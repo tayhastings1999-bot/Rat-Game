@@ -27,6 +27,7 @@ export const G = {
   friendGhost: null,
   rat: null,
   darkness: 0,          // 0..1, how deep the player is in a zero-visibility zone
+  touch: false,         // on-screen controls in use
 };
 
 /** Per-map entity lists. Reset whenever a district is generated. */

@@ -438,7 +438,7 @@ export function update(dt) {
   updateScent(dt);
   if (G.lockOn && (G.lockOn.dead || Math.hypot(G.lockOn.x - P.x, G.lockOn.z - P.z) > 34)) G.lockOn = null;
   if (G.lockOn && !G.drag) G.camYaw += angD(Math.atan2(G.lockOn.x - P.x, G.lockOn.z - P.z), G.camYaw) * Math.min(1, 4 * dt);
-  else if (settings.mouse && !G.drag) {
+  else if (settings.mouse && !G.drag && !G.touch) {
     const ex2 = G.mX / innerWidth;
     if (ex2 < 0.04) G.camYaw += 1.8 * dt * settings.sens;
     else if (ex2 > 0.96) G.camYaw -= 1.8 * dt * settings.sens;

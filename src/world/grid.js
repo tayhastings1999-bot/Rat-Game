@@ -180,7 +180,8 @@ export function collideBody(b, prevY, R, H, isP) {
     if (lx > hw || lx < -hw || lz > hd || lz < -hd) continue;
     const top = p.y, bot = p.y - p.th;
     if (b.vy <= 0 && prevY >= top - 0.1 && b.y <= top + 0.001) { b.y = top; b.vy = 0; g = p; }
-    else if (b.vy > 0 && prevY + H <= bot + 0.05 && b.y + H > bot) { b.y = bot - H; b.vy = 0; }
+    // Thin platforms (power lines) are one-way: stand on them, pass through from below.
+    else if (!p.thin && b.vy > 0 && prevY + H <= bot + 0.05 && b.y + H > bot) { b.y = bot - H; b.vy = 0; }
     else if (b.y < top - 0.1 && b.y + H > bot) {
       if (top - b.y < 0.45 && b.vy <= 0) { b.y = top; b.vy = 0; g = p; continue; }
       b.blocked = p;

@@ -52,19 +52,32 @@ export function initInput() {
     for (const k in keys) keys[k] = false;
     if (G.state === 'play') pause(true);
   });
-  canvas.addEventListener('pointerdown', e => { G.drag = e.button === 2 || e.shiftKey ? 2 : 1; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointerup', () => { G.drag = 0; });
-  canvas.addEventListener('pointercancel', () => { G.drag = 0; });
+  // Drag to orbit (right-drag / shift-drag pans). Deltas are tracked per pointer so fingers work too.
+  let dragId = null, lastX = 0, lastY = 0;
+  canvas.addEventListener('pointerdown', e => {
+    if (dragId !== null) return;
+    dragId = e.pointerId;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    G.drag = e.button === 2 || e.shiftKey ? 2 : 1;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  const endDrag = e => { if (e.pointerId === dragId) { dragId = null; G.drag = 0; } };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('pointermove', e => {
-    if (!G.drag) return;
+    if (!G.drag || e.pointerId !== dragId) return;
+    const mx = e.clientX - lastX, my = e.clientY - lastY, touch = e.pointerType === 'touch' ? 1.4 : 1;
+    lastX = e.clientX;
+    lastY = e.clientY;
     if (G.drag === 1) {
-      G.camYaw -= e.movementX * 0.006;
-      G.camPitch = clamp(G.camPitch + e.movementY * 0.005, 0.18, 1.42);
+      G.camYaw -= mx * 0.006 * touch;
+      G.camPitch = clamp(G.camPitch + my * 0.005 * touch, 0.18, 1.42);
     } else {
       const { fx, fz, rx, rz } = camBasis(), k = G.camDist * 0.0016;
-      G.camOff.x += (-rx * e.movementX + fx * e.movementY) * k;
-      G.camOff.z += (-rz * e.movementX + fz * e.movementY) * k;
+      G.camOff.x += (-rx * mx + fx * my) * k;
+      G.camOff.z += (-rz * mx + fz * my) * k;
       const l = Math.hypot(G.camOff.x, G.camOff.z);
       if (l > 12) { G.camOff.x *= 12 / l; G.camOff.z *= 12 / l; }
     }
@@ -72,6 +85,7 @@ export function initInput() {
   canvas.addEventListener('wheel', e => { e.preventDefault(); G.camDist = clamp(G.camDist + e.deltaY * 0.012, 6, 28); }, { passive: false });
   addEventListener('pointerdown', audioInit);
   addEventListener('mousemove', e => {
+    if (G.touch) return; // taps also fire mouse events; touch uses drag-to-orbit only
     G.mX = e.clientX;
     if (G.state !== 'play' || G.drag || !settings.mouse || G.lockOn) return;
     G.camYaw -= e.movementX * 0.0042 * settings.sens;

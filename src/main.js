@@ -1,9 +1,9 @@
 // Entry point: fonts, styles, boot, and the frame loop.
-import '@fontsource/pirata-one/400.css';
-import '@fontsource/silkscreen/400.css';
-import '@fontsource/silkscreen/700.css';
-import '@fontsource/alegreya-sans/500.css';
-import '@fontsource/alegreya-sans/700.css';
+import '@fontsource/pirata-one/latin-400.css';
+import '@fontsource/silkscreen/latin-400.css';
+import '@fontsource/silkscreen/latin-700.css';
+import '@fontsource/alegreya-sans/latin-500.css';
+import '@fontsource/alegreya-sans/latin-700.css';
 import './style.css';
 
 import { $ } from './core/util.js';
@@ -16,16 +16,19 @@ import { sync, animate } from './game/sync.js';
 import { menu } from './game/flow.js';
 import { initInput } from './game/input.js';
 import { hud, drawMap, initHudIcons } from './ui/hud.js';
+import { initTouch } from './ui/touch.js';
 
 initHudIcons();
 refreshPortraits();
 initInput();
+initTouch();
 menu();
 
 let hudT = 0, mapT = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - G.last) / 1000);
+  document.body.classList.toggle('playing', G.state === 'play');
   G.last = now;
   G.time += dt;
   let sdt = dt;

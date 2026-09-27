@@ -311,6 +311,60 @@ await step('soak: 20s of live horde', async () => {
   await shot('11-soak');
 });
 
+// ---------- phone-sized touch session ----------
+await page.close(); // stop the desktop session's game loop competing for CPU
+{
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+  const tp = await ctx.newPage();
+  tp.on('pageerror', e => errors.push('touch pageerror: ' + (e.stack || e.message)));
+  tp.on('console', m => { if (m.type() === 'error') errors.push('touch console: ' + m.text()); });
+  const cdp = await ctx.newCDPSession(tp);
+  const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+  const center = async sel => { const b = await tp.locator(sel).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+  await step('touch: phone menu and start', async () => {
+    await tp.goto('http://localhost:5199/?debug');
+    await tp.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
+    await tp.waitForTimeout(1200);
+    await tp.screenshot({ path: OUT + '12-phone-menu.png' });
+    await tp.locator('.card[data-k="brawler"]').scrollIntoViewIfNeeded();
+    await tp.tap('.card[data-k="brawler"]');
+    await tp.waitForTimeout(1200);
+    const s = await tp.evaluate(() => ({ state: __scurry.G.state, touch: document.body.classList.contains('touch'), vis: getComputedStyle(document.getElementById('touch')).display }));
+    if (s.state !== 'play' || !s.touch || s.vis !== 'block') throw new Error(JSON.stringify(s));
+    await tp.evaluate(() => __scurry.god(true));
+  });
+  await step('touch: stick moves the rat, buttons act', async () => {
+    const [sx, sy] = await center('#tStick');
+    const p0 = await tp.evaluate(() => [__scurry.P.x, __scurry.P.z]);
+    await touch('touchStart', sx, sy);
+    for (let i = 1; i <= 5; i++) { await touch('touchMove', sx, sy - i * 10); await tp.waitForTimeout(40); }
+    await tp.waitForTimeout(1500);
+    const mid = await tp.evaluate(() => ({ active: document.querySelector('#tStick i').style.transform, p: [__scurry.P.x, __scurry.P.z] }));
+    await touch('touchEnd');
+    const moved = Math.hypot(mid.p[0] - p0[0], mid.p[1] - p0[1]);
+    if (moved < 2) throw new Error('rat moved only ' + moved.toFixed(2) + ' ' + JSON.stringify(mid));
+    await tp.screenshot({ path: OUT + '13-phone-play.png' });
+    for (let i = 0; i < 10 && (await tp.evaluate(() => __scurry.G.state)) === 'levelup'; i++) { await tp.tap('.card[data-i="0"]'); await tp.waitForTimeout(150); }
+    await tp.evaluate(() => { __scurry.st.xp = 0; }); // no more level-ups mid-test
+    await tp.waitForTimeout(300);
+    const [jx, jy] = await center('[data-b="jump"]');
+    const y0 = await tp.evaluate(() => __scurry.P.y);
+    await touch('touchStart', jx, jy);
+    let rose = false;
+    for (let i = 0; i < 20 && !rose; i++) { await tp.waitForTimeout(50); rose = await tp.evaluate(y0 => __scurry.P.vy > 0 || __scurry.P.y > y0 + 0.3, y0); }
+    await touch('touchEnd');
+    if (!rose) throw new Error('jump button did nothing');
+    const [px, py] = await center('[data-b="pause"]');
+    await touch('touchStart', px, py); await touch('touchEnd');
+    await tp.waitForTimeout(300);
+    if ((await tp.evaluate(() => __scurry.G.state)) !== 'paused') throw new Error('pause button did nothing');
+    await tp.tap('#resumeBtn');
+    await tp.waitForTimeout(300);
+    if ((await tp.evaluate(() => __scurry.G.state)) !== 'play') throw new Error('resume tap did nothing');
+  });
+  await ctx.close();
+}
+
 await browser.close();
 await server.close();
 if (errors.length) {

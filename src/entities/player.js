@@ -18,10 +18,18 @@ import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 
 export const keys = {};
+/** On-screen joystick (touch). x = right, y = forward, each -1..1. */
+export const stick = { active: false, x: 0, y: 0 };
 export const camBasis = () => ({ fx: Math.sin(G.camYaw), fz: Math.cos(G.camYaw), rx: -Math.cos(G.camYaw), rz: Math.sin(G.camYaw) });
 
+/** Movement input from keys or the touch stick: [right, forward, magnitude]. */
+function moveInput() {
+  if (stick.active && Math.hypot(stick.x, stick.y) > 0.18) return [stick.x, stick.y, Math.min(1, Math.hypot(stick.x, stick.y) * 1.25)];
+  return [(keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), 1];
+}
+
 export function stepPlayer(dt) {
-  const { fx: f1, fz, rx, rz } = camBasis(), ix = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), iz = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+  const { fx: f1, fz, rx, rz } = camBasis(), [ix, iz, mag] = moveInput();
   let wx = f1 * iz + rx * ix, wz = fz * iz + rz * ix;
   const L = Math.hypot(wx, wz);
   if (L) { wx /= L; wz /= L; P.wx = wx; P.wz = wz; }
@@ -29,7 +37,7 @@ export function stepPlayer(dt) {
   P.squeeze = !!(keys.KeyC || keys.ControlLeft) && P.onGround && !P.carry;
   if (t === 5 && P.y < topAt(toG(P.x), toG(P.z)) - 0.1) P.squeeze = true;
   P.sprinting = (keys.ShiftLeft || keys.ShiftRight) && L > 0 && run.sta > 1 && !P.squeeze && !P.carry && P.roll <= 0;
-  const spd = st.speed * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
+  const spd = mag * st.speed * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
   if (P.sprinting) { run.sta -= st.sprintDrain * dt; P.staT = 0.6; }
   P.rollCd -= dt;
   if (P.roll > 0) {
@@ -139,7 +147,7 @@ export function primary(dt) {
 export function startRoll() {
   if (P.roll > 0 || P.rollCd > 0 || run.sta < 15 || P.squeeze || P.chewing) return;
   if (P.carry) dropCarry();
-  const { fx: fx0, fz, rx, rz } = camBasis(), ix = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), iz = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+  const { fx: fx0, fz, rx, rz } = camBasis(), [ix, iz] = moveInput();
   let dx, dz;
   if (ix || iz) { dx = fx0 * iz + rx * ix; dz = fz * iz + rz * ix; const l = Math.hypot(dx, dz); dx /= l; dz /= l; }
   else { dx = Math.sin(P.facing); dz = Math.cos(P.facing); }

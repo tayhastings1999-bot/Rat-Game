@@ -44,6 +44,12 @@ export function renderMenu(m) {
       <div class="lb">${lb.length ? lb.map((r, i) => `<span>${i + 1}</span><span>${CLASSES[r.c]?.name || r.c}</span><span>${fmtT(r.t)}</span>`).join('') : '<span></span><span>No times yet</span><span></span>'}</div>
       <textarea id="fg" placeholder="Paste a friend's ghost code here">${G.friendGhost ? '(friend ghost loaded: ' + fmtT(G.friendGhost.t) + ')' : ''}</textarea>`
     : '<p>Smash the nests or outlast the timer to wake the district boss. Every pick, chest and detour raises the threat, and the horde scales with it. Kill the boss to open the road, or spend a key on the manhole.</p>'}
+    <div class="howto">
+      <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up the orange XP gems, and pick an upgrade each level.</p></div>
+      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Shift</kbd> roll, hold to sprint · <kbd>Q</kbd> special · <kbd>E</kbd> use, hold to gnaw · <kbd>F</kbd> sniff out loot · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</p></div>
+      <div><h3 class="px">Touch</h3><p>Left stick to move, drag anywhere else to look around. Jump, Roll, Special and Use sit on the right.</p></div>
+    </div>
+    <div class="kick px">Pick a rat to start</div>
     <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => {
       const lk = !isUnl(k);
       return `<button class="card${lk ? ' off' : ''}" data-k="${k}" style="--rc:${C.rc}">
@@ -153,9 +159,10 @@ export function pause(on) {
 
 export function openMap() {
   G.state = 'map';
-  show(`<div class="panel narrow frame"><div class="kick px">Explored ${dName()} · M to close</div><canvas id="bigmap" width="520" height="520"></canvas>
-    <p class="px" style="font-size:11px"><span style="color:#4aa3ff">■</span> workbench <span style="color:#ffa030">■</span> chest <span style="color:#ff3a3a">■</span> cursed chest <span style="color:#ffe070">■</span> cache <span style="color:#b0b0b8">■</span> pipe <span style="color:#ff3a20">■</span> nest <span style="color:#b070ff">■</span> manhole <span style="color:#ffd040">■</span> key <span style="color:#a89468">■</span> boards <span style="color:#8a5a44">■</span> crevice <span style="color:#7aa020">■</span> acid</p></div>`);
+  show(`<div class="panel narrow frame"><div class="kick px">Explored ${dName()}</div><canvas id="bigmap" width="520" height="520"></canvas>
+    <p class="px" style="font-size:11px"><span style="color:#4aa3ff">■</span> workbench <span style="color:#ffa030">■</span> chest <span style="color:#ff3a3a">■</span> cursed chest <span style="color:#ffe070">■</span> cache <span style="color:#b0b0b8">■</span> pipe <span style="color:#ff3a20">■</span> nest <span style="color:#b070ff">■</span> manhole <span style="color:#ffd040">■</span> key <span style="color:#a89468">■</span> boards <span style="color:#8a5a44">■</span> crevice <span style="color:#7aa020">■</span> acid</p><div class="btns"><button class="btn ghost" id="mapX">Close (M)</button></div></div>`);
   drawMap($('bigmap'), 520 / M.W, 0);
+  $('mapX').onclick = resume;
 }
 
 export function openBench() {

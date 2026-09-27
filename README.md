@@ -4,6 +4,10 @@ A rat roguelike in the browser: an open-world neighbourhood crawling with hordes
 
 This is the production build of the **Scurry v5** design from Claude Design, plus the unfinished v6 overhaul from the design chat, now completed. The original prototypes and transcript are kept for reference in `project/` and `chats/`.
 
+## Play it
+
+Hosted build: https://claude.ai/artifact/Jfhgbb7RbS6iHANvSRPUoD (private to the owner until shared from the page's Share menu). Click a rat to start. Keyboard and mouse on desktop; on a phone or tablet, on-screen controls appear automatically (landscape works best).
+
 ## Run it
 
 ```bash
@@ -12,9 +16,10 @@ npm run dev        # http://localhost:5173
 npm run build      # static site in dist/ (open with `npm run preview`, not file://)
 npm run lint
 npm run smoke      # headless end-to-end test (needs Chromium; see below)
+npm run artifact   # build + package dist/artifact.html for hosting as a claude.ai Artifact
 ```
 
-`npm run smoke` drives a real browser through the whole loop with zero tolerance for console errors. It covers the menu, a city run, interactions (chests, workbench, gnawing boards, climbing, power lines, key and manhole), corrupted elites, every boss through all three phases, the sewer and ladder, pause and map, death, the Nest, the new classes, a Ghost Trial finish and a horde soak. It uses `/opt/pw-browsers/chromium` by default; set `CHROMIUM=/path/to/chrome` to override. Screenshots land in `scripts/out/`. Headless Chromium runs the game at roughly half speed, so waits in the script are generous.
+`npm run smoke` drives a real browser through the whole loop with zero tolerance for console errors. It covers the menu, a city run, interactions (chests, workbench, gnawing boards, climbing, power lines, key and manhole), corrupted elites, every boss through all three phases, the sewer and ladder, pause and map, death, the Nest, the new classes, a Ghost Trial finish, a horde soak, and a phone-sized touch session. It uses `/opt/pw-browsers/chromium` by default; set `CHROMIUM=/path/to/chrome` to override. Screenshots land in `scripts/out/`. Headless Chromium runs the game at roughly half speed, so waits in the script are generous.
 
 Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for poking at state.
 
@@ -54,6 +59,8 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · E use / grab / hold to gnaw · R lock-on · F scent trails · M map · mouse look (V toggles) · wheel zoom · Esc pause.
 
+**Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Use (hold to gnaw), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
+
 ## Code map
 
 ```
@@ -75,6 +82,6 @@ Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta`
 
 ## Known gaps
 
-- No touch controls. Keyboard and mouse only.
+- Touch controls are tuned for landscape phones and tablets; portrait works but is cramped.
 - Ghost Trial sharing is still copy-paste codes. There's no online leaderboard.
 - Balance (threat curve, boss HP, drop rates) comes from design intent and automated runs, not playtesting.
