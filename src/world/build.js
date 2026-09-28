@@ -563,7 +563,9 @@ function fireEscapes(n) {
 /** Small street and sewer clutter. Solid, knee-high, and good for hopping. */
 function clutter(city) {
   const open = [];
-  for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k])) open.push(k);
+  // Keep solid clutter off the spawn point so the rat never starts pinned inside a can or heap.
+  const sr = G.startRoom;
+  for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !(sr && Math.abs(k % M.W - sr.cx) <= 2 && Math.abs(((k / M.W) | 0) - sr.cy) <= 2)) open.push(k);
   shuffleR(open);
   const place = (n, fn) => { for (let i = 0; i < n && open.length; i++) { const k = open.pop(); fn(toW(k % M.W) + rr(-1.4, 1.4), toW((k / M.W) | 0) + rr(-1.4, 1.4)); } };
   if (city) {
