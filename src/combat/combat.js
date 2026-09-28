@@ -13,6 +13,7 @@ import { chain, shoot } from './arsenal.js';
 import { puddle, warn } from './hazards.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
+import { addChest } from '../world/build.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -78,6 +79,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   }
   if (crit && st.mut.gutting) gore(e, 0.35);
   if (!quiet || crit || Math.random() < 0.3) dnum(e.x, e.y + e.h + 0.3, e.z, d, crit ? 'crit' : '');
+  if (melee && st.meleeLeech) run.hp = Math.min(st.maxHp, run.hp + st.meleeLeech);
   if (melee && st.mut.livewire && Math.random() < 0.35) chain(e, 2, d * 0.5, 'livewire', [e.x, e.y + e.h * 0.6, e.z], true);
   if (e.hp <= 0) kill(e);
 }
@@ -98,6 +100,7 @@ export function hurtP(d, from, raw) {
     d *= 0.3;
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
   }
+  if (from && from.hp != null) d *= st.guard; // melee classes brace against bites and swipes
   d = Math.max(1, Math.round(d * st.taken * (1 + 0.1 * run.tier) - (raw ? 0 : st.armor)));
   run.hp -= d;
   if (!raw) P.inv = 0.6;
@@ -142,6 +145,7 @@ export function kill(e) {
   decal(e.x, floorY(e.x, e.z) + 0.01, e.z, rand(1.2, 2.2) * (big ? 2.5 : 1) * (e.sc || 1), e.blood);
   gore(e);
   if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech);
+  if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
   if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {
     run.nailT = 0.08;
@@ -149,6 +153,14 @@ export function kill(e) {
   }
   if (st.mut.chemfire && e.bT > 0) puddle('pfire', e.x, e.z, 2, 4, 'p');
   if (e.corrupt) corruptDeath(e);
+  if (e.mini) {
+    const gy = floorY(e.x, e.z);
+    addChest(e.x, gy, e.z, true);
+    for (let i = 0; i < 12; i++) scrapDrop(e.x, gy, e.z);
+    if (!isSewer() && !run.keys && !W.keys.length && Math.random() < 0.6) dropKey(e.x + 1.2, gy, e.z);
+    banner(e.name + ' slain', 'Its hoard is yours');
+    G.hitStop = Math.max(G.hitStop, 0.2);
+  }
 
   if (e.type === 'nest') {
     world.remove(e.mesh);

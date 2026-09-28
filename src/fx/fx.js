@@ -70,6 +70,67 @@ export function slashFx(A, R, col, from = P) {
   pfx(0, from.x + Math.sin(A) * R * 0.5, from.y + 0.5, from.z + Math.cos(A) * R * 0.5, R * 2.1, 0.2, { ground: true, ang: A, col });
   if (from === P) P.atk = 0.22;
 }
+// ---------- swipe crescents ----------
+/** Unit arc (inner 0.5, outer 1) spanning `span` radians around +z, uv.x along the arc, uv.y across it. */
+function arcGeo(span, segs = 22) {
+  const pos = [], uv = [], r0 = 0.5, r1 = 1;
+  for (let i = 0; i < segs; i++) {
+    const t0 = i / segs, t1 = (i + 1) / segs, a0 = -span / 2 + span * t0, a1 = -span / 2 + span * t1;
+    const P0 = [Math.sin(a0) * r0, 0, Math.cos(a0) * r0], P1 = [Math.sin(a0) * r1, 0, Math.cos(a0) * r1];
+    const Q0 = [Math.sin(a1) * r0, 0, Math.cos(a1) * r0], Q1 = [Math.sin(a1) * r1, 0, Math.cos(a1) * r1];
+    pos.push(...P0, ...P1, ...Q1, ...P0, ...Q1, ...Q0);
+    uv.push(t0, 0, t0, 1, t1, 1, t0, 0, t1, 1, t1, 0);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  return g;
+}
+const ARC = { light: arcGeo(2.5), heavy: arcGeo(2.9) };
+const swipeVS = `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+// A bright leading edge sweeps along the arc with a fading tail; alpha is posterised for the pixel look.
+const swipeFS = `uniform float head,len,op;uniform vec3 col;varying vec2 vUv;
+void main(){
+  float along=smoothstep(head-len,head,vUv.x)*(1.-step(head,vUv.x));
+  float edge=smoothstep(0.,1.,vUv.y);
+  float a=along*(0.25+0.75*edge*edge)*op;
+  a=floor(a*5.)/5.;
+  if(a<=0.)discard;
+  gl_FragColor=vec4(col*(0.7+0.9*edge*along),a);
+}`;
+const swipes = [];
+/**
+ * Organic melee swipe: a crescent that sweeps across the arc (alternating
+ * sides, slightly tilted) instead of a flat stamp. `heavy` is wider and slower.
+ */
+export function swipeFx(A, R, col, heavy = false, from = P) {
+  sfx('slash');
+  let f = swipes.find(f => !f.on && f.heavy === heavy);
+  if (!f) {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { head: { value: 0 }, len: { value: 0.5 }, op: { value: 1 }, col: { value: new THREE.Color() } },
+      vertexShader: swipeVS, fragmentShader: swipeFS, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    });
+    const m = new THREE.Mesh(heavy ? ARC.heavy : ARC.light, mat);
+    m.frustumCulled = false;
+    scene.add(m);
+    f = { m, mat, heavy };
+    swipes.push(f);
+  }
+  const side = from === P ? (P.swingSide = -(P.swingSide || 1)) : Math.random() < 0.5 ? -1 : 1;
+  const life = heavy ? 0.26 : 0.18;
+  Object.assign(f, { on: true, life, max: life });
+  f.mat.uniforms.col.value.set(col);
+  f.m.position.set(from.x, from.y + (heavy ? 0.5 : 0.6), from.z);
+  f.m.rotation.set(0, 0, 0);
+  f.m.rotateY(A);
+  f.m.rotateZ(side * (0.18 + Math.random() * 0.22));
+  f.m.scale.set(R * side, 1, R);
+  f.m.visible = true;
+  if (from === P) { P.swing = heavy ? 0.3 : 0.24; P.swingHeavy = heavy; }
+  return f;
+}
+
 export function boom(x, y, z, s, col = 0xffffff) {
   pfx(2, x, y, z, s * 1.3, 0.36, { col });
   if (s >= 2.5) {
@@ -210,6 +271,15 @@ export function dnum(x, y, z, v, cls = '') {
 
 /** Advance pooled FX lifetimes (called from the render sync). */
 export function tickFx(dt) {
+  for (const f of swipes) {
+    if (!f.on) continue;
+    f.life -= dt;
+    if (f.life <= 0) { f.on = false; f.m.visible = false; continue; }
+    const u = 1 - f.life / f.max, e = 1 - Math.pow(1 - u, 3);
+    f.mat.uniforms.head.value = e * 1.35;
+    f.mat.uniforms.len.value = 0.55;
+    f.mat.uniforms.op.value = u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1;
+  }
   for (const f of fxs) {
     if (!f.on) continue;
     f.life -= dt;
@@ -232,6 +302,7 @@ export function tickFx(dt) {
   }
 }
 export function clearFx() {
+  for (const f of swipes) { f.on = false; f.m.visible = false; }
   for (const f of fxs) { f.on = false; f.g.visible = false; }
   for (const f of pfxs) { f.on = false; f.obj.visible = false; }
 }

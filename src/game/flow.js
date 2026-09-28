@@ -26,6 +26,8 @@ export function freshStats(C) {
     chew: 1, specCd: 1, taken: 1, shrap: false, foeSpd: 1, leech: 0, salvage: 1 + 0.15 * (n.scav || 0),
     mut: {}, rabid: false, noRegen: false, foodMul: 1, fury: false, poisonMul: 1, selfPoison: false,
     meleePrim: C.prim === 'rake' || C.prim === 'gnash',
+    // Melee kit: heal a little per hit, shrug off 20% of bites and swipes.
+    meleeLeech: C.prim === 'rake' || C.prim === 'gnash' ? 0.6 : 0, guard: C.prim === 'rake' || C.prim === 'gnash' ? 0.8 : 1,
   };
 }
 
@@ -79,7 +81,7 @@ export function startRun(k) {
   resetObj(run, {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
     pendingLv: 0, specT: 0, primT: 0, lowWarned: false, hp: 0, sta: 100, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
-    dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 3, surgeT: 60, splits: [], rec: [], recT: 0, reactor: false,
+    dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 3, surgeT: 90, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
     keys: meta.nest.key ? 1 : 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
@@ -134,7 +136,7 @@ function transition(apply, title, sub) {
     run.bossDone = false;
     run.dStart = run.time;
     run.nests = 0;
-    run.surgeT = 60;
+    run.surgeT = 75;
     run.rerolls = meta.nest.reroll || 0;
     meta.maxDistrict = Math.max(meta.maxDistrict, run.district);
     if (isSewer()) meta.maxSewer = Math.max(meta.maxSewer, run.sewerIdx);

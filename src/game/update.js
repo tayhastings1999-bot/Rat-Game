@@ -12,7 +12,7 @@ import { WEAP, auraR, shoot, flasks } from '../combat/arsenal.js';
 import { near, nearest, hit, kill, aoe, hurtP, gainXP, updThreat } from '../combat/combat.js';
 import { puddle, tickHaz } from '../combat/hazards.js';
 import { stepPlayer, primary, keys, chewTarget, doChew, tickInteractives } from '../entities/player.js';
-import { spawnTick, updateEnemies } from '../entities/mobs.js';
+import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
 import { spawnBoss } from '../entities/bosses.js';
 import { exitRoad, exitLadder } from './flow.js';
 import { collectCore } from './loot.js';
@@ -74,6 +74,23 @@ function updateZones(dt) {
   if (scene.fog) {
     scene.fog.near = G.fogNear * (1 - G.darkness * 0.92);
     scene.fog.far = G.fogFar * (1 - G.darkness * 0.8);
+  }
+}
+
+/** Hidden lairs wake their mini-boss when the rat steps inside; secret walls show while sniffing. */
+function updateHidden() {
+  for (const s of W.secrets) s.g.visible = P.scent && M.grid[s.k] === 3;
+  const gx = toG(P.x), gz = toG(P.z);
+  for (const L of W.lairs) {
+    if (L.woke || gx < L.x || gz < L.y || gx >= L.x + L.w || gz >= L.y + L.h) continue;
+    L.woke = true;
+    const mb = L.mini;
+    const e = spawnEnemy(mb.type, L.cx, L.cz, { elite: true, corrupt: mb.corrupt, sc: 2.1, hpMul: 9 + run.tier * 3, mini: true, name: mb.name });
+    if (e) { e.dmg *= 1.4; e.bar = true; }
+    for (let i = 0; i < 3; i++) spawnEnemy(mb.type === 'brute' ? 'mawling' : mb.type, L.cx + rand(-3, 3), L.cz + rand(-3, 3), { plain: true });
+    banner('Hidden lair · ' + mb.name, 'Kill it for a premium hoard');
+    sfx('boss');
+    G.shake = 0.4;
   }
 }
 
@@ -146,6 +163,8 @@ function updatePlayerStatus(dt) {
     for (const e of near(P.x, P.y, P.z, 1.6)) if (!e.heavy && (e.tT || 0) <= 0) { e.tT = 0.4; hit(e, 12, Math.atan2(e.x - P.x, e.z - P.z), 10, 'special', true); }
   } else shieldM.visible = false;
   if (P.glideT > 0) P.glideT -= dt;
+  // Bloodlust (melee): stacks from kills, bleeds off a stack at a time when you stop killing.
+  if (run.blood > 0) { run.bloodT -= dt; if (run.bloodT <= 0) { run.blood--; run.bloodT = 1; } }
 }
 
 function updateWeapons(dt) {
@@ -227,6 +246,7 @@ function updateProjectiles(dt) {
         p.vx += (dx / l * p.spd - p.vx) * k; p.vy += (dy / l * p.spd - p.vy) * k; p.vz += (dz / l * p.spd - p.vz) * k;
       }
     }
+    if (p.g) p.vy -= p.g * dt;
     p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     if (Math.random() < 0.3) W.parts.push({ x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, life: 0.2, c: p.col, s: 0.6, ng: true });
     if (p.y < floorY(p.x, p.z) - 0.1 || solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.7, p.col); continue; }
@@ -379,6 +399,8 @@ export function update(dt) {
   P.inv = Math.max(0, P.inv - dt);
   P.aimT -= dt;
   P.atk -= dt;
+  P.swing = Math.max(0, (P.swing || 0) - dt);
+  P.throwT = Math.max(0, (P.throwT || 0) - dt);
   run.specT = Math.max(0, run.specT - dt);
   if (!st.noRegen) run.hp = Math.min(st.maxHp, run.hp + st.regen * dt);
   if (run.hp > st.maxHp * 0.5) run.lowWarned = false;
@@ -390,6 +412,7 @@ export function update(dt) {
   tickHaz(dt);
   if (P.onGround && Math.abs(P.y - floorY(P.x, P.z, true)) < 0.1 && DRY(tileAt(P.x, P.z)) && !W.cracks.has(gi(toG(P.x), toG(P.z)))) { P.safe.x = P.x; P.safe.z = P.z; }
   updateMods(dt);
+  updateHidden();
   updatePlayerStatus(dt);
   if (G.state !== 'play') return;
   updateWeapons(dt);

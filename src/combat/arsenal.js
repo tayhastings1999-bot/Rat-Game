@@ -4,10 +4,17 @@ import * as THREE from 'three';
 import { rand, randi, angD, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { slashFx, boom, fx, spark, bolt, orb, orbState, puff } from '../fx/fx.js';
+import { swipeFx, boom, fx, spark, bolt, orb, orbState, puff } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { solidFor, tileAt, topAt, toG } from '../world/grid.js';
 import { near, sorted, nearest, hit, aoe } from './combat.js';
+
+/** Melee step-in: close most of the gap to a target just outside reach. */
+function stepIn(t, R) {
+  if (!t) return;
+  const dx = t.x - P.x, dz = t.z - P.z, d = Math.hypot(dx, dz);
+  if (d > R * 0.75 && d < R + 2.5 && P.onGround) { const s = Math.min(12, (d - R * 0.6) * 5); P.vx += dx / d * s; P.vz += dz / d * s; P.lock = 0.08; }
+}
 
 export const auraR = w => 2.6 * st.area * (1 + 0.12 * (w.lvl - 1));
 
@@ -51,7 +58,8 @@ export function shoot(x, y, z, dx, dy, dz, spd, dmg, pierce, src, o = {}) {
     life: (o.life || 0.75) * (pr ? st.range : 1), dmg, pierce, src, hs: new Set(), col: o.col || 0xf4efe6,
     homing: o.homing || (pr && st.homing), split: pr && st.split && !o.child, size: 1 + (pr ? st.shotSize : 0) * (o.child ? 0.5 : 1), fx: pr,
   });
-  if (pr) { spark(x + dx / d * 0.5, y, z + dz / d * 0.5, 0.6, o.col || 0xffffff); P.atk = 0.18; sfx('shoot'); }
+  if (o.arc) { const p = W.pproj[W.pproj.length - 1]; p.vy += 2.2; p.g = 9; }
+  if (pr) { spark(x + dx / d * 0.5, y, z + dz / d * 0.5, 0.6, o.col || 0xffffff); P.throwT = 0.26; sfx('shoot'); }
 }
 
 /** Enemy projectile. `g` makes it arc, `pud` leaves a puddle, `home` makes it seek. */
@@ -67,7 +75,7 @@ export const WEAP = {
     fire(w) {
       const L = w.lvl, R = 2.6 * st.area * (1 + 0.1 * (L - 1)), t = nearest(R + 3), a = t ? Math.atan2(t.x - P.x, t.z - P.z) : P.facing, dm = 20 * (1 + 0.28 * (L - 1));
       for (const A of L >= 4 ? [a, a + Math.PI] : [a]) {
-        slashFx(A, R, 0xffd8c0);
+        swipeFx(A, R, 0xffd8c0);
         for (const e of near(P.x, P.y, P.z, R + 0.3)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.25) hit(e, dm, A, 5, 'claw');
       }
     },
@@ -76,7 +84,7 @@ export const WEAP = {
     name: 'Tail Lash', role: 'Melee', desc: 'Spin and lash everything around you, hurling it back.', lv: ['+Damage', 'Faster, +radius', '+Damage', 'Faster, +radius'], cd: w => 1.9 * (1 - 0.08 * (w.lvl - 1)),
     fire(w) {
       const L = w.lvl, R = 3 * st.area * (1 + 0.08 * (L - 1)), dm = 16 * (1 + 0.25 * (L - 1));
-      for (let k = 0; k < 4; k++) slashFx(k * PI2 + G.time, R, 0xff9a7a);
+      for (let k = 0; k < 3; k++) swipeFx(k * TAU / 3 + G.time * 3, R, 0xff9a7a, true);
       for (const e of near(P.x, P.y, P.z, R)) hit(e, dm, Math.atan2(e.x - P.x, e.z - P.z), 9, 'whip');
     },
   },
@@ -107,7 +115,7 @@ export const WEAP = {
       const pr = L >= 5 ? 2 : L >= 3 ? 1 : 0, dm = 13 * (1 + 0.2 * (L - 1)) * (L >= 5 ? 1.2 : 1);
       for (let i = 0; i < n; i++) {
         const t = ts[i % ts.length];
-        shoot(P.x, P.y + 0.7, P.z, t.x - P.x, t.y + t.h / 2 - (P.y + 0.7), t.z - P.z, 26, dm, pr, 'sling', { col: 0xe8d8b0 });
+        shoot(P.x, P.y + 0.7, P.z, t.x - P.x, t.y + t.h / 2 - (P.y + 0.7), t.z - P.z, 26, dm, pr, 'sling', { col: 0xe8d8b0, arc: true });
       }
     },
   },
@@ -206,24 +214,26 @@ export function useSpecialFx() { overclockNova(); }
 
 export const PRIM = {
   rake: {
-    name: 'Claw Rake', range: 4.5, cd: 0.42, melee: true,
-    fire(dx, dz) {
-      const a = Math.atan2(dx, dz), R = 2.3 * st.area, n = 1 + st.multi;
+    name: 'Claw Rake', range: 4.8, cd: 0.38, melee: true,
+    fire(dx, dz, t) {
+      const a = Math.atan2(dx, dz), R = 2.8 * st.area, n = 1 + st.multi;
+      stepIn(t, R);
       for (let k = 0; k < n; k++) {
         const A = a + (k - (n - 1) / 2) * 0.6;
-        slashFx(A, R, 0xffffff);
-        for (const e of near(P.x, P.y, P.z, R + 0.2)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.1) hit(e, 15, A, 5, 'primary', false, true);
+        swipeFx(A, R, 0xffe8d0);
+        for (const e of near(P.x, P.y, P.z, R + 0.3)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.3) hit(e, 22, A, 4, 'primary', false, true);
       }
     },
   },
   gnash: {
-    name: 'Gnash', range: 3.6, cd: 0.62, melee: true,
-    fire(dx, dz) {
-      const a = Math.atan2(dx, dz), R = 2.6 * st.area, n = 1 + st.multi;
+    name: 'Gnash', range: 4, cd: 0.6, melee: true,
+    fire(dx, dz, t) {
+      const a = Math.atan2(dx, dz), R = 3 * st.area, n = 1 + st.multi;
+      stepIn(t, R);
       for (let k = 0; k < n; k++) {
         const A = a + (k - (n - 1) / 2) * 0.7;
-        slashFx(A, R, 0xffc090);
-        for (const e of near(P.x, P.y, P.z, R + 0.2)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.2) hit(e, 26, A, 12, 'primary', false, true);
+        swipeFx(A, R, 0xffc090, true);
+        for (const e of near(P.x, P.y, P.z, R + 0.3)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.3) hit(e, 30, A, 10, 'primary', false, true);
       }
       G.shake = Math.max(G.shake, 0.06);
     },
@@ -239,7 +249,7 @@ export const PRIM = {
     name: 'Sling Stone', range: 13, cd: 0.3,
     fire(dx, dz, t) {
       const n = 1 + st.multi, dy = t ? (t.y + t.h * 0.5 - (P.y + 0.7)) / Math.max(1, Math.hypot(t.x - P.x, t.z - P.z)) : 0;
-      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.16; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 20 * st.shotSpd, 7, 0, 'primary', { col: 0xf4efe6 }); }
+      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.16; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 20 * st.shotSpd, 7, 0, 'primary', { col: 0xf4efe6, arc: true }); }
     },
   },
   darts: {

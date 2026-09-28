@@ -307,3 +307,54 @@ export const arrowTex = ctex(32, x => {
   x.fillRect(13, 10, 6, 18);
   for (let i = 0; i < 9; i++) x.fillRect(16 - i, 2 + i, i * 2, 1);
 });
+
+/** Brick that is secretly gnawable: same bond, a few hairline cracks and a hollow, lighter patch. */
+const secretCache = {};
+export function secretTex(col) {
+  if (secretCache[col]) return secretCache[col];
+  const [r, g, b] = rgb(col);
+  return (secretCache[col] = ctex(64, (x, s) => {
+    x.fillStyle = '#3a2620';
+    x.fillRect(0, 0, s, s);
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) {
+      const o = (j % 2) * 11;
+      x.fillStyle = shade(r, g, b, rand(0.85, 1.15));
+      x.fillRect((i * 22 + o) % s + 1, j * 13 + 1, 20, 11);
+      if (o && i === 2) x.fillRect(1, j * 13 + 1, 9, 11);
+    }
+    x.fillStyle = 'rgba(255,240,220,.12)';
+    x.fillRect(18, 16, 28, 30);
+    x.strokeStyle = 'rgba(10,6,4,.8)';
+    x.lineWidth = 1;
+    for (let n = 0; n < 4; n++) {
+      x.beginPath();
+      let px = 32 + rand(-6, 6), py = 30 + rand(-6, 6);
+      x.moveTo(px, py);
+      for (let q = 0; q < 5; q++) { px += rand(-7, 7); py += rand(-7, 7); x.lineTo(px, py); }
+      x.stroke();
+    }
+  }));
+}
+
+/** Spray-painted tags for alley walls. */
+const TAGS = ['RAT', 'SCURRY', 'NO CATS', 'GNAW', '2 THE SEWER', 'EAT CHEESE', 'KING RAT'];
+export function graffitiTex(i) {
+  return ctex(128, x => {
+    x.clearRect(0, 0, 128, 128);
+    const col = ['#ff3a6a', '#3ad0ff', '#b0ff3a', '#ffe03a', '#ff8a3a', '#c07aff'][i % 6];
+    x.font = 'bold 30px monospace';
+    x.textAlign = 'center';
+    x.save();
+    x.translate(64, 70);
+    x.rotate(rand(-0.25, 0.25));
+    x.lineWidth = 7;
+    x.strokeStyle = '#101014';
+    const t = TAGS[i % TAGS.length];
+    x.strokeText(t, 0, 0);
+    x.fillStyle = col;
+    x.fillText(t, 0, 0);
+    x.restore();
+    x.fillStyle = col;
+    for (let n = 0; n < 5; n++) x.fillRect(rand(30, 98), rand(78, 96), 2, rand(4, 18));
+  });
+}

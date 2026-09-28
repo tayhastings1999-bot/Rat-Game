@@ -14,6 +14,7 @@ import { blob } from '../entities/rat.js';
 G.camPos = new THREE.Vector3(0, 12, 12);
 G.camOff = new THREE.Vector3();
 const camLook = new THREE.Vector3();
+const _fwd = new THREE.Vector3(0, 0, 1), _dir = new THREE.Vector3();
 const want = new THREE.Vector3(), tgt = new THREE.Vector3(), shakeV = new THREE.Vector3();
 let camFix = 0; // 0..1: how much the camera has lifted/pulled in to see past buildings
 
@@ -124,13 +125,22 @@ export function sync(dt) {
   coreIM.count = n;
   coreIM.instanceMatrix.needsUpdate = true;
   if (coreIM.instanceColor) coreIM.instanceColor.needsUpdate = true;
-  const putP = (im, arr) => {
+  // Projectiles: player shots are stretched along their flight path; enemy globs tumble.
+  const putP = (im, arr, streak) => {
     let n = 0;
     for (const p of arr) {
       if (n >= 320) break;
       dummy.position.set(p.x, p.y, p.z);
-      dummy.rotation.set(G.time * 5, G.time * 3, 0);
-      dummy.scale.setScalar(p.size || 1);
+      if (streak) {
+        const sp = Math.hypot(p.vx, p.vy, p.vz) || 1;
+        _dir.set(p.vx / sp, p.vy / sp, p.vz / sp);
+        dummy.quaternion.setFromUnitVectors(_fwd, _dir);
+        const s = p.size || 1;
+        dummy.scale.set(s * 0.8, s * 0.8, s * Math.min(3, 1 + sp * 0.07));
+      } else {
+        dummy.rotation.set(G.time * 5, G.time * 3, 0);
+        dummy.scale.setScalar(p.size || 1);
+      }
       dummy.updateMatrix();
       im.setMatrixAt(n, dummy.matrix);
       im.setColorAt(n, tmpC.setHex(p.col));
@@ -140,8 +150,8 @@ export function sync(dt) {
     im.instanceMatrix.needsUpdate = true;
     if (im.instanceColor) im.instanceColor.needsUpdate = true;
   };
-  putP(pprojIM, W.pproj);
-  putP(eprojIM, W.eproj);
+  putP(pprojIM, W.pproj, true);
+  putP(eprojIM, W.eproj, false);
   for (const p of W.parts) {
     p.life -= dt;
     if (!p.ng) p.vy -= 14 * dt;
@@ -272,6 +282,33 @@ export function animate(dt) {
     s.rotation.y = Math.sin(t * (3 + r01 * 5) - i * 0.5) * (0.1 + r01 * 0.08);
     s.rotation.x = i ? 0.1 + (P.onGround ? 0 : 0.03) + (P.glideT > 0 ? -0.05 : 0) : 0.2;
   });
+  // Melee swing: wind-up twist, a fast strike with the leading forepaw and a bite, then follow-through.
+  if (P.swing > 0) {
+    const len = P.swingHeavy ? 0.3 : 0.24, u = 1 - P.swing / len, side = P.swingSide || 1;
+    const strike = Math.sin(clamp((u - 0.18) / 0.5, 0, 1) * Math.PI);
+    const tw = u < 0.2 ? -side * 0.45 * (u / 0.2) : side * 0.6 * Math.sin(clamp((u - 0.2) / 0.4, 0, 1) * Math.PI / 2) * (1 - clamp((u - 0.65) / 0.35, 0, 1));
+    rat.body.rotation.y = tw;
+    rat.head.rotation.y = tw * 0.8;
+    rat.body.position.z = strike * 0.22;
+    rat.head.position.z = 0.66 + strike * 0.26;
+    rat.jaw.rotation.x = 0.22 + strike * 0.9;
+    const paw = rat.legs[side > 0 ? 1 : 0];
+    paw.rotation.x = -1.9 * strike;
+    paw.rotation.z = side * 0.9 * strike;
+    rat.tail.forEach((s, i) => { s.rotation.y -= tw * 0.25 * (1 - i / 14); });
+  } else if (P.throwT > 0) {
+    // Ranged throw: rear back, whip the forepaw over, a little recoil through the body.
+    const u = 1 - P.throwT / 0.26, paw = rat.legs[1];
+    paw.rotation.x = u < 0.35 ? -2.4 * (u / 0.35) : -2.4 + 3.0 * ((u - 0.35) / 0.65);
+    paw.rotation.z = 0.35 * Math.sin(u * Math.PI);
+    rat.body.position.z = -0.12 * Math.sin(u * Math.PI);
+    rat.head.rotation.x = -0.25 * Math.sin(u * Math.PI);
+    rat.body.rotation.y = 0.2 * Math.sin(u * Math.PI);
+  } else {
+    rat.body.rotation.y *= Math.max(0, 1 - dt * 12);
+    rat.head.rotation.y *= Math.max(0, 1 - dt * 12);
+    rat.legs.forEach(l => { l.rotation.z *= Math.max(0, 1 - dt * 12); });
+  }
   rat.g.visible = P.inv > 0 && P.roll <= 0 && G.state === 'play' ? Math.floor(t * 24) % 2 === 0 : true;
   rat.head.visible = P.roll <= 0;
   if (P.roll > 0) { const u = 1 - P.roll / 0.3; rat.body.rotation.x = -u * TAU; rat.body.position.y = 0.42; rat.g.scale.set(bulk, 0.8 * bulk, 0.9 * bulk); }

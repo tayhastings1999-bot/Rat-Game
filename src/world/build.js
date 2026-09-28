@@ -7,7 +7,7 @@ import { G, W, run } from '../core/state.js';
 import { scene, world, hemi, sun, lantern, lampL } from '../render/renderer.js';
 import {
   furTex, stoneTex, flameTex, metalTex, dryTex, plywoodTex, waterTex, acidTex, crackTex, arrowTex, texFor,
-  asphaltTex, sidewalkTex, grassTex, roofTex, facade, glassTex,
+  asphaltTex, sidewalkTex, grassTex, roofTex, facade, glassTex, secretTex, graffitiTex,
 } from '../render/textures.js';
 import { Sp, Bx, Cy, Co } from '../render/models.js';
 import { clearDecals, ringGeo, discGeo } from '../fx/fx.js';
@@ -105,8 +105,8 @@ export function buildWorld() {
       if (city) roofs.push(new THREE.PlaneGeometry(T, T).rotateX(-PI2).translate(cx, h + 0.01, cz));
     }
     if (t === 3) {
-      const hh = h;
-      const m = new THREE.Mesh(uvScale(new THREE.BoxGeometry(T, hh + 1, T), 1, (hh + 1) / 4).translate(0, (hh - 1) / 2, 0), lam(0xffffff, { map: city ? plywoodTex : dryTex }));
+      const hh = h, sec = M.secret[k];
+      const m = new THREE.Mesh(uvScale(new THREE.BoxGeometry(T, hh + 1, T), 1, (hh + 1) / (sec ? 3.2 : 4)).translate(0, (hh - 1) / 2, 0), lam(0xffffff, { map: sec ? secretTex(city ? D.palette[0] : D.brick) : city ? plywoodTex : dryTex }));
       m.position.set(cx, 0, cz);
       m.castShadow = m.receiveShadow = true;
       world.add(m);
@@ -494,6 +494,127 @@ function roofTiles() {
   return shuffleR(out);
 }
 
+// ---------- hidden areas & dressing ----------
+/** Secret walls glow faintly, but only while the rat is sniffing (F). */
+function markSecrets() {
+  for (let k = 0; k < M.W * M.H; k++) {
+    if (!M.secret[k] || M.grid[k] !== 3) continue;
+    const g = glowSprite(0xffe070, 3, world, toW(k % M.W), 1.4, toW((k / M.W) | 0), 0.55);
+    g.visible = false;
+    W.secrets.push({ k, g });
+  }
+}
+/** Mini-bosses waiting in hidden lairs; they wake when the rat walks in. */
+const MINI = {
+  surface: [
+    { name: 'Alley Tom', type: 'cat', corrupt: 'haste' },
+    { name: 'Scrap Brute', type: 'brute', corrupt: 'ward' },
+    { name: 'Crow Matriarch', type: 'crow', corrupt: 'leech' },
+  ],
+  sewer: [
+    { name: 'Bloated Queen', type: 'bloat', corrupt: 'split' },
+    { name: 'Ghoul Lord', type: 'ghoul', corrupt: 'fire' },
+    { name: 'Tick Hive', type: 'tick', corrupt: 'split' },
+  ],
+};
+function setupHidden(hidden, premium) {
+  const bone = lam(0xcfc2a4);
+  for (const h of hidden) {
+    const cx = toW(h.x + (h.w - 1) / 2), cz = toW(h.y + (h.h - 1) / 2);
+    if (h.lair) {
+      const pool = MINI[isSewer() ? 'sewer' : 'surface'], mb = pool[ri(0, pool.length - 1)];
+      W.lairs.push({ ...h, cx, cz, mini: mb, woke: false });
+      for (let i = 0; i < 14; i++) {
+        const b = mkMesh(Cy(0.07, 0.07, rr(0.5, 1.2), 5), bone, cx + rr(-h.w, h.w) * 1.6, 0.1, cz + rr(-h.h, h.h) * 1.6);
+        b.rotation.set(rr(1.2, 1.9), rr(0, 3), 0);
+      }
+      glowSprite(0xff2a2a, 5, world, cx, 0.6, cz, 0.35);
+    } else {
+      addChest(cx, 0, cz, premium || rng.next() < 0.5, !premium && rng.next() < 0.3);
+      addCache(cx + 2, 0, cz + 1);
+    }
+  }
+}
+/** Fire escapes: zig-zag landings up a building face, an easy (stamina-free) way onto the roofs. */
+function fireEscapes(n) {
+  const mt = lam(0x3a3e44, { map: metalTex }), spots = [];
+  for (let gz = 2; gz < M.H - 2; gz++) for (let gx = 2; gx < M.W - 2; gx++) {
+    const k = gi(gx, gz);
+    if (M.grid[k] !== 0 || M.hgt[k] < 6 || M.hgt[k] >= 12) continue;
+    for (const [dx, dz] of N4) if (DRY(tAt(gx + dx, gz + dz)) && tAt(gx - dz, gz + dx) === 0 && tAt(gx + dz, gz - dx) === 0) spots.push([gx, gz, dx, dz, M.hgt[k]]);
+  }
+  for (const [gx, gz, dx, dz, h] of shuffleR(spots).slice(0, n)) {
+    const fx0 = toW(gx) + dx * (T / 2 + 0.55), fz0 = toW(gz) + dz * (T / 2 + 0.55), px = -dz, pz = dx;
+    const steps = Math.floor((h - 0.3) / 1.15);
+    for (let i = 1; i <= steps; i++) {
+      const y = i === steps ? h - 0.3 : i * 1.15, side = i % 2 ? 1 : -1;
+      const x = fx0 + px * side * 0.9, z = fz0 + pz * side * 0.9, w = dx ? 1.1 : 1.8, d = dx ? 1.8 : 1.1;
+      staticBox(x, z, w, d, 0.12, mt, y - 0.12);
+      mkMesh(new THREE.BoxGeometry(dx ? 0.05 : 1.8, 0.6, dx ? 1.8 : 0.05), mt, x + dx * 0.55, y + 0.3, z + dz * 0.55);
+    }
+    mkMesh(new THREE.BoxGeometry(0.08, h, 0.08), mt, fx0 + px * 1.8, h / 2, fz0 + pz * 1.8);
+    mkMesh(new THREE.BoxGeometry(0.08, h, 0.08), mt, fx0 - px * 1.8, h / 2, fz0 - pz * 1.8);
+  }
+}
+/** Small street and sewer clutter. Solid, knee-high, and good for hopping. */
+function clutter(city) {
+  const open = [];
+  for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k])) open.push(k);
+  shuffleR(open);
+  const place = (n, fn) => { for (let i = 0; i < n && open.length; i++) { const k = open.pop(); fn(toW(k % M.W) + rr(-1.4, 1.4), toW((k / M.W) | 0) + rr(-1.4, 1.4)); } };
+  if (city) {
+    const red = lam(0xc0302a, { map: metalTex }), cone = lam(0xff7a2a), blue = lam(0x2a4a8a, { map: metalTex }), wood = lam(0x6a4a2e, { map: stoneTex });
+    place(14, (x, z) => { staticBox(x, z, 0.5, 0.5, 0.75, red); mkMesh(Sp(0.28, 6, 4), red, x, 0.8, z); });
+    place(18, (x, z) => { mkMesh(Co(0.28, 0.8, 6), cone, x, 0.4, z); W.plats.push({ x, z, w: 0.4, d: 0.4, y: 0.8, th: 0.8 }); });
+    place(8, (x, z) => { staticBox(x, z, 0.6, 0.5, 1.2, blue); });
+    place(8, (x, z) => { const rot = rng.next() < 0.5; staticBox(x, z, rot ? 2.2 : 0.7, rot ? 0.7 : 2.2, 0.55, wood); });
+    // Graffiti on walls that face alleys and streets.
+    let tags = 0;
+    for (let k = 0; k < M.W * M.H && tags < 22; k++) {
+      if (M.grid[k] !== 0 || rng.next() > 0.08) continue;
+      const gx = k % M.W, gz = (k / M.W) | 0;
+      for (const [dx, dz] of N4) {
+        if (!DRY(tAt(gx + dx, gz + dz))) continue;
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6), new THREE.MeshLambertMaterial({ map: graffitiTex(tags), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+        m.position.set(toW(gx) + dx * (T / 2 + 0.03), rr(1.2, 2), toW(gz) + dz * (T / 2 + 0.03));
+        m.rotation.y = Math.atan2(dx, dz);
+        world.add(m);
+        tags++;
+        break;
+      }
+    }
+  } else {
+    const barrel = lam(0x4a5a3a, { map: metalTex }), rust = lam(0x7a4a2a, { map: metalTex }), bone = lam(0xcfc2a4);
+    place(16, (x, z) => { const m = rng.next() < 0.5 ? barrel : rust; staticBox(x, z, 0.9, 0.9, 1.1, m); mkMesh(Cy(0.46, 0.46, 0.08, 10), m, x, 1.12, z); });
+    place(10, (x, z) => { for (let i = 0; i < 6; i++) { const b = mkMesh(Cy(0.06, 0.06, rr(0.4, 0.9), 5), bone, x + rr(-0.6, 0.6), 0.1, z + rr(-0.6, 0.6)); b.rotation.set(rr(1.3, 1.8), rr(0, 3), 0); } mkMesh(Sp(0.2, 6, 4), bone, x, 0.18, z); });
+    // Pipes running along the tunnel walls.
+    let n = 0;
+    for (let k = 0; k < M.W * M.H && n < 30; k++) {
+      if (M.grid[k] !== 0 || rng.next() > 0.1) continue;
+      const gx = k % M.W, gz = (k / M.W) | 0;
+      for (const [dx, dz] of N4) {
+        if (!OPEN(tAt(gx + dx, gz + dz))) continue;
+        const g = new THREE.CylinderGeometry(0.22, 0.22, T, 8);
+        if (dx) g.rotateX(Math.PI / 2); else g.rotateZ(Math.PI / 2);
+        mkMesh(g, rust, toW(gx) + dx * (T / 2 + 0.25), rr(1.6, 3.4), toW(gz) + dz * (T / 2 + 0.25));
+        n++;
+        break;
+      }
+    }
+  }
+}
+/** Dead-end alleys always end in something worth the detour. */
+function deadEndLoot(alleys) {
+  for (const a of alleys || []) {
+    for (const [x, y] of [[a.x, a.y], [a.x + a.w - 1, a.y + a.h - 1]]) {
+      if (!DRY(tAt(x, y))) continue;
+      const exits = N4.filter(([dx, dy]) => OPEN(tAt(x + dx, y + dy))).length;
+      if (exits !== 1) continue;
+      if (rng.next() < 0.5) addCache(toW(x), 0, toW(y)); else addChest(toW(x), 0, toW(y));
+    }
+  }
+}
+
 // ---------- populate ----------
 export function resetLists() {
   for (const k of Object.keys(W)) if (Array.isArray(W[k])) W[k] = [];
@@ -605,6 +726,12 @@ export function populate(info) {
     shuffleR(others.filter(r => r.w >= 5 && r.h >= 4)).slice(0, 4).forEach(addRope);
     if (!trial) shuffleR(others.slice()).slice(0, 4).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
   }
+
+  // Hidden areas and set dressing.
+  if (!trial) setupHidden(info.hidden || [], !city);
+  markSecrets();
+  if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
+  clutter(city);
 
   // Shared: workbenches, pipes, live wires, nests or valves, predators, hazards.
   const benchAt = w => { if (w) addBench(toW(w.x) - w.dx * 0.6, toW(w.y) - w.dy * 0.6, Math.atan2(w.dx, w.dy)); };

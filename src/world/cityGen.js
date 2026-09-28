@@ -57,6 +57,9 @@ export function genCity(seed, D) {
       else { split(x0, z0, x1, c, depth + 1); split(x0, c + 1, x1, z1, depth + 1); }
     }
   };
+  // One mid-sized block away from the centre is kept whole: a walled compound that becomes the mini-boss lair.
+  const eligible = blocks.filter(b => b.x0 > 1 && b.z0 > 1 && b.x1 < W - 2 && b.z1 < W - 2 && b.x1 - b.x0 >= 8 && b.z1 - b.z0 >= 8 && Math.hypot((b.x0 + b.x1) / 2 - W / 2, (b.z0 + b.z1) / 2 - W / 2) > 8);
+  const lairBlock = eligible.length ? eligible[ri(0, eligible.length - 1)] : null;
   for (const b of blocks) {
     for (let z = b.z0; z <= b.z1; z++) for (let x = b.x0; x <= b.x1; x++) {
       const edge = x === b.x0 || x === b.x1 || z === b.z0 || z === b.z1;
@@ -64,7 +67,8 @@ export function genCity(seed, D) {
       if (edge && !border) set(x, z, TL.FLOOR, 0);
     }
     const ix0 = b.x0 === 1 ? 1 : b.x0 + 1, iz0 = b.z0 === 1 ? 1 : b.z0 + 1, ix1 = b.x1 === W - 2 ? W - 2 : b.x1 - 1, iz1 = b.z1 === W - 2 ? W - 2 : b.z1 - 1;
-    if (ix1 - ix0 >= 1 && iz1 - iz0 >= 1) split(ix0, iz0, ix1, iz1, 0);
+    if (b === lairBlock) lots.push({ x: ix0, y: iz0, w: ix1 - ix0 + 1, h: iz1 - iz0 + 1, compound: true });
+    else if (ix1 - ix0 >= 1 && iz1 - iz0 >= 1) split(ix0, iz0, ix1, iz1, 0);
   }
 
   // 3. Lot types.
@@ -72,6 +76,7 @@ export function genCity(seed, D) {
   for (const L of lots) {
     const q = rng.next(), big = L.w >= 3 && L.h >= 3;
     const fill = (t, h) => { for (let y = L.y; y < L.y + L.h; y++) for (let x = L.x; x < L.x + L.w; x++) set(x, y, t, h); };
+    if (L.compound) { L.type = 'bldg'; fill(TL.WALL, Math.max(6, pickH())); continue; }
     if (big && q < D.park) { L.type = 'park'; fill(TL.GRASS, 0); }
     else if (big && q < D.park + D.yard) {
       L.type = 'yard'; fill(TL.FLOOR, 0);
@@ -141,6 +146,27 @@ export function genCity(seed, D) {
   const live = rooms.filter(r => dist[gi(r.cx, r.cy)] >= 0);
   const byDist = live.filter(r => r !== startRoom).sort((a, b) => dist[gi(b.cx, b.cy)] - dist[gi(a.cx, a.cy)]);
 
+  // 7b. Secrets: hollow out a few big buildings into hidden courtyards behind a
+  // cracked (gnawable, disguised) wall; the biggest becomes a mini-boss lair.
+  const hidden = [];
+  const solidLot = L => { for (let y = L.y; y < L.y + L.h; y++) for (let x = L.x; x < L.x + L.w; x++) { const t = grid[gi(x, y)]; if (t !== TL.WALL && t !== TL.METAL) return false; } return true; };
+  const bigLots = shuffleR(lots.filter(L => L.type === 'bldg' && L.w >= 4 && L.h >= 4 && L.x > 1 && L.y > 1 && L.x + L.w < W - 1 && L.y + L.h < W - 1 && solidLot(L)));
+  bigLots.sort((a, b) => b.w * b.h - a.w * a.h);
+  const lairLot = bigLots.find(L => L.compound) || bigLots.find(L => L.w >= 5 && L.h >= 5) || bigLots[0];
+  for (const L of [lairLot, ...shuffleR(bigLots.filter(l => l !== lairLot)).slice(0, 3)].filter(Boolean)) {
+    const doors = [];
+    for (let x = L.x + 1; x < L.x + L.w - 1; x++) { doors.push([x, L.y, 0, -1]); doors.push([x, L.y + L.h - 1, 0, 1]); }
+    for (let y = L.y + 1; y < L.y + L.h - 1; y++) { doors.push([L.x, y, -1, 0]); doors.push([L.x + L.w - 1, y, 1, 0]); }
+    const door = shuffleR(doors).find(([x, y, dx, dy]) => { const k = gi(x + dx, y + dy); return OPEN(grid[k]) && dist[k] >= 0; });
+    if (!door) continue;
+    const h = hgt[gi(L.x, L.y)];
+    for (let y = L.y + 1; y < L.y + L.h - 1; y++) for (let x = L.x + 1; x < L.x + L.w - 1; x++) set(x, y, TL.FLOOR, 0);
+    const lair = L === lairLot;
+    set(door[0], door[1], lair && rng.next() < 0.5 ? TL.CREV : TL.DRY, h);
+    if (grid[gi(door[0], door[1])] === TL.DRY) M.secret[gi(door[0], door[1])] = 1;
+    hidden.push({ x: L.x + 1, y: L.y + 1, w: L.w - 2, h: L.h - 2, door: [door[0], door[1]], lair });
+  }
+
   // 8. Street furniture spots.
   const lampSpots = [], neonSpots = [], carSpots = [], lineSpots = [], treeSpots = [], dumpSpots = [];
   for (let y = 1; y < W - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -175,5 +201,5 @@ export function genCity(seed, D) {
     }
   }
 
-  return { rooms: live, startRoom, dist, pockets: [], byDist, metal: [], lots, slots, lampSpots, neonSpots, carSpots, lineSpots, treeSpots, dumpSpots };
+  return { rooms: live, startRoom, dist, pockets: [], byDist, metal: [], lots, slots, hidden, alleys, lampSpots, neonSpots, carSpots, lineSpots, treeSpots, dumpSpots };
 }

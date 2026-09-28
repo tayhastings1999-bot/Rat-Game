@@ -36,8 +36,10 @@ export function stepPlayer(dt) {
   const t = tileAt(P.x, P.z), wet = ((t === 2 || t === 4) && P.y < -0.4) || P.y < G.tideY - 0.2;
   P.squeeze = !!(keys.KeyC || keys.ControlLeft) && P.onGround && !P.carry;
   if (t === 5 && P.y < topAt(toG(P.x), toG(P.z)) - 0.1) P.squeeze = true;
+  // Walking into a crevice squeezes you in automatically (no extra button needed).
+  if (L && P.onGround && !P.carry) { const ax = P.x + wx * 0.7, az = P.z + wz * 0.7; if (tileAt(ax, az) === 5 && P.y < topAt(toG(ax), toG(az)) - 0.1) P.squeeze = true; }
   P.sprinting = (keys.ShiftLeft || keys.ShiftRight) && L > 0 && run.sta > 1 && !P.squeeze && !P.carry && P.roll <= 0;
-  const spd = mag * st.speed * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
+  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
   if (P.sprinting) { run.sta -= st.sprintDrain * dt; P.staT = 0.6; }
   P.rollCd -= dt;
   if (P.roll > 0) {
@@ -139,7 +141,7 @@ export function primary(dt) {
   }
   PR.fire(dx, dz, t);
   const fury = st.fury && run.hp < st.maxHp * 0.5 ? 0.66 : 1;
-  run.primT = PR.cd * st.cd * st.tear * fury;
+  run.primT = PR.cd * st.cd * st.tear * fury * (1 - 0.06 * (run.blood || 0));
   P.aim = Math.atan2(dx, dz);
   P.aimT = 0.35;
 }
@@ -206,7 +208,7 @@ export function chewTarget() {
   const f = P.facing;
   for (const dd of [0.9, 1.6]) {
     const x = P.x + Math.sin(f) * dd, z = P.z + Math.cos(f) * dd, gx = toG(x), gz = toG(z);
-    if (tAt(gx, gz) === 3 && P.y < topAt(gx, gz) - 0.5) return { kind: 'tile', gx, gz, time: 1.2, label: M.kind === 'city' ? 'Gnaw through the boards' : 'Gnaw through drywall' };
+    if (tAt(gx, gz) === 3 && P.y < topAt(gx, gz) - 0.5) return { kind: 'tile', gx, gz, time: 1.2, label: M.secret[gi(gx, gz)] ? 'This wall sounds hollow: gnaw through' : M.kind === 'city' ? 'Gnaw through the boards' : 'Gnaw through drywall' };
   }
   for (const it of W.inter) {
     if (it.kind === 'rope' && it.used) continue;
@@ -295,8 +297,11 @@ export function doUse(u) {
 export function doChew(c) {
   if (c.kind === 'tile') {
     const k = gi(c.gx, c.gz);
+    const secret = M.secret[k];
     M.grid[k] = 1;
     M.hgt[k] = 0;
+    M.secret[k] = 0;
+    if (secret) { banner('Secret passage', 'Something was hidden back here'); sfx('key'); }
     const m = tileMesh[k];
     if (m) { world.remove(m); delete tileMesh[k]; }
     const x = toW(c.gx), z = toW(c.gz);

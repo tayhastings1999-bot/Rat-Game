@@ -13,7 +13,7 @@ export const TL = { WALL: 0, FLOOR: 1, WATER: 2, DRY: 3, ACID: 4, CREV: 5, METAL
 export const M = {
   kind: 'sewer',
   W: 40, H: 40, half: 80,
-  grid: new Uint8Array(1600), hgt: new Float32Array(1600), seen: new Uint8Array(1600),
+  grid: new Uint8Array(1600), hgt: new Float32Array(1600), seen: new Uint8Array(1600), secret: new Uint8Array(1600),
   flow: new Int16Array(1600).fill(-1), spawnTiles: [],
 };
 
@@ -24,6 +24,7 @@ export function allocMap(w, kind) {
   M.grid = new Uint8Array(w * w);
   M.hgt = new Float32Array(w * w).fill(WH);
   M.seen = new Uint8Array(w * w);
+  M.secret = new Uint8Array(w * w); // 1 = gnawable wall disguised as solid brick
   M.flow = new Int16Array(w * w).fill(-1);
   M.spawnTiles = [];
 }

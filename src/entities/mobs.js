@@ -6,7 +6,7 @@ import { rand, randi, clamp, angD, pick, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { GEO, bodyMat } from '../render/models.js';
-import { fx, pfx, puff, spark, blood, boom, dnum } from '../fx/fx.js';
+import { fx, puff, spark, blood, boom, dnum, swipeFx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { banner } from '../ui/hud.js';
 import { M, G as GRAV, toW, tileAt, floorY, solidFor, flowDir, collideBody } from '../world/grid.js';
@@ -20,16 +20,66 @@ import { bossAI } from './bosses.js';
 const CORRUPT_KEYS = Object.keys(CORRUPT);
 
 // ---------- spawning ----------
+/**
+ * Staggered roster: each mob type joins the horde at a set point in the run
+ * (seconds of run time, plus 45s per cleared district), announced with a
+ * banner, and fades in over a minute instead of arriving at full strength.
+ */
+export const ROSTER = {
+  surface: [['mawling', 0], ['roach', 45], ['bat', 95], ['crow', 150], ['tick', 210], ['cat', 280], ['wasp', 360], ['ghoul', 450], ['moth', 540], ['brute', 640], ['shade', 750]],
+  sewer: [['mawling', 0], ['tick', 0], ['roach', 30], ['bat', 70], ['ghoul', 120], ['bloat', 180], ['moth', 250], ['shade', 330], ['brute', 420], ['wasp', 500]],
+};
+const WEIGHT = { mawling: 4, roach: 2, bat: 1.6, crow: 2, tick: 2, cat: 1.3, wasp: 1.3, ghoul: 1.4, bloat: 1.3, moth: 1, brute: 0.8, shade: 1 };
+export const INTRO = {
+  mawling: ['Mawlings', 'They bite up close and pounce from mid range'],
+  roach: ['Roaches', 'They swarm in packs and scale walls'],
+  bat: ['Infected bats', 'They screech, then dive: roll through the dive'],
+  crow: ['Crows', 'They circle overhead, swoop and throw feathers'],
+  tick: ['Ticks', 'They dart in bursts and spit blood'],
+  cat: ['Feral cats', 'They pounce harder when you are hurt: dodge the red ring'],
+  wasp: ['Wasps', 'Jittery darts, and every third one comes straight at you'],
+  ghoul: ['Ghouls', 'Slow, but their slam and poison spit hurt'],
+  bloat: ['Bloats', 'They keep their distance and lob poison'],
+  moth: ['Moths', 'They blink around and drop poison clouds'],
+  brute: ['Brutes', 'They charge in straight lines: sidestep'],
+  shade: ['Shades', 'They blink behind you: keep moving'],
+};
+const rosterClock = () => (run.time || 0) + (run.tier || 0) * 45;
+const roster = () => ROSTER[isSewer() ? 'sewer' : 'surface'];
+
 export function pickType() {
-  const TL = run.T || 0;
-  const mix = isSewer()
-    ? { mawling: 4, tick: 3, ghoul: TL > 1 ? 2.5 : 0.8, bloat: TL > 2 ? 2 : 0.4, bat: 2, moth: TL > 1.5 ? 1.8 : 0, roach: 2, shade: TL > 3 ? 1.4 : 0.3, brute: TL > 4 ? 1 : 0.2, wasp: TL > 2 ? 0.8 : 0 }
-    : { mawling: 4, roach: TL > 0.6 ? 2 : 0.5, cat: TL > 1 ? 1.6 : 0.4, crow: TL > 0.8 ? 2.2 : 0.6, bat: 1.4, wasp: TL > 1.8 ? 1.6 : 0.2, moth: TL > 3 ? 1 : 0, tick: 1.5, ghoul: TL > 2.5 ? 1.2 : 0, brute: TL > 4 ? 0.9 : 0, shade: TL > 5 ? 1.2 : 0 };
+  const t = rosterClock(), TL = run.T || 0, mix = {};
+  for (const [k, at] of roster()) {
+    if (t < at) continue;
+    const ramp = clamp((t - at) / 60, 0.15, 1), heavy = k === 'brute' || k === 'ghoul' || k === 'shade' ? 1 + Math.min(1, TL * 0.05) : 1;
+    mix[k] = WEIGHT[k] * ramp * heavy;
+  }
   let tot = 0;
   for (const k in mix) tot += mix[k];
   let r = Math.random() * tot;
   for (const k in mix) { r -= mix[k]; if (r <= 0) return k; }
   return 'mawling';
+}
+
+/** Announce newly unlocked mob types with a banner and a small introductory group. */
+function rosterIntros(dt) {
+  if (!run.seenMobs) run.seenMobs = {};
+  run.introCd = (run.introCd || 0) - dt;
+  if (run.introCd > 0) return;
+  const t = rosterClock();
+  for (const [k, at] of roster()) {
+    if (t < at || run.seenMobs[k]) continue;
+    run.seenMobs[k] = true;
+    if (at === 0 || G.mode === 'trial') continue;
+    run.introCd = 8; // one new threat every few seconds at most
+    banner('New threat · ' + INTRO[k][0], INTRO[k][1]);
+    const n = k === 'brute' || k === 'ghoul' ? 1 : 3;
+    for (let i = 0; i < n && M.spawnTiles.length; i++) {
+      const s = M.spawnTiles[randi(0, M.spawnTiles.length - 1)];
+      spawnEnemy(k, toW(s % M.W) + rand(-1, 1), toW((s / M.W) | 0) + rand(-1, 1), { plain: true });
+    }
+    return; // one introduction at a time
+  }
 }
 
 /**
@@ -41,13 +91,13 @@ export function spawnEnemy(type, x, z, o = {}) {
   const D = EN[type], gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
-  const eliteP = Math.min(0.3, 0.02 + (run.T || 0) * 0.012 + (sewer ? 0.07 : 0));
+  const eliteP = run.time < 90 ? 0 : Math.min(0.3, 0.02 + (run.T || 0) * 0.012 + (sewer ? 0.07 : 0));
   const el = !o.plain && (!!o.elite || Math.random() < eliteP);
   const mut = sewer && G.mode !== 'trial';
   const hpm = (run.hpM || 1) * (el ? 2 : 1) * (mut ? 1.5 : 1), sc = (D.sc || 1) * (el ? 1.3 : 1) * (o.sc || 1);
   const e = {
     type, x, y: D.fly ? gy + 2.2 : gy, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0,
-    hp: D.hp * hpm * (o.sc ? o.sc : 1), maxHp: D.hp * hpm * (o.sc ? o.sc : 1),
+    hp: D.hp * hpm * (o.sc ? o.sc : 1) * (o.hpMul || 1), maxHp: D.hp * hpm * (o.sc ? o.sc : 1) * (o.hpMul || 1), mini: !!o.mini, name: o.name,
     spd: D.spd * rand(0.9, 1.1) * (run.spdM || 1) * (mut ? 1.1 : 1), dmg: D.dmg * (run.dmgM || 1) * 1.25 * (mut ? 1.25 : 1),
     r: D.r * (el ? 1.3 : 1) * (o.sc || 1), h: D.h * (el ? 1.3 : 1) * (o.sc || 1), sc, xp: D.xp * (el ? 4 : 1),
     fly: D.fly, col: D.col, blood: D.blood, flash: 0, slow: 0, atk: rand(1, 2.5), ph: rand(0, 6), ang: rand(0, TAU),
@@ -126,8 +176,7 @@ export function bite(e, R, dmg) {
   if (Math.hypot(P.x - e.x, P.z - e.z) < R + e.r * 0.5 && P.y < e.y + e.h + 0.4 && P.y + 0.9 > e.y - 0.4) hurtP(dmg, e);
 }
 export function cone(e, R, arc, dmg) {
-  pfx(0, e.x + Math.sin(e.ang) * R * 0.5, e.y + 0.5, e.z + Math.cos(e.ang) * R * 0.5, R * 2, 0.2, { ground: true, ang: e.ang, col: 0xff5040 });
-  sfx('slash');
+  swipeFx(e.ang, R, 0xff5040, R > 3, e);
   const dx = P.x - e.x, dz = P.z - e.z;
   if (Math.hypot(dx, dz) < R + 0.3 && Math.abs(angD(Math.atan2(dx, dz), e.ang)) < arc && Math.abs(P.y - e.y) < 1.8) hurtP(dmg, e);
 }
@@ -591,13 +640,21 @@ function tickCorrupt(e, dt) {
 }
 
 // ---------- spawning tick ----------
+/**
+ * Spawning ramps with run time and threat: a small cap and slow trickle at
+ * first, growing steadily. Surges come every minute or so and are followed by
+ * a short lull so there is room to breathe, loot and reposition.
+ */
 export function spawnTick(dt) {
-  const trial = G.mode === 'trial', TL = run.T || 0;
-  const cap = trial ? 45 : Math.min(240, 60 + TL * 9) * (run.moon ? 1.4 : 1);
+  const trial = G.mode === 'trial', TL = run.T || 0, mins = run.time / 60;
+  rosterIntros(dt);
+  const cap = trial ? 45 : Math.min(220, 14 + mins * 9 + TL * 6 + run.tier * 10) * (run.moon ? 1.4 : 1);
+  run.lullT = (run.lullT || 0) - dt;
   run.spawnT -= dt;
   if (run.spawnT <= 0 && M.spawnTiles.length) {
-    run.spawnT = (trial ? 2.2 : Math.max(0.12, 1.05 / (1 + TL * 0.15))) * (run.moon ? 0.5 : 1);
-    const n = trial ? 2 : 1 + Math.floor(TL * 0.3);
+    const base = trial ? 2.2 : Math.max(0.18, 1.6 / (1 + TL * 0.12 + mins * 0.05));
+    run.spawnT = base * (run.moon ? 0.5 : 1) * (run.lullT > 0 ? 2.5 : 1);
+    const n = trial ? 2 : 1 + Math.floor(TL * 0.25);
     for (let i = 0; i < n && W.enemies.length < cap; i++) {
       const k = M.spawnTiles[randi(0, M.spawnTiles.length - 1)];
       spawnEnemy(pickType(), toW(k % M.W) + rand(-1.4, 1.4), toW((k / M.W) | 0) + rand(-1.4, 1.4));
@@ -606,12 +663,14 @@ export function spawnTick(dt) {
   if (!trial) {
     run.surgeT -= dt;
     if (run.surgeT <= 0 && M.spawnTiles.length) {
-      run.surgeT = Math.max(35, 60 - TL * 1.5);
+      run.surgeT = Math.max(40, 70 - TL * 1.5);
+      run.lullT = 12;
       sfx('screech');
-      banner('The horde surges', '');
-      for (let i = 0; i < 20 + run.tier * 6; i++) {
+      banner('The horde surges', 'Hold on: it thins out after');
+      const size = Math.min(40, Math.round(8 + mins * 2 + run.tier * 5));
+      for (let i = 0; i < size; i++) {
         const k = M.spawnTiles[randi(0, M.spawnTiles.length - 1)];
-        spawnEnemy(isSewer() ? (i % 3 ? 'mawling' : 'tick') : (i % 4 ? 'mawling' : 'crow'), toW(k % M.W) + rand(-1.4, 1.4), toW((k / M.W) | 0) + rand(-1.4, 1.4));
+        spawnEnemy(i % 3 ? 'mawling' : pickType(), toW(k % M.W) + rand(-1.4, 1.4), toW((k / M.W) | 0) + rand(-1.4, 1.4));
       }
     }
   }

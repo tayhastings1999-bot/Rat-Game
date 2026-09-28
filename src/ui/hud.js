@@ -52,6 +52,7 @@ export function hud() {
     `<div class="r">${IC_SCRAP}<span>${Math.floor(run.scrap)}</span>${run.keys ? `<span class="keyc">${IC_KEY}<span>${run.keys}</span></span>` : ''}</div>` +
     (isSewer() && G.mode !== 'trial' ? '<span class="chip" style="--cc:#b070ff">SEWER · MUTATED HORDE</span>' : '') +
     run.mods.map(m => `<span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span>`).join('') +
+    (run.blood > 0 ? `<span class="chip" style="--cc:#ff4a3a">BLOODLUST ×${run.blood}</span>` : '') +
     (P.scent ? '<span class="chip" style="--cc:#ffe070">Scent vision</span>' : '');
   $('dmgTotal').textContent = commas(run.dmg);
   $('kills').textContent = run.kills;

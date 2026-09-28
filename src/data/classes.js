@@ -2,7 +2,7 @@
 import { meta } from '../core/state.js';
 
 export const CLASSES = {
-  brawler: { name: 'Gutter Brawler', role: 'Melee', rc: '#ff6a3a', blurb: 'Iron-knuckled and stubborn. Wades into the swarm and rakes it apart.', hp: 150, speed: 7, armor: 2, prim: 'rake', special: 'slam', fur: 0xbab4a8, spike: 0xc9a860, eye: 0xffa040, gear: 0x6a6672 },
+  brawler: { name: 'Gutter Brawler', role: 'Melee', rc: '#ff6a3a', blurb: 'Iron-knuckled and stubborn. Lunges into the swarm, heals on every hit and gets faster with each kill.', hp: 170, speed: 7.2, armor: 3, prim: 'rake', special: 'slam', fur: 0xbab4a8, spike: 0xc9a860, eye: 0xffa040, gear: 0x6a6672 },
   plague: { name: 'Plaguebearer', role: 'Area', rc: '#9be06a', blurb: 'Lobs blight and bursts it. Anything close starts to rot.', hp: 120, speed: 6.7, area: 1.2, prim: 'blight', special: 'nova', fur: 0x9a9e8a, spike: 0x8a9a50, eye: 0xc8f060, gear: 0x3e4a2c },
   slinger: { name: 'Sewer Slinger', role: 'Ranged', rc: '#f2b233', blurb: 'Quick feet, quicker stones. Kites the horde and never stops moving.', hp: 95, speed: 7.8, prim: 'stone', special: 'volley', fur: 0xa08870, spike: 0xa87a48, eye: 0xffc040, gear: 0x6a4a2c },
   warlock: { name: 'Rat Warlock', role: 'Magic', rc: '#b46cff', blurb: 'Fragile, but the hex bolts find their mark. Blinks out of trouble.', hp: 85, speed: 7, cd: 0.9, prim: 'hex', special: 'blink', fur: 0x6e6874, spike: 0x8a6ab0, eye: 0xc080ff, gear: 0x2a2234 },

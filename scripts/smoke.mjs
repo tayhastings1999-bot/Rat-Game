@@ -142,6 +142,43 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   await S(() => __scurry.exitLadder()); await wait(1200);
   await S(() => { __scurry.run.district = 0; });
 });
+await step('staggered roster, secrets, lairs, melee kit', async () => {
+  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('brawler'); __scurry.god(true); });
+  await wait(600);
+  // Early on only mawlings spawn; later types unlock on schedule with a banner.
+  const early = await S(() => { const s = new Set(); for (let i = 0; i < 200; i++) s.add(__scurry.pickType()); return [...s]; });
+  if (early.length !== 1 || early[0] !== 'mawling') throw new Error('early roster ' + early);
+  await S(() => { __scurry.run.time = 170; });
+  await wait(1200);
+  const seen = await S(() => Object.keys(__scurry.run.seenMobs));
+  if (!seen.includes('roach')) throw new Error('roster intros not firing: ' + seen);
+  await S(() => { __scurry.run.time = 5; });
+  // Secret wall: gnaw it open.
+  const sec = await S(() => { const { M } = __scurry; for (let k = 0; k < M.W * M.H; k++) if (M.secret[k] && M.grid[k] === 3) { const gx = k % M.W, gz = (k / M.W) | 0; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = M.grid[(gz + dz) * M.W + gx + dx]; if ((n === 1 || n === 10 || n === 9) && M.flow[(gz + dz) * M.W + gx + dx] >= 0) return { k, gx, gz, dx, dz }; } } return null; });
+  if (!sec) throw new Error('no reachable secret wall in the city');
+  await S(bd => { const { P, M, G } = __scurry, toW = g => (g - M.W / 2 + 0.5) * 4; P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, sec);
+  await page.keyboard.down('KeyW'); await rawWait(250);
+  await page.keyboard.down('KeyE'); await rawWait(4500); await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
+  if ((await S(k => __scurry.M.grid[k], sec.k)) !== 1) throw new Error('secret wall not gnawed');
+  // Lair: walk in, mini-boss wakes; kill it, hoard appears.
+  const lair = await S(() => { const L = __scurry.W.lairs[0]; return L && { x: L.cx, z: L.cz }; });
+  if (!lair) throw new Error('no lair generated');
+  const chests0 = await S(() => __scurry.W.chests.length);
+  await S(l => { const P = __scurry.P; P.x = l.x; P.z = l.z; P.y = 0; }, lair);
+  await wait(600);
+  const mini = await S(() => { const e = __scurry.W.enemies.find(e => e.mini); return e && { name: e.name, hp: Math.round(e.hp) }; });
+  if (!mini) throw new Error('mini-boss did not wake');
+  console.log('     mini-boss:', JSON.stringify(mini));
+  await shot('03b-lair');
+  await S(() => { const e = __scurry.W.enemies.find(e => e.mini); e.hp = 1; });
+  await wait(2500);
+  if ((await S(() => __scurry.W.chests.length)) <= chests0) throw new Error('mini-boss left no hoard');
+  // Melee kit: kills stack bloodlust.
+  await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 1.5, P.z + 0.5, { plain: true }); if (e) e.hp = 1; } });
+  await wait(1500);
+  await shot('03c-swipe');
+  if (!((await S(() => __scurry.run.blood || 0)) > 0)) throw new Error('bloodlust did not stack');
+});
 await step('corrupted elites spawn and die', async () => {
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
   await wait(2000);

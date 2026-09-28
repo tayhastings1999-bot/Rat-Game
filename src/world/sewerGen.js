@@ -97,10 +97,39 @@ export function genSewer(seed, D) {
       if (cells.some(([x, y]) => !inG(x, y) || grid[gi(x, y)] !== 0)) continue;
       cells.forEach(([x, y]) => { grid[gi(x, y)] = 1; });
       grid[gi(ex, ey)] = 3;
+      cells.door = [ex, ey];
       pockets.push(cells);
       break;
     }
   }
+  // Half the pockets hide behind walls that look like plain brick.
+  for (const c of pockets) if (rng.next() < 0.5) M.secret[gi(...c.door)] = 1;
+  // A sealed lair (5x5, or 4x4 if nothing fits) off one of the far rooms, reached
+  // through a crevice or a cracked wall. Every wall position is tried, far rooms first.
+  const hidden = [];
+  const cands = [];
+  for (const r of byDist.filter(r => !r.metal)) {
+    const order = [];
+    for (let y = r.y + 1; y < r.y + r.h - 1; y++) { order.push([r.x - 1, y, -1, 0], [r.x + r.w, y, 1, 0]); }
+    for (let x = r.x + 1; x < r.x + r.w - 1; x++) { order.push([x, r.y - 1, 0, -1], [x, r.y + r.h, 0, 1]); }
+    cands.push(...shuffleR(order));
+  }
+  for (const S of [5, 4]) {
+    for (const [ex, ey, dx, dy] of cands) {
+      const x0 = dx ? (dx > 0 ? ex + 1 : ex - S) : ex - (S >> 1), y0 = dy ? (dy > 0 ? ey + 1 : ey - S) : ey - (S >> 1);
+      if (grid[gi(ex, ey)] !== 0 || x0 < 2 || y0 < 2 || x0 + S > GW - 2 || y0 + S > GH - 2) continue;
+      let ok = true;
+      for (let y = y0 - 1; y <= y0 + S && ok; y++) for (let x = x0 - 1; x <= x0 + S; x++) if (grid[gi(x, y)] !== 0 && !(x === ex && y === ey)) { ok = false; break; }
+      if (!ok) continue;
+      for (let y = y0; y < y0 + S; y++) for (let x = x0; x < x0 + S; x++) grid[gi(x, y)] = 1;
+      const crev = rng.next() < 0.5;
+      grid[gi(ex, ey)] = crev ? 5 : 3;
+      if (!crev) M.secret[gi(ex, ey)] = 1;
+      hidden.push({ x: x0, y: y0, w: S, h: S, door: [ex, ey], lair: true });
+      break;
+    }
+    if (hidden.length) break;
+  }
   dist = bfs(startRoom.cx, startRoom.cy, OPEN);
-  return { rooms, startRoom, dist, pockets, byDist, metal };
+  return { rooms, startRoom, dist, pockets, byDist, metal, hidden };
 }
