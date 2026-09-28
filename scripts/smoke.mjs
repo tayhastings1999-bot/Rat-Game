@@ -221,7 +221,7 @@ await step('volatile junk + rummaging', async () => {
   await page.keyboard.down('KeyW'); await page.keyboard.press('ShiftLeft'); await rawWait(150); await page.keyboard.up('KeyW');
   if (!(await S(() => __scurry.W.volt.length))) throw new Error('no electric trail');
   // Razor blade bleeds; the sinker slams.
-  await S(() => { const { P } = __scurry; for (let i = 0; i < 6; i++) __scurry.spawnEnemy('mawling', P.x + 2 + i * 0.3, P.z + 1, { hpMul: 30 }); });
+  await S(() => { const { P, G, M } = __scurry, r = G.startRoom; P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; for (let i = 0; i < 6; i++) __scurry.spawnEnemy('mawling', P.x + 1.5 + i * 0.3, P.z + 0.8, { hpMul: 30 }); });
   await wait(1500);
   if (!(await S(() => __scurry.W.enemies.some(e => e.bleed > 0) || __scurry.run.dmgBy.dot > 0))) throw new Error('no bleed stacks');
   await S(() => { __scurry.run.specT = 0; });
