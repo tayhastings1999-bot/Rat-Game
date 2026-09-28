@@ -5,7 +5,7 @@ import { G, run, st, meta, best, settings, saveMeta, saveSettings, saveBest } fr
 import { CLASSES, UNLOCK, SKINS, isUnl, skinOk } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
-import { ITEMS, MUTATIONS, CURSED, AUG, NEST } from '../data/items.js';
+import { ITEMS, MUTATIONS, CURSED, JUNK, AUG, NEST } from '../data/items.js';
 import { WEAP, TOMES, RAR, PRIM, SPECIALS } from '../combat/arsenal.js';
 import { addThreat } from '../combat/combat.js';
 import { sfx, applyVolumes } from '../audio/audio.js';
@@ -136,10 +136,11 @@ export function pause(on) {
   const It = run.items.map(i => `<span style="border-color:${hexs(ITEMS[i].col)}">${ITEMS[i].name}</span>`).join('');
   const Au = Object.keys(run.augs).map(i => `<span style="border-color:#4aa3ff">${AUG.find(a => a.id === i).name}</span>`).join('');
   const Mu = run.muts.map(id => { const m = MUTATIONS.find(m => m.id === id); return `<p><span class="chip" style="--cc:${m.col}">Mutation · ${m.name}</span> ${m.desc}</p>`; }).join('');
+  const Ju = (run.junk || []).map(id => `<p><span class="chip" style="--cc:${hexs(JUNK[id].col)}">Junk · ${JUNK[id].name}</span> ${JUNK[id].up}; ${JUNK[id].dn.toLowerCase()}.</p>`).join('');
   const Cu = run.cursed.map(id => `<p><span class="chip" style="--cc:#ff3a3a">Cursed · ${CURSED[id].name}</span> ${CURSED[id].up}; ${CURSED[id].dn.toLowerCase()}.</p>`).join('');
   show(`<div class="panel narrow frame"><div class="kick px">${fmt(run.time)} · Lv ${run.level} · ${dName()}</div><h2>Paused</h2>
     ${run.mods.map(m => `<p><span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span> ${MODS[m].desc}</p>`).join('')}
-    ${Mu}${Cu}
+    ${Mu}${Cu}${Ju}
     ${Wp ? `<div class="tags">${Wp}</div>` : ''}${Tm ? `<div class="tags">${Tm}</div>` : ''}${It ? `<div class="tags">${It}</div>` : ''}${Au ? `<div class="tags">${Au}</div>` : ''}
     <div class="sets px">
       <label>Screen shake<input type="range" id="sSh" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
@@ -160,7 +161,7 @@ export function pause(on) {
 export function openMap() {
   G.state = 'map';
   show(`<div class="panel narrow frame"><div class="kick px">Explored ${dName()}</div><canvas id="bigmap" width="520" height="520"></canvas>
-    <p class="px" style="font-size:11px"><span style="color:#4aa3ff">■</span> workbench <span style="color:#ffa030">■</span> chest <span style="color:#ff3a3a">■</span> cursed chest <span style="color:#ffe070">■</span> cache <span style="color:#b0b0b8">■</span> pipe <span style="color:#ff3a20">■</span> nest <span style="color:#b070ff">■</span> manhole <span style="color:#ffd040">■</span> key <span style="color:#a89468">■</span> boards <span style="color:#8a5a44">■</span> crevice <span style="color:#7aa020">■</span> acid</p><div class="btns"><button class="btn ghost" id="mapX">Close (M)</button></div></div>`);
+    <p class="px" style="font-size:11px"><span style="color:#4aa3ff">■</span> workbench <span style="color:#ffa030">■</span> chest <span style="color:#ff3a3a">■</span> cursed chest <span style="color:#ffe070">■</span> cache <span style="color:#b0b0b8">■</span> pipe <span style="color:#ff3a20">■</span> nest <span style="color:#b070ff">■</span> manhole <span style="color:#ffd040">■</span> key <span style="color:#a89468">■</span> boards <span style="color:#8a5a44">■</span> crevice <span style="color:#7aa020">■</span> acid <span style="color:#8ad06a">■</span> fungus <span style="color:#8a9098">■</span> bin</p><div class="btns"><button class="btn ghost" id="mapX">Close (M)</button></div></div>`);
   drawMap($('bigmap'), 520 / M.W, 0);
   $('mapX').onclick = resume;
 }
@@ -261,7 +262,7 @@ function dmgTable() {
   const C = CLASSES[run.cls];
   const names = {
     ...Object.fromEntries(Object.entries(WEAP).map(([k, w]) => [k, w.name])), primary: PRIM[C.prim].name, special: SPECIALS[C.special].name,
-    dot: 'Poison & burn', trap: 'Traps', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
+    dot: 'Poison, burn & bleed', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
     livewire: 'Livewire Claws', tesla: 'Tesla Coil', nailbomb: 'Nail Bomb', recoil: 'Slingshot Recoil', overclock: 'Overclock',
   };
   const dmg = Object.entries(run.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 10), mx = dmg.length ? dmg[0][1] : 1;

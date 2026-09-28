@@ -26,6 +26,7 @@ export const ICON = {
   updraft: SV('<path d="M12 21V5"/><path d="m6 11 6-6 6 6"/><path d="M4 21h4M16 21h4"/>'),
   key: SV('<circle cx="7" cy="12" r="4"/><path d="M11 12h10M17 12v4M20 12v3"/>'),
   skull: SV('<path d="M12 3a8 8 0 0 0-8 8c0 3 1.5 5 3 6v3h10v-3c1.5-1 3-3 3-6a8 8 0 0 0-8-8z"/><circle cx="9" cy="11" r="1.5" fill="currentColor"/><circle cx="15" cy="11" r="1.5" fill="currentColor"/><path d="M10 20v-2M14 20v-2"/>'),
+  junk: SV('<path d="M7 6h10l-1 14H8z"/><path d="M5 6h14M10 3h4"/><path d="M10 10l1 6M14 10l-1 6"/>'),
   dna: SV('<path d="M7 3c0 6 10 6 10 12s-10 6-10 6"/><path d="M17 3c0 6-10 6-10 12"/><path d="M8 7h8M8 17h8"/>'),
   reroll: SV('<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>'),
 };

@@ -31,9 +31,9 @@ export const ITEMS = {
   barbs: { name: 'Barbed Hide', flav: 'Enemies that touch you bleed', col: 0x8a6a5a, ap: () => { st.thorns += 15; } },
   cheese: { name: 'Moldy Cheese', flav: 'Max HP up, a little', col: 0xe8b84a, ap: () => { st.maxHp += 15; run.hp = Math.min(st.maxHp, run.hp + 30); } },
   // ---- mundane ingredients: weak alone, wild in pairs ----
-  razor: { name: 'Rusty Razor', flav: 'Melee hits harder', col: 0x9a8a7a, ing: true, ap: () => { st.melee += 0.2; } },
+  razor: { name: 'Box Cutter', flav: 'Melee hits harder', col: 0x9a8a7a, ing: true, ap: () => { st.melee += 0.2; } },
   drink: { name: 'Spilled Energy Drink', flav: 'A little faster at everything', col: 0x3aff9a, ing: true, ap: () => { st.speed *= 1.05; st.cd *= 0.95; } },
-  battery: { name: 'Leaky Battery', flav: 'Special recharges faster', col: 0xe8d040, ing: true, ap: () => { st.specCd *= 0.9; } },
+  battery: { name: 'Watch Battery', flav: 'Special recharges faster', col: 0xe8d040, ing: true, ap: () => { st.specCd *= 0.9; } },
   wire: { name: 'Copper Wire', flav: 'Bigger area', col: 0xd0803a, ing: true, ap: () => { st.area += 0.1; } },
   lighter: { name: 'Cheap Lighter', flav: 'Burning hits', col: 0xff5a2a, ing: true, ap: () => { st.burn = true; } },
   bleach: { name: 'Bleach Bottle', flav: 'Poison hits', col: 0xd8f0ff, ing: true, ap: () => { st.poison = true; } },
@@ -63,6 +63,14 @@ export const CURSED = {
   greed: { name: 'Greedy Gut', up: '+60% XP and salvage', dn: 'Threat +2, permanently', ap: () => { st.xp += 0.6; st.salvage += 0.6; run.threatBase = (run.threatBase || 0) + 2; } },
   fury: { name: 'Berserker Tail', up: 'Below half HP: +50% attack speed, +30% damage', dn: 'Take 30% more damage, always', ap: () => { st.fury = true; st.taken *= 1.3; } },
   plagueheart: { name: 'Plague Heart', up: 'Every hit poisons; your poison deals triple', dn: 'You are poisoned every 12 seconds', ap: () => { st.poison = true; st.poisonMul *= 3; st.selfPoison = true; } },
+};
+
+/** Volatile junk: rummaged out of dumpsters, bins and sewer heaps. Strong, and every piece bites back. */
+export const JUNK = {
+  volt: { name: 'Leaking 9-Volt Battery', col: 0xe8d040, up: 'Rolls leave an electric trail; attacks arc lightning', dn: 'Stand still for 2s and it shocks you for 5% HP', ap: () => { st.volt = true; } },
+  blade: { name: 'Rusted Razor Blade', col: 0xb07a5a, up: 'Hits stack bleed on anything you cut', dn: '−40% max stamina', ap: () => { st.bleed = true; st.staMax = Math.round(st.staMax * 0.6); run.sta = Math.min(run.sta, st.staMax); } },
+  rag: { name: 'Pesticide Soaked Rag', col: 0x9ad06a, up: 'Your scent reveals every enemy; immune to toxins', dn: 'Healing is 75% less effective', ap: () => { st.rag = true; st.toxImmune = true; st.healMul *= 0.25; } },
+  sinker: { name: 'Heavy Lead Sinker', col: 0x7a7a88, up: 'Q becomes a massive, uninterruptible ground slam', dn: 'No Scramble; climbing costs double stamina', ap: () => { st.sinker = true; st.noScramble = true; st.climbCost *= 2; } },
 };
 
 export const AUG = [

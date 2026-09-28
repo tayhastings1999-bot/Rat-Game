@@ -4,7 +4,7 @@ import { G, P, W, run, st } from '../core/state.js';
 import { M, T, gi, inG, toG, tileAt } from '../world/grid.js';
 import { CLASSES } from '../data/classes.js';
 import { MODS, isSewer, nextSurfaceName } from '../data/world.js';
-import { ITEMS, MUTATIONS, CURSED } from '../data/items.js';
+import { ITEMS, MUTATIONS, CURSED, JUNK } from '../data/items.js';
 import { OBJ } from '../data/props.js';
 import { PRIM, SPECIALS, WEAP } from '../combat/arsenal.js';
 import { threatTier } from '../combat/combat.js';
@@ -27,7 +27,8 @@ export function renderSlots() {
   $('items').innerHTML =
     run.items.map(id => `<i style="--c:${hexs(ITEMS[id].col)}" title="${ITEMS[id].name}${ITEMS[id].ing ? ' (ingredient)' : ''}"></i>`).join('') +
     run.muts.map(id => { const m = MUTATIONS.find(m => m.id === id); return `<span class="mut" style="--c:${m.col}" title="${m.name}: ${m.desc}">${ICON.dna}</span>`; }).join('') +
-    run.cursed.map(id => `<span class="mut curse" title="${CURSED[id].name}: ${CURSED[id].up}; ${CURSED[id].dn}">${ICON.skull}</span>`).join('');
+    run.cursed.map(id => `<span class="mut curse" title="${CURSED[id].name}: ${CURSED[id].up}; ${CURSED[id].dn}">${ICON.skull}</span>`).join('') +
+    (run.junk || []).map(id => `<span class="mut junk" style="--c:${hexs(JUNK[id].col)}" title="${JUNK[id].name}: ${JUNK[id].up}; ${JUNK[id].dn}">${ICON.junk}</span>`).join('');
 }
 
 function objective() {
@@ -127,12 +128,15 @@ export function drawMap(cv, px, radius) {
   W.caches.filter(c => !c.taken).forEach(c => dot(c, '#ffe070', 4));
   W.pipes.forEach(p => dot(p, '#b0b0b8', 5));
   W.fungi.forEach(f => { if (!f.taken) dot(f, '#8ad06a', 3); });
+  W.bins.forEach(b => { if (!b.done) dot(b, '#8a9098', 3); });
   W.keys.forEach(k => dot(k, '#ffd040', 7));
   W.enemies.filter(e => e.type === 'nest').forEach(e => dot(e, '#ff3a20', 6));
   W.valves.filter(v => !v.done).forEach(v => dot(v, '#6ad06a', 6));
   if (G.manhole) dot(G.manhole, '#b070ff', 7);
   if (G.exitD) dot(G.exitD, '#ffffff', 7);
   if (G.boss) dot(G.boss, '#ff2a60', 8);
+  // The pesticide rag's scent gives away every enemy, seen or not.
+  if (st.rag) for (const e of W.enemies) if (!e.dead && e.type !== 'nest') { x.fillStyle = e.pred || e.boss ? '#ff2a60' : '#d04030'; x.fillRect(ox + (e.x / T + M.W / 2 - 0.5 - cx) * px - 1.5, oy + (e.z / T + M.H / 2 - 0.5 - cz) * px - 1.5, 3, 3); }
   x.save();
   x.translate(ox + (P.x / T + M.W / 2 - 0.5 - cx) * px, oy + (P.z / T + M.H / 2 - 0.5 - cz) * px);
   x.rotate(-P.facing + Math.PI);

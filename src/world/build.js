@@ -437,7 +437,8 @@ function dumpsters(spots) {
   for (const s of spots) {
     const x = toW(s.gx), z = toW(s.gy), alongX = s.along === 'x';
     staticBox(x, z, alongX ? 2.4 : 1.4, alongX ? 1.4 : 2.4, 1.4, mat);
-    mkMesh(new THREE.BoxGeometry(alongX ? 2.5 : 1.5, 0.1, alongX ? 1.5 : 2.5), lam(0x1e3a26), x, 1.45, z);
+    const lid = mkMesh(new THREE.BoxGeometry(alongX ? 2.5 : 1.5, 0.1, alongX ? 1.5 : 2.5), lam(0x1e3a26), x, 1.45, z);
+    W.bins.push({ x, z, y: 0, r: 1.3, kind: 'dumpster', lid, done: false });
   }
 }
 function trees(spots) {
@@ -569,6 +570,9 @@ function clutter(city) {
     place(14, (x, z) => { staticBox(x, z, 0.5, 0.5, 0.75, red); mkMesh(Sp(0.28, 6, 4), red, x, 0.8, z); });
     place(18, (x, z) => { mkMesh(Co(0.28, 0.8, 6), cone, x, 0.4, z); W.plats.push({ x, z, w: 0.4, d: 0.4, y: 0.8, th: 0.8 }); });
     place(8, (x, z) => { staticBox(x, z, 0.6, 0.5, 1.2, blue); });
+    // Trash cans: rummage them for junk.
+    const can = lam(0x5a5e62, { map: metalTex });
+    place(12, (x, z) => { staticBox(x, z, 0.7, 0.7, 1, can); const lid = mkMesh(Cy(0.42, 0.42, 0.08, 8), can, x, 1.04, z); W.bins.push({ x, z, y: 0, r: 0.6, kind: 'bin', lid, done: false }); });
     place(8, (x, z) => { const rot = rng.next() < 0.5; staticBox(x, z, rot ? 2.2 : 0.7, rot ? 0.7 : 2.2, 0.55, wood); });
     // Graffiti on walls that face alleys and streets.
     let tags = 0;
@@ -588,6 +592,8 @@ function clutter(city) {
   } else {
     const barrel = lam(0x4a5a3a, { map: metalTex }), rust = lam(0x7a4a2a, { map: metalTex }), bone = lam(0xcfc2a4);
     place(16, (x, z) => { const m = rng.next() < 0.5 ? barrel : rust; staticBox(x, z, 0.9, 0.9, 1.1, m); mkMesh(Cy(0.46, 0.46, 0.08, 10), m, x, 1.12, z); });
+    // Junk heaps: the best rummaging in the city.
+    place(10, (x, z) => { for (let i = 0; i < 7; i++) { const b = mkMesh(Bx(rr(0.3, 0.7), rr(0.15, 0.4), rr(0.3, 0.7)), rng.next() < 0.5 ? rust : barrel, x + rr(-0.6, 0.6), rr(0.1, 0.4), z + rr(-0.6, 0.6)); b.rotation.set(rr(-0.4, 0.4), rr(0, 3), rr(-0.4, 0.4)); } W.bins.push({ x, z, y: 0, r: 0.9, kind: 'heap', done: false }); });
     place(10, (x, z) => { for (let i = 0; i < 6; i++) { const b = mkMesh(Cy(0.06, 0.06, rr(0.4, 0.9), 5), bone, x + rr(-0.6, 0.6), 0.1, z + rr(-0.6, 0.6)); b.rotation.set(rr(1.3, 1.8), rr(0, 3), 0); } mkMesh(Sp(0.2, 6, 4), bone, x, 0.18, z); });
     // Pipes running along the tunnel walls.
     let n = 0;

@@ -209,6 +209,34 @@ await step('scramble, wall-bounce, foraging', async () => {
   if (!(t > 8)) throw new Error('fungus buff ' + f.k + ' = ' + t);
   await shot('03b-forage');
 });
+await step('volatile junk + rummaging', async () => {
+  const bin = await S(() => { const b = __scurry.W.bins.find(b => !b.done); return b && { x: b.x, z: b.z, r: b.r }; });
+  if (!bin) throw new Error('no bins to rummage');
+  await S(b => { const P = __scurry.P; P.x = b.x + b.r + 0.6; P.z = b.z; P.y = 0; P.vx = P.vz = 0; }, bin);
+  await rawWait(150);
+  await page.keyboard.press('KeyE');
+  await wait(200);
+  if (!(await S(b => __scurry.W.bins.find(o => o.x === b.x && o.z === b.z).done, bin))) throw new Error('rummage did nothing');
+  await S(() => { for (const k of ['volt', 'blade', 'rag', 'sinker']) if (!__scurry.run.junk.includes(k)) __scurry.giveJunk(k); });
+  const s0 = await S(() => ({ n: __scurry.run.junk.length, tox: __scurry.st.toxImmune, heal: __scurry.st.healMul, noScr: __scurry.st.noScramble, sta: __scurry.st.staMax }));
+  if (s0.n !== 4 || !s0.tox || s0.heal > 0.3 || !s0.noScr) throw new Error('junk stats ' + JSON.stringify(s0));
+  // Roll with the battery: electric trail.
+  await page.keyboard.down('KeyW'); await page.keyboard.press('ShiftLeft'); await rawWait(150); await page.keyboard.up('KeyW');
+  if (!(await S(() => __scurry.W.volt.length))) throw new Error('no electric trail');
+  // Razor blade bleeds; the sinker slams.
+  await S(() => { const { P } = __scurry; for (let i = 0; i < 6; i++) __scurry.spawnEnemy('mawling', P.x + 2 + i * 0.3, P.z + 1); });
+  await wait(1500);
+  if (!(await S(() => __scurry.W.enemies.some(e => e.bleed > 0) || __scurry.run.dmgBy.dot > 0))) throw new Error('no bleed stacks');
+  await S(() => { __scurry.run.specT = 0; });
+  await page.keyboard.press('KeyQ');
+  await rawWait(60);
+  const slam = await S(() => __scurry.P.slam);
+  if (slam !== 'sinker') throw new Error('sinker slam not armed: ' + slam);
+  await wait(1500);
+  await shot('03c-junk');
+  // The volt's still-curse gets the rat out of its way.
+  await S(() => { __scurry.run.stillT = 0; });
+});
 await step('corrupted elites spawn and die', async () => {
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
   await wait(2000);

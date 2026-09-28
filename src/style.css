@@ -47,7 +47,7 @@ a{color:var(--gold)}a:hover{color:#ffd070}
 .slot.empty{opacity:.45}
 .slot em{position:absolute;right:1px;bottom:-2px;font-style:normal;font-family:'Silkscreen';font-size:11px;text-shadow:1px 1px 0 #000,-1px -1px 0 #000}
 .slot .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.7)}
-#items{position:absolute;left:24px;bottom:152px;display:flex;gap:6px;flex-wrap:wrap;max-width:360px}
+#items{position:absolute;left:24px;bottom:198px;display:flex;gap:6px;flex-wrap:wrap;max-width:360px}
 #items i{width:16px;height:16px;background:var(--c);transform:rotate(45deg);border:2px solid #000;box-shadow:0 0 8px var(--c)}
 #timer{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
 #clock{font-size:32px;line-height:1}

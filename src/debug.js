@@ -10,12 +10,13 @@ import { audioReady, music } from './audio/audio.js';
 import { renderer, scene } from './render/renderer.js';
 import { chewTarget, useTarget, grabTarget, dropCarry } from './entities/player.js';
 import { comboGain, shriek } from './game/swarm.js';
+import { giveJunk, rummage } from './game/junk.js';
 
 export function debugApi(state) {
   return {
     ...state, M,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, giveItem, giveCursed, collectCore,
-    openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, renderer, scene, comboGain, shriek, dropCarry, kill,
+    openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4) {
       for (let k = 0; k < M.W * M.H; k++) {

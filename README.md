@@ -57,8 +57,13 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 | The Rat King | sewer | ricocheting rolls, tail-whip rings, rat fans, vortex pull, prince adds |
 
 **Builds.**
-- *Mutations.* Mundane ingredient items fuse in pairs into ten synergies, such as Rusty Razor + Energy Drink → Livewire Claws, Lighter + Energy Drink → Napalm Trail, and Rubber Band + Fish Hook → Slingshot Recoil. Loot favours the partner of a half-finished recipe.
+- *Mutations.* Mundane ingredient items fuse in pairs into ten synergies, such as Box Cutter + Energy Drink → Livewire Claws, Lighter + Energy Drink → Napalm Trail, and Rubber Band + Fish Hook → Slingshot Recoil. Loot favours the partner of a half-finished recipe.
 - *Cursed loot.* Six items with big upsides and permanent downsides, such as Rabid Bite: double damage, but you bleed out unless you keep hitting things.
+- *Volatile junk.* Press E on dumpsters, trash cans and sewer junk heaps to rummage them (once each). You may find salvage, scraps of food, a nest of roaches, nothing, or one of four pieces of junk, each with an upside and a curse:
+  - Leaking 9-Volt Battery: rolls leave an electric trail and attacks arc lightning, but it shocks you for 5% HP whenever you stand still for 2s.
+  - Rusted Razor Blade: every hit stacks bleed, but max stamina drops 40%.
+  - Pesticide Soaked Rag: every enemy shows on the minimap and you are immune to toxins, but healing is 75% less effective.
+  - Heavy Lead Sinker: Q becomes a massive, uninterruptible ground slam, but Scramble is disabled and climbing costs double.
 - *Bonk physics.* Knocked-back mobs smash into each other and take fall damage off rooftops.
 
 **Meta (the Nest).** On death, unspent salvage plus a quarter of what you spent is banked. At the Nest you buy permanent upgrades (HP, salvage, stamina, pickup reach, level-up rerolls, starting weapon, spare key) and hire rats.

@@ -17,6 +17,7 @@ import { spawnBoss } from '../entities/bosses.js';
 import { exitRoad, exitLadder } from './flow.js';
 import { tickSwarm, comboTick } from './swarm.js';
 import { tickForage } from './forage.js';
+import { tickJunk } from './junk.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -132,6 +133,7 @@ function updateMods(dt) {
 }
 
 function updatePlayerStatus(dt) {
+  if (st.toxImmune) P.poisonT = 0;
   if (P.poisonT > 0) { P.poisonT -= dt; P.pTick -= dt; if (P.pTick <= 0) { P.pTick = 0.5; hurtP(3, null, true); } }
   const tp = tileAt(P.x, P.z);
   if (tp === 4 && P.y < -0.5) { P.acidT -= dt; if (P.acidT <= 0) { P.acidT = 0.5; hurtP(5, null, true); puff(P.x, P.y + 0.5, P.z, 0xb8f040, 4, 1.5); } }
@@ -353,7 +355,7 @@ function updatePickups(dt) {
     f.m.rotation.y += dt * 2;
     if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) {
       world.remove(f.m);
-      const h = Math.round(st.maxHp * 0.3 * st.foodMul);
+      const h = Math.round(st.maxHp * 0.3 * st.foodMul * st.healMul);
       run.hp = Math.min(st.maxHp, run.hp + h);
       dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
       return false;
@@ -366,7 +368,7 @@ function updatePickups(dt) {
     if (Math.hypot(P.x - c.x, P.z - c.z) < 1.2 && Math.abs(P.y - c.y) < 1.3) {
       c.taken = true;
       world.remove(c.g);
-      const h = Math.round(st.maxHp * 0.4 * st.foodMul);
+      const h = Math.round(st.maxHp * 0.4 * st.foodMul * st.healMul);
       run.hp = Math.min(st.maxHp, run.hp + h);
       for (let i = 0; i < 8; i++) W.scraps.push({ x: c.x + rand(-0.6, 0.6), y: c.y, z: c.z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
       dnum(P.x, P.y + 1.6, P.z, 'Cheese cache +' + h, 'heal');
@@ -407,7 +409,7 @@ export function update(dt) {
   P.swing = Math.max(0, (P.swing || 0) - dt);
   P.throwT = Math.max(0, (P.throwT || 0) - dt);
   run.specT = Math.max(0, run.specT - dt);
-  if (!st.noRegen) run.hp = Math.min(st.maxHp, run.hp + st.regen * dt);
+  if (!st.noRegen) run.hp = Math.min(st.maxHp, run.hp + st.regen * st.healMul * dt);
   if (run.hp > st.maxHp * 0.5) run.lowWarned = false;
   updateZones(dt);
   stepPlayer(dt / 2);
@@ -435,6 +437,7 @@ export function update(dt) {
   updateEnemies(dt, cap);
   tickSwarm(dt);
   tickForage(dt);
+  tickJunk(dt);
   comboTick(dt);
   if (G.state !== 'play') return;
   updateProjectiles(dt);

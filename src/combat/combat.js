@@ -16,6 +16,7 @@ import { onBossDeath } from '../entities/bosses.js';
 import { addChest } from '../world/build.js';
 import { comboGain, comboBreak } from '../game/swarm.js';
 import { buffOn } from '../game/forage.js';
+import { junkHit } from '../game/junk.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -90,7 +91,8 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   }
   if (crit && st.mut.gutting) gore(e, 0.35);
   if (!quiet || crit || Math.random() < 0.3) dnum(e.x, e.y + e.h + 0.3, e.z, d, crit ? 'crit' : '');
-  if (melee && st.meleeLeech) run.hp = Math.min(st.maxHp, run.hp + st.meleeLeech);
+  if (melee && st.meleeLeech) run.hp = Math.min(st.maxHp, run.hp + st.meleeLeech * st.healMul);
+  junkHit(e, d, src);
   if (melee && st.mut.livewire && Math.random() < 0.35) chain(e, 2, d * 0.5, 'livewire', [e.x, e.y + e.h * 0.6, e.z], true);
   if (e.hp <= 0) kill(e);
 }
@@ -117,7 +119,7 @@ export function hurtP(d, from, raw) {
   if (!raw) P.inv = 0.6;
   G.flash = Math.max(G.flash, raw ? 0.35 : 1);
   G.shake = Math.max(G.shake, raw ? 0.08 : 0.25);
-  if (from) {
+  if (from && P.slam !== 'sinker') {
     const dx = P.x - from.x, dz = P.z - from.z, l = Math.hypot(dx, dz) || 1;
     P.vx += dx / l * 6;
     P.vz += dz / l * 6;
@@ -156,7 +158,7 @@ export function kill(e) {
   boom(e.x, e.y + e.h * 0.5, e.z, (big ? 5 : 1.6) * (e.sc || 1), e.blood);
   decal(e.x, floorY(e.x, e.z) + 0.01, e.z, rand(1.2, 2.2) * (big ? 2.5 : 1) * (e.sc || 1), e.blood);
   gore(e);
-  if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech);
+  if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech * st.healMul);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
   if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {

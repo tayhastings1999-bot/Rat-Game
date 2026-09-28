@@ -15,6 +15,7 @@ import { puddle } from '../combat/hazards.js';
 import { giveChest } from '../game/loot.js';
 import { enterSewer } from '../game/flow.js';
 import { buffOn } from '../game/forage.js';
+import { rummage, sinkerSlam, sinkerLand } from '../game/junk.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 
@@ -125,7 +126,7 @@ export function stepPlayer(dt) {
     P.glideT = 0;
     if (!was) {
       puff(P.x, P.y, P.z, 0x9a8a7a, P.fallV > 12 ? 10 : 4, 1.6);
-      if (P.slam) {
+      if (P.slam === 'sinker') { P.slam = false; P.lock = 0; sinkerLand(); } else if (P.slam) {
         P.slam = false;
         P.lock = 0;
         const R = 4.2 * st.area;
@@ -146,7 +147,7 @@ export function stepPlayer(dt) {
     else if (st.mut.sludge && L) { P.trailT = 0.35; puddle('sludge', P.x, P.z, 1.4, 4, 'p'); }
   }
   // Sewer water is toxic.
-  if (isSewer() && wet && t === 2) P.poisonT = Math.max(P.poisonT, 1.2);
+  if (isSewer() && wet && t === 2 && !st.toxImmune) P.poisonT = Math.max(P.poisonT, 1.2);
 }
 
 export function primary(dt) {
@@ -211,7 +212,7 @@ export function toggleLock() {
 export function useSpecial() {
   if (run.specT > 0 || P.squeeze) return;
   const S = SPECIALS[CLASSES[run.cls].special];
-  S.use();
+  if (!sinkerSlam()) S.use();
   useSpecialFx();
   run.specT = S.cd * st.specCd * st.cd;
 }
@@ -222,6 +223,7 @@ export function useTarget() {
   for (const b of W.benches) if (Math.hypot(b.x - P.x, b.z - P.z) < 2.4 && P.y < 2) return { kind: 'bench', o: b, label: 'Use workbench' };
   for (const p of W.pipes) if (Math.hypot(p.x - P.x, p.z - P.z) < 1.8 && P.y < 1.2) return { kind: 'pipe', o: p, label: 'Squeeze into pipe' };
   for (const v of W.valves) if (!v.done && Math.hypot(v.x - P.x, v.z - P.z) < 1.9) return { kind: 'valve', o: v, label: 'Turn valve' };
+  for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < b.r + 1 && P.y < 2) return { kind: 'bin', o: b, label: b.kind === 'dumpster' ? 'Rummage the dumpster' : b.kind === 'bin' ? 'Rummage the trash can' : 'Dig through the junk heap' };
   const mh = G.manhole;
   if (mh && Math.hypot(mh.x - P.x, mh.z - P.z) < 2 && P.y < 0.6) return { kind: 'manhole', o: mh, label: run.keys ? 'Unlock the manhole — descend into the sewer' : 'Manhole (locked — find a sewer key)' };
   return null;
@@ -290,6 +292,7 @@ export function doUse(u) {
     for (let i = 0; i < 4; i++) scrapDrop(c.x, c.y, c.z);
   }
   if (u.kind === 'bench') openBench();
+  if (u.kind === 'bin') rummage(u.o);
   if (u.kind === 'pipe') {
     const p = u.o.link;
     if (!p) return;

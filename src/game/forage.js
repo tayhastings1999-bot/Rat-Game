@@ -18,7 +18,7 @@ export function tickForage(dt) {
     f.g.rotation.y += dt * 0.3;
     if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) eat(f);
   }
-  if (buffOn('bloodmold')) run.hp = Math.min(st.maxHp, run.hp + 5 * dt);
+  if (buffOn('bloodmold')) run.hp = Math.min(st.maxHp, run.hp + 5 * st.healMul * dt);
   if (buffOn('sporecap') && (sporeT -= dt) <= 0) {
     sporeT = 0.8;
     puff(P.x, P.y + 0.4, P.z, FUNGI.sporecap.col, 8, 3);

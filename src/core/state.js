@@ -35,7 +35,7 @@ export const W = {
   rooms: [], objs: [], plats: [], inter: [], benches: [], chests: [], caches: [], pipes: [],
   lamps: [], valves: [], zones: [], enemies: [], gems: [], scraps: [], cores: [], keys: [],
   pproj: [], eproj: [], parts: [], foods: [], familiars: [], scentPaths: [], baits: [], gibs: [],
-  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [],
+  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [],
   cracks: new Map(),
 };
 
