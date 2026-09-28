@@ -32,8 +32,11 @@ export const post = new THREE.ShaderMaterial({
     vec3 c=vec3(texture2D(t,vUv+o).r,texture2D(t,vUv).g,texture2D(t,vUv-o).b);
     c=pow(max(c,0.),vec3(1./2.2));
     float l=dot(c,vec3(.3,.59,.11));c=mix(vec3(l),c,1.12);c=(c-.5)*1.06+.52;
-    vec3 hi=max(c-vec3(.75),0.);
-    c=mix(c,vec3(l*.42,l*.5,l*.66)+hi*2.2,scent*.85);
+    // Scent: the world drains to grey; only saturated, bright 'toxic' marks burn through.
+    float mx=max(c.r,max(c.g,c.b)),mn=min(c.r,min(c.g,c.b));
+    float tox=smoothstep(.42,.7,mx-mn)*smoothstep(.5,.8,mx);
+    vec3 grey=vec3(l*.5,l*.54,l*.6);
+    c=mix(c,mix(grey,c*1.3,tox),scent*.92);
     c=mix(c,c*vec3(1.35,.5,.45)+vec3(.05,0.,0.),moon*.7);
     c=mix(c,c*vec3(.75,1.15,.6),toxic*.35);
     c+=(hash(floor(vUv*res)+fract(time*7.)*vec2(37.,91.))-.5)*.03;

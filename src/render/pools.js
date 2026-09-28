@@ -10,7 +10,7 @@ export const tmpC = new THREE.Color();
 export const _v = new THREE.Vector3();
 export const MOB_CAP = 160;
 
-function mkIM(geo, mat, cap, col = true) {
+export function mkIM(geo, mat, cap, col = true) {
   const m = new THREE.InstancedMesh(geo, mat, cap);
   m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   if (col) m.setColorAt(0, new THREE.Color(1, 1, 1));

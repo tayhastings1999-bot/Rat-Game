@@ -140,6 +140,8 @@ export function owlAI(e, dt) {
   e.z += (e.vz + e.kz) * dt;
   e.y = Math.max(e.y, floorY(e.x, e.z) + 0.6);
   e.ang = Math.atan2(e.vx, e.vz);
+  e.det = hidden ? 0 : 12;
+  e.look = e.st === 'circle' ? Math.atan2(P.x - e.x, P.z - e.z) : e.ang;
   e.pitch = e.st === 'dive' ? 0.6 : e.st === 'climb' ? -0.4 : 0;
   e.roll = e.st === 'circle' ? -0.35 + Math.sin(G.time * 2) * 0.08 : Math.sin(G.time * 9) * (e.st === 'dive' ? 0.05 : 0.25);
   return true;

@@ -8,6 +8,7 @@ import { CLASSES, isUnl } from '../data/classes.js';
 import { keys, camBasis, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { startRun, menu } from './flow.js';
 import { shriek } from './swarm.js';
+import { toggleScent } from './scent.js';
 import { pause, resume, openMap, renderMenu, renderNest, choose, currentOffers, reroll } from '../ui/screens.js';
 
 export function initInput() {
@@ -25,7 +26,7 @@ export function initInput() {
       if (e.code === 'KeyQ') useSpecial();
       if (e.code === 'KeyX') shriek();
       if (e.code === 'KeyE') pressE();
-      if (e.code === 'KeyF') { P.scent = !P.scent; }
+      if (e.code === 'KeyF') toggleScent();
       if (e.code === 'KeyV') { settings.mouse = !settings.mouse; saveSettings(); dnum(P.x, P.y + 1.6, P.z, settings.mouse ? 'Mouse look on' : 'Mouse look off', 'info'); }
       if (e.code === 'KeyM' || e.code === 'Tab') openMap();
       if (e.code === 'Escape' || e.code === 'KeyP') pause(true);

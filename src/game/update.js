@@ -4,7 +4,7 @@ import { G, P, W, run, st, settings } from '../core/state.js';
 import { world, scene } from '../render/renderer.js';
 import { puff, spark, boom, bolt, dnum, auraG, orbs, orbState, shieldM } from '../fx/fx.js';
 import { sfx, setMusic } from '../audio/audio.js';
-import { M, G as GRAV, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, descend, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
+import { M, G as GRAV, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
 import { syncObj, pitMat } from '../world/build.js';
 import { isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
@@ -19,11 +19,12 @@ import { tickSwarm, comboTick } from './swarm.js';
 import { tickForage } from './forage.js';
 import { tickJunk } from './junk.js';
 import { tickLight } from './light.js';
+import { tickScent } from './scent.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
 
-let scentT = 0, seenT = 0;
+let seenT = 0;
 
 function updateZones(dt) {
   P.gmul = 1;
@@ -377,31 +378,6 @@ function updatePickups(dt) {
   }
 }
 
-function updateScent(dt) {
-  if (!P.scent) return;
-  scentT -= dt;
-  if (scentT > 0) return;
-  scentT = 0.4;
-  W.scentPaths = [];
-  const tgt = (list, col) => {
-    let b = null, bd = 1e9;
-    for (const o of list) {
-      const [gx, gz] = nearOpen(toG(o.x), toG(o.z)), d = M.flow[gi(gx, gz)];
-      if (d >= 0 && d < bd) { bd = d; b = [gx, gz]; }
-    }
-    if (b) W.scentPaths.push({ col, p: descend(M.flow, b[0], b[1], 120) });
-  };
-  if (G.mode === 'survival' && G.exitD) tgt([G.exitD], 0x6ad06a);
-  if (G.mode === 'survival' && G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
-  if (W.keys.length) tgt(W.keys, 0xffd040);
-  if (G.boss && !G.boss.revealed) tgt([G.boss], 0xff2a60);
-  tgt(W.caches.filter(c => !c.taken), 0xffe070);
-  tgt(W.chests.filter(c => !c.open), 0xffa030);
-  tgt(W.benches, 0x4aa3ff);
-  if (G.mode === 'trial') { const v = W.valves.filter(v => !v.done); tgt(v.length ? v : [G.exitD], 0x6ad06a); }
-  for (const e of W.enemies) if (e.pred) W.scentPaths.push({ col: 0xff3a20, p: e.path.filter((_, i) => i % 2 === 0), loop: true });
-}
-
 export function update(dt) {
   run.time += dt;
   P.inv = Math.max(0, P.inv - dt);
@@ -471,7 +447,7 @@ export function update(dt) {
     gh.r.g.position.set(a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, a[3] + (b[3] - a[3]) * u);
     gh.r.g.rotation.y = a[4] + angD(b[4], a[4]) * u;
   }
-  updateScent(dt);
+  tickScent(dt);
   if (G.lockOn && (G.lockOn.dead || Math.hypot(G.lockOn.x - P.x, G.lockOn.z - P.z) > 34)) G.lockOn = null;
   if (G.lockOn && !G.drag) G.camYaw += angD(Math.atan2(G.lockOn.x - P.x, G.lockOn.z - P.z), G.camYaw) * Math.min(1, 4 * dt);
   else if (settings.mouse && !G.drag && !G.touch) {

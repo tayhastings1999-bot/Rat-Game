@@ -253,7 +253,8 @@ export function chewTarget() {
 export function pressE() {
   if (P.carry) { dropCarry(); return; }
   const u = useTarget();
-  if (u) { doUse(u); return; }
+  // A bin never gets in the way of gnawing the wall you're facing.
+  if (u && !(u.kind === 'bin' && chewTarget())) { doUse(u); return; }
   const o = grabTarget();
   if (o) { P.carry = o; o.carried = true; P.chewing = false; return; }
   if (chewTarget()) { P.chewing = true; P.chewT = 0; }

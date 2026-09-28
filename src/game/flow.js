@@ -22,7 +22,7 @@ export function freshStats(C) {
     maxHp: C.hp + 12 * (n.hide || 0), regen: 0, armor: C.armor || 0, speed: C.speed, dmg: 1, area: C.area || 1, cd: C.cd || 1, proj: 0,
     magnet: 2.6 * (1 + 0.25 * (n.nose || 0)), crit: 0.05, critMul: 2, xp: 1, jumps: C.jumps || 0, multi: 0, range: 1, shotSpd: 1, tear: 1,
     homing: false, poison: false, burn: false, split: false, shotSize: 0, thorns: 0, melee: 0, kb: 1,
-    staMax: 100 + 10 * (n.lungs || 0), staRegen: 28, sprintMul: 1.45, sprintDrain: 22, climbCost: 20, metalClimb: false, glide: false,
+    staMax: 100 + 10 * (n.lungs || 0), scentMax: 8, staRegen: 28, sprintMul: 1.45, sprintDrain: 22, climbCost: 20, metalClimb: false, glide: false,
     chew: 1, specCd: 1, taken: 1, shrap: false, foeSpd: 1, leech: 0, salvage: 1 + 0.15 * (n.scav || 0),
     mut: {}, rabid: false, noRegen: false, foodMul: 1, healMul: 1, volt: false, bleed: false, rag: false, toxImmune: false, sinker: false, noScramble: false, fury: false, poisonMul: 1, selfPoison: false,
     meleePrim: C.prim === 'rake' || C.prim === 'gnash',
@@ -51,7 +51,7 @@ export function setupWorld(seed) {
   P.x = toW(s.cx); P.z = toW(s.cy); P.y = floorY(P.x, P.z);
   P.vx = P.vy = P.vz = 0;
   P.safe = { x: P.x, z: P.z, y: P.y };
-  P.poisonT = 0; P.roll = 0; P.chain = 0; P.scramble = 0; P.carry = null; P.bulwark = 0; P.glideT = 0;
+  P.poisonT = 0; P.roll = 0; P.chain = 0; P.scramble = 0; P.scent = false; P.scentE = st.scentMax; P.carry = null; P.bulwark = 0; P.glideT = 0;
   G.camPos.set(P.x, 12, P.z + 12);
   G.flowT = 0;
   for (const f of W.familiars) { f.x = P.x; f.z = P.z; }

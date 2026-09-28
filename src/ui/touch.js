@@ -7,6 +7,7 @@ import { audioInit } from '../audio/audio.js';
 import { keys, stick, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { pause, openMap } from './screens.js';
 import { shriek } from '../game/swarm.js';
+import { toggleScent } from '../game/scent.js';
 
 const STICK_R = 52;
 
@@ -95,7 +96,7 @@ function press(k) {
     case 'spec': useSpecial(); break;
     case 'use': keys.KeyE = true; pressE(); break;
     case 'lock': toggleLock(); break;
-    case 'scent': P.scent = !P.scent; break;
+    case 'scent': toggleScent(); break;
     case 'map': openMap(); break;
     case 'pause': pause(true); break;
     case 'shriek': shriek(); break;

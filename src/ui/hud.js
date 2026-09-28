@@ -60,7 +60,7 @@ export function hud() {
     (isSewer() && G.mode !== 'trial' ? '<span class="chip" style="--cc:#b070ff">SEWER · MUTATED HORDE</span>' : '') +
     run.mods.map(m => `<span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span>`).join('') +
     (run.blood > 0 ? `<span class="chip" style="--cc:#ff4a3a">BLOODLUST ×${run.blood}</span>` : '') +
-    (P.scent ? '<span class="chip" style="--cc:#ffe070">Scent vision</span>' : '') +
+    (P.scent ? `<span class="chip" style="--cc:#c8ff20">SCENT ${st.rag ? '∞' : Math.ceil(P.scentE) + 's'}</span>` : P.scentE < st.scentMax - 0.5 ? `<span class="chip" style="--cc:#6a7a4a">Nose ${Math.round(P.scentE / st.scentMax * 100)}%</span>` : '') +
     activeBuffs().map(b => `<span class="chip" style="--cc:${hexs(b.col)}">${b.name} ${Math.ceil(b.t)}s</span>`).join('') +
     (P.chain ? `<span class="chip" style="--cc:#ffd070">MOMENTUM ×${P.chain}</span>` : '');
   $('dmgTotal').textContent = commas(run.dmg);

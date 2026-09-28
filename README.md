@@ -47,6 +47,8 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Light and shadow.** The eye meter under stamina is your exposure. Street lamps, neon, the sweeping rooftop searchlights (city), light shafts through grates (sewer) and the Exterminator's flashlight all fill it; darkness drains it, and squeezing drains it faster. In shadow you regain stamina 50% faster and patrolling predators have to be almost on top of you to notice. Fill the meter and you're **spotted**: every cat nearby starts hunting you and a barn owl takes wing (bats in the sewer). The owl circles, screeches, then dives with its talons. Break line of sight in the dark and it loses you, circles wider and eventually gives up. Blackout districts kill the lamps but not the searchlights.
 
+**Advanced Scent (F).** Sniffing drains the world to grey and lights up what your nose picks up in toxic colours: trails to exits, keys and loot; predator **view cones** (magenta while patrolling, red once they're hunting you); **fresh footprints** left by predators, elites, mini-bosses and bosses (bright when fresh, fading over ~20s); and pulsing rings on **gnaw points** (boards, hollow walls, ropes, live wires, traps, bins). Scent runs on an 8-second gauge that refills while your nose rests; the Pesticide Rag makes it endless. Cats only spot you inside their cone, which sweeps side to side, or when you're right on top of them, so reading the cones lets you slip past behind them.
+
 **Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
 
 | Boss | Where | Signature |
@@ -76,7 +78,7 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 ## Controls
 
-WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · X shriek (full combo) · E use / grab / hold to gnaw · R lock-on · F scent trails · M map · mouse look (V toggles) · wheel zoom · Esc pause.
+WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · X shriek (full combo) · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · mouse look (V toggles) · wheel zoom · Esc pause.
 
 **Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Use (hold to gnaw), Shriek (when the combo is full), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
 

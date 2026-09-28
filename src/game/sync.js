@@ -10,6 +10,7 @@ import { M, G as GRAV, toW, floorY, segBlocked, forPlatsNear } from '../world/gr
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
 import { blob } from '../entities/rat.js';
+import { syncScent } from './scent.js';
 
 G.camPos = new THREE.Vector3(0, 12, 12);
 G.camOff = new THREE.Vector3();
@@ -250,6 +251,7 @@ export function sync(dt) {
   scentIM.count = n;
   scentIM.instanceMatrix.needsUpdate = true;
   if (scentIM.instanceColor) scentIM.instanceColor.needsUpdate = true;
+  syncScent();
   post.uniforms.scent.value += ((P.scent && G.state !== 'menu' ? 1 : 0) - post.uniforms.scent.value) * Math.min(1, 6 * dt);
   // Health bars over big and elite enemies.
   let bi = 0;

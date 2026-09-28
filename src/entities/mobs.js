@@ -617,8 +617,12 @@ export function updateEnemies(dt, cap) {
 function predAI(e, dt, d) {
   // Shadows all but hide you; standing in light makes you easy to spot.
   const det = (P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5) * (P.shadow ? 0.3 : 1 + (run.expo || 0) / 100);
+  e.det = e.mode === 'hunt' ? 18 : det;
+  e.look = e.ang + Math.sin(G.time * 0.9 + (e.ph || 0)) * 0.45;
   if (e.mode === 'patrol') {
-    if ((d < det && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); return false; }
+    // It sees you inside its view cone (±52°), or senses you when you're right on top of it.
+    const inCone = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.look)) < 0.9;
+    if ((d < det && (inCone || d < det * 0.3) && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); return false; }
     const k = e.path[e.pi], tx = toW(k % M.W), tz = toW((k / M.W) | 0), vx = tx - e.x, vz = tz - e.z, l = Math.hypot(vx, vz);
     if (l < 0.8) e.pi = (e.pi + 1) % e.path.length;
     else { e.x += vx / l * e.spd * dt; e.z += vz / l * e.spd * dt; e.ang = Math.atan2(vx, vz); }
