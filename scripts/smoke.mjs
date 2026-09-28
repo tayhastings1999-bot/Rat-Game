@@ -108,13 +108,13 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   // Climb a brick building
   const wall = await S(() => { const w = __scurry.wallSpot(4.5, 6); return w && { ...w, h: w.top }; });
   if (!wall) throw new Error('no climbable wall found');
-  await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); });
+  await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); });
   await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 1.6; P.z = w.z + w.nz * 1.6; P.y = 0; P.vx = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); __scurry.run.sta = 100; }, wall);
   await page.keyboard.down('KeyW'); await wait(120); await page.keyboard.press('Space'); await page.keyboard.down('Space');
   await wait(2600);
   await page.keyboard.up('Space'); await wait(400); await page.keyboard.up('KeyW');
   const py = await S(() => __scurry.P.y);
-  if (py < wall.h - 0.2) throw new Error(`climb reached y=${py.toFixed(2)} of roof ${wall.h}`);
+  if (py < wall.h - 0.2) throw new Error(`climb reached y=${py.toFixed(2)} of roof ${wall.h} ` + (await S(() => { const P = __scurry.P; return JSON.stringify({ st: __scurry.G.state, x: P.x, z: P.z, wt: P.wallType, sta: __scurry.run.sta, carry: !!P.carry, sq: P.squeeze }); })) + ' ' + JSON.stringify(wall));
   await shot('02b-rooftop');
   // Stand on a power line
   const line = await S(() => { const p = __scurry.W.plats.find(p => p.line); return p && { x: p.x, z: p.z, y: p.y }; });
