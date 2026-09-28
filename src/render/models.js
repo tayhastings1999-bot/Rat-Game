@@ -155,6 +155,23 @@ export const GEO = {
     ]),
     glow: MG([...eyes([[-0.14, 1.38, 1.04], [0.14, 1.38, 1.04]], 0xd0ff40, 0.075), prt(Bx(0.03, 0.11, 0.03), 0x101010, [-0.14, 1.38, 1.11]), prt(Bx(0.03, 0.11, 0.03), 0x101010, [0.14, 1.38, 1.11]), ...maw(0, 1.1, 1.14, 0.9)]),
   },
+  // Barn owl: the night predator. A pale, broad-winged silhouette with a heart-shaped face.
+  owl: {
+    body: MG([
+      prt(Sp(0.5, 8, 6), 0x8a7458, [0, 0.5, 0], [0.3, 0, 0], [0.85, 1, 0.8]),
+      prt(Sp(0.36, 7, 5), 0xb8a080, [0, 1.05, 0.12]),
+      prt(Sp(0.3, 6, 4), 0xf0e6d4, [0, 1.03, 0.3], [0, 0, 0], [1, 1.05, 0.35]),
+      prt(Co(0.05, 0.16, 4), 0xc8a060, [0, 0.95, 0.46], [PI2 + 0.4, 0, 0]),
+      prt(Sp(0.34, 6, 4), 0xe8dcc8, [0, 0.45, 0.2], [0, 0, 0], [0.75, 0.9, 0.5]),
+      ...[-1, 1].flatMap(s => [
+        prt(Bx(1.3, 0.06, 0.62), 0x7a6448, [s * 0.95, 0.72, -0.02], [0, 0, s * 0.18]),
+        prt(Bx(0.8, 0.05, 0.44), 0x5a4834, [s * 1.85, 0.86, -0.1], [0, s * 0.2, s * 0.32]),
+        prt(Cy(0.04, 0.03, 0.34, 4), 0x3a3024, [s * 0.14, 0.05, 0.1], [0.3, 0, 0]),
+      ]),
+      prt(Bx(0.42, 0.05, 0.5), 0x6a5840, [0, 0.4, -0.55], [0.4, 0, 0]),
+    ]),
+    glow: MG(eyes([[-0.12, 1.08, 0.4], [0.12, 1.08, 0.4]], 0x101010, 0.07).concat(eyes([[-0.12, 1.08, 0.43], [0.12, 1.08, 0.43]], 0xffc020, 0.035))),
+  },
   crow: {
     body: MG([
       prt(Sp(0.28, 8, 6), 0x1a181e, [0, 0.3, 0], [0, 0, 0], [0.9, 0.85, 1.4]),
@@ -250,7 +267,7 @@ export const GEO = {
 };
 
 /** Geometry keys that get an instancing pool (bosses use their own meshes). */
-export const MOB_GEOS = Object.keys(GEO).filter(k => k !== 'drone' && k !== 'ratking');
+export const MOB_GEOS = Object.keys(GEO).filter(k => k !== 'drone' && k !== 'ratking' && k !== 'owl');
 
 /** Creature skin: gouraud-lit vertex colours over a coarse fur texture, with PS1 vertex snap and affine mapping. */
 export const bodyMat = () => ps1(new THREE.MeshLambertMaterial({ vertexColors: true, map: furTex }));

@@ -138,7 +138,7 @@ export function stepPlayer(dt) {
       }
     }
   }
-  if (!P.sprinting && !P.climbing) { P.staT -= dt; if (P.staT <= 0) run.sta = Math.min(st.staMax, run.sta + st.staRegen * dt); }
+  if (!P.sprinting && !P.climbing) { P.staT -= dt; if (P.staT <= 0) run.sta = Math.min(st.staMax, run.sta + st.staRegen * (P.shadow ? 1.5 : 1) * dt); }
   run.sta = Math.max(0, run.sta);
   // Mutation trails.
   P.trailT -= dt;

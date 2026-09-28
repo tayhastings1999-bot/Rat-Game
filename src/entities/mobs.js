@@ -16,6 +16,7 @@ import { glob } from '../combat/arsenal.js';
 import { hit, hurtP, kill, gainXP, aoe } from '../combat/combat.js';
 import { warn, puddle } from '../combat/hazards.js';
 import { bossAI } from './bosses.js';
+import { owlAI } from '../game/light.js';
 
 const CORRUPT_KEYS = Object.keys(CORRUPT);
 
@@ -538,7 +539,8 @@ export function updateEnemies(dt, cap) {
       e.cd -= dt * (run.atkM || 1) * (haste ? 1.6 : 1);
       if (!mobState(e, dt, dx, dz)) MOBAI[e.type](e, dt, dx, dz, d, e.spd * (haste ? 1.4 : 1));
     }
-    if (e.pred && !custom) custom = predAI(e, dt, d);
+    if (e.type === 'owl') custom = owlAI(e, dt);
+    else if (e.pred && !custom) custom = predAI(e, dt, d);
     if (!custom) {
       // Generic chaser with a telegraphed contact bite (predators on the hunt).
       const sp = e.spd * slowMul(e) * (e.pred ? 2 : 1) * (e.wind > 0 ? 0.12 : 1), dir = flowDir(e);
@@ -613,7 +615,8 @@ export function updateEnemies(dt, cap) {
 }
 
 function predAI(e, dt, d) {
-  const det = P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5;
+  // Shadows all but hide you; standing in light makes you easy to spot.
+  const det = (P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5) * (P.shadow ? 0.3 : 1 + (run.expo || 0) / 100);
   if (e.mode === 'patrol') {
     if ((d < det && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); return false; }
     const k = e.path[e.pi], tx = toW(k % M.W), tz = toW((k / M.W) | 0), vx = tx - e.x, vz = tz - e.z, l = Math.hypot(vx, vz);

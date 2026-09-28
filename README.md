@@ -45,6 +45,8 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Fungal foraging.** Mushrooms and molds grow against walls (far more in the sewer), shown as green dots on the minimap. Walk over one for a 10-second buff: Puffcap (+35% speed), Glowcap (+25% crit), Sporecap (toxic spore cloud), Iron Mold (−40% damage taken), Blood Mold (5 HP/s regen) or Slime Mold (free sprinting and climbing).
 
+**Light and shadow.** The eye meter under stamina is your exposure. Street lamps, neon, the sweeping rooftop searchlights (city), light shafts through grates (sewer) and the Exterminator's flashlight all fill it; darkness drains it, and squeezing drains it faster. In shadow you regain stamina 50% faster and patrolling predators have to be almost on top of you to notice. Fill the meter and you're **spotted**: every cat nearby starts hunting you and a barn owl takes wing (bats in the sewer). The owl circles, screeches, then dives with its talons. Break line of sight in the dark and it loses you, circles wider and eventually gives up. Blackout districts kill the lamps but not the searchlights.
+
 **Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
 
 | Boss | Where | Signature |

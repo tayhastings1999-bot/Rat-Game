@@ -10,11 +10,12 @@ import { PRIM, SPECIALS, WEAP } from '../combat/arsenal.js';
 import { threatTier } from '../combat/combat.js';
 import { useTarget, grabTarget, chewTarget } from '../entities/player.js';
 import { activeBuffs } from '../game/forage.js';
-import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT } from './icons.js';
+import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
   $('icBolt').innerHTML = IC_BOLT;
+  $('icEye').innerHTML = IC_EYE;
 }
 
 export function renderSlots() {
@@ -44,6 +45,10 @@ export function hud() {
   $('hpTxt').textContent = Math.ceil(Math.max(0, run.hp)) + ' / ' + st.maxHp;
   $('enFill').style.width = clamp(run.sta / st.staMax * 100, 0, 100) + '%';
   $('enTxt').textContent = P.bulwark > 0 ? 'BULWARK' : P.roll > 0 ? 'ROLL' : P.climbing ? 'CLIMBING' : P.sprinting ? 'SPRINTING' : P.squeeze ? 'SQUEEZING' : P.glideT > 0 ? 'GLIDING' : 'STAMINA';
+  const ex = run.expo || 0;
+  $('exFill').style.width = ex + '%';
+  $('exFill').parentElement.classList.toggle('lit', ex > 70);
+  $('exTxt').textContent = P.shadow ? (ex > 1 ? 'IN SHADOW' : 'HIDDEN') : ex > 70 ? 'EXPOSED' : 'LIT';
   const S = SPECIALS[CLASSES[run.cls].special], cd = $('specCd');
   if (cd) cd.style.height = (run.specT / (S.cd * st.specCd * st.cd) * 100) + '%';
   $('xpFill').style.width = (run.xp / run.need * 100) + '%';

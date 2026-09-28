@@ -35,7 +35,7 @@ export const W = {
   rooms: [], objs: [], plats: [], inter: [], benches: [], chests: [], caches: [], pipes: [],
   lamps: [], valves: [], zones: [], enemies: [], gems: [], scraps: [], cores: [], keys: [],
   pproj: [], eproj: [], parts: [], foods: [], familiars: [], scentPaths: [], baits: [], gibs: [],
-  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [],
+  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [], neons: [], searches: [], shafts: [],
   cracks: new Map(),
 };
 
@@ -43,7 +43,7 @@ export const P = {
   x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, onGround: true, coyote: 0, buffer: 0, air: 0, facing: Math.PI,
   inv: 0, slam: false, lock: 0, jumping: false, cut: false, wx: 0, wz: -1, fallV: 0, aim: 0, aimT: 0,
   roll: 0, rollCd: 0, rdx: 0, rdz: 1, safe: { x: 0, z: 0, y: 0 }, poisonT: 0, squeeze: false, carry: null,
-  chewing: false, chewT: 0, climbing: false, wallT: 0, wallType: 0, wallTop: 0, wallNX: 0, wallNZ: 0, scramble: 0, scrCd: 0, sprintMem: 0, chain: 0, chainT: 0, atk: 0, acidT: 0, scent: false,
+  chewing: false, chewT: 0, climbing: false, wallT: 0, wallType: 0, wallTop: 0, wallNX: 0, wallNZ: 0, scramble: 0, scrCd: 0, light: 0, shadow: false, sprintMem: 0, chain: 0, chainT: 0, atk: 0, acidT: 0, scent: false,
   sprinting: false, staT: 0, gmul: 1, slowT: 0, pTick: 0, glideT: 0, bulwark: 0, lastHitT: 0, trailT: 0,
 };
 

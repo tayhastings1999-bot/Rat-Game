@@ -45,7 +45,7 @@ export function renderMenu(m) {
       <textarea id="fg" placeholder="Paste a friend's ghost code here">${G.friendGhost ? '(friend ghost loaded: ' + fmtT(G.friendGhost.t) + ')' : ''}</textarea>`
     : '<p>Smash the nests or outlast the timer to wake the district boss. Every pick, chest and detour raises the threat, and the horde scales with it. Kill the boss to open the road, or spend a key on the manhole.</p>'}
     <div class="howto">
-      <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up the orange XP gems, and pick an upgrade each level.</p></div>
+      <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up the orange XP gems, and pick an upgrade each level. Stay out of the light: fill the eye meter and the owls come.</p></div>
       <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Shift</kbd> roll, hold to sprint (sprint into a wall to run up it, jump off walls to chain bounces) · <kbd>Q</kbd> special · <kbd>X</kbd> shriek when the combo bar is full · <kbd>E</kbd> use, hold to gnaw · <kbd>F</kbd> sniff out loot · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</p></div>
       <div><h3 class="px">Touch</h3><p>Left stick to move, drag anywhere else to look around. Jump, Roll, Special and Use sit on the right.</p></div>
     </div>

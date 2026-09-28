@@ -409,6 +409,7 @@ function neonSigns(spots) {
     fr.rotation.y = m.rotation.y;
     world.add(fr);
     glowSprite(col, w * 1.8, world, x + s.dx * 0.3, y, z + s.dy * 0.3, 0.45);
+    W.neons.push({ x: x + s.dx * 1.5, y, z: z + s.dy * 1.5 });
   }
 }
 const wheelMat = new THREE.MeshLambertMaterial({ color: 0x101012, flatShading: true });
@@ -611,6 +612,44 @@ function clutter(city) {
     }
   }
 }
+/** Rooftop searchlights sweeping the streets (city) and light shafts through grates (sewer). */
+const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+const spotMat = new THREE.MeshBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+function searchlights(city) {
+  if (city) {
+    const roofs = [];
+    for (let k = 0; k < M.W * M.H; k++) if (M.grid[k] === 0 && M.hgt[k] >= 8 && M.hgt[k] < 20) roofs.push(k);
+    shuffleR(roofs);
+    const picked = [];
+    for (const k of roofs) {
+      const x = toW(k % M.W), z = toW((k / M.W) | 0);
+      if (picked.some(p => Math.hypot(p.x - x, p.z - z) < 36)) continue;
+      picked.push({ x, z, h: M.hgt[k] });
+      if (picked.length >= 4) break;
+    }
+    const housing = lam(0x3a3c42, { map: metalTex });
+    for (const p of picked) {
+      mkMesh(Cy(0.5, 0.6, 0.8, 6), housing, p.x, p.h + 0.4, p.z);
+      glowSprite(0xfff4d0, 2.2, world, p.x, p.h + 1, p.z, 0.9);
+      const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 3.4, 1, 10, 1, true).translate(0, -0.5, 0), beamMat);
+      cone.position.set(p.x, p.h + 1, p.z);
+      world.add(cone);
+      const spot = new THREE.Mesh(new THREE.CircleGeometry(3.4, 14).rotateX(-Math.PI / 2), spotMat);
+      world.add(spot);
+      W.searches.push({ hx: p.x, hy: p.h + 1, hz: p.z, cx: p.x + rr(-6, 6), cz: p.z + rr(-6, 6), rx: rr(10, 16), rz: rr(10, 16), w: rr(0.25, 0.4), o: rr(0, 6), ph: rr(0, 6), sx: p.x, sz: p.z, R: 3.4, cone, spot });
+    }
+  } else {
+    for (const r of shuffleR(W.rooms.slice()).slice(0, 7)) {
+      if (r === G.startRoom) continue;
+      const x = toW(r.cx), z = toW(r.cy), y = floorY(x, z);
+      const beam = mkMesh(new THREE.CylinderGeometry(1.3, 1.9, 9, 8, 1, true), beamMat, x, y + 4.5, z);
+      beam.castShadow = false;
+      const pool = mkMesh(new THREE.CircleGeometry(1.9, 12).rotateX(-Math.PI / 2), spotMat, x, y + 0.05, z);
+      pool.castShadow = false;
+      W.shafts.push({ x, z, R: 1.9 });
+    }
+  }
+}
 /** Mushrooms and molds grow in damp corners against walls; the sewer is thick with them. */
 const fungusMats = {};
 function fungi(city) {
@@ -775,6 +814,7 @@ export function populate(info) {
   if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
   clutter(city);
   fungi(city);
+  if (!trial) searchlights(city);
 
   // Shared: workbenches, pipes, live wires, nests or valves, predators, hazards.
   const benchAt = w => { if (w) addBench(toW(w.x) - w.dx * 0.6, toW(w.y) - w.dy * 0.6, Math.atan2(w.dx, w.dy)); };
