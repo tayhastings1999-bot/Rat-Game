@@ -15,6 +15,7 @@ import { stepPlayer, primary, keys, chewTarget, doChew, tickInteractives } from 
 import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
 import { spawnBoss } from '../entities/bosses.js';
 import { exitRoad, exitLadder } from './flow.js';
+import { tickSwarm, comboTick } from './swarm.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -389,6 +390,7 @@ function updateScent(dt) {
   if (G.mode === 'survival' && G.exitD) tgt([G.exitD], 0x6ad06a);
   if (G.mode === 'survival' && G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
   if (W.keys.length) tgt(W.keys, 0xffd040);
+  if (G.boss && !G.boss.revealed) tgt([G.boss], 0xff2a60);
   tgt(W.caches.filter(c => !c.taken), 0xffe070);
   tgt(W.chests.filter(c => !c.open), 0xffa030);
   tgt(W.benches, 0x4aa3ff);
@@ -430,6 +432,8 @@ export function update(dt) {
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1));
   if (G.mode !== 'trial' && !run.bossDone && !G.boss && (run.time - run.dStart >= run.bossAt || run.nests <= 0) && M.spawnTiles.length) spawnBoss();
   updateEnemies(dt, cap);
+  tickSwarm(dt);
+  comboTick(dt);
   if (G.state !== 'play') return;
   updateProjectiles(dt);
   updateObjects(dt);
@@ -470,7 +474,14 @@ export function update(dt) {
   }
   if (!G.drag) { const k = Math.min(1, 1.5 * dt); G.camOff.x -= G.camOff.x * k; G.camOff.z -= G.camOff.z * k; }
   // Music: boss > crowded fight > exploring.
-  let close = 0;
-  for (const e of W.enemies) if (!e.dead && Math.abs(e.x - P.x) < 12 && Math.abs(e.z - P.z) < 12) close++;
+  let close = 0, near9 = 0;
+  for (const e of W.enemies) {
+    if (e.dead || Math.abs(e.x - P.x) > 12 || Math.abs(e.z - P.z) > 12) continue;
+    close++;
+    if (Math.hypot(e.x - P.x, e.z - P.z) < 9) near9++;
+  }
+  // Combat: fade the controls text and minimap so the fight reads clearly.
+  const combat = !!G.lockOn || near9 >= 3 || (run.combo || 0) > 8 || !!(G.boss && G.boss.revealed);
+  if (combat !== G.combat) { G.combat = combat; document.body.classList.toggle('combat', combat); }
   setMusic(G.boss ? 3 : close > 8 || (run.T || 0) > 8 ? 2 : 1, isSewer());
 }

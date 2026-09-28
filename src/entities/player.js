@@ -294,25 +294,27 @@ export function doUse(u) {
   }
 }
 
+/** Remove a gnawable tile (boards, drywall, a cracked secret wall) and open the way. */
+export function openTile(gx, gz) {
+  const k = gi(gx, gz), secret = M.secret[k];
+  M.grid[k] = 1;
+  M.hgt[k] = 0;
+  M.secret[k] = 0;
+  if (secret) { banner('Secret passage', 'Something was hidden back here'); sfx('key'); }
+  const m = tileMesh[k];
+  if (m) { world.remove(m); delete tileMesh[k]; }
+  const x = toW(gx), z = toW(gz);
+  puff(x, 1.5, z, 0xc8b894, 24, 4);
+  boom(x, 1.2, z, 3, 0xe8d8b0);
+  scrapDrop(x, 0, z);
+  scrapDrop(x, 0, z);
+  G.flowT = 0;
+  dnum(x, 2, z, 'Shortcut', 'info');
+  G.shake = Math.max(G.shake, 0.2);
+}
+
 export function doChew(c) {
-  if (c.kind === 'tile') {
-    const k = gi(c.gx, c.gz);
-    const secret = M.secret[k];
-    M.grid[k] = 1;
-    M.hgt[k] = 0;
-    M.secret[k] = 0;
-    if (secret) { banner('Secret passage', 'Something was hidden back here'); sfx('key'); }
-    const m = tileMesh[k];
-    if (m) { world.remove(m); delete tileMesh[k]; }
-    const x = toW(c.gx), z = toW(c.gz);
-    puff(x, 1.5, z, 0xc8b894, 24, 4);
-    boom(x, 1.2, z, 3, 0xe8d8b0);
-    scrapDrop(x, 0, z);
-    scrapDrop(x, 0, z);
-    G.flowT = 0;
-    dnum(x, 2, z, 'Shortcut', 'info');
-    G.shake = 0.2;
-  }
+  if (c.kind === 'tile') openTile(c.gx, c.gz);
   if (c.kind === 'rope') {
     const it = c.it;
     it.used = true;

@@ -145,6 +145,7 @@ export function sfx(n) {
     case 'mutation': tone(110, 440, 0.6, 'sawtooth', 0.1, true); tone(165, 660, 0.6, 'sawtooth', 0.08, true); nz(2000, 2, 0.5, 0.15, 'bandpass', true); break;
     case 'curse': tone(220, 55, 1.1, 'sawtooth', 0.14, true); tone(233, 58, 1.1, 'sawtooth', 0.12, true); break;
     case 'door': tone(60, 40, 0.8, 'square', 0.15, true); nz(200, 1, 0.7, 0.25, 'lowpass', true); break;
+    case 'shriek': for (let i = 0; i < 5; i++) { tone(2200 + i * 300, 900 + i * 120, 0.35, 'sawtooth', 0.05, true, AC.currentTime + i * 0.05); } nz(3000, 3, 0.6, 0.2, 'bandpass', true); break;
     case 'buy': tone(660, 990, 0.12, 'square', 0.06); tone(990, 1320, 0.14, 'square', 0.05, false, AC.currentTime + 0.08); break;
   }
 }

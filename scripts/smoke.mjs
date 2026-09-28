@@ -125,6 +125,8 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   // Stand on a power line
   const line = await S(() => { const p = __scurry.W.plats.find(p => p.line); return p && { x: p.x, z: p.z, y: p.y }; });
   if (line) {
+    // Clear the area so a stray bite can't knock the rat off mid-check.
+    await S(() => { for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest') e.hp = 0; });
     await tp(line.x, line.z, line.y + 0.5); await wait(900);
     const y = await S(() => __scurry.P.y);
     if (Math.abs(y - line.y) > 0.05) throw new Error(`power line: y=${y} vs ${line.y}`);
@@ -187,7 +189,18 @@ await step('corrupted elites spawn and die', async () => {
 });
 await step('surface boss: three phases, death, exits', async () => {
   await S(() => __scurry.spawnBoss());
+  await wait(300);
+  const hidden = await S(() => { const b = __scurry.G.boss; return document.getElementById('bossWrap').style.display === 'none' || b.revealed; });
+  if (!hidden) throw new Error('boss UI shown before reveal');
+  await S(() => { const { G, P } = __scurry; const b = G.boss; b.x = P.x + 8; b.z = P.z; __scurry.comboGain(100); });
+  const ready = await S(() => __scurry.run.shriekReady);
+  if (!ready) throw new Error('combo did not charge shriek');
+  await page.keyboard.press('KeyX');
+  await rawWait(150);
+  const sw = await S(() => ({ n: __scurry.W.swarm.length, stun: __scurry.G.boss.stun || 0, ui: document.getElementById('bossWrap').style.display }));
+  if (sw.n !== 8 || !(sw.stun > 0)) throw new Error('shriek ' + JSON.stringify(sw));
   await wait(2500);
+  if (!(await S(() => __scurry.G.boss.revealed))) throw new Error('boss not revealed in arena');
   await shot('04-boss');
   await S(() => __scurry.hurtBoss(0.4));
   await wait(2500);

@@ -6,6 +6,7 @@ import { G, P } from '../core/state.js';
 import { audioInit } from '../audio/audio.js';
 import { keys, stick, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { pause, openMap } from './screens.js';
+import { shriek } from '../game/swarm.js';
 
 const STICK_R = 52;
 
@@ -15,6 +16,7 @@ export function initTouch() {
   root.innerHTML = `
     <div id="tStick" aria-label="Move"><i></i></div>
     <div id="tBtns">
+      <button class="tb shriek" data-b="shriek" aria-label="Shriek" hidden>Shriek</button>
       <button class="tb sm" data-b="lock" aria-label="Lock on">Lock</button>
       <button class="tb sm" data-b="scent" aria-label="Scent trails">Sniff</button>
       <button class="tb" data-b="spec" aria-label="Special">Special</button>
@@ -96,6 +98,7 @@ function press(k) {
     case 'scent': P.scent = !P.scent; break;
     case 'map': openMap(); break;
     case 'pause': pause(true); break;
+    case 'shriek': shriek(); break;
   }
 }
 function release(k) {

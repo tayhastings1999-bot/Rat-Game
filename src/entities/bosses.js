@@ -45,9 +45,8 @@ export function spawnBoss() {
   };
   W.enemies.push(b);
   G.boss = b;
-  $('bossWrap').style.display = 'flex';
   $('bossLabel').textContent = `${B.name.toUpperCase()} · I`;
-  banner(B.name, 'has come for you');
+  banner('Something big has woken', 'Sniff it out (F), or keep your distance');
   sfx('boss');
   G.shake = 0.5;
   boom(x, gy + 1.5, z, 6, 0xff3a20);

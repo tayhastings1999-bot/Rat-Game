@@ -39,6 +39,8 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Enemies.** Twelve types, each with several telegraphed attacks chosen by distance and sometimes by your HP. Flyers move erratically: bats weave on sine waves, screech and dive-bomb; crows orbit, reverse direction, swoop and fire feather volleys; moths drift in lissajous paths, drop poison clouds and blink; wasps dart. Big patrol cats hunt in packs. **Corrupted elites** have double HP plus a modifier: Burning (fire trail), Warding (shields allies), Frenzied, Brood-bloated (splits), Leeching or Volatile (explodes on death). They drop cores that give an item and salvage.
 
+**Swarm combo.** Hits and kills fill a combo meter that drains fast and empties when you get hurt. Fill it to unlock the **territorial shriek** (X): eight nest-mates pour in for 10 seconds, biting everything nearby, staggering any boss within earshot and chewing through barricades. In a fight the controls hint and minimap fade out, and the boss bar only appears once you enter its arena.
+
 **Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
 
 | Boss | Where | Signature |
@@ -63,9 +65,9 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 ## Controls
 
-WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · E use / grab / hold to gnaw · R lock-on · F scent trails · M map · mouse look (V toggles) · wheel zoom · Esc pause.
+WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · X shriek (full combo) · E use / grab / hold to gnaw · R lock-on · F scent trails · M map · mouse look (V toggles) · wheel zoom · Esc pause.
 
-**Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Use (hold to gnaw), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
+**Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Use (hold to gnaw), Shriek (when the combo is full), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
 
 ## Code map
 

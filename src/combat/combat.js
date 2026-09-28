@@ -14,6 +14,7 @@ import { puddle, warn } from './hazards.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
 import { addChest } from '../world/build.js';
+import { comboGain, comboBreak } from '../game/swarm.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -71,6 +72,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   e.flash = 0.1;
   e.hurt = true;
   P.lastHitT = G.time;
+  if (src !== 'swarm' && src !== 'dot') comboGain(Math.min(4, 0.6 + d / 12));
   sfx('hit');
   if (crit || d >= 40) G.hitStop = Math.max(G.hitStop, 0.035);
   run.dmgBy[src] = (run.dmgBy[src] || 0) + d;
@@ -122,7 +124,7 @@ export function hurtP(d, from, raw) {
     if (st.thorns && from.hp != null && !from.dead && (from.tT || 0) <= 0) { from.tT = 0.5; hit(from, st.thorns, Math.atan2(from.x - P.x, from.z - P.z), 6, 'thorns'); }
   }
   blood(P.x, P.y + 0.5, P.z, 0xa01010, null, raw ? 2 : 6);
-  if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); }
+  if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); comboBreak(); }
   if (run.hp < st.maxHp * 0.3 && !run.lowWarned) { run.lowWarned = true; banner('Rat needs cheese, badly!', 'Press F to sniff out a food cache'); }
   if (run.hp <= 0) {
     if (run.reactor) {
@@ -144,6 +146,7 @@ export function kill(e) {
   run.kills++;
   run.spike = (run.spike || 0) + 0.025;
   meta.kills++;
+  comboGain(e.mini ? 20 : e.elite ? 8 : e.boss ? 0 : 3);
   sfx('kill');
   if (e.boss || e.pred || e.elite || e.type === 'brute' || e.type === 'nest') G.hitStop = Math.max(G.hitStop, e.boss ? 0.3 : 0.08);
   const big = e.boss || e.pred;

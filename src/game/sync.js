@@ -95,6 +95,18 @@ export function sync(dt) {
   ringIM.count = rings;
   ringIM.instanceMatrix.needsUpdate = true;
   if (ringIM.instanceColor) ringIM.instanceColor.needsUpdate = true;
+  // Summoned nest-mates.
+  for (const s of W.swarm) {
+    const i = cnt.ratling++;
+    if (i >= MOB_CAP) break;
+    dummy.position.set(s.x, s.y + Math.abs(Math.sin(G.time * 18 + s.ph)) * 0.08, s.z);
+    dummy.rotation.set(0, s.ang, 0);
+    dummy.scale.setScalar(s.life < 0.5 ? s.life * 2 : 1);
+    dummy.updateMatrix();
+    IMB.ratling.setMatrixAt(i, dummy.matrix);
+    IMG.ratling.setMatrixAt(i, dummy.matrix);
+    IMB.ratling.setColorAt(i, tmpC.setScalar(1));
+  }
   for (const k in IMB) {
     const n = Math.min(MOB_CAP, cnt[k]);
     IMB[k].count = IMG[k].count = n;

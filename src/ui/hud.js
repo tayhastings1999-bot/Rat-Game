@@ -33,7 +33,7 @@ function objective() {
   if (G.mode === 'trial') return W.valves.every(v => v.done) ? 'Reach the drain' : `Turn the valves ${W.valves.filter(v => v.done).length}/3 · F to sniff the way`;
   const key = !isSewer() ? (run.keys ? ' · Manhole unlocked: descend for premium loot' : ' · Manhole locked') : '';
   if (G.exitD) return isSewer() ? 'A ladder leads up to the streets · F to sniff it out' : `The road to ${nextSurfaceName()} is open · F to sniff it out${run.keys ? ' · or take the manhole down' : ''}`;
-  if (G.boss) return 'Boss awake';
+  if (G.boss) return G.boss.revealed ? 'Boss awake' : 'Something big is awake · F to sniff it out';
   return `Nests left ${run.nests} · Boss wakes in ${fmt(Math.max(0, run.bossAt - (run.time - run.dStart)))}${key}`;
 }
 
@@ -58,7 +58,17 @@ export function hud() {
   $('kills').textContent = run.kills;
   $('clock').textContent = G.mode === 'trial' ? fmtT(run.time) : fmt(run.time);
   $('obj').textContent = objective();
-  if (G.boss) $('bossFill').style.width = Math.max(0, G.boss.hp / G.boss.maxHp * 100) + '%';
+  // Boss UI stays hidden until you enter its arena (or hit it).
+  const b = G.boss;
+  if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; banner(b.name, 'Fight or flee'); }
+  $('bossWrap').style.display = b && b.revealed ? 'flex' : 'none';
+  if (b) $('bossFill').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%';
+  const cmb = $('combo'), ready = !!run.shriekReady;
+  $('comboFill').style.width = (ready ? 100 : (run.combo || 0)) + '%';
+  $('comboTxt').textContent = ready ? (G.touch ? 'SHRIEK READY' : 'SHRIEK READY · X') : 'COMBO';
+  cmb.classList.toggle('ready', ready);
+  const sb = document.querySelector('[data-b="shriek"]');
+  if (sb) sb.hidden = !ready;
   if (G.mode === 'trial') {
     const gs = (G.ghost && G.ghost.data.sp) || [];
     $('splits').innerHTML = run.splits.map((t, i) => `Valve ${i + 1} ${fmtT(t)}${gs[i] != null ? ` <span style="color:${t < gs[i] ? '#6ad06a' : '#ff7a6a'}">${t < gs[i] ? '−' : '+'}${Math.abs(t - gs[i]).toFixed(1)}</span>` : ''}`).join('<br>') + (G.ghost ? `<br><span style="color:#9ad0ff">Ghost ${fmtT(G.ghost.data.t)}</span>` : '');
