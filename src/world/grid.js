@@ -177,7 +177,8 @@ const GROUND = { ground: true };
 /**
  * Resolve a cylinder (radius R, height H) against solid tiles and platforms.
  * Returns what the body stands on (a platform, a tile-top marker) or null.
- * Sets b.hw when it pushed against a wall (b.wt = tile, b.wtop = wall top).
+ * Sets b.hw when it pushed against a wall (b.wt = tile, b.wtop = wall top,
+ * b.wnx/b.wnz = outward wall normal).
  */
 export function collideBody(b, prevY, R, H, isP) {
   b.hw = false;
@@ -198,9 +199,10 @@ export function collideBody(b, prevY, R, H, isP) {
       const d = Math.sqrt(d2);
       b.x += dx / d * (R - d);
       b.z += dz / d * (R - d);
+      b.wnx = dx / d; b.wnz = dz / d;
     } else {
       const l = b.x - x0, r = x1 - b.x, u = b.z - z0, o = z1 - b.z, m = Math.min(l, r, u, o);
-      if (m === l) b.x = x0 - R; else if (m === r) b.x = x1 + R; else if (m === u) b.z = z0 - R; else b.z = z1 + R;
+      if (m === l) { b.x = x0 - R; b.wnx = -1; b.wnz = 0; } else if (m === r) { b.x = x1 + R; b.wnx = 1; b.wnz = 0; } else if (m === u) { b.z = z0 - R; b.wnx = 0; b.wnz = -1; } else { b.z = z1 + R; b.wnx = 0; b.wnz = 1; }
     }
     b.hw = true;
     b.wt = t;

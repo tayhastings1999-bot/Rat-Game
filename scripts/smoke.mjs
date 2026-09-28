@@ -115,6 +115,7 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
     return null;
   });
   if (!wall) throw new Error('no climbable wall found');
+  await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); });
   await S(w => { const { P, M, G } = __scurry, toW = g => (g - M.W / 2 + 0.5) * 4; P.x = toW(w.gx) + w.dx * 2.6; P.z = toW(w.gz) + w.dz * 2.6; P.y = 0; G.camYaw = Math.atan2(-w.dx, -w.dz); __scurry.run.sta = 100; }, wall);
   await page.keyboard.down('KeyW'); await wait(120); await page.keyboard.press('Space'); await page.keyboard.down('Space');
   await wait(2600);
@@ -172,14 +173,41 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   if (!mini) throw new Error('mini-boss did not wake');
   console.log('     mini-boss:', JSON.stringify(mini));
   await shot('03b-lair');
-  await S(() => { const e = __scurry.W.enemies.find(e => e.mini); e.hp = 1; });
-  await wait(2500);
+  await S(() => { const e = __scurry.W.enemies.find(e => e.mini); e.hp = 0; __scurry.kill(e); });
+  await wait(1200);
   if ((await S(() => __scurry.W.chests.length)) <= chests0) throw new Error('mini-boss left no hoard');
   // Melee kit: kills stack bloodlust.
   await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 1.5, P.z + 0.5, { plain: true }); if (e) e.hp = 1; } });
   await wait(1500);
   await shot('03c-swipe');
   if (!((await S(() => __scurry.run.blood || 0)) > 0)) throw new Error('bloodlust did not stack');
+});
+await step('scramble, wall-bounce, foraging', async () => {
+  const w = await S(() => __scurry.wallSpot());
+  if (!w) throw new Error('no tall wall');
+  await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); });
+  await S(w => { const { P, G, W } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') e.hp = 0; P.x = w.x + w.nx * 2.5; P.z = w.z + w.nz * 2.5; P.y = 0; P.vx = P.vy = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); G.lockOn = null; }, w);
+  await rawWait(200);
+  await S(() => { __scurry.run.sta = __scurry.st.staMax; });
+  await page.keyboard.down('ShiftLeft'); await page.keyboard.down('KeyW');
+  let peak = 0, scr = false;
+  for (let i = 0; i < 20; i++) { await rawWait(60); const r = await S(() => ({ y: __scurry.P.y, s: __scurry.P.scramble })); peak = Math.max(peak, r.y); if (r.s > 0) scr = true; }
+  await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft');
+  if (!scr || peak < 2) throw new Error(`scramble: triggered=${scr} peak=${peak.toFixed(2)} ` + (await S(() => { const P = __scurry.P; return JSON.stringify({ s: __scurry.G.state, carry: !!P.carry, lock: P.lock, sq: P.squeeze, sta: __scurry.run.sta, y: P.y }); })));
+  // Bounce off the wall mid-scramble.
+  await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 2.5; P.z = w.z + w.nz * 2.5; P.y = 0; P.vx = P.vy = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, w);
+  await page.keyboard.down('ShiftLeft'); await page.keyboard.down('KeyW');
+  let chain = 0;
+  for (let i = 0; i < 25 && !chain; i++) { await rawWait(50); if (await S(() => __scurry.P.scramble > 0)) { await page.keyboard.press('Space'); await rawWait(80); chain = await S(() => __scurry.P.chain); } }
+  await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft');
+  if (!chain) throw new Error('wall-bounce did not chain');
+  const f = await S(() => { const f = __scurry.W.fungi.find(f => !f.taken); return f && { x: f.x, y: f.y, z: f.z, k: f.kind }; });
+  if (!f) throw new Error('no fungi in district');
+  await S(f => { const P = __scurry.P; P.x = f.x; P.z = f.z; P.y = f.y; P.vx = P.vz = 0; }, f);
+  await wait(300);
+  const t = await S(k => (__scurry.run.buffs || {})[k] || 0, f.k);
+  if (!(t > 8)) throw new Error('fungus buff ' + f.k + ' = ' + t);
+  await shot('03b-forage');
 });
 await step('corrupted elites spawn and die', async () => {
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
@@ -268,7 +296,7 @@ await step('boss marathon: each boss in phase 3 for a while', async () => {
     await S(() => __scurry.hurtBoss(0.3));
     await wait(9000);
     const b = await S(() => __scurry.G.boss && { kind: __scurry.G.boss.kind, phase: __scurry.G.boss.phase, hp: __scurry.G.boss.hp });
-    if (!b || b.phase !== 3) throw new Error('boss state ' + JSON.stringify(b));
+    if (!b || b.phase !== 3) throw new Error('boss state ' + JSON.stringify(b) + ' game ' + (await S(() => __scurry.G.state + ' hp=' + __scurry.run.hp)));
     await S(() => __scurry.killBoss());
     await wait(300);
   }

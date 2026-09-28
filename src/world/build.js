@@ -15,6 +15,7 @@ import { flasks } from '../combat/arsenal.js';
 import { M, T, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
 import { curD, isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
+import { FUNGI } from '../data/fungi.js';
 import { addPred } from '../entities/mobs.js';
 
 export const tileMesh = {};
@@ -604,6 +605,40 @@ function clutter(city) {
     }
   }
 }
+/** Mushrooms and molds grow in damp corners against walls; the sewer is thick with them. */
+const fungusMats = {};
+function fungi(city) {
+  const spots = [];
+  for (let k = 0; k < M.W * M.H; k++) {
+    if (!DRY(M.grid[k])) continue;
+    const gx = k % M.W, gz = (k / M.W) | 0;
+    if (N4.some(([dx, dz]) => tAt(gx + dx, gz + dz) === 0)) spots.push(k);
+  }
+  shuffleR(spots);
+  const kinds = Object.keys(FUNGI), n = Math.min(spots.length, city ? 10 : 16);
+  for (let i = 0; i < n; i++) {
+    const k = spots[i], kind = kinds[i % kinds.length], F = FUNGI[kind];
+    const x = toW(k % M.W) + rr(-1.2, 1.2), z = toW((k / M.W) | 0) + rr(-1.2, 1.2), y = floorY(x, z);
+    const mat = fungusMats[kind] || (fungusMats[kind] = lam(F.col, { emissive: F.glow ? F.col : 0x000000, emissiveIntensity: 0.4 }));
+    const g = new THREE.Group();
+    if (F.mold) {
+      for (let j = 0; j < 5; j++) mkMesh(Sp(rr(0.18, 0.32), 6, 3), mat, rr(-0.35, 0.35), 0.02, rr(-0.35, 0.35), g).scale.set(1, 0.35, 1);
+    } else {
+      const stem = fungusMats.stem || (fungusMats.stem = lam(0xe8dcc0)), spot = fungusMats[kind + 's'] || (fungusMats[kind + 's'] = lam(F.spot));
+      for (let j = 0; j < 3; j++) {
+        const s = j ? rr(0.5, 0.7) : 1, ox = j ? rr(-0.35, 0.35) : 0, oz = j ? rr(-0.35, 0.35) : 0;
+        mkMesh(Cy(0.07 * s, 0.09 * s, 0.4 * s, 5), stem, ox, 0.2 * s, oz, g);
+        mkMesh(Sp(0.24 * s, 6, 3), mat, ox, 0.4 * s, oz, g).scale.set(1, 0.6, 1);
+        mkMesh(Sp(0.05 * s, 4, 2), spot, ox + 0.1 * s, 0.5 * s, oz, g);
+      }
+    }
+    g.traverse(m => { m.castShadow = false; });
+    glowSprite(F.col, 1, g, 0, 0.3, 0, F.glow ? 0.5 : 0.22);
+    g.position.set(x, y, z);
+    world.add(g);
+    W.fungi.push({ x, y, z, g, kind, taken: false });
+  }
+}
 /** Dead-end alleys always end in something worth the detour. */
 function deadEndLoot(alleys) {
   for (const a of alleys || []) {
@@ -733,6 +768,7 @@ export function populate(info) {
   markSecrets();
   if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
   clutter(city);
+  fungi(city);
 
   // Shared: workbenches, pipes, live wires, nests or valves, predators, hazards.
   const benchAt = w => { if (w) addBench(toW(w.x) - w.dx * 0.6, toW(w.y) - w.dy * 0.6, Math.atan2(w.dx, w.dy)); };

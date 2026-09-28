@@ -15,6 +15,7 @@ import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
 import { addChest } from '../world/build.js';
 import { comboGain, comboBreak } from '../game/swarm.js';
+import { buffOn } from '../game/forage.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -64,7 +65,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   }
   let d = base * st.dmg * (melee ? 1 + st.melee : 1);
   if (st.fury && run.hp < st.maxHp * 0.5) d *= 1.3;
-  const crit = Math.random() < st.crit;
+  const crit = Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   if (crit) d *= st.critMul;
   if (e.ward > 0) d *= 0.4;
   d = Math.max(1, Math.round(d));
@@ -111,7 +112,7 @@ export function hurtP(d, from, raw) {
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
   }
   if (from && from.hp != null) d *= st.guard; // melee classes brace against bites and swipes
-  d = Math.max(1, Math.round(d * st.taken * (1 + 0.1 * run.tier) - (raw ? 0 : st.armor)));
+  d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (1 + 0.1 * run.tier) - (raw ? 0 : st.armor)));
   run.hp -= d;
   if (!raw) P.inv = 0.6;
   G.flash = Math.max(G.flash, raw ? 0.35 : 1);

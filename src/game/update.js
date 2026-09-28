@@ -16,6 +16,7 @@ import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
 import { spawnBoss } from '../entities/bosses.js';
 import { exitRoad, exitLadder } from './flow.js';
 import { tickSwarm, comboTick } from './swarm.js';
+import { tickForage } from './forage.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -433,6 +434,7 @@ export function update(dt) {
   if (G.mode !== 'trial' && !run.bossDone && !G.boss && (run.time - run.dStart >= run.bossAt || run.nests <= 0) && M.spawnTiles.length) spawnBoss();
   updateEnemies(dt, cap);
   tickSwarm(dt);
+  tickForage(dt);
   comboTick(dt);
   if (G.state !== 'play') return;
   updateProjectiles(dt);

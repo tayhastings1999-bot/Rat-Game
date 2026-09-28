@@ -51,7 +51,7 @@ export function setupWorld(seed) {
   P.x = toW(s.cx); P.z = toW(s.cy); P.y = floorY(P.x, P.z);
   P.vx = P.vy = P.vz = 0;
   P.safe = { x: P.x, z: P.z, y: P.y };
-  P.poisonT = 0; P.roll = 0; P.carry = null; P.bulwark = 0; P.glideT = 0;
+  P.poisonT = 0; P.roll = 0; P.chain = 0; P.scramble = 0; P.carry = null; P.bulwark = 0; P.glideT = 0;
   G.camPos.set(P.x, 12, P.z + 12);
   G.flowT = 0;
   for (const f of W.familiars) { f.x = P.x; f.z = P.z; }
@@ -82,7 +82,7 @@ export function startRun(k) {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
     pendingLv: 0, specT: 0, primT: 0, lowWarned: false, hp: 0, sta: 100, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 3, surgeT: 90, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
-    keys: meta.nest.key ? 1 : 0, combo: 0, comboT: 0, shriekReady: false, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
+    keys: meta.nest.key ? 1 : 0, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
   run.hp = st.maxHp;

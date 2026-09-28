@@ -41,6 +41,10 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Swarm combo.** Hits and kills fill a combo meter that drains fast and empties when you get hurt. Fill it to unlock the **territorial shriek** (X): eight nest-mates pour in for 10 seconds, biting everything nearby, staggering any boss within earshot and chewing through barricades. In a fight the controls hint and minimap fade out, and the boss bar only appears once you enter its arena.
 
+**Momentum Scramble.** Sprint into a climbable wall and you run straight up it, free of stamina. Tap jump while on a wall to bounce off it; each chained bounce adds 10% speed (up to ×4) until you settle on the ground.
+
+**Fungal foraging.** Mushrooms and molds grow against walls (far more in the sewer), shown as green dots on the minimap. Walk over one for a 10-second buff: Puffcap (+35% speed), Glowcap (+25% crit), Sporecap (toxic spore cloud), Iron Mold (−40% damage taken), Blood Mold (5 HP/s regen) or Slime Mold (free sprinting and climbing).
+
 **Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
 
 | Boss | Where | Signature |

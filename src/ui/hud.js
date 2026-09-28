@@ -9,6 +9,7 @@ import { OBJ } from '../data/props.js';
 import { PRIM, SPECIALS, WEAP } from '../combat/arsenal.js';
 import { threatTier } from '../combat/combat.js';
 import { useTarget, grabTarget, chewTarget } from '../entities/player.js';
+import { activeBuffs } from '../game/forage.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT } from './icons.js';
 
 export function initHudIcons() {
@@ -53,7 +54,9 @@ export function hud() {
     (isSewer() && G.mode !== 'trial' ? '<span class="chip" style="--cc:#b070ff">SEWER · MUTATED HORDE</span>' : '') +
     run.mods.map(m => `<span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span>`).join('') +
     (run.blood > 0 ? `<span class="chip" style="--cc:#ff4a3a">BLOODLUST ×${run.blood}</span>` : '') +
-    (P.scent ? '<span class="chip" style="--cc:#ffe070">Scent vision</span>' : '');
+    (P.scent ? '<span class="chip" style="--cc:#ffe070">Scent vision</span>' : '') +
+    activeBuffs().map(b => `<span class="chip" style="--cc:${hexs(b.col)}">${b.name} ${Math.ceil(b.t)}s</span>`).join('') +
+    (P.chain ? `<span class="chip" style="--cc:#ffd070">MOMENTUM ×${P.chain}</span>` : '');
   $('dmgTotal').textContent = commas(run.dmg);
   $('kills').textContent = run.kills;
   $('clock').textContent = G.mode === 'trial' ? fmtT(run.time) : fmt(run.time);
@@ -123,6 +126,7 @@ export function drawMap(cv, px, radius) {
   W.chests.filter(c => !c.open).forEach(c => dot(c, c.cursed ? '#ff3a3a' : '#ffa030', 5));
   W.caches.filter(c => !c.taken).forEach(c => dot(c, '#ffe070', 4));
   W.pipes.forEach(p => dot(p, '#b0b0b8', 5));
+  W.fungi.forEach(f => { if (!f.taken) dot(f, '#8ad06a', 3); });
   W.keys.forEach(k => dot(k, '#ffd040', 7));
   W.enemies.filter(e => e.type === 'nest').forEach(e => dot(e, '#ff3a20', 6));
   W.valves.filter(v => !v.done).forEach(v => dot(v, '#6ad06a', 6));

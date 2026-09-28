@@ -14,6 +14,7 @@ import { nearest, near, aoe, hit, hurtP, scrapDrop } from '../combat/combat.js';
 import { puddle } from '../combat/hazards.js';
 import { giveChest } from '../game/loot.js';
 import { enterSewer } from '../game/flow.js';
+import { buffOn } from '../game/forage.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 
@@ -39,8 +40,11 @@ export function stepPlayer(dt) {
   // Walking into a crevice squeezes you in automatically (no extra button needed).
   if (L && P.onGround && !P.carry) { const ax = P.x + wx * 0.7, az = P.z + wz * 0.7; if (tileAt(ax, az) === 5 && P.y < topAt(toG(ax), toG(az)) - 0.1) P.squeeze = true; }
   P.sprinting = (keys.ShiftLeft || keys.ShiftRight) && L > 0 && run.sta > 1 && !P.squeeze && !P.carry && P.roll <= 0;
-  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
-  if (P.sprinting) { run.sta -= st.sprintDrain * dt; P.staT = 0.6; }
+  // Momentum: sprinting is remembered briefly, and chained wall-bounces stack speed until you settle.
+  P.sprintMem = P.sprinting ? 0.35 : (P.sprintMem || 0) - dt;
+  if (P.onGround && P.chain) { P.chainT -= dt; if (P.chainT <= 0) P.chain = 0; }
+  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (1 + 0.1 * (P.chain || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
+  if (P.sprinting) { run.sta -= st.sprintDrain * dt * (buffOn('slime') ? 0 : 1); P.staT = 0.6; }
   P.rollCd -= dt;
   if (P.roll > 0) {
     P.roll -= dt;
@@ -61,10 +65,22 @@ export function stepPlayer(dt) {
   P.wallT -= dt;
   const canClimb = P.wallT > 0 && (P.wallType !== 6 || st.metalClimb) && !P.carry && P.y < P.wallTop + 0.3;
   P.climbing = false;
+  P.scrCd -= dt;
+  // Scramble: hit a climbable wall at a sprint and you run straight up it, free.
+  if (canClimb && P.sprintMem > 0 && P.scramble <= 0 && P.scrCd <= 0 && !st.noScramble && P.wallTop > P.y + 0.5) {
+    P.scramble = 0.75 + 0.1 * (P.chain || 0);
+    P.scrCd = 0.5;
+    puff(P.x, P.y + 0.3, P.z, 0x9a8a7a, 5, 1.5);
+    sfx('jump');
+  }
+  if (P.scramble > 0) {
+    P.scramble -= dt;
+    if (canClimb) { P.vy = Math.max(P.vy, 9.5 + (P.chain || 0)); P.climbing = true; P.jumping = false; P.staT = 0.3; }
+  }
   // Hold Space against a climbable wall to scale it — from the air, the ground, or a ledge.
-  if (keys.Space && canClimb && run.sta > 1 && (!P.onGround || P.wallTop > P.y + 0.5)) {
+  if (!P.climbing && keys.Space && canClimb && run.sta > 1 && (!P.onGround || P.wallTop > P.y + 0.5)) {
     P.vy = Math.max(P.vy, 6.5);
-    run.sta -= st.climbCost * dt;
+    run.sta -= st.climbCost * dt * (buffOn('slime') ? 0 : 1);
     P.staT = 0.6;
     P.climbing = true;
     P.jumping = false;
@@ -72,7 +88,21 @@ export function stepPlayer(dt) {
   if (P.buffer > 0 && !P.squeeze) {
     const j = v => { P.vy = v; P.onGround = false; P.coyote = 0; P.buffer = 0; P.cut = false; P.jumping = true; };
     if (P.onGround || P.coyote > 0) { j(12.5 * (P.gmul < 0.6 ? 1.05 : 1)); puff(P.x, P.y, P.z, 0x9a8a7a, 4, 1.5); }
-    else if (P.air > 0 && !canClimb) { P.air--; j(11.5); spark(P.x, P.y + 0.2, P.z, 1.2, 0xc080ff); }
+    else if (P.wallT > 0 && !P.onGround && (P.scramble > 0 || P.sprintMem > 0 || P.chain) && !st.noScramble) {
+      // Wall-bounce: kick off the wall, keep your speed and chain the next one faster.
+      P.chain = Math.min(4, (P.chain || 0) + 1);
+      P.chainT = 0.6;
+      P.scramble = 0;
+      const k = 8 + 1.6 * P.chain;
+      P.vx = P.wallNX * k + P.vx * 0.4;
+      P.vz = P.wallNZ * k + P.vz * 0.4;
+      j(11.5 + P.chain * 0.5);
+      P.lock = 0.2;
+      P.sprintMem = 0.5;
+      P.wallT = 0;
+      spark(P.x, P.y + 0.4, P.z, 1.4, 0xffd070);
+      if (P.chain > 1) dnum(P.x, P.y + 1.6, P.z, 'Bounce ×' + P.chain, 'info');
+    } else if (P.air > 0 && !canClimb) { P.air--; j(11.5); spark(P.x, P.y + 0.2, P.z, 1.2, 0xc080ff); }
   }
   if (!keys.Space && P.vy > 0 && !P.cut && P.jumping) { P.vy *= 0.5; P.cut = true; }
   if (!P.climbing) P.vy -= GRAV * P.gmul * dt;
@@ -86,9 +116,10 @@ export function stepPlayer(dt) {
   P.z += P.vz * dt;
   const g = collideBody(P, py, P.squeeze ? 0.2 : 0.3, P.squeeze ? 0.45 : 0.9, true), was = P.onGround;
   P.onGround = !!g;
-  if (P.hw && L) { P.wallT = 0.12; P.wallType = P.wt; P.wallTop = P.wtop; }
+  if (P.hw && L) { P.wallT = 0.12; P.wallType = P.wt; P.wallTop = P.wtop; P.wallNX = P.wnx; P.wallNZ = P.wnz; }
   if (g) {
     P.coyote = 0.1;
+    P.scramble = 0;
     P.air = st.jumps;
     P.jumping = false;
     P.glideT = 0;
