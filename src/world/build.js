@@ -12,7 +12,7 @@ import {
 import { Sp, Bx, Cy, Co } from '../render/models.js';
 import { clearDecals, ringGeo, discGeo } from '../fx/fx.js';
 import { flasks } from '../combat/arsenal.js';
-import { M, T, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4 } from './grid.js';
+import { M, T, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
 import { curD, isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
 import { addPred } from '../entities/mobs.js';
@@ -193,6 +193,7 @@ export function addObj(kind, x, z, y) {
   world.add(g);
   o.mesh = g;
   o.y = (y ?? floorY(x, z)) + o.th;
+  o.dyn = true;
   W.plats.push(o);
   W.objs.push(o);
   syncObj(o);
@@ -800,6 +801,13 @@ export function populate(info) {
       W.cracks.set(k, { t: -1, m });
     });
   }
+  indexPlats();
+  // Small props don't cast real-time shadows (cheaper; buildings and big set pieces still do).
+  world.traverse(o => {
+    if (!o.isMesh || !o.castShadow) return;
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+    if (o.geometry.boundingSphere.radius * Math.max(o.scale.x, o.scale.y, o.scale.z) < 1.4) o.castShadow = false;
+  });
   applyLighting(D, city);
 }
 

@@ -141,6 +141,37 @@ export function flowDir(e) {
   return [vx / l, vz / l];
 }
 
+// ---------- platform index ----------
+/**
+ * Static platforms (crates, cars, props, lines...) bucketed by tile so a body
+ * only tests the ones near it. Movable junk (W.objs) is checked separately.
+ */
+let platCells = new Map(), stamp = 0;
+export function indexPlats() {
+  platCells = new Map();
+  for (const p of W.plats) {
+    if (p.dyn) continue;
+    const x0 = toG(p.x - p.w / 2), x1 = toG(p.x + p.w / 2), z0 = toG(p.z - p.d / 2), z1 = toG(p.z + p.d / 2);
+    for (let gz = z0; gz <= z1; gz++) for (let gx = x0; gx <= x1; gx++) {
+      if (!inG(gx, gz)) continue;
+      const k = gi(gx, gz);
+      let l = platCells.get(k);
+      if (!l) platCells.set(k, (l = []));
+      l.push(p);
+    }
+  }
+}
+/** Call fn once for every platform that could overlap a circle of radius R at (x, z). */
+export function forPlatsNear(x, z, R, fn) {
+  const s = ++stamp, x0 = toG(x - R - 0.1), x1 = toG(x + R + 0.1), z0 = toG(z - R - 0.1), z1 = toG(z + R + 0.1);
+  for (let gz = z0; gz <= z1; gz++) for (let gx = x0; gx <= x1; gx++) {
+    const l = platCells.get(gi(gx, gz));
+    if (!l) continue;
+    for (const p of l) { if (p._s === s) continue; p._s = s; fn(p); }
+  }
+  for (const o of W.objs) fn(o);
+}
+
 // ---------- collision ----------
 const GROUND = { ground: true };
 /**
@@ -175,22 +206,23 @@ export function collideBody(b, prevY, R, H, isP) {
     b.wt = t;
     b.wtop = top;
   }
-  for (const p of W.plats) {
-    if (p === b || p.carried) continue;
+  const visit = p => {
+    if (p === b || p.carried) return;
     const hw = p.w / 2 + R, hd = p.d / 2 + R, lx = b.x - p.x, lz = b.z - p.z;
-    if (lx > hw || lx < -hw || lz > hd || lz < -hd) continue;
+    if (lx > hw || lx < -hw || lz > hd || lz < -hd) return;
     const top = p.y, bot = p.y - p.th;
     if (b.vy <= 0 && prevY >= top - 0.1 && b.y <= top + 0.001) { b.y = top; b.vy = 0; g = p; }
     // Thin platforms (power lines) are one-way: stand on them, pass through from below.
     else if (!p.thin && b.vy > 0 && prevY + H <= bot + 0.05 && b.y + H > bot) { b.y = bot - H; b.vy = 0; }
     else if (b.y < top - 0.1 && b.y + H > bot) {
-      if (top - b.y < 0.45 && b.vy <= 0) { b.y = top; b.vy = 0; g = p; continue; }
+      if (top - b.y < 0.45 && b.vy <= 0) { b.y = top; b.vy = 0; g = p; return; }
       b.blocked = p;
-      if (p.thin) continue; // power lines: walk under them
+      if (p.thin) return; // power lines: walk under them
       if (hw - Math.abs(lx) < hd - Math.abs(lz)) b.x = p.x + Math.sign(lx || 1) * hw;
       else b.z = p.z + Math.sign(lz || 1) * hd;
     }
-  }
+  };
+  forPlatsNear(b.x, b.z, R, visit);
   const gy = floorY(b.x, b.z, isP);
   if (b.y <= gy + 0.001 && b.vy <= 0 && gy - b.y <= 1.05) {
     if (!g || gy >= g.y) { b.y = gy; b.vy = 0; g = GROUND; }

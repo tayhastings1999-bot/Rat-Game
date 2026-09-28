@@ -2,7 +2,7 @@
 // movement helpers, telegraphed attack patterns per mob type, and the
 // per-frame enemy update.
 import * as THREE from 'three';
-import { rand, randi, clamp, angD, pick, TAU, PI2 } from '../core/util.js';
+import { rand, randi, clamp, angD, pick, keep, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { GEO, bodyMat } from '../render/models.js';
@@ -577,27 +577,39 @@ export function updateEnemies(dt, cap) {
       if (big) fx('ring', e.x, e.y, e.z, reach + 0.6, 0xff3020, e.wind, 0, 0.9);
     }
   }
-  // Separation (and bonks) between bodies.
-  const en = W.enemies;
-  for (let i = 0; i < en.length; i++) {
-    const a = en[i];
+  // Separation (and bonks) between bodies, using a coarse spatial grid instead of every pair.
+  const cells = new Map(), CS = 2.5;
+  let idx = 0;
+  for (const e of W.enemies) {
+    e._i = idx++;
+    if (e.dead || e.type === 'nest') continue;
+    const k = Math.floor(e.x / CS) * 4096 + Math.floor(e.z / CS);
+    let l = cells.get(k);
+    if (!l) cells.set(k, (l = []));
+    l.push(e);
+  }
+  for (const a of W.enemies) {
     if (a.dead || a.type === 'nest') continue;
-    for (let j = i + 1; j < en.length; j++) {
-      const b = en[j];
-      if (b.dead || b.type === 'nest') continue;
-      const dx = b.x - a.x, dz = b.z - a.z, rr = a.r + b.r;
-      if (dx > rr || dx < -rr || dz > rr || dz < -rr) continue;
-      const d2 = dx * dx + dz * dz;
-      if (d2 < rr * rr && d2 > 1e-4 && Math.abs(a.y - b.y) < 1.4) {
-        bonkPair(a, b);
-        bonkPair(b, a);
-        const d = Math.sqrt(d2), p = (rr - d) * 0.5 / d, wa = a.heavy ? 0 : b.heavy ? 1 : 0.5;
-        a.x -= dx * p * 2 * wa; a.z -= dz * p * 2 * wa;
-        b.x += dx * p * 2 * (1 - wa); b.z += dz * p * 2 * (1 - wa);
+    const cx = Math.floor(a.x / CS), cz = Math.floor(a.z / CS);
+    for (let ox = -1; ox <= 1; ox++) for (let oz = -1; oz <= 1; oz++) {
+      const l = cells.get((cx + ox) * 4096 + cz + oz);
+      if (!l) continue;
+      for (const b of l) {
+        if (b._i <= a._i || b.dead) continue; // each pair once
+        const dx = b.x - a.x, dz = b.z - a.z, rr = a.r + b.r;
+        if (dx > rr || dx < -rr || dz > rr || dz < -rr) continue;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < rr * rr && d2 > 1e-4 && Math.abs(a.y - b.y) < 1.4) {
+          bonkPair(a, b);
+          bonkPair(b, a);
+          const d = Math.sqrt(d2), p = (rr - d) * 0.5 / d, wa = a.heavy ? 0 : b.heavy ? 1 : 0.5;
+          a.x -= dx * p * 2 * wa; a.z -= dz * p * 2 * wa;
+          b.x += dx * p * 2 * (1 - wa); b.z += dz * p * 2 * (1 - wa);
+        }
       }
     }
   }
-  if (W.enemies.some(e => e.dead)) W.enemies = W.enemies.filter(e => !e.dead);
+  keep(W.enemies, e => !e.dead);
 }
 
 function predAI(e, dt, d) {

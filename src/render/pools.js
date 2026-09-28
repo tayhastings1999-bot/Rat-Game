@@ -22,8 +22,7 @@ function mkIM(geo, mat, cap, col = true) {
 
 export const IMB = {}, IMG = {};
 for (const k of MOB_GEOS) {
-  IMB[k] = mkIM(GEO[k].body, bodyMat(), MOB_CAP);
-  IMB[k].castShadow = true;
+  IMB[k] = mkIM(GEO[k].body, bodyMat(), MOB_CAP); // no real-time shadows: mobs get PS1-style blob shadows
   IMG[k] = mkIM(GEO[k].glow, new THREE.MeshBasicMaterial({ vertexColors: true }), MOB_CAP, false);
 }
 
@@ -34,7 +33,6 @@ export const pprojIM = mkIM(new THREE.IcosahedronGeometry(0.13, 0), new THREE.Me
 export const eprojIM = mkIM(new THREE.IcosahedronGeometry(0.19, 0), new THREE.MeshBasicMaterial(), 320);
 export const partIM = mkIM(Bx(0.12, 0.12, 0.12), new THREE.MeshBasicMaterial(), 700);
 export const gibIM = mkIM(Bx(0.2, 0.13, 0.13), new THREE.MeshLambertMaterial({ flatShading: true }), 400);
-gibIM.castShadow = true;
 export const scentIM = mkIM(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.95, depthWrite: false }), 600);
 /** Coloured ground rings under corrupted elites and warded allies. */
 export const ringIM = mkIM(new THREE.RingGeometry(0.8, 1, 20).rotateX(-PI2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide }), 120);
@@ -53,3 +51,5 @@ export const decals = [0, 1, 2, 3].map(i => {
   scene.add(m);
   return { m, i: 0, n: 0 };
 });
+/** Soft dark discs under every creature (the PS1 way to do shadows cheaply). */
+export const shadowIM = mkIM(new THREE.CircleGeometry(0.5, 8).rotateX(-PI2), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.38, depthWrite: false }), 260, false);

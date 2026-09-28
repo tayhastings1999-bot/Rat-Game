@@ -6,6 +6,7 @@ import { G, P, W, run, meta } from '../core/state.js';
 import { scene, renderer } from '../render/renderer.js';
 import { furTex, stoneTex, flameTex } from '../render/textures.js';
 import { Sp, Bx, Cy, Co } from '../render/models.js';
+import { ps1 } from '../render/ps1.js';
 import { CLASSES, SKINS, skinOk } from '../data/classes.js';
 
 function glow(col, s, par, x = 0, y = 0, z = 0, op = 0.8) {
@@ -18,7 +19,8 @@ function glow(col, s, par, x = 0, y = 0, z = 0, op = 0.8) {
 
 export function makeRat(C) {
   if (skinOk(meta.skin)) C = { ...C, ...SKINS[meta.skin].over };
-  const g = new THREE.Group(), L = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, ...o });
+  // PS1 treatment: gouraud-lit, vertex-snapped, affinely textured.
+  const g = new THREE.Group(), L = (c, o = {}) => ps1(new THREE.MeshLambertMaterial({ color: c, ...o }));
   const fur = L(C.fur, { map: furTex }), furD = L(new THREE.Color(C.fur).multiplyScalar(0.62).getHex(), { map: furTex }), spk = L(C.spike);
   const skin = L(0xb0786c), claw = L(0x1a1616), tooth = L(0xf0e8d8), gear = L(C.gear, { map: stoneTex }), metal = L(0x8a8690, { map: stoneTex });
   const eyeM = new THREE.MeshBasicMaterial({ color: C.eye }), mouthM = new THREE.MeshBasicMaterial({ color: 0x6a0e0e });
@@ -27,7 +29,6 @@ export function makeRat(C) {
     m.position.set(x, y, z);
     if (r) m.rotation.set(...r);
     if (s) m.scale.set(...s);
-    m.castShadow = true;
     par.add(m);
     return m;
   };
@@ -36,8 +37,8 @@ export function makeRat(C) {
   g.add(body);
   add(Sp(0.45, 9, 7), fur, 0, 0, 0, body, null, [0.78, 0.72, 1.5]);
   add(Sp(0.34, 8, 6), furD, 0, -0.1, 0.3, body, null, [0.8, 0.7, 1]);
-  for (let i = 0; i < 8; i++) add(Co(0.075 - i * 0.004, 0.44 - i * 0.02, 4), spk, 0, 0.28 - i * 0.012, 0.42 - i * 0.16, body, [-1.05, 0, 0]);
-  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) add(Co(0.05, 0.26, 4), spk, s * 0.17, 0.22, 0.36 - i * 0.2, body, [-1, 0, s * 0.55]);
+  for (let i = 0; i < 5; i++) add(Co(0.08 - i * 0.006, 0.46 - i * 0.03, 3), spk, 0, 0.28 - i * 0.02, 0.42 - i * 0.26, body, [-1.05, 0, 0]);
+  for (const s of [-1, 1]) for (let i = 0; i < 3; i++) add(Co(0.055, 0.28, 3), spk, s * 0.17, 0.22, 0.32 - i * 0.26, body, [-1, 0, s * 0.55]);
   const head = new THREE.Group();
   head.position.set(0, 0.78, 0.66);
   g.add(head);
@@ -73,14 +74,13 @@ export function makeRat(C) {
   par.position.set(0, 0.5, -0.68);
   g.add(par);
   const tA = L(0xb88a78, { map: furTex }), tB = L(0x7a5248, { map: furTex });
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 8; i++) {
     const s = new THREE.Group();
-    s.position.z = i ? -0.17 : 0;
-    const r = 0.062 - i * 0.0036;
-    const m = new THREE.Mesh(Cy(r * 0.85, r, 0.19, 6), i % 2 ? tB : tA);
+    s.position.z = i ? -0.3 : 0;
+    const r = 0.062 - i * 0.0064;
+    const m = new THREE.Mesh(Cy(r * 0.8, r, 0.32, 4), i % 2 ? tB : tA);
     m.rotation.x = PI2;
-    m.position.z = -0.085;
-    m.castShadow = true;
+    m.position.z = -0.15;
     s.add(m);
     par.add(s);
     tail.push(s);

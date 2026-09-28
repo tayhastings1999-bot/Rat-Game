@@ -256,7 +256,11 @@ for (let i = 0; i < 48; i++) {
   nums.push(d);
 }
 let numI = 0;
+let numBudget = 0;
+/** Floating number. Plain damage numbers are rate-limited so huge fights don't flood the page. */
 export function dnum(x, y, z, v, cls = '') {
+  if ((cls === '' || cls === 'poison' || cls === 'burn') && numBudget <= 0) return;
+  numBudget--;
   _v.set(x, y, z).project(camera);
   if (_v.z > 1 || Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) return;
   const el = nums[numI++ % nums.length];
@@ -271,6 +275,7 @@ export function dnum(x, y, z, v, cls = '') {
 
 /** Advance pooled FX lifetimes (called from the render sync). */
 export function tickFx(dt) {
+  numBudget = 4;
   for (const f of swipes) {
     if (!f.on) continue;
     f.life -= dt;

@@ -1,5 +1,6 @@
 // Telegraphed area attacks and lingering ground puddles (fire, poison, sludge).
 import * as THREE from 'three';
+import { keep } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
@@ -45,7 +46,7 @@ export function tickHaz(dt) {
     if (!h.o.silent) boom(h.x, h.y + 0.4, h.z, Math.min(h.R * 1.2, 6), h.o.col || 0xff6a3a);
     if (h.o.fn) h.o.fn();
   }
-  if (W.hazQ.some(h => h.done)) W.hazQ = W.hazQ.filter(h => !h.done);
+  keep(W.hazQ, h => !h.done);
 
   let i = 0;
   for (const p of W.puddles) {
@@ -77,5 +78,5 @@ export function tickHaz(dt) {
     }
   }
   for (; i < pudSpr.length; i++) pudSpr[i].visible = false;
-  if (W.puddles.some(p => p.t <= 0)) W.puddles = W.puddles.filter(p => p.t > 0);
+  keep(W.puddles, p => p.t > 0);
 }

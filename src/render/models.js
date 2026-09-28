@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TAU, PI2 } from '../core/util.js';
 import { furTex } from './textures.js';
+import { ps1 } from './ps1.js';
 
 const V3 = THREE.Vector3;
 const EU = new THREE.Euler(), QU = new THREE.Quaternion(), M4 = new THREE.Matrix4();
@@ -19,11 +20,12 @@ export function prt(geo, col, p = [0, 0, 0], r = [0, 0, 0], s = [1, 1, 1]) {
   geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
   return geo;
 }
-export const Sp = (r, w = 7, h = 5) => new THREE.SphereGeometry(r, w, h);
+// PS1-era budgets: spheres and cylinders are capped at a handful of segments.
+export const Sp = (r, w = 6, h = 4) => new THREE.SphereGeometry(r, Math.min(w, 6), Math.min(h, 4));
 export const Bx = (x, y, z) => new THREE.BoxGeometry(x, y, z);
-export const Cy = (a, b, h, s = 6) => new THREE.CylinderGeometry(a, b, h, s);
+export const Cy = (a, b, h, s = 6) => new THREE.CylinderGeometry(a, b, h, Math.min(s, 6));
 export const Co = (r, h, s = 5) => new THREE.ConeGeometry(r, h, s);
-const To = (r, t, a) => new THREE.TorusGeometry(r, t, 4, 10, a);
+const To = (r, t, a) => new THREE.TorusGeometry(r, t, 3, 7, a);
 
 function spikes(n, col, cx, cy, cz, rx, ry, rz, len, w, seed) {
   let s = seed;
@@ -238,4 +240,5 @@ export const GEO = {
 /** Geometry keys that get an instancing pool (bosses use their own meshes). */
 export const MOB_GEOS = Object.keys(GEO).filter(k => k !== 'drone' && k !== 'ratking');
 
-export const bodyMat = () => new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: furTex });
+/** Creature skin: gouraud-lit vertex colours over a coarse fur texture, with PS1 vertex snap and affine mapping. */
+export const bodyMat = () => ps1(new THREE.MeshLambertMaterial({ vertexColors: true, map: furTex }));

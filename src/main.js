@@ -8,7 +8,7 @@ import './style.css';
 
 import { $ } from './core/util.js';
 import { G, P, W, run, st, meta } from './core/state.js';
-import { renderFrame } from './render/renderer.js';
+import { renderFrame, adaptResolution } from './render/renderer.js';
 import { setMusic } from './audio/audio.js';
 import { refreshPortraits } from './entities/rat.js';
 import { update } from './game/update.js';
@@ -27,12 +27,14 @@ menu();
 let hudT = 0, mapT = 0;
 function loop(now) {
   requestAnimationFrame(loop);
-  const dt = Math.min(0.05, (now - G.last) / 1000);
+  const raw = (now - G.last) / 1000, dt = Math.min(0.05, raw);
+  if (G.state === 'play') adaptResolution(raw);
   document.body.classList.toggle('playing', G.state === 'play');
   G.last = now;
   G.time += dt;
   let sdt = dt;
   if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; }
+  const t0 = performance.now();
   if (G.state === 'play') {
     update(sdt);
     hudT -= dt;
@@ -43,9 +45,14 @@ function loop(now) {
     if (G.state === 'menu' || G.state === 'nest') { G.camYaw += dt * 0.12; P.facing += dt * 0.4; }
     if (G.state === 'menu' || G.state === 'nest') setMusic(0, false);
   }
+  const t1 = performance.now();
   sync(G.state === 'play' || G.state === 'menu' || G.state === 'nest' ? sdt : 0);
   animate(sdt);
+  const t2 = performance.now();
   renderFrame();
+  const t3 = performance.now(), k = 0.05, pf = G.perf || (G.perf = { upd: 0, sync: 0, draw: 0 });
+  // Smoothed CPU cost per frame (ms): simulation, scene sync, render submission.
+  pf.upd += (t1 - t0 - pf.upd) * k; pf.sync += (t2 - t1 - pf.sync) * k; pf.draw += (t3 - t2 - pf.draw) * k;
 }
 requestAnimationFrame(loop);
 

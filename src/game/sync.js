@@ -1,12 +1,12 @@
 // Pushes simulation state into the scene every frame: instanced mobs,
 // pickups, projectiles, particles, gibs, health bars, and the rat + camera.
 import * as THREE from 'three';
-import { rand, clamp, angD, TAU, PI2, $ } from '../core/util.js';
+import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
 import { camera, sun, lantern, lampL, post } from '../render/renderer.js';
-import { IMB, IMG, MOB_CAP, gemIM, scrapIM, coreIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
+import { IMB, IMG, MOB_CAP, shadowIM, gemIM, scrapIM, coreIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, tickFx, PART_CAP } from '../fx/fx.js';
-import { M, G as GRAV, toW, floorY, segBlocked } from '../world/grid.js';
+import { M, G as GRAV, toW, floorY, segBlocked, forPlatsNear } from '../world/grid.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
 import { blob } from '../entities/rat.js';
@@ -79,6 +79,19 @@ export function sync(dt) {
       rings++;
     }
   }
+  // Blob shadows under every creature.
+  let sh = 0;
+  for (const e of W.enemies) {
+    if (e.dead || e.hidden || e.type === 'nest' || sh >= 260) continue;
+    const gy = floorY(e.x, e.z), hgt = Math.max(0, e.y - gy);
+    dummy.position.set(e.x, (e.y >= gy - 0.2 ? gy : e.y) + 0.04, e.z);
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.setScalar(e.r * 2.4 * Math.max(0.35, 1 - hgt * 0.08) * (e.boss ? 1.2 : 1));
+    dummy.updateMatrix();
+    shadowIM.setMatrixAt(sh++, dummy.matrix);
+  }
+  shadowIM.count = sh;
+  shadowIM.instanceMatrix.needsUpdate = true;
   ringIM.count = rings;
   ringIM.instanceMatrix.needsUpdate = true;
   if (ringIM.instanceColor) ringIM.instanceColor.needsUpdate = true;
@@ -159,7 +172,7 @@ export function sync(dt) {
     const gy = floorY(p.x, p.z);
     if (p.y <= gy && p.vy < 0) { if (p.b && Math.random() < 0.35) decal(p.x, gy, p.z, rand(0.35, 0.8), p.c); p.life = 0; }
   }
-  if (W.parts.some(p => p.life <= 0)) W.parts = W.parts.filter(p => p.life > 0);
+  keep(W.parts, p => p.life > 0);
   n = 0;
   for (const p of W.parts) {
     if (n >= PART_CAP) break;
@@ -203,7 +216,7 @@ export function sync(dt) {
       n++;
     }
   }
-  if (W.gibs.some(g => g.life <= 0)) W.gibs = W.gibs.filter(g => g.life > 0);
+  keep(W.gibs, g => g.life > 0);
   gibIM.count = n;
   gibIM.instanceMatrix.needsUpdate = true;
   if (gibIM.instanceColor) gibIM.instanceColor.needsUpdate = true;
@@ -279,7 +292,7 @@ export function animate(dt) {
     l.rotation.x = P.climbing ? Math.sin(t * 18 + i * 1.6) * 0.9 - 1 : P.onGround ? Math.sin(t * 16 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.7 * r01 + (i < 2 ? -at * 1.4 : 0) : (i < 2 ? -0.6 : 0.6);
   });
   rat.tail.forEach((s, i) => {
-    s.rotation.y = Math.sin(t * (3 + r01 * 5) - i * 0.5) * (0.1 + r01 * 0.08);
+    s.rotation.y = Math.sin(t * (3 + r01 * 5) - i * 0.8) * (0.16 + r01 * 0.1);
     s.rotation.x = i ? 0.1 + (P.onGround ? 0 : 0.03) + (P.glideT > 0 ? -0.05 : 0) : 0.2;
   });
   // Melee swing: wind-up twist, a fast strike with the leading forepaw and a bite, then follow-through.
@@ -295,7 +308,7 @@ export function animate(dt) {
     const paw = rat.legs[side > 0 ? 1 : 0];
     paw.rotation.x = -1.9 * strike;
     paw.rotation.z = side * 0.9 * strike;
-    rat.tail.forEach((s, i) => { s.rotation.y -= tw * 0.25 * (1 - i / 14); });
+    rat.tail.forEach((s, i) => { s.rotation.y -= tw * 0.25 * (1 - i / rat.tail.length); });
   } else if (P.throwT > 0) {
     // Ranged throw: rear back, whip the forepaw over, a little recoil through the body.
     const u = 1 - P.throwT / 0.26, paw = rat.legs[1];
@@ -314,7 +327,7 @@ export function animate(dt) {
   if (P.roll > 0) { const u = 1 - P.roll / 0.3; rat.body.rotation.x = -u * TAU; rat.body.position.y = 0.42; rat.g.scale.set(bulk, 0.8 * bulk, 0.9 * bulk); }
   let gy = floorY(P.x, P.z, true);
   if (gy > P.y + 0.05) gy = P.y;
-  for (const p of W.plats) if (!p.carried && Math.abs(P.x - p.x) < p.w / 2 && Math.abs(P.z - p.z) < p.d / 2 && p.y <= P.y + 0.05 && p.y > gy) gy = p.y;
+  forPlatsNear(P.x, P.z, 0, p => { if (!p.carried && Math.abs(P.x - p.x) < p.w / 2 && Math.abs(P.z - p.z) < p.d / 2 && p.y <= P.y + 0.05 && p.y > gy) gy = p.y; });
   blob.position.set(P.x, gy + 0.03, P.z);
   blob.scale.setScalar(clamp(1 - (P.y - gy) * 0.08, 0.4, 1));
 

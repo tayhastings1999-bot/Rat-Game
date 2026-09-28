@@ -1,12 +1,14 @@
 // WebGL renderer, low-res pixel render target and the post-process pass.
 import * as THREE from 'three';
 import { $ } from '../core/util.js';
+import { ps1Snap } from './ps1.js';
 
 export const canvas = $('c');
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.autoUpdate = true;
 
 export const scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 190);
@@ -14,7 +16,7 @@ export const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 190);
 export const world = new THREE.Group();
 scene.add(world);
 
-// The scene is drawn at half resolution into `rt`, then upscaled with nearest filtering.
+// The scene is drawn at a low, PS1-like resolution into `rt`, then upscaled with nearest filtering.
 const rt = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
 
 export const post = new THREE.ShaderMaterial({
@@ -38,6 +40,10 @@ export const post = new THREE.ShaderMaterial({
     vec2 q=vUv-.5;float v=dot(q,q);c*=1.-v*.55;
     c*=1.-dark*clamp(v*5.5+.25,0.,.97);
     c=mix(c,vec3(.7,.08,.05),clamp(hurt*.45+low*v*1.8*(.6+.4*sin(time*6.)),0.,.65));
+    // PS1 15-bit colour (32 levels per channel) with a 4x4 ordered dither.
+    vec2 pp=mod(floor(vUv*res),4.);
+    float b=mod(pp.x*4.+pp.y*11.+pp.x*pp.y*7.,16.)/16.-.5;
+    c=floor(clamp(c,0.,1.)*31.+.5+b*.9)/31.;
     gl_FragColor=vec4(c,1.);
   }`,
 });
@@ -45,13 +51,26 @@ const postScene = new THREE.Scene();
 const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post));
 
+/**
+ * Render at a PlayStation-like vertical resolution (default 300 lines) and let
+ * it drop towards 216 lines automatically when frames run long, then climb
+ * back when there is headroom. Upscaled with nearest filtering.
+ */
+export const res = { lines: 300, max: 300, min: 216, slowT: 0, fastT: 0 };
 export function resize() {
-  const w = Math.max(320, Math.floor(innerWidth / 2)), h = Math.max(180, Math.floor(innerHeight / 2));
+  const h = Math.max(180, Math.min(Math.round(innerHeight * 0.6), res.lines)), w = Math.max(240, Math.round(h * innerWidth / Math.max(1, innerHeight)));
   renderer.setSize(w, h, false);
   rt.setSize(w, h);
   post.uniforms.res.value.set(w, h);
+  ps1Snap.value.set(w * 0.5, h * 0.5);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+}
+/** Called once per frame with the real frame time (seconds). */
+export function adaptResolution(frameDt) {
+  if (frameDt > 1 / 42) { res.slowT += frameDt; res.fastT = 0; } else if (frameDt < 1 / 57) { res.fastT += frameDt; res.slowT = 0; }
+  if (res.slowT > 1.5 && res.lines > res.min) { res.lines = Math.max(res.min, res.lines - 28); res.slowT = 0; resize(); }
+  else if (res.fastT > 6 && res.lines < res.max) { res.lines = Math.min(res.max, res.lines + 28); res.fastT = 0; resize(); }
 }
 addEventListener('resize', resize);
 resize();

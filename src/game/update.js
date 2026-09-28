@@ -1,10 +1,10 @@
 // One simulation step of a running district.
-import { rand, randi, clamp, angD, TAU } from '../core/util.js';
+import { rand, randi, clamp, angD, keep, TAU } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
 import { world, scene } from '../render/renderer.js';
 import { puff, spark, boom, bolt, dnum, auraG, orbs, orbState, shieldM } from '../fx/fx.js';
 import { sfx, setMusic } from '../audio/audio.js';
-import { M, G as GRAV, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, descend, nearOpen, OPEN, DRY } from '../world/grid.js';
+import { M, G as GRAV, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, descend, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
 import { syncObj, pitMat } from '../world/build.js';
 import { isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
@@ -223,7 +223,9 @@ function updateWeapons(dt) {
 const solidAt = (x, y, z) => {
   const gx = toG(x), gz = toG(z);
   if (solidFor(tAt(gx, gz), false) && y < topAt(gx, gz)) return true;
-  return W.plats.some(p => !p.carried && !p.thin && Math.abs(x - p.x) < p.w / 2 && Math.abs(z - p.z) < p.d / 2 && y < p.y && y > p.y - p.th);
+  let hit = false;
+  forPlatsNear(x, z, 0, p => { if (!hit && !p.carried && !p.thin && Math.abs(x - p.x) < p.w / 2 && Math.abs(z - p.z) < p.d / 2 && y < p.y && y > p.y - p.th) hit = true; });
+  return hit;
 };
 
 function updateProjectiles(dt) {
@@ -262,7 +264,7 @@ function updateProjectiles(dt) {
       }
     }
   }
-  if (W.pproj.some(p => p.life <= 0)) W.pproj = W.pproj.filter(p => p.life > 0);
+  keep(W.pproj, p => p.life > 0);
   for (const p of W.eproj) {
     p.life -= dt;
     if (p.g) p.vy -= p.g * dt;
@@ -279,7 +281,7 @@ function updateProjectiles(dt) {
     if (dx * dx + dy * dy + dz * dz < hr) { hurtP(p.dmg); if (p.slow) P.slowT = 1.5; p.life = 0; spark(p.x, p.y, p.z, 1, p.col); continue; }
     if (solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.8, p.col); if (p.onLand) p.onLand(p.x - p.vx * 0.05, p.z - p.vz * 0.05); }
   }
-  if (W.eproj.some(p => p.life <= 0)) W.eproj = W.eproj.filter(p => p.life > 0);
+  keep(W.eproj, p => p.life > 0);
   for (const b of flasks) {
     if (!b.on) continue;
     b.t += dt;
@@ -303,10 +305,10 @@ function updateObjects(dt) {
       const px = o.x + sx * (o.w / 2 - 0.1), pz = o.z + sz * (o.d / 2 - 0.1), gx = toG(px), gz = toG(pz), t = tAt(gx, gz);
       sup = Math.max(sup, solidFor(t, false) ? (o.y - o.th >= topAt(gx, gz) - 0.15 ? topAt(gx, gz) : -10) : floorY(px, pz, false));
     }
-    for (const p of W.plats) {
-      if (p === o || p.carried || p.thin) continue;
+    forPlatsNear(o.x, o.z, Math.max(o.w, o.d), p => {
+      if (p === o || p.carried || p.thin) return;
       if (Math.abs(p.x - o.x) < (p.w + o.w) / 2 - 0.05 && Math.abs(p.z - o.z) < (p.d + o.d) / 2 - 0.05 && p.y <= o.y - o.th + 0.06) sup = Math.max(sup, p.y);
-    }
+    });
     const bot = o.y - o.th;
     if (bot > sup + 0.001) {
       o.vy -= GRAV * dt;
@@ -325,14 +327,14 @@ function updatePickups(dt) {
     if (g.pull) { g.s = Math.min(30, (g.s || 6) + 40 * dt); const d = Math.sqrt(d2) || 1, s = Math.min(d, g.s * dt); g.x += dx / d * s; g.y += dy / d * s; g.z += dz / d * s; }
     return d2 < 0.36;
   };
-  W.gems = W.gems.filter(g => { if (pull(g)) { gainXP(g.v); sfx('pickup'); return false; } return true; });
-  W.scraps = W.scraps.filter(g => { if (pull(g)) { run.scrap += st.salvage; return false; } return true; });
-  W.cores = W.cores.filter(c => {
+  keep(W.gems, g => { if (pull(g)) { gainXP(g.v); sfx('pickup'); return false; } return true; });
+  keep(W.scraps, g => { if (pull(g)) { run.scrap += st.salvage; return false; } return true; });
+  keep(W.cores, c => {
     const d = Math.hypot(P.x - c.x, P.z - c.z);
     if (d < 1.4 && Math.abs(P.y - c.y) < 1.6) { collectCore(); sfx('key'); return false; }
     return true;
   });
-  W.keys = W.keys.filter(k => {
+  keep(W.keys, k => {
     k.g.rotation.y += dt * 2;
     k.g.position.y = k.y + 0.8 + Math.sin(G.time * 3) * 0.15;
     if (Math.hypot(P.x - k.x, P.z - k.z) < 1.4 && Math.abs(P.y - k.y) < 1.6) {
@@ -344,7 +346,7 @@ function updatePickups(dt) {
     }
     return true;
   });
-  W.foods = W.foods.filter(f => {
+  keep(W.foods, f => {
     f.m.position.set(f.x, f.y + 0.4 + Math.sin(G.time * 3) * 0.1, f.z);
     f.m.rotation.y += dt * 2;
     if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) {

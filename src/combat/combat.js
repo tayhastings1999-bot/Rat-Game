@@ -37,7 +37,15 @@ export const sorted = R => {
   }
   return o.sort((a, b) => a[0] - b[0]).map(a => a[1]);
 };
-export const nearest = R => sorted(R)[0];
+export const nearest = R => {
+  let b = null, bd = R * R;
+  for (const e of W.enemies) {
+    if (e.dead || (e.pred && e.mode === 'patrol' && !e.hurt) || e.hidden) continue;
+    const d = (e.x - P.x) ** 2 + (e.z - P.z) ** 2;
+    if (d < bd) { bd = d; b = e; }
+  }
+  return b;
+};
 
 const MELEE = new Set(['claw', 'whip', 'bite']);
 const isMelee = src => MELEE.has(src) || (src === 'primary' && st.meleePrim);
