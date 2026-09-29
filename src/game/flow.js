@@ -7,6 +7,7 @@ import { clearFx } from '../fx/fx.js';
 import { M, gi, toW, floorY } from '../world/grid.js';
 import { genCity } from '../world/cityGen.js';
 import { genSewer } from '../world/sewerGen.js';
+import { carveDucts } from '../world/ducts.js';
 import { buildWorld, populate, addExit } from '../world/build.js';
 import { curD, dName, isSewer, MODS } from '../data/world.js';
 import { CLASSES, UNLOCK, SKINS } from '../data/classes.js';
@@ -43,6 +44,7 @@ export function setupWorld(seed) {
   $('bossWrap').style.display = 'none';
   const D = curD();
   const info = D.kind === 'city' ? genCity(seed, D) : genSewer(seed, D);
+  info.ducts = carveDucts();
   const pool = shuffleR(ALL_MODS.filter(m => m !== D.haz));
   run.mods = G.mode === 'trial' || !D.haz ? pool.slice(0, 2) : [D.haz, pool[0]];
   buildWorld();

@@ -337,6 +337,36 @@ await step('physics traps: cable into puddle, scaffold, brick pallet', async () 
   await shot('03h-trap-scaffold');
   await S(() => { __scurry.run.primT = 0; for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
 });
+await step('squeeze network: crawl in, cutaway, mobs locked out, rival nests', async () => {
+  const di = await S(() => __scurry.ductInfo());
+  if (!di.nets || !di.first) throw new Error('no crawlspaces carved ' + JSON.stringify(di));
+  // Stand on the street outside the first mouth, facing in, and walk.
+  const mouth = await S(() => {
+    const { M } = __scurry, a = __scurry.ductInfo().first.a, x = a % M.W, z = (a / M.W) | 0, toW = g => (g - M.W / 2 + 0.5) * 4;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t = M.grid[(z + dz) * M.W + x + dx]; if (t === 1 || t === 9 || t === 10) return { sx: toW(x + dx), sz: toW(z + dz), dx: -dx, dz: -dz, ax: toW(x), az: toW(z) }; }
+    return null;
+  });
+  if (!mouth) throw new Error('crawlspace mouth has no street');
+  await S(m => { const { P, G, W } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); P.x = m.sx; P.z = m.sz; P.y = 0; P.vx = P.vz = 0; G.camYaw = Math.atan2(m.dx, m.dz); G.lockOn = null; }, mouth);
+  await page.keyboard.down('KeyW');
+  const inside = await until(() => __scurry.P.inDuct, 5000);
+  await rawWait(300);
+  await page.keyboard.up('KeyW');
+  if (!inside) throw new Error('could not crawl in: ' + JSON.stringify(await S(() => ({ x: __scurry.P.x, z: __scurry.P.z, sq: __scurry.P.squeeze, t: __scurry.M.grid[Math.floor(__scurry.P.z / 4 + __scurry.M.H / 2) * __scurry.M.W + Math.floor(__scurry.P.x / 4 + __scurry.M.W / 2)] }))));
+  const cut = await until(() => __scurry.cutY() < 5 && __scurry.cutY(), 3000) || await S(() => __scurry.cutY());
+  if (!(cut < 5)) throw new Error('no cutaway inside the walls: ' + cut);
+  await wait(400);
+  await shot('03i-squeeze-network');
+  // The horde can't follow: a mawling dropped at the mouth stays on the street.
+  await S(m => { const e = __scurry.spawnEnemy('mawling', m.sx, m.sz, { plain: true }); if (e) e.tag = 'door'; }, mouth);
+  await wait(1500);
+  const leak = await S(() => { const { M, W } = __scurry, e = W.enemies.find(e => e.tag === 'door'); if (!e) return false; const k = Math.floor(e.z / 4 + M.H / 2) * M.W + Math.floor(e.x / 4 + M.W / 2); return M.grid[k] === 11; });
+  if (leak) throw new Error('a mawling got into the crawlspace');
+  // Out again: back on the street the cutaway lifts.
+  await S(m => { const P = __scurry.P; P.x = m.sx; P.z = m.sz; P.y = 0; }, mouth);
+  if (!(await until(() => __scurry.cutY() > 100, 3000))) throw new Error('cutaway stuck on');
+  await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
+});
 await step('corrupted elites spawn and die', async () => {
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
   await wait(2000);

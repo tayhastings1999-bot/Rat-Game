@@ -8,7 +8,9 @@ export const WH = 4.5;       // default wall / sewer ceiling-ledge height
 export const G = 32;         // gravity
 
 /** Tile ids. Solid tiles have a top height in `M.hgt` you can stand on. */
-export const TL = { WALL: 0, FLOOR: 1, WATER: 2, DRY: 3, ACID: 4, CREV: 5, METAL: 6, PIT: 7, FENCE: 8, GRASS: 9, ROAD: 10 };
+export const TL = { WALL: 0, FLOOR: 1, WATER: 2, DRY: 3, ACID: 4, CREV: 5, METAL: 6, PIT: 7, FENCE: 8, GRASS: 9, ROAD: 10, DUCT: 11 };
+/** Squeeze Network crawlspace ceiling: a squeezing rat fits under it, the building sits on top. */
+export const DUCT_TOP = 1.0;
 
 export const M = {
   kind: 'sewer',
@@ -46,7 +48,7 @@ export const OPEN = t => t === 1 || t === 2 || t === 4 || t === 9 || t === 10;
 export const DRY = t => t === 1 || t === 9 || t === 10;
 /** Brick and concrete walls you can climb without augments. */
 export const CLIMB = t => t === 0 || t === 3 || t === 8;
-export const solidFor = (t, isP) => t === 0 || t === 6 || t === 3 || t === 8 || (t === 5 && !(isP && P.squeeze));
+export const solidFor = (t, isP) => t === 0 || t === 6 || t === 3 || t === 8 || (t === 5 && !(isP && P.squeeze)) || (t === 11 && !(isP && P.squeeze && P.y < DUCT_TOP));
 
 /** Height of whatever you would stand on at (x, z). */
 export function floorY(x, z, isP) {
@@ -239,7 +241,7 @@ export function segBlocked(ax, ay, az, bx, by, bz) {
   const dx = bx - ax, dy = by - ay, dz = bz - az, L = Math.hypot(dx, dy, dz), n = Math.ceil(L / 0.7);
   for (let i = 2; i <= n; i++) {
     const u = i / n, x = ax + dx * u, y = ay + dy * u, z = az + dz * u, gx = toG(x), gz = toG(z), t = tAt(gx, gz);
-    if ((t === 0 || t === 6 || t === 3) && y < topAt(gx, gz) - 0.2) return true;
+    if ((t === 0 || t === 6 || t === 3 || (t === 11 && y > DUCT_TOP)) && y < topAt(gx, gz) - 0.2) return true;
   }
   return false;
 }

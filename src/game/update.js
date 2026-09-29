@@ -4,7 +4,7 @@ import { G, P, W, run, st, settings } from '../core/state.js';
 import { world, scene } from '../render/renderer.js';
 import { puff, spark, boom, bolt, dnum, auraG, orbs, orbState, shieldM } from '../fx/fx.js';
 import { sfx, setMusic } from '../audio/audio.js';
-import { M, G as GRAV, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
+import { M, G as GRAV, DUCT_TOP, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
 import { syncObj, pitMat } from '../world/build.js';
 import { isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
@@ -21,6 +21,7 @@ import { tickJunk } from './junk.js';
 import { tickLight } from './light.js';
 import { tickScent } from './scent.js';
 import { tickTraps } from './traps.js';
+import { tickDucts } from '../world/ducts.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -76,6 +77,7 @@ function updateZones(dt) {
       dark = Math.max(dark, clamp((zn.r - d) / 3, 0, 1));
     }
   }
+  if (P.inDuct) dark = Math.max(dark, 0.4); // inside the walls it's close and dark
   G.darkness += (dark - G.darkness) * Math.min(1, 3 * dt);
   if (scene.fog) {
     scene.fog.near = G.fogNear * (1 - G.darkness * 0.92);
@@ -186,7 +188,7 @@ function updateWeapons(dt) {
       auraG.position.set(P.x, P.y + 0.05, P.z);
       auraG.scale.setScalar(R * (1 + Math.sin(G.time * 4) * 0.03));
     }
-    if (Wp.fire && !P.squeeze) {
+    if (Wp.fire && (!P.squeeze || P.inDuct)) {
       const fury = st.fury && run.hp < st.maxHp * 0.5 ? 0.66 : 1;
       w.t -= dt;
       if (w.t <= 0) w.t = Wp.fire(w) === false ? 0.15 : Wp.cd(w) * st.cd * fury;
@@ -229,7 +231,8 @@ function updateWeapons(dt) {
 
 const solidAt = (x, y, z) => {
   const gx = toG(x), gz = toG(z);
-  if (solidFor(tAt(gx, gz), false) && y < topAt(gx, gz)) return true;
+  const t = tAt(gx, gz);
+  if (t === 11 ? y > DUCT_TOP && y < topAt(gx, gz) : solidFor(t, false) && y < topAt(gx, gz)) return true;
   let hit = false;
   forPlatsNear(x, z, 0, p => { if (!hit && !p.carried && !p.thin && Math.abs(x - p.x) < p.w / 2 && Math.abs(z - p.z) < p.d / 2 && y < p.y && y > p.y - p.th) hit = true; });
   return hit;
@@ -389,6 +392,7 @@ export function update(dt) {
   run.specT = Math.max(0, run.specT - dt);
   if (!st.noRegen) run.hp = Math.min(st.maxHp, run.hp + st.regen * st.healMul * dt);
   if (run.hp > st.maxHp * 0.5) run.lowWarned = false;
+  tickDucts(dt);
   updateZones(dt);
   stepPlayer(dt / 2);
   stepPlayer(dt / 2);

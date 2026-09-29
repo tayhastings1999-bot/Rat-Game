@@ -5,7 +5,7 @@ import { G, P, W, run, st } from '../core/state.js';
 import { puff, spark, boom, fx, bolt, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { world } from '../render/renderer.js';
-import { M, G as GRAV, gi, toG, toW, tAt, tileAt, topAt, floorY, solidFor, collideBody } from '../world/grid.js';
+import { M, G as GRAV, DUCT_TOP, gi, toG, toW, tAt, tileAt, topAt, floorY, solidFor, collideBody } from '../world/grid.js';
 import { tileMesh, syncObj, addObj } from '../world/build.js';
 import { curD, isSewer } from '../data/world.js';
 import { CLASSES } from '../data/classes.js';
@@ -39,8 +39,9 @@ export function stepPlayer(dt) {
   const t = tileAt(P.x, P.z), wet = ((t === 2 || t === 4) && P.y < -0.4) || P.y < G.tideY - 0.2;
   P.squeeze = !!(keys.KeyC || keys.ControlLeft) && P.onGround && !P.carry;
   if (t === 5 && P.y < topAt(toG(P.x), toG(P.z)) - 0.1) P.squeeze = true;
+  if (t === 11 && P.y < DUCT_TOP) P.squeeze = true;
   // Walking into a crevice squeezes you in automatically (no extra button needed).
-  if (L && P.onGround && !P.carry) { const ax = P.x + wx * 0.7, az = P.z + wz * 0.7; if (tileAt(ax, az) === 5 && P.y < topAt(toG(ax), toG(az)) - 0.1) P.squeeze = true; }
+  if (L && P.onGround && !P.carry) { const ax = P.x + wx * 0.7, az = P.z + wz * 0.7, ta = tileAt(ax, az); if ((ta === 5 && P.y < topAt(toG(ax), toG(az)) - 0.1) || (ta === 11 && P.y < DUCT_TOP)) P.squeeze = true; }
   P.sprinting = (keys.ShiftLeft || keys.ShiftRight) && L > 0 && run.sta > 1 && !P.squeeze && !P.carry && P.roll <= 0;
   // Momentum: sprinting is remembered briefly, and chained wall-bounces stack speed until you settle.
   P.sprintMem = P.sprinting ? 0.35 : (P.sprintMem || 0) - dt;
@@ -153,7 +154,7 @@ export function stepPlayer(dt) {
 
 export function primary(dt) {
   run.primT -= dt;
-  if (run.primT > 0 || P.squeeze || P.chewing) return;
+  if (run.primT > 0 || (P.squeeze && !P.inDuct) || P.chewing) return;
   const PR = PRIM[CLASSES[run.cls].prim];
   const ax = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0), az = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0);
   let dx, dz, t = null;

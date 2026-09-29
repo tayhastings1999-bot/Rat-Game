@@ -98,6 +98,7 @@ export function hud() {
         else {
           const f = P.facing, t = tileAt(P.x + Math.sin(f) * 1.4, P.z + Math.cos(f) * 1.4);
           if (t === 5 && !P.squeeze) lab = 'Hold C · Squeeze through the crevice';
+          else if (t === 11 && !P.squeeze && P.y < 1) lab = 'Walk in · Crawl into the Squeeze Network';
         }
       }
     }
@@ -106,7 +107,7 @@ export function hud() {
   else tip.style.display = 'none';
 }
 
-const MAPCOL = { 7: '#141014', 1: '#5e5866', 2: '#2e5a4a', 3: '#a89468', 4: '#7aa020', 5: '#8a5a44', 8: '#2e4a26', 9: '#3e5a2c', 10: '#3a383e' };
+const MAPCOL = { 11: '#6a3a8a', 7: '#141014', 1: '#5e5866', 2: '#2e5a4a', 3: '#a89468', 4: '#7aa020', 5: '#8a5a44', 8: '#2e4a26', 9: '#3e5a2c', 10: '#3a383e' };
 export function drawMap(cv, px, radius) {
   const x = cv.getContext('2d');
   x.fillStyle = '#000';

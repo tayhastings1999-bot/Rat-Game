@@ -17,6 +17,7 @@ import { addChest } from '../world/build.js';
 import { comboGain, comboBreak } from '../game/swarm.js';
 import { buffOn } from '../game/forage.js';
 import { junkHit } from '../game/junk.js';
+import { rivalDeath } from '../world/ducts.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -177,6 +178,7 @@ export function kill(e) {
     G.hitStop = Math.max(G.hitStop, 0.2);
   }
 
+  if (e.rival) { rivalDeath(e, scrapDrop, dropGem); addThreat(0.3); return; }
   if (e.type === 'nest') {
     world.remove(e.mesh);
     run.nests--;

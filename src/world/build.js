@@ -12,7 +12,8 @@ import {
 import { Sp, Bx, Cy, Co } from '../render/models.js';
 import { clearDecals, ringGeo, discGeo } from '../fx/fx.js';
 import { flasks } from '../combat/arsenal.js';
-import { M, T, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
+import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
+import { populateDucts, applyCutaway } from './ducts.js';
 import { curD, isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
@@ -71,7 +72,7 @@ export function buildWorld() {
   if (city) {
     let n = 0;
     for (let k = 0; k < bid.length; k++) {
-      const t = M.grid[k];
+      const t = M.grid[k] === 11 ? 0 : M.grid[k];
       if ((t !== 0 && t !== 6) || bid[k] >= 0) continue;
       const h = M.hgt[k], q = [k];
       bid[k] = n;
@@ -80,7 +81,7 @@ export function buildWorld() {
         for (const [dx, dy] of N4) {
           if (!inG(x + dx, y + dy)) continue;
           const j = gi(x + dx, y + dy);
-          if (bid[j] < 0 && M.grid[j] === t && M.hgt[j] === h) { bid[j] = n; q.push(j); }
+          if (bid[j] < 0 && (M.grid[j] === 11 ? 0 : M.grid[j]) === t && M.hgt[j] === h) { bid[j] = n; q.push(j); }
         }
       }
       n++;
@@ -128,23 +129,31 @@ export function buildWorld() {
       g.position.set(cx, 0, cz);
       world.add(g);
     }
+    // Squeeze Network crawlspace: open floor under the building's mass.
+    if (t === 11) {
+      fl.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
+      const hh = h - DUCT_TOP;
+      pushWall(city ? 'f' + (bid[k] % 4) : 'brick', uvScale(new THREE.BoxGeometry(T, hh, T), 1, hh / (city ? 4 : 3.2)).translate(cx, DUCT_TOP + hh / 2, cz));
+      if (city) roofs.push(new THREE.PlaneGeometry(T, T).rotateX(-PI2).translate(cx, h + 0.01, cz));
+    }
     // Yard hedges: low enough to jump onto, solid to the horde's path-finding.
     if (t === 8) fence.push(uvScale(new THREE.BoxGeometry(T, h, T), 1.5, 0.7).translate(cx, h / 2, cz));
   }
-  const add = (arr, mat, cast) => {
+  const add = (arr, mat, cast, floor) => {
     if (!arr.length) return null;
     const m = new THREE.Mesh(mergeGeometries(arr), mat);
     m.receiveShadow = true;
     m.castShadow = !!cast;
+    m.userData.floor = !!floor; // floors and water are never cut away
     world.add(m);
     return m;
   };
-  add(fl, lam(0xffffff, { map: floorTex }));
-  add(road, lam(0xffffff, { map: asphaltTex }));
-  add(grass, lam(0xffffff, { map: grassTex }));
-  add(bed, lam(0x2a3a30));
-  add(wat, waterMat);
-  add(acd, acidMat);
+  add(fl, lam(0xffffff, { map: floorTex }), false, true);
+  add(road, lam(0xffffff, { map: asphaltTex }), false, true);
+  add(grass, lam(0xffffff, { map: grassTex }), false, true);
+  add(bed, lam(0x2a3a30), false, true);
+  add(wat, waterMat, false, true);
+  add(acd, acidMat, false, true);
   add(met, lam(0xffffff, { map: metalTex }), true);
   add(roofs, lam(0xffffff, { map: roofTex }));
   add(fence, lam(0x3e6a30, { map: furTex, emissive: 0x0a140a }), true);
@@ -850,6 +859,7 @@ export function populate(info) {
     if (path.length > 4) addPred(path);
   }
   if (!trial) placeTraps(rooms, startRoom);
+  populateDucts(info.ducts || [], addCache);
   const open = [];
   for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && dist[k] > 4) open.push(k);
   shuffleR(open);
@@ -894,6 +904,7 @@ export function populate(info) {
     if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
     if (o.geometry.boundingSphere.radius * Math.max(o.scale.x, o.scale.y, o.scale.z) < 1.4) o.castShadow = false;
   });
+  applyCutaway();
   applyLighting(D, city);
 }
 

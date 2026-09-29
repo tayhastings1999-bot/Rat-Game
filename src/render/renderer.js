@@ -9,6 +9,9 @@ renderer.setPixelRatio(1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.shadowMap.autoUpdate = true;
+renderer.localClippingEnabled = true;
+/** Cutaway plane for the Squeeze Network: clips everything above it (parked far overhead when unused). */
+export const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e4);
 
 export const scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 190);

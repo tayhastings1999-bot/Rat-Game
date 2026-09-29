@@ -57,6 +57,10 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 Bosses take a capped share of trap damage (5% of max HP from a crush) plus a stagger, so traps help but can't cheese a boss.
 
+**Squeeze Network.** Every district has crawlspaces carved through its building blocks (and the sewer's wall mass), each linking two streets whose walk-around is much longer than the crawl. Look for the dark slots with a steel lintel and bent grille at the foot of a wall and just walk in: you squeeze automatically, and the camera cuts every building away at knee height so you can see the maze from above. Nothing on the streets can follow you (cats lose you, owls can't see you, the horde mills around at the mouths), and nothing lights you in there, but it isn't safe:
+- *Exposed live wires* arc for a second every few seconds. Time your crawl.
+- *Rival nests* in side chambers spit at you. You can fight inside the walls, and clearing one drops salvage and a big XP gem. Other chambers hold a cheese cache.
+
 **Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
 
 | Boss | Where | Signature |

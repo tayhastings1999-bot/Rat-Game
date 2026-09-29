@@ -53,7 +53,7 @@ function sweep(dt) {
 
 export function tickLight(dt) {
   sweep(dt);
-  const L = lightAt(P.x, P.y, P.z);
+  const L = P.inDuct ? 0 : lightAt(P.x, P.y, P.z);
   P.light = L;
   P.shadow = (L < 0.2 || P.smoke) && !P.carry;
   run.expo = run.expo || 0;

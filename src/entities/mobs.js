@@ -529,6 +529,7 @@ export function updateEnemies(dt, cap) {
       }
       continue;
     }
+    if (e.rival) continue; // rival nests (Squeeze Network) are static; ducts.js runs them
     if (e.corrupt) tickCorrupt(e, dt);
     const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
     let custom = false;
@@ -616,7 +617,7 @@ export function updateEnemies(dt, cap) {
 
 function predAI(e, dt, d) {
   // Shadows all but hide you; standing in light makes you easy to spot.
-  const det = (P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5) * (P.shadow ? 0.3 : 1 + (run.expo || 0) / 100);
+  const det = P.inDuct ? 0 : (P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5) * (P.shadow ? 0.3 : 1 + (run.expo || 0) / 100);
   e.det = e.mode === 'hunt' ? 18 : det;
   e.look = e.ang + Math.sin(G.time * 0.9 + (e.ph || 0)) * 0.45;
   if (e.mode === 'patrol') {
@@ -632,7 +633,7 @@ function predAI(e, dt, d) {
     collideBody(e, py, e.r * 0.7, e.h, false);
     return true;
   }
-  if (d > 18 || P.smoke) {
+  if (d > 18 || P.smoke || P.inDuct) {
     e.lost += dt;
     if (e.lost > 4) {
       e.mode = 'patrol';
