@@ -189,6 +189,7 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   if (!((await S(() => __scurry.run.blood || 0)) > 0)) throw new Error('bloodlust did not stack');
 });
 await step('scramble, wall-bounce, foraging', async () => {
+  await S(() => { __scurry.G.testFreeze = true; }); // hold any boss still through the scripted steps
   // Hold off level-up screens through the scripted movement/junk/light steps.
   await wait(100);
   await S(() => { const r = __scurry.run; r.needHold = r.need; r.need = 1e12; });
@@ -406,6 +407,7 @@ await step('leveling: breakthrough trial, champion, rewards, crate, evolution', 
   await S(() => { __scurry.G.testNoBusy = false; });
 });
 await step('corrupted elites spawn and die', async () => {
+  await S(() => { __scurry.G.testFreeze = false; });
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
   await wait(2000);
   await S(() => { for (const e of __scurry.W.enemies) if (e.corrupt) e.hp = 1; });
@@ -422,9 +424,19 @@ await step('surface boss: three phases, death, exits', async () => {
   await page.keyboard.press('KeyX');
   await rawWait(150);
   const sw = await S(() => ({ n: __scurry.W.swarm.length, stun: __scurry.G.boss.stun || 0, ui: document.getElementById('bossWrap').style.display }));
-  if (sw.n !== 8 || !(sw.stun > 0)) throw new Error('shriek ' + JSON.stringify(sw));
+  const want = await S(() => 8 + (__scurry.st.swarmPlus || 0));
+  if (sw.n !== want || !(sw.stun > 0)) throw new Error('shriek ' + JSON.stringify(sw));
   await wait(2500);
   if (!(await S(() => __scurry.G.boss.revealed))) throw new Error('boss not revealed in arena');
+  // The brain has been watching; a burst of real hits breaks its poise.
+  await S(() => { __scurry.G.boss.stun = 0; __scurry.G.boss.invuln = 0; });
+  const br = await S(() => { const b = __scurry.G.boss.brain; return b && { range: b.range, budget: b.budget }; });
+  if (!br || !isFinite(br.range)) throw new Error('boss has no brain ' + JSON.stringify(br));
+  await S(() => __scurry.hitBoss(0.08));
+  const stg = await S(() => ({ s: __scurry.G.boss.brain.stagger, label: document.getElementById('bossLabel').textContent }));
+  if (!(stg.s > 0)) throw new Error('burst did not stagger the boss ' + JSON.stringify(stg));
+  await wait(200);
+  if (!(await S(() => document.getElementById('bossLabel').textContent.includes('STAGGERED')))) throw new Error('boss bar does not show the stagger');
   await shot('04-boss');
   await S(() => __scurry.hurtBoss(0.4));
   await wait(2500);

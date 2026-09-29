@@ -181,9 +181,10 @@ export function cone(e, R, arc, dmg) {
   const dx = P.x - e.x, dz = P.z - e.z;
   if (Math.hypot(dx, dz) < R + 0.3 && Math.abs(angD(Math.atan2(dx, dz), e.ang)) < arc && Math.abs(P.y - e.y) < 1.8) hurtP(dmg, e);
 }
-export function aimShot(e, spd, dmg, col, life = 1.2, off = 0, size = 1) {
-  const y0 = e.y + e.h * 0.6, dd = Math.hypot(P.x - e.x, P.z - e.z), lt = Math.max(dd / spd, 0.2);
-  const tx = P.x + P.vx * lt * 0.6, tz = P.z + P.vz * lt * 0.6, a = Math.atan2(tx - e.x, tz - e.z) + off;
+export function aimShot(e, spd, dmg, col, life = 1.2, off = 0, size = 1, at = null) {
+  // Mini-bosses and champions lead you fully; the horde only partly.
+  const y0 = e.y + e.h * 0.6, dd = Math.hypot(P.x - e.x, P.z - e.z), lt = Math.max(dd / spd, 0.2), k = e.mini || e.champion ? 1 : 0.6;
+  const tx = at ? at.x : P.x + P.vx * lt * k, tz = at ? at.z : P.z + P.vz * lt * k, a = Math.atan2(tx - e.x, tz - e.z) + off;
   const p = glob(e.x, y0, e.z, Math.sin(a) * spd, (P.y + 0.5 - y0) / lt, Math.cos(a) * spd, dmg, col);
   p.life = life * 2;
   p.size = size;
@@ -200,9 +201,9 @@ export function lobAt(e, tx, ty, tz, spd, dmg, col, pud, size = 1.4) {
   fx('ring', tx, ty, tz, 1.4, 0xff3a20, ft, 0, 0.7);
   return p;
 }
-export function pounceAt(e, wind, dur, hgt, dmg, R, after) {
-  let tx = P.x + P.vx * wind * 0.5, tz = P.z + P.vz * wind * 0.5;
-  if (solidFor(tileAt(tx, tz), false) && floorY(tx, tz) > P.y + 0.5) { tx = P.x; tz = P.z; }
+export function pounceAt(e, wind, dur, hgt, dmg, R, after, target, roof) {
+  let tx = target ? target.x : P.x + P.vx * wind * 0.5, tz = target ? target.z : P.z + P.vz * wind * 0.5;
+  if (!roof && solidFor(tileAt(tx, tz), false) && floorY(tx, tz) > P.y + 0.5) { tx = P.x; tz = P.z; }
   const ty = floorY(tx, tz);
   fx('warn', tx, ty, tz, R, 0xff2a1a, wind + dur, 0, 0.45);
   fx('ring', tx, ty, tz, R, 0xff4a2a, wind + dur, 0, 0.9);
@@ -217,11 +218,12 @@ export function pounceAt(e, wind, dur, hgt, dmg, R, after) {
     });
   });
 }
-export function chargeStart(e, wind, spd, dur) {
+/** `aim(e)` may return a heading (bosses lead you); `bounces` ricochets off walls, re-aiming each time. */
+export function chargeStart(e, wind, spd, dur, aim, bounces = 0) {
   fx('ring', e.x, e.y, e.z, e.r + 1.2, 0xff3a20, wind, 0, 0.9);
   wait(e, wind, e => {
-    const a = Math.atan2(P.x - e.x, P.z - e.z);
-    Object.assign(e, { st: 'charge', tt: dur, cx: Math.sin(a), cz: Math.cos(a), cs: spd, hitP: 0 });
+    const a = aim ? aim(e) : Math.atan2(P.x - e.x, P.z - e.z);
+    Object.assign(e, { st: 'charge', tt: dur, ct: dur, cx: Math.sin(a), cz: Math.cos(a), cs: spd, hitP: 0, bounces, reaim: aim });
   });
 }
 export function swoop(e, dur) {
@@ -256,6 +258,16 @@ export function mobState(e, dt, dx, dz) {
     e.ang = Math.atan2(e.cx, e.cz);
     if (Math.random() < 0.4) puff(e.x, e.y + 0.2, e.z, 0x8a7a6a, 1, 2);
     if (!e.hitP && Math.hypot(P.x - e.x, P.z - e.z) < e.r + 0.6 && Math.abs(P.y - e.y) < 1.6) { e.hitP = 1; hurtP(e.dmg * 1.3, e); }
+    if (e.hw && e.bounces > 0) {
+      // Ricochet: bounce off the wall and come again at where the rat is heading.
+      e.bounces--;
+      const a = e.reaim ? e.reaim(e) : Math.atan2(P.x - e.x, P.z - e.z);
+      e.cx = Math.sin(a); e.cz = Math.cos(a); e.tt = e.ct; e.hitP = 0;
+      e.x += e.cx * 0.6; e.z += e.cz * 0.6;
+      G.shake = Math.max(G.shake, 0.25);
+      puff(e.x, e.y + 1, e.z, 0x9a8a7a, 8, 3);
+      return true;
+    }
     if (e.tt <= 0 || e.hw) {
       if (e.hw) { e.stun = e.boss ? 0.9 : 0.7; G.shake = Math.max(G.shake, 0.2); puff(e.x, e.y + 1, e.z, 0x9a8a7a, 8, 3); }
       e.st = 'move';

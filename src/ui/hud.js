@@ -11,6 +11,7 @@ import { threatTier } from '../combat/combat.js';
 import { useTarget, grabTarget, chewTarget } from '../entities/player.js';
 import { activeBuffs } from '../game/forage.js';
 import { EVO, capped } from '../game/progress.js';
+import { bossStatus } from '../entities/bosses.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
 
 export function initHudIcons() {
@@ -75,7 +76,7 @@ export function hud() {
   const b = G.boss;
   if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; banner(b.name, 'Fight or flee'); }
   $('bossWrap').style.display = b && b.revealed ? 'flex' : 'none';
-  if (b) $('bossFill').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%';
+  if (b) { $('bossFill').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%'; $('bossLabel').textContent = (b.label || '') + bossStatus(b); }
   const cmb = $('combo'), ready = !!run.shriekReady;
   $('comboFill').style.width = (ready ? 100 : (run.combo || 0)) + '%';
   $('comboTxt').textContent = ready ? (G.touch ? 'SHRIEK READY' : 'SHRIEK READY · X') : 'COMBO';

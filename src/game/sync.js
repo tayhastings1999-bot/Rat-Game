@@ -56,7 +56,8 @@ export function sync(dt) {
       e.mesh.position.set(e.x, e.y, e.z);
       e.mesh.rotation.set(e.pitch || 0, e.ang, e.roll || 0);
       const em = e.invuln > 0 ? 0.4 + 0.3 * Math.sin(G.time * 30) : e.flash > 0 ? 0.5 : (e.st === 'wind' || e.tel > 0 || e.wind > 0) ? 0.3 + 0.2 * Math.sin(G.time * 40) : e.pred && e.mode === 'hunt' ? 0.12 : 0;
-      e.mesh.material.emissive.setScalar(em);
+      if (e.brain && (e.brain.exposed > 0 || e.brain.stagger > 0)) e.mesh.material.emissive.setRGB(0.45 + 0.25 * Math.sin(G.time * 16), 0.35, 0.05);
+      else e.mesh.material.emissive.setScalar(em);
       continue;
     }
     const i = cnt[e.type]++;

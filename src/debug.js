@@ -8,7 +8,7 @@ import { ductInfo } from './world/ducts.js';
 import { need } from './combat/combat.js';
 import { giveItem, giveCursed, collectCore } from './game/loot.js';
 import { openLevelUp, renderNest, die, pause } from './ui/screens.js';
-import { dropKey, gainXP, kill } from './combat/combat.js';
+import { dropKey, gainXP, kill, hit } from './combat/combat.js';
 import { M, T, tAt, topAt, toW, DRY, N4 } from './world/grid.js';
 import { audioReady, music } from './audio/audio.js';
 import { renderer, scene, cutPlane } from './render/renderer.js';
@@ -46,6 +46,8 @@ export function debugApi(state) {
     pendLevel() { state.run.level++; state.run.pendingLv++; openLevelUp(); },
     god(on = true) { state.st.taken = on ? 0 : 1; },
     hurtBoss(f = 0.35) { const b = state.G.boss; if (b) b.hp -= b.maxHp * f; },
+    /** Real hits (through poise and exposure), totalling a share of the boss's max HP. */
+    hitBoss(f = 0.07) { const b = state.G.boss; if (b) for (let i = 0; i < 5; i++) hit(b, b.maxHp * f / 5, 0, 0, 'primary', true); },
     killBoss() { const b = state.G.boss; if (b) kill(b); },
   };
 }

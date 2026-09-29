@@ -19,6 +19,7 @@ import { buffOn } from '../game/forage.js';
 import { junkHit } from '../game/junk.js';
 import { rivalDeath } from '../world/ducts.js';
 import { addXP, championDown, dropMusk } from '../game/progress.js';
+import { onBossHit } from '../entities/brain.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -71,6 +72,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   const crit = Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   if (crit) d *= st.critMul;
   if (e.ward > 0) d *= 0.4;
+  if (e.boss) d *= onBossHit(e, d); // exposed bosses take more; bursts break their poise
   d = Math.max(1, Math.round(d));
   e.hp -= d;
   e.flash = 0.1;

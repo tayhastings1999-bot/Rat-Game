@@ -61,16 +61,22 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
 - *Exposed live wires* arc for a second every few seconds. Time your crawl.
 - *Rival nests* in side chambers spit at you. You can fight inside the walls, and clearing one drops salvage and a big XP gem. Other chambers hold a cheese cache.
 
-**Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
+**Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed. Every boss has a **brain** that watches how you fight:
+- *It learns you.* Your preferred range, which way you circle it, which way you dodge-roll, and whether you're standing still.
+- *It aims where you'll be.* Projectiles, pounces, charges, dives and ground marks lead you with a real intercept, nudged toward the side you usually dodge to. Circling bosses move the same way you do, so they cut you off instead of chasing.
+- *It counters your style.* Kite it and it favours gap-closers; hug it and it shoves you off and zones you; camp and it punishes the spot. It sidesteps incoming projectiles, more often against ranged rats and in later phases.
+- *Balance.* Every attack spends from an aggression budget. When a boss overextends it runs dry and is **EXPOSED** (sluggish, takes +25% damage). Dealing about 6% of its max HP in a quick burst breaks its poise into a 1.6s **STAGGER**. When you're below 25% HP bosses dodge less, recover slower and pick their biggest attacks less. Everything is still telegraphed.
+
+Movement and signature moves:
 
 | Boss | Where | Signature |
 |---|---|---|
-| The Horned Tabby | Cinder Row | chained pounces, hairball fans, swipe combos, slowing roar |
-| The Murder King | Neon Market, Hollow Heights | erratic flight, feather storms, crow flocks, dive-bomb chains, tornado spiral |
-| The Exterminator | Rust Yards | poison spray, snap traps, missiles, machine gun, flamethrower, fumigation |
-| The Many-Mouthed | sewer | chained charges, spit fans, burrow ambush, spiral |
-| The Brood Mother | sewer | tick broods, web rings, hatching egg lobs, leaps, acid rain |
-| The Rat King | sewer | ricocheting rolls, tail-whip rings, rat fans, vortex pull, prince adds |
+| The Horned Tabby | Cinder Row | cut-off circling, chained predictive pounces, feints that punish early rolls, rooftop stalking with a drop-pounce, hairball fans, swipe combos, slowing roar |
+| The Murder King | Neon Market, Hollow Heights | hovers ahead of where you're running, feint swoops, crossfire volleys, feather storms, crow flocks, dive-bomb chains, tornado spiral |
+| The Exterminator | Rust Yards | kites at range and jet-blinks away when you close in, a tracking sniper laser, traps laid along your path, poison spray, missiles, machine gun, flamethrower, fumigation |
+| The Many-Mouthed | sewer | lead-aimed charges, burrows and surfaces where you're about to be, an inhale that drags you into its mouths, spit fans, spiral |
+| The Brood Mother | sewer | skitters round to your back, webs your escape line, tick broods, hatching egg lobs, leaps, acid rain |
+| The Rat King | sewer | rolls that ricochet off walls and re-aim at you, royal decrees stamped along your path, tail-whip rings, rat fans, vortex pull, prince adds |
 
 **Leveling.** Built to feel smooth, with milestones you have to earn:
 - *Even pace.* XP income rises with the threat (a tougher horde pays more), and if you fall behind the expected level for the run time you earn up to 50% extra until you catch up. Gems come in tiers: blue, green, red and violet.
