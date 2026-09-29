@@ -14,15 +14,17 @@ import { WEAP } from '../combat/arsenal.js';
 import { need, addThreat } from '../combat/combat.js';
 import { setRat, clearFamiliars, makeGhostRat, FACE } from '../entities/rat.js';
 import { banner, renderSlots, hud } from '../ui/hud.js';
-import { renderMenu, hideOverlay } from '../ui/screens.js';
+import { renderMenu, hideOverlay, openLevelUp } from '../ui/screens.js';
+import { STARTS } from '../data/items.js';
 
 export function freshStats(C) {
   const n = meta.nest;
   return {
-    maxHp: C.hp + 12 * (n.hide || 0), regen: 0, armor: C.armor || 0, speed: C.speed, dmg: 1, area: C.area || 1, cd: C.cd || 1, proj: 0,
+    maxHp: C.hp + 12 * (n.hide || 0), regen: 0, armor: C.armor || 0, speed: C.speed, dmg: 1, area: C.area || 1, cd: (C.cd || 1) * (1 - 0.05 * (n.tempo || 0)), proj: 0,
+    primMul: 1 + 0.08 * (n.fang || 0), squeezeMul: C.squeeze || 1,
     magnet: 2.6 * (1 + 0.25 * (n.nose || 0)), crit: 0.05, critMul: 2, xp: 1, jumps: C.jumps || 0, multi: 0, range: 1, shotSpd: 1, tear: 1,
     homing: false, poison: false, burn: false, split: false, shotSize: 0, thorns: 0, melee: 0, kb: 1,
-    staMax: 100 + 10 * (n.lungs || 0), scentMax: 8, staRegen: 28, sprintMul: 1.45, sprintDrain: 22, climbCost: 20, metalClimb: false, glide: false,
+    staMax: 100 + 10 * (n.lungs || 0), scentMax: C.scent || 8, staRegen: 28 * (1 + 0.15 * (n.wind || 0)), sprintMul: 1.45, sprintDrain: 22, climbCost: 20, metalClimb: false, glide: false,
     chew: 1, specCd: 1, taken: 1, shrap: false, foeSpd: 1, leech: 0, salvage: 1 + 0.15 * (n.scav || 0),
     mut: {}, rabid: false, noRegen: false, foodMul: 1, healMul: 1, volt: false, bleed: false, rag: false, toxImmune: false, sinker: false, noScramble: false, fury: false, poisonMul: 1, selfPoison: false,
     meleePrim: C.prim === 'rake' || C.prim === 'gnash',
@@ -82,7 +84,7 @@ export function startRun(k) {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], junk: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
     pendingLv: 0, specT: 0, primT: 0, lowWarned: false, hp: 0, sta: 100, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 3, surgeT: 90, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
-    keys: meta.nest.key ? 1 : 0, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
+    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
   run.hp = st.maxHp;
@@ -91,6 +93,13 @@ export function startRun(k) {
   saveMeta();
   const seed = G.mode === 'trial' ? weekSeed() : 'S' + Date.now();
   if (G.mode === 'trial') { run.layer = 'sewer'; run.sewerIdx = 0; }
+  // Shortcuts from the Nest: start deeper, with a head start of level-up picks.
+  const at = G.mode === 'trial' ? null : STARTS[meta.startAt] && STARTS[meta.startAt].ok(meta) && meta.startAt !== 'row' ? STARTS[meta.startAt] : null;
+  if (at) {
+    run.tier = 1;
+    run.domMul = at.domMul;
+    if (at.sewer) { run.layer = 'sewer'; run.sewerIdx = 0; } else run.district = at.district;
+  }
   setupWorld(seed);
   run.seed = seed;
   setRat(C);
@@ -98,7 +107,7 @@ export function startRun(k) {
     const d = G.friendGhost && G.friendGhost.s === seed ? G.friendGhost : loadJSON('scurry4.ghost.' + seed, null);
     if (d && d.d && d.d.length > 1) G.ghost = { data: d, i: 0, r: makeGhostRat(d.c) };
   }
-  if (meta.nest.start && G.mode !== 'trial') { const id = pick(Object.keys(WEAP)); run.weapons.push({ id, lvl: 1, t: 0 }); }
+  if (meta.nest.start && G.mode !== 'trial') { const id = pick(Object.keys(WEAP)); run.weapons.push({ id, lvl: meta.nest.arms ? 2 : 1, t: 0 }); }
   G.state = 'play';
   G.camYaw = Math.PI; G.camPitch = 0.9; G.camDist = 13;
   G.camOff.set(0, 0, 0);
@@ -111,7 +120,12 @@ export function startRun(k) {
   renderSlots();
   hud();
   G.last = performance.now();
-  banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), run.mods.map(m => MODS[m].name).join(' · '));
+  banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), at ? 'Shortcut · three free picks to catch up' : run.mods.map(m => MODS[m].name).join(' · '));
+  if (at) {
+    for (let i = 0; i < 3; i++) { run.level++; run.need = need(run.level); }
+    run.pendingLv = 3;
+    openLevelUp();
+  }
 }
 
 /** Boss dead: open the way on. Surface → a road gate; sewer → a ladder up. */
@@ -172,10 +186,21 @@ export function checkUnlocks() {
   return got;
 }
 
-/** Unspent salvage (and a quarter of what you spent) goes home to the Nest. */
+/** Dominance: how hard you ruled the streets this run. */
+export function dominanceOf() {
+  const parts = {
+    kills: (run.kills || 0) / 30, damage: (run.dmg || 0) / 10000, bosses: (run.bosses || 0) * 8, lairs: (run.minis || 0) * 3, depth: (run.tier || 0) * 2,
+  };
+  const raw = Object.values(parts).reduce((a, b) => a + b, 0);
+  return { total: Math.floor(raw * (run.domMul || 1)), parts, mul: run.domMul || 1 };
+}
+/** Unspent salvage (and a quarter of what you spent) plus Dominance go home to the Nest. */
 export function bankSalvage() {
   const amt = Math.floor((run.scrap || 0) + (run.scrapSpent || 0) * 0.25);
+  const dom = G.mode === 'trial' ? { total: 0 } : dominanceOf();
   meta.salvage = (meta.salvage || 0) + amt;
+  meta.dominance = (meta.dominance || 0) + dom.total;
+  meta.domTotal = (meta.domTotal || 0) + dom.total;
   saveMeta();
-  return amt;
+  return { salvage: amt, dom: dom.total };
 }

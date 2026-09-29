@@ -75,12 +75,33 @@ function scan() {
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < 40) gnaw.push({ x: b.x, y: 1.3, z: b.z, s: 0.8 });
 }
 
+/** Smoke clouds (Sewer Sneak): you vanish inside; the horde inside is slowed and loses its rhythm. */
+function tickSmoke(dt) {
+  P.smoke = false;
+  for (const s of W.smokes) {
+    s.t -= dt;
+    if (Math.random() < dt * 14) { const a = Math.random() * 6.3, r = Math.random() * s.R; W.parts.push({ x: s.x + Math.sin(a) * r, y: floorY(s.x, s.z) + 0.3, z: s.z + Math.cos(a) * r, vx: 0, vy: 0.8, vz: 0, life: 1.4, c: 0x8a8a8a, s: 3, ng: true }); }
+    if (Math.hypot(P.x - s.x, P.z - s.z) < s.R) P.smoke = true;
+    for (const e of W.enemies) {
+      if (e.dead || e.boss || Math.hypot(e.x - s.x, e.z - s.z) > s.R) continue;
+      e.slow = Math.max(e.slow || 0, 0.3);
+      if (e.cd != null) e.cd = Math.max(e.cd, 0.25);
+      if (e.pred && e.mode === 'hunt') e.lost = (e.lost || 0) + dt * 2;
+    }
+  }
+  keep(W.smokes, s => s.t > 0);
+  // Lurk in the dark (or smoke) for a second and your next strike is an ambush.
+  if (P.shadow || P.smoke) { P.ambT = (P.ambT || 0) + dt; if (P.ambT > 1) P.ambush = 1; }
+  else if (P.ambush > 0) { P.ambT = 0; P.ambush = Math.max(0, P.ambush - dt / 3); }
+}
+
 export function tickScent(dt) {
+  tickSmoke(dt);
   if (P.scentE == null) P.scentE = st.scentMax;
   if (P.scent) {
     if (!st.rag) P.scentE -= dt;
     if (P.scentE <= 0) { P.scentE = 0; P.scent = false; dnum(P.x, P.y + 1.6, P.z, 'Scent fades', 'info'); }
-  } else P.scentE = Math.min(st.scentMax, P.scentE + dt * 0.55);
+  } else P.scentE = Math.min(st.scentMax, P.scentE + dt * 0.55 * st.scentMax / 8);
   trackPrints(dt);
   if (!P.scent) return;
   scanT -= dt;

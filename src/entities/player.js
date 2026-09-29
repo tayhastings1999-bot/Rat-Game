@@ -45,7 +45,7 @@ export function stepPlayer(dt) {
   // Momentum: sprinting is remembered briefly, and chained wall-bounces stack speed until you settle.
   P.sprintMem = P.sprinting ? 0.35 : (P.sprintMem || 0) - dt;
   if (P.onGround && P.chain) { P.chainT -= dt; if (P.chainT <= 0) P.chain = 0; }
-  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (1 + 0.1 * (P.chain || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
+  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (1 + 0.1 * (P.chain || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
   if (P.sprinting) { run.sta -= st.sprintDrain * dt * (buffOn('slime') ? 0 : 1); P.staT = 0.6; }
   P.rollCd -= dt;
   if (P.roll > 0) {

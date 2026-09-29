@@ -35,7 +35,7 @@ export const W = {
   rooms: [], objs: [], plats: [], inter: [], benches: [], chests: [], caches: [], pipes: [],
   lamps: [], valves: [], zones: [], enemies: [], gems: [], scraps: [], cores: [], keys: [],
   pproj: [], eproj: [], parts: [], foods: [], familiars: [], scentPaths: [], baits: [], gibs: [],
-  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [], neons: [], searches: [], shafts: [], prints: [], traps: [], falling: [], shocks: [],
+  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [], neons: [], searches: [], shafts: [], prints: [], traps: [], falling: [], shocks: [], smokes: [],
   cracks: new Map(),
 };
 
@@ -61,7 +61,7 @@ export const saveSettings = () => saveJSON('scurry.settings', settings);
 
 /** Persistent meta progression (the Nest). */
 export const meta = Object.assign(
-  { kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, nest: {}, bought: {}, runs: 0 },
+  { kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, dominance: 0, domTotal: 0, startAt: 'row', nest: {}, bought: {}, runs: 0 },
   loadJSON('scurry.meta', loadJSON('scurry5.meta', {})),
 );
 if (!meta.nest) meta.nest = {};

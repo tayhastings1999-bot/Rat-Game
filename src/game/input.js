@@ -33,7 +33,7 @@ export function initInput() {
     } else if (s === 'paused' || s === 'map' || s === 'bench') {
       if (['Escape', 'KeyP', 'KeyM', 'Tab', 'Enter'].includes(e.code)) resume();
     } else if (s === 'menu') {
-      const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'].indexOf(e.code);
+      const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'].indexOf(e.code);
       const k = Object.keys(CLASSES)[i];
       if (i >= 0 && k && isUnl(k)) startRun(k);
       if (e.code === 'KeyN') renderNest();

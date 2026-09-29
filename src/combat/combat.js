@@ -64,7 +64,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
     e.bonk = 0.6;
     if (base >= 25) G.shake = Math.max(G.shake, 0.1 * settings.shake);
   }
-  let d = base * st.dmg * (melee ? 1 + st.melee : 1);
+  let d = base * st.dmg * (melee ? 1 + st.melee : 1) * (src === 'primary' ? st.primMul : 1);
   if (st.fury && run.hp < st.maxHp * 0.5) d *= 1.3;
   const crit = Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   if (crit) d *= st.critMul;
@@ -149,6 +149,7 @@ export function kill(e) {
   run.kills++;
   run.spike = (run.spike || 0) + 0.025;
   meta.kills++;
+  if (e.mini) run.minis = (run.minis || 0) + 1;
   comboGain(e.mini ? 20 : e.elite ? 8 : e.boss ? 0 : 3);
   sfx('kill');
   if (e.boss || e.pred || e.elite || e.type === 'brute' || e.type === 'nest') G.hitStop = Math.max(G.hitStop, e.boss ? 0.3 : 0.08);

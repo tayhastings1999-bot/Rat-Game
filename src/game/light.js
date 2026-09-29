@@ -55,7 +55,7 @@ export function tickLight(dt) {
   sweep(dt);
   const L = lightAt(P.x, P.y, P.z);
   P.light = L;
-  P.shadow = L < 0.2 && !P.carry;
+  P.shadow = (L < 0.2 || P.smoke) && !P.carry;
   run.expo = run.expo || 0;
   run.expoCd = Math.max(0, (run.expoCd || 0) - dt);
   if (L >= 0.2) run.expo = Math.min(EXPO_MAX, run.expo + L * (P.sprinting ? 20 : 14) * dt);

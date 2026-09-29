@@ -18,6 +18,8 @@ export const ICON = {
   tome: SV('<path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M4 17a3 3 0 0 1 3-3h11"/>'),
   heal: SV('<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3C14.8 3 13.5 3.5 12 5c-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>'),
   gear: SV('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>'),
+  shiv: SV('<path d="M6 18 16 8l2-4-4 2L4 16z"/><path d="m5 15 4 4"/>'),
+  smoke: SV('<circle cx="8" cy="14" r="4"/><circle cx="15" cy="12" r="5"/><circle cx="12" cy="7" r="3"/>'),
   slam: SV('<path d="M12 3v10"/><path d="m8 9 4 4 4-4"/><path d="M3 20h18"/><path d="M6 17l-2 3M18 17l2 3"/>'),
   nova: SV('<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3"/>'),
   volley: SV('<circle cx="12" cy="12" r="2"/><circle cx="12" cy="4" r="1.5"/><circle cx="12" cy="20" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="20" cy="12" r="1.5"/>'),

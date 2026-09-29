@@ -7,6 +7,7 @@ export const CLASSES = {
   slinger: { name: 'Sewer Slinger', role: 'Ranged', rc: '#f2b233', blurb: 'Quick feet, quicker stones. Kites the horde and never stops moving.', hp: 95, speed: 7.8, prim: 'stone', special: 'volley', fur: 0xa08870, spike: 0xa87a48, eye: 0xffc040, gear: 0x6a4a2c },
   warlock: { name: 'Rat Warlock', role: 'Magic', rc: '#b46cff', blurb: 'Fragile, but the hex bolts find their mark. Blinks out of trouble.', hp: 85, speed: 7, cd: 0.9, prim: 'hex', special: 'blink', fur: 0x6e6874, spike: 0x8a6ab0, eye: 0xc080ff, gear: 0x2a2234 },
   tank: { name: 'Sewer Rat', role: 'Tank', rc: '#d08a4a', blurb: 'Scarred, heavy and nearly unkillable. Gnashes and shoves the horde back by brute force.', hp: 215, speed: 6.2, armor: 5, prim: 'gnash', special: 'bulwark', fur: 0x5e5044, spike: 0x8a7a60, eye: 0xff6a2a, gear: 0x4a4640, bulk: 1.18 },
+  sneak: { name: 'Sewer Sneak', role: 'Stealth', rc: '#5ad0a0', blurb: 'Slight and silent. A longer nose, a faster squeeze, and a shiv that triples on anything that never saw it coming.', hp: 70, speed: 7.6, prim: 'shiv', special: 'smoke', scent: 16, squeeze: 1.7, fur: 0x4a5048, spike: 0x5a7a60, eye: 0x6affb0, gear: 0x2a3a30, bulk: 0.86 },
   roof: { name: 'Roof Rat', role: 'Nimble', rc: '#7ad0ff', blurb: 'Light, fast and born on the rooftops. Double-jumps and rains darts from above.', hp: 80, speed: 8.6, jumps: 1, prim: 'darts', special: 'updraft', fur: 0x3a3438, spike: 0x6a6070, eye: 0x9ad8ff, gear: 0x2a3a4a, bulk: 0.9 },
 };
 
@@ -16,6 +17,7 @@ export const UNLOCK = {
   warlock: { req: m => m.bosses >= 3, txt: 'Slay 3 bosses', cost: 250 },
   tank: { txt: 'Buy at the Nest', cost: 200 },
   roof: { txt: 'Buy at the Nest', cost: 200 },
+  sneak: { req: m => (m.domTotal || 0) >= 60, txt: 'Earn 60 Dominance', dom: 30 },
 };
 export const isUnl = k => !UNLOCK[k] || !!meta.bought[k] || !!(UNLOCK[k].req && UNLOCK[k].req(meta));
 

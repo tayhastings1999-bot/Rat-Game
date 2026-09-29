@@ -310,6 +310,7 @@ export function onBossDeath(e) {
   if (!isSewer()) dropKey(e.x + 1.5, gy, e.z + 1.5);
   run.bossDone = true;
   meta.bosses++;
+  run.bosses = (run.bosses || 0) + 1;
   openGate();
   const got = checkUnlocks();
   banner(e.name + ' falls', got.length ? 'Unlocked: ' + got.join(', ') : isSewer() ? 'A ladder leads back to the streets' : 'The road is open — or take the key below');

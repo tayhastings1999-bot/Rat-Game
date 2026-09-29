@@ -96,6 +96,22 @@ export const NEST = [
   { id: 'key', name: 'Spare Key', desc: 'Begin each run holding a sewer key', costs: [220] },
 ];
 
+/** Bought with Dominance: earned by kills, damage, bosses and depth. */
+export const DOMNEST = [
+  { id: 'fang', name: 'Honed Fangs', desc: 'Your primary attack deals +8% damage per rank', costs: [8, 16, 28] },
+  { id: 'tempo', name: 'Quick Paws', desc: 'All weapons fire 5% faster per rank', costs: [10, 22] },
+  { id: 'wind', name: 'Deep Lungs', desc: 'Stamina regenerates 15% faster per rank', costs: [8, 18] },
+  { id: 'arms', name: 'Scavenged Arsenal', desc: 'New weapons start one level higher', costs: [24] },
+  { id: 'drain', name: 'Storm Drain Shortcut', desc: 'Start runs in Neon Market with 3 free picks · +25% Dominance', costs: [15], shortcut: true },
+  { id: 'tunnel', name: 'Deep Tunnel Shortcut', desc: 'Start runs in the Undersewer with 3 free picks · +40% Dominance', costs: [30], shortcut: true },
+];
+/** Where a run can begin. Shortcuts need the matching Dominance upgrade. */
+export const STARTS = {
+  row: { name: 'Cinder Row', ok: () => true },
+  drain: { name: 'Neon Market', ok: m => !!m.nest.drain, district: 1, domMul: 1.25 },
+  tunnel: { name: 'The Undersewer', ok: m => !!m.nest.tunnel, sewer: true, domMul: 1.4 },
+};
+
 /** Elite corruptions: double HP, one nasty modifier, premium drops. */
 export const CORRUPT = {
   fire: { name: 'Burning', col: 0xff6a2a, desc: 'leaves fire in its wake' },

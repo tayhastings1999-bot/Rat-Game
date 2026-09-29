@@ -5,12 +5,12 @@ import { G, run, st, meta, best, settings, saveMeta, saveSettings, saveBest } fr
 import { CLASSES, UNLOCK, SKINS, isUnl, skinOk } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
-import { ITEMS, MUTATIONS, CURSED, JUNK, AUG, NEST } from '../data/items.js';
+import { ITEMS, MUTATIONS, CURSED, JUNK, AUG, NEST, DOMNEST, STARTS } from '../data/items.js';
 import { WEAP, TOMES, RAR, PRIM, SPECIALS } from '../combat/arsenal.js';
 import { addThreat } from '../combat/combat.js';
 import { sfx, applyVolumes } from '../audio/audio.js';
 import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
-import { startRun, checkUnlocks, bankSalvage, menu } from '../game/flow.js';
+import { startRun, checkUnlocks, bankSalvage, dominanceOf, menu } from '../game/flow.js';
 import { giveCursed } from '../game/loot.js';
 import { drawMap, renderSlots, hud, banner } from './hud.js';
 import { ICON } from './icons.js';
@@ -26,6 +26,13 @@ export function resume() {
 }
 
 // ---------- main menu ----------
+/** Nest shortcuts: pick where the run begins. */
+function startsHTML() {
+  const open = Object.entries(STARTS).filter(([, s]) => s.ok(meta));
+  if (open.length < 2) return '';
+  if (!STARTS[meta.startAt] || !STARTS[meta.startAt].ok(meta)) meta.startAt = 'row';
+  return `<div class="btns"><span class="px" style="font-size:12px">Start in</span>${open.map(([k, s]) => `<button class="btn ${meta.startAt === k ? 'on' : 'ghost'}" data-at="${k}" style="font-size:11px;padding:8px 12px">${s.name}${s.domMul ? ` · +${Math.round((s.domMul - 1) * 100)}% Dominance` : ''}</button>`).join('')}</div>`;
+}
 function skinsHTML() {
   return `<div class="btns"><span class="px" style="font-size:12px">Fur</span>${SKINS.map((s, i) => {
     const ok = skinOk(i);
@@ -39,7 +46,7 @@ export function renderMenu(m) {
   show(`<div class="panel frame">
     <div class="kick px">A rat roguelike · Streets above, sewer below</div><h1>Scurry</h1>
     <p>An open neighbourhood crawling with hordes. Climb brick to the rooftops and walk the power lines, gnaw through boarded gaps, squeeze through cracks and sniff out cheese. Find a sewer key and take the manhole down — the sewer is darker, meaner and richer.</p>
-    <div class="btns"><button class="btn ${m === 'survival' ? 'on' : 'ghost'}" id="mS">Survival</button><button class="btn ${m === 'trial' ? 'on' : 'ghost'}" id="mT">Ghost Trial</button><button class="btn ghost" id="mN">The Nest · ${commas(meta.salvage || 0)} salvage</button></div>
+    <div class="btns"><button class="btn ${m === 'survival' ? 'on' : 'ghost'}" id="mS">Survival</button><button class="btn ${m === 'trial' ? 'on' : 'ghost'}" id="mT">Ghost Trial</button><button class="btn ghost" id="mN">The Nest · ${commas(meta.salvage || 0)} salvage · ${meta.dominance || 0} dominance</button></div>
     ${m === 'trial' ? `<p>This week's map: <span class="px" style="font-size:13px">${seed}</span>. Turn three valves in the Undersewer, then dive down the drain. You race your best ghost, or a friend's if you paste their code.</p>
       <div class="lb">${lb.length ? lb.map((r, i) => `<span>${i + 1}</span><span>${CLASSES[r.c]?.name || r.c}</span><span>${fmtT(r.t)}</span>`).join('') : '<span></span><span>No times yet</span><span></span>'}</div>
       <textarea id="fg" placeholder="Paste a friend's ghost code here">${G.friendGhost ? '(friend ghost loaded: ' + fmtT(G.friendGhost.t) + ')' : ''}</textarea>`
@@ -54,9 +61,9 @@ export function renderMenu(m) {
       const lk = !isUnl(k);
       return `<button class="card${lk ? ' off' : ''}" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="" style="${lk ? 'filter:brightness(.08)' : ''}">
-        <b>${lk ? 'Locked' : C.name}</b><span class="d">${lk ? UNLOCK[k].txt + (UNLOCK[k].cost ? ` · or ${UNLOCK[k].cost} salvage at the Nest` : '') : C.blurb}</span>
+        <b>${lk ? 'Locked' : C.name}</b><span class="d">${lk ? UNLOCK[k].txt + (UNLOCK[k].cost ? ` · or ${UNLOCK[k].cost} salvage at the Nest` : UNLOCK[k].dom ? ` · or ${UNLOCK[k].dom} Dominance at the Nest` : '') : C.blurb}</span>
         <span class="s">${C.hp} HP · ${PRIM[C.prim].name}<br>Q: ${SPECIALS[C.special].name}</span></button>`;
-    }).join('')}</div>${skinsHTML()}
+    }).join('')}</div>${m === 'survival' ? startsHTML() : ''}${skinsHTML()}
     <p class="px" style="font-size:12px">${best.time ? `Best survival: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}${pb ? ` · Trial PB ${fmtT(pb.t)}` : ''}</p></div>`);
   G.mode = m;
   $('mS').onclick = () => renderMenu('survival');
@@ -72,6 +79,7 @@ export function renderMenu(m) {
     } catch (_) { fg.value = 'That code is for a different week or is damaged.'; }
   };
   ov.querySelectorAll('.card').forEach(b => { b.onclick = () => { if (isUnl(b.dataset.k)) startRun(b.dataset.k); }; });
+  ov.querySelectorAll('[data-at]').forEach(b => { b.onclick = () => { meta.startAt = b.dataset.at; saveMeta(); renderMenu(m); }; });
   ov.querySelectorAll('[data-s]').forEach(b => {
     b.onclick = () => {
       const i = +b.dataset.s;
@@ -85,30 +93,36 @@ export function renderMenu(m) {
   });
 }
 
-/** The Nest: spend banked salvage on permanent upgrades and new rats. */
+/** The Nest: spend banked salvage and Dominance on permanent upgrades, shortcuts and new rats. */
+function upCards(list, cur, bank) {
+  return list.map(u => {
+    const r = meta.nest[u.id] || 0, max = u.costs.length, cost = u.costs[r], done = r >= max, poor = !done && bank < cost;
+    return `<button class="card ${done ? 'own' : ''} ${poor ? 'off' : ''}" data-n="${u.id}" data-cur="${cur}" style="--rc:${done ? '#6ad06a' : cur === 'dom' ? '#c080ff' : '#f2b233'}">
+      <div class="row"><span class="role">${done ? (u.shortcut ? 'Open' : 'Maxed') : cost + (cur === 'dom' ? ' dominance' : ' salvage')}</span><span class="key px">${r}/${max}</span></div><b>${u.name}</b><span class="d">${u.desc}</span></button>`;
+  }).join('');
+}
 export function renderNest() {
   G.state = 'nest';
   const lockedCls = Object.keys(UNLOCK).filter(k => !isUnl(k));
+  const sal = meta.salvage || 0, dom = meta.dominance || 0;
   show(`<div class="panel frame">
-    <div class="kick px">Home base · ${commas(meta.salvage || 0)} salvage banked</div><h2>The Nest</h2>
-    <p>Everything you carried dies with you — except salvage. Unspent salvage (and a quarter of what you spent at workbenches) comes home here.</p>
-    <div class="cards">${NEST.map(u => {
-      const r = meta.nest[u.id] || 0, max = u.costs.length, cost = u.costs[r], done = r >= max, poor = !done && meta.salvage < cost;
-      return `<button class="card ${done ? 'own' : ''} ${poor ? 'off' : ''}" data-n="${u.id}" style="--rc:${done ? '#6ad06a' : '#f2b233'}">
-        <div class="row"><span class="role">${done ? 'Maxed' : cost + ' salvage'}</span><span class="key px">${r}/${max}</span></div><b>${u.name}</b><span class="d">${u.desc}</span></button>`;
-    }).join('')}</div>
+    <div class="kick px">Home base · ${commas(sal)} salvage · ${dom} dominance</div><h2>The Nest</h2>
+    <p>Everything you carried dies with you, except what you bring home. Salvage comes from unspent scrap (plus a quarter of what you spent at workbenches). <b style="color:#c080ff">Dominance</b> is how hard you ruled the streets: kills, damage, bosses, hidden lairs and how deep you got.</p>
+    <h3 class="px" style="margin:6px 0 0;font-size:14px;color:var(--gold)">Salvage</h3><div class="cards">${upCards(NEST, 'sal', sal)}</div>
+    <h3 class="px" style="margin:6px 0 0;font-size:14px;color:#c080ff">Dominance · weapons, lungs and shortcuts</h3><div class="cards">${upCards(DOMNEST, 'dom', dom)}</div>
     ${lockedCls.length ? `<h3 class="px" style="margin:6px 0 0;font-size:14px;color:var(--gold)">Rats for hire</h3><div class="cards">${lockedCls.map(k => {
-      const C = CLASSES[k], cost = UNLOCK[k].cost, poor = meta.salvage < cost;
-      return `<button class="card ${poor ? 'off' : ''}" data-c="${k}" style="--rc:${C.rc}"><div class="row"><span class="role">${C.role} · ${cost} salvage</span></div><img class="por" src="${PORT[k]}" alt=""><b>${C.name}</b><span class="d">${C.blurb}</span></button>`;
+      const C = CLASSES[k], U = UNLOCK[k], dcur = !!U.dom, cost = dcur ? U.dom : U.cost, poor = (dcur ? dom : sal) < cost;
+      return `<button class="card ${poor ? 'off' : ''}" data-c="${k}" style="--rc:${C.rc}"><div class="row"><span class="role">${C.role} · ${cost} ${dcur ? 'dominance' : 'salvage'}</span></div><img class="por" src="${PORT[k]}" alt=""><b>${C.name}</b><span class="d">${C.blurb}</span></button>`;
     }).join('')}</div>` : ''}
     <div class="btns"><button class="btn ghost" id="nb">Back (Esc)</button></div></div>`);
   $('nb').onclick = () => renderMenu('survival');
   ov.querySelectorAll('[data-n]').forEach(b => {
     b.onclick = () => {
-      const u = NEST.find(u => u.id === b.dataset.n), r = meta.nest[u.id] || 0, cost = u.costs[r];
-      if (r >= u.costs.length || meta.salvage < cost) return;
-      meta.salvage -= cost;
+      const dcur = b.dataset.cur === 'dom', u = (dcur ? DOMNEST : NEST).find(u => u.id === b.dataset.n), r = meta.nest[u.id] || 0, cost = u.costs[r], key = dcur ? 'dominance' : 'salvage';
+      if (r >= u.costs.length || (meta[key] || 0) < cost) return;
+      meta[key] -= cost;
       meta.nest[u.id] = r + 1;
+      if (u.shortcut) meta.startAt = u.id;
       saveMeta();
       sfx('buy');
       renderNest();
@@ -116,9 +130,9 @@ export function renderNest() {
   });
   ov.querySelectorAll('[data-c]').forEach(b => {
     b.onclick = () => {
-      const k = b.dataset.c, cost = UNLOCK[k].cost;
-      if (meta.salvage < cost) return;
-      meta.salvage -= cost;
+      const k = b.dataset.c, U = UNLOCK[k], key = U.dom ? 'dominance' : 'salvage', cost = U.dom || U.cost;
+      if ((meta[key] || 0) < cost) return;
+      meta[key] -= cost;
       meta.bought[k] = 1;
       saveMeta();
       sfx('buy');
@@ -245,7 +259,7 @@ export function reroll() {
 }
 export function choose(o) {
   addThreat(0.2);
-  if (o.kind === 'new') run.weapons.push({ id: o.id, lvl: 1, t: 0 });
+  if (o.kind === 'new') run.weapons.push({ id: o.id, lvl: meta.nest.arms ? 2 : 1, t: 0 });
   else if (o.kind === 'up') run.weapons.find(w => w.id === o.id).lvl++;
   else if (o.kind === 'tome') { run.tomes[o.id] = (run.tomes[o.id] || 0) + 1; TOMES[o.id].ap(RAR[o.rar].m); }
   else if (o.kind === 'cursed') giveCursed(o.id);
@@ -274,10 +288,11 @@ export function die() {
   const got = checkUnlocks();
   const nb = G.mode === 'survival' && run.time > best.time;
   if (nb) { Object.assign(best, { time: run.time, kills: run.kills, district: run.tier }); saveBest(); }
-  const banked = bankSalvage();
+  const dm = dominanceOf(), banked = bankSalvage();
   show(`<div class="panel narrow frame"><div class="kick px">${nb ? 'New best' : 'Run over'} · ${dName()}</div><h1 style="font-size:clamp(64px,9vw,120px)">You died</h1>
     <div class="stat px"><div><b>${fmt(run.time)}</b><span>Survived</span></div><div><b>${run.kills}</b><span>Kills</span></div><div><b>${run.level}</b><span>Level</span></div><div><b>${run.tier + 1}</b><span>Districts</span></div><div><b>${(run.T || 0).toFixed(1)}</b><span>Peak threat</span></div></div>
-    <p class="px" style="color:#9ad0ff;font-size:13px">+${banked} salvage banked at the Nest · ${commas(meta.salvage)} total</p>
+    <p class="px" style="color:#9ad0ff;font-size:13px">+${banked.salvage} salvage · <span style="color:#c080ff">+${banked.dom} dominance</span> banked at the Nest</p>
+    <p class="px" style="font-size:11px;color:var(--dim)">Dominance: kills ${dm.parts.kills.toFixed(1)} · damage ${dm.parts.damage.toFixed(1)} · bosses ${dm.parts.bosses} · lairs ${dm.parts.lairs} · depth ${dm.parts.depth}${dm.mul > 1 ? ` · shortcut ×${dm.mul}` : ''}</p>
     ${got.length ? `<p class="px" style="color:#f2b233;font-size:13px">Unlocked: ${got.join(' · ')}</p>` : ''}${dmgTable()}
     <div class="btns"><button class="btn" id="again">Choose a rat</button><button class="btn ghost" id="nest">The Nest</button><span class="px" style="font-size:12px;color:var(--dim)">or press R</span></div></div>`);
   $('again').onclick = menu;
@@ -300,7 +315,7 @@ export function finishTrial() {
   const gh = G.ghost;
   show(`<div class="panel narrow frame"><div class="kick px">${newPB ? 'New personal best' : 'Trial complete'}</div><h2>Down the drain</h2>
     <div class="stat px"><div><b>${fmtT(t)}</b><span>Time</span></div>${gh ? `<div><b style="color:${t < gh.data.t ? '#6ad06a' : '#ff7a6a'}">${t < gh.data.t ? '−' : '+'}${Math.abs(t - gh.data.t).toFixed(1)}s</b><span>vs ghost</span></div>` : ''}<div><b>${run.kills}</b><span>Kills</span></div></div>
-    <p class="px" style="color:#9ad0ff;font-size:13px">+${banked} salvage banked at the Nest</p>
+    <p class="px" style="color:#9ad0ff;font-size:13px">+${banked.salvage} salvage banked at the Nest</p>
     <p>Send this code to a friend. They paste it on the Ghost Trial screen to race your run this week.</p><textarea readonly id="code">${code}</textarea>
     <div class="btns"><button class="btn" id="cp">Copy ghost code</button><button class="btn ghost" id="again">Back to menu</button></div></div>`);
   $('cp').onclick = () => { const ta = $('code'); ta.select(); try { navigator.clipboard.writeText(code); } catch (_) { document.execCommand('copy'); } $('cp').textContent = 'Copied'; };

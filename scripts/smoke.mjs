@@ -462,6 +462,7 @@ await step('death banks salvage', async () => {
   await wait(400);
   const after = await S(() => __scurry.meta.salvage);
   if (after < before + 120) throw new Error(`salvage ${before} -> ${after}`);
+  if (!(await S(() => __scurry.meta.domTotal > 0))) throw new Error('no dominance banked');
   await shot('09-dead');
 });
 await step('nest purchase', async () => {
@@ -473,6 +474,14 @@ await step('nest purchase', async () => {
   await page.click('[data-n="hide"]');
   const r = await S(() => __scurry.meta.nest.hide || 0);
   if (r < 1) throw new Error('nest upgrade not bought');
+  // Dominance shelf: a stat upgrade and a shortcut.
+  await S(() => { __scurry.meta.dominance = 120; __scurry.meta.domTotal = Math.max(__scurry.meta.domTotal, 120); __scurry.renderNest(); });
+  await wait(200);
+  await page.click('[data-n="fang"]');
+  await page.click('[data-n="drain"]');
+  const n = await S(() => ({ fang: __scurry.meta.nest.fang, drain: __scurry.meta.nest.drain, at: __scurry.meta.startAt, dom: __scurry.meta.dominance }));
+  if (n.fang !== 1 || n.drain !== 1 || n.at !== 'drain') throw new Error('dominance shop ' + JSON.stringify(n));
+  await shot('10b-nest-dominance');
   await page.keyboard.press('Escape');
   await wait(300);
 });
@@ -486,6 +495,23 @@ await step('new classes play', async () => {
     await S(() => __scurry.menu());
     await wait(800);
   }
+});
+await step('sewer sneak: shortcut start, smoke bomb, ambush shiv', async () => {
+  await S(() => { __scurry.G.mode = 'survival'; __scurry.meta.startAt = 'drain'; __scurry.startRun('sneak'); __scurry.god(true); });
+  await rawWait(300);
+  const s0 = await S(() => ({ st: __scurry.G.state, d: __scurry.run.district, lv: __scurry.run.level, pend: __scurry.run.pendingLv, scent: __scurry.st.scentMax, sq: __scurry.st.squeezeMul, prim: __scurry.st.primMul }));
+  if (s0.st !== 'levelup' || s0.d !== 1 || s0.pend !== 3 || s0.scent !== 16 || !(s0.sq > 1) || !(s0.prim > 1)) throw new Error('sneak start ' + JSON.stringify(s0));
+  await wait(400);
+  await S(() => { const { W } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); __scurry.run.specT = 0; });
+  await page.keyboard.press('KeyQ');
+  const sm = await until(() => __scurry.W.smokes.length && __scurry.P.ambush > 0, 3000);
+  if (!sm) throw new Error('smoke bomb did nothing');
+  await S(() => { const { P } = __scurry; const e = __scurry.spawnEnemy('mawling', P.x + 1.5, P.z, { hpMul: 20, plain: true }); if (e) { e.spd = 0; e.tag = 'mark'; } });
+  const amb = await until(() => __scurry.P.ambush === 0 && __scurry.W.enemies.some(e => e.tag === 'mark' && e.hp < e.maxHp), 4000);
+  await shot('11b-sneak');
+  if (!amb) throw new Error('ambush shiv never landed');
+  await S(() => { __scurry.meta.startAt = 'row'; __scurry.menu(); });
+  await wait(600);
 });
 await step('ghost trial', async () => {
   await page.click('#mT');

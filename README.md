@@ -78,9 +78,16 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
   - Heavy Lead Sinker: Q becomes a massive, uninterruptible ground slam, but Scramble is disabled and climbing costs double.
 - *Bonk physics.* Knocked-back mobs smash into each other and take fall damage off rooftops.
 
-**Meta (the Nest).** On death, unspent salvage plus a quarter of what you spent is banked. At the Nest you buy permanent upgrades (HP, salvage, stamina, pickup reach, level-up rerolls, starting weapon, spare key) and hire rats.
+**Meta (the Nest).** On death you bank two currencies:
+- *Salvage* is unspent scrap plus a quarter of what you spent at workbenches. It buys HP, salvage gain, max stamina, pickup reach, level-up rerolls, a starting weapon, a spare key, and salvage-priced rats.
+- *Dominance* is how hard you ruled the streets: kills/30 + damage/10,000 + 8 per boss + 3 per hidden lair + 2 per district deep. The death screen shows the breakdown. It buys:
+  - Honed Fangs (+8% primary damage per rank)
+  - Quick Paws (−5% weapon cooldowns per rank)
+  - Deep Lungs (+15% stamina regen per rank)
+  - Scavenged Arsenal (new weapons start at level 2)
+  - two **shortcuts**: start in Neon Market (+25% Dominance) or straight in the Undersewer (+40%). Either way you get 3 free level-up picks at the start so you aren't underpowered. Pick where to start on the menu.
 
-**Classes.** Melee rats (Gutter Brawler, Sewer Rat) lunge into range, heal a little on every hit, take 20% less damage from bites and build **Bloodlust** (faster attacks and movement) from kills. Gutter Brawler, Plaguebearer, Sewer Slinger, Rat Warlock, and two new ones: the **Sewer Rat** (tank: Gnash plus a reflecting Bulwark) and the **Roof Rat** (nimble: double jump, Needle Darts, Updraft glide).
+**Classes.** Melee rats (Gutter Brawler, Sewer Rat) lunge into range, heal a little on every hit, take 20% less damage from bites and build **Bloodlust** (faster attacks and movement) from kills. Gutter Brawler, Plaguebearer, Sewer Slinger, Rat Warlock, and two new ones: the **Sewer Rat** (tank: Gnash plus a reflecting Bulwark) and the **Roof Rat** (nimble: double jump, Needle Darts, Updraft glide). The **Sewer Sneak** unlocks at 60 lifetime Dominance (or buy it for 30): only 70 HP, but a 16-second scent gauge that refills twice as fast, a 70% faster squeeze, a **Shiv** that deals triple damage from ambush (after a second in shadow or smoke, or on a cat that hasn't noticed you) and 1.8× from behind, and a **Smoke Bomb** that hides you from predators and owls, makes hunting cats lose you, slows the horde inside and primes an ambush.
 
 **Music.** A procedural soundtrack: a distorted boom-bap drum loop with stuttering trap hi-hat rolls and a discordant phrygian/tritone synth bass. Tempo and density climb from exploring (132 BPM) to crowded fights (148) to bosses (166, with a siren lead). Music and effects have separate volume sliders.
 

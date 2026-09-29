@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { rand, randi, angD, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { swipeFx, boom, fx, spark, bolt, orb, orbState, puff } from '../fx/fx.js';
+import { swipeFx, boom, fx, spark, bolt, orb, orbState, puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { solidFor, tileAt, topAt, toG } from '../world/grid.js';
 import { near, sorted, nearest, hit, aoe } from './combat.js';
@@ -200,6 +200,17 @@ export const SPECIALS = {
       G.shake = 0.35;
     },
   },
+  smoke: {
+    // Smoke bomb: a cloud that hides you from predators and owls, slows the horde inside and primes an ambush.
+    name: 'Smoke Bomb', cd: 8,
+    use() {
+      W.smokes.push({ x: P.x, z: P.z, R: 5 * st.area, t: 4.5 });
+      puff(P.x, P.y + 0.5, P.z, 0x8a8a8a, 30, 6);
+      run.expo = 0;
+      P.ambush = 1;
+      sfx('roll');
+    },
+  },
   updraft: {
     name: 'Updraft', cd: 6,
     use() {
@@ -236,6 +247,29 @@ export const PRIM = {
         for (const e of near(P.x, P.y, P.z, R + 0.3)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.3) hit(e, 30, A, 10, 'primary', false, true);
       }
       G.shake = Math.max(G.shake, 0.06);
+    },
+  },
+  shiv: {
+    // Quick single-target stab. Triple damage from ambush (after lurking in shadow or smoke, or on a cat that hasn't
+    // noticed you), and 1.8× from behind: roll past a mob and stick it in the back.
+    name: 'Shiv', range: 3.8, cd: 0.28, melee: true,
+    fire(dx, dz, t) {
+      const a = Math.atan2(dx, dz), R = 2.3 * st.area, amb = P.ambush > 0, n = 1 + st.multi;
+      stepIn(t, R);
+      let landed = 0;
+      for (let k = 0; k < n; k++) {
+        const A = a + (k - (n - 1) / 2) * 0.5;
+        swipeFx(A, R, amb ? 0x6affb0 : 0xd8f0e0);
+        for (const e of near(P.x, P.y, P.z, R + 0.3)) {
+          if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) > 0.9) continue;
+          const back = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.ang || 0)) > 2.1, unaware = e.pred && e.mode === 'patrol';
+          const m = (amb || unaware ? 3 : 1) * (back ? 1.8 : 1);
+          hit(e, 16 * m, A, 3, 'primary', false, true);
+          if (m > 1 && landed === 0) dnum(e.x, e.y + e.h + 0.5, e.z, amb || unaware ? 'AMBUSH' : 'BACKSTAB', 'crit');
+          landed++;
+        }
+      }
+      if (amb && landed) { P.ambush = 0; P.ambT = 0; sfx('slash'); }
     },
   },
   blight: {
