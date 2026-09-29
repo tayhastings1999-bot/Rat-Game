@@ -474,5 +474,6 @@ export function update(dt) {
   // Combat: fade the controls text and minimap so the fight reads clearly.
   const combat = !!G.lockOn || near9 >= 3 || (run.combo || 0) > 8 || !!(G.boss && G.boss.revealed);
   if (combat !== G.combat) { G.combat = combat; document.body.classList.toggle('combat', combat); }
-  setMusic(G.boss ? 3 : close > 8 || (run.T || 0) > 8 ? 2 : 1, isSewer());
+  const bs = G.boss;
+  setMusic(bs ? 3 : close > 8 || (run.T || 0) > 8 ? 2 : 1, isSewer(), bs ? { kind: bs.kind, phase: bs.revealed ? bs.phase : 0 } : null);
 }

@@ -89,6 +89,18 @@ export function audioInit() {
   setInterval(scheduleMusic, 25);
 }
 
+/** Debug/tests: loudness of the music bus right now ({ rms, peak } on a 0..1 scale). */
+let an = null;
+export function musicLevel() {
+  if (!AC) return null;
+  if (!an) { an = AC.createAnalyser(); an.fftSize = 2048; musicBus.connect(an); }
+  const d = new Float32Array(an.fftSize);
+  an.getFloatTimeDomainData(d);
+  let s = 0, pk = 0;
+  for (const v of d) { s += v * v; pk = Math.max(pk, Math.abs(v)); }
+  return { rms: Math.sqrt(s / d.length), peak: pk };
+}
+
 export function applyVolumes() {
   if (!AC) return;
   sfxBus.gain.setTargetAtTime(settings.sfx, AC.currentTime, 0.05);
@@ -156,8 +168,8 @@ export function sfx(n) {
  * intensity: 0 menu/nest, 1 exploring, 2 fighting a crowd, 3 boss.
  * The sequencer runs in 16th notes with boom-bap swing; tempo climbs with intensity.
  */
-export const music = { intensity: 0, want: 0, step: 0, bar: 0, nextT: 0, bpm: 90, riff: 0, sewer: false };
-const BPM = [90, 132, 148, 166];
+export const music = { intensity: 0, want: 0, step: 0, bar: 0, nextT: 0, bpm: 90, riff: 0, sewer: false, bossKind: null, bossPhase: 0, wantBoss: null };
+const BPM = [90, 132, 148, 84];
 const KICKS = [
   [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0],
   [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
@@ -173,9 +185,13 @@ const RIFFS = [
 const E1 = 41.2;
 const fq = semi => E1 * Math.pow(2, semi / 12);
 
-export function setMusic(intensity, sewer) {
+/** boss: { kind, phase } while a boss is awake (phase 0 = not yet revealed). */
+export function setMusic(intensity, sewer, boss) {
   music.want = intensity;
   music.sewer = !!sewer;
+  music.wantBoss = boss || null;
+  // Phase changes land on the next beat, not the next bar.
+  if (boss && music.intensity === 3) music.bossPhase = boss.phase;
 }
 
 function kick(t, v) {
@@ -286,13 +302,123 @@ function playStep(s, t, stepLen) {
   if (I >= 3 && s === 0 && bar % 2 === 1) siren(t, stepLen * 14);
 }
 
+// ---------- The boss score ----------
+/**
+ * A separate, sinister track for boss fights: half-time doom drums, a detuned
+ * drone, a formant "choir" moving through a phrygian/diminished progression,
+ * a tolling FM bell, and taiko hits. Each boss has its own key. It builds
+ * with the fight: asleep (drone + heartbeat), phase 1 (choir, bell, doom
+ * drums), phase 2 (taiko, driving sub bass), phase 3 (a frantic diminished
+ * arpeggio, stuttering hats, the siren, and a faster pulse).
+ */
+const BOSS_KEY = { tabby: 0, murder: 3, exterm: 1, maw: -2, brood: 5, ratking: 6 };
+// Chord progression (semitone offsets for three choir voices), one chord per two bars.
+const BOSS_PROG = [[0, 3, 6], [1, 4, 8], [0, 3, 7], [-1, 2, 5]];
+const bRoot = () => BOSS_KEY[music.bossKind] ?? 0;
+
+function drone(t, dur, v) {
+  const g = AC.createGain(), lp = AC.createBiquadFilter();
+  lp.type = 'lowpass'; lp.Q.value = 4;
+  lp.frequency.setValueAtTime(90, t);
+  lp.frequency.linearRampToValueAtTime(260, t + dur * 0.5);
+  lp.frequency.linearRampToValueAtTime(90, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(v, t + dur * 0.25);
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  lp.connect(g); g.connect(bassBus);
+  for (const [semi, det] of [[0, -9], [0, 9], [6, 0], [-12, 0]]) {
+    const o = AC.createOscillator();
+    o.type = 'sawtooth'; o.frequency.value = fq(bRoot() + semi); o.detune.value = det;
+    o.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+  }
+}
+/** Three detuned voices through two vowel formants: a cold, wordless choir. */
+function choir(t, chord, dur, v) {
+  const g = AC.createGain(), f1 = AC.createBiquadFilter(), f2 = AC.createBiquadFilter(), mix = AC.createGain();
+  f1.type = 'bandpass'; f1.frequency.value = 700; f1.Q.value = 6;
+  f2.type = 'bandpass'; f2.frequency.value = 1150; f2.Q.value = 8;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(v, t + dur * 0.35);
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  mix.connect(f1); mix.connect(f2); f1.connect(g); f2.connect(g);
+  g.connect(musicBus); g.connect(verb);
+  for (const semi of chord) for (const det of [-12, 0, 12]) {
+    const o = AC.createOscillator(), vib = AC.createOscillator(), vg = AC.createGain();
+    o.type = 'sawtooth'; o.frequency.value = fq(bRoot() + 36 + semi); o.detune.value = det;
+    vib.frequency.value = rand(4.5, 5.5); vg.gain.value = 4;
+    vib.connect(vg); vg.connect(o.detune);
+    o.connect(mix); o.start(t); o.stop(t + dur + 0.05); vib.start(t); vib.stop(t + dur + 0.05);
+  }
+}
+/** A struck FM bell, inharmonic, left to ring into the reverb. */
+function bell(t, semi, v) {
+  const c = AC.createOscillator(), m = AC.createOscillator(), mg = AC.createGain(), g = AC.createGain(), f = fq(bRoot() + semi);
+  c.frequency.value = f; m.frequency.value = f * 3.51;
+  mg.gain.setValueAtTime(f * 4, t); mg.gain.exponentialRampToValueAtTime(f * 0.2, t + 2.5);
+  m.connect(mg); mg.connect(c.frequency);
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
+  c.connect(g); g.connect(musicBus); g.connect(verb);
+  c.start(t); c.stop(t + 3.3); m.start(t); m.stop(t + 3.3);
+}
+function taiko(t, v) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.25);
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+  o.connect(g); g.connect(drumBus); g.connect(verb);
+  o.start(t); o.stop(t + 0.65);
+  nz(400, 0.8, 0.12, v * 0.35, 'lowpass', true, t, drumBus);
+}
+function arp(t, semi, dur, v) {
+  const o = AC.createOscillator(), g = AC.createGain(), bp = AC.createBiquadFilter();
+  o.type = 'square'; o.frequency.value = fq(bRoot() + 24 + semi);
+  bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 3;
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(bp); bp.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function swell(t, dur) {
+  const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.Q.value = 3;
+  f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(3500, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + dur * 0.95); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(musicBus); g.connect(verb);
+  s.start(t, Math.random()); s.stop(t + dur + 0.05);
+}
+const DIM = [0, 3, 6, 9, 12, 9, 6, 3];
+function playBossStep(s, t, stepLen) {
+  const ph = music.bossPhase, bar = music.bar, barLen = stepLen * 16, chord = BOSS_PROG[(bar >> 1) % BOSS_PROG.length];
+  // Always: the drone, and a heartbeat under everything until the fight turns frantic.
+  if (s === 0 && bar % 2 === 0) drone(t, barLen * 2.05, ph === 0 ? 0.35 : 0.5);
+  if (ph < 3 && (s === 0 || s === 3)) kick(t, s === 0 ? 0.55 : 0.35);
+  if (ph === 0) { if (s === 0 && bar % 4 === 0) bell(t, 24, 0.05); return; }
+  // Phase 1+: choir, bell tolls, half-time doom (kick on 1, the big snare on 3).
+  if (s === 0 && bar % 2 === 0) choir(t, chord, barLen * 2.05, 0.05 + 0.015 * ph);
+  if (s === 0 && bar % 2 === 1) bell(t, 24 + chord[0], 0.07);
+  if (s === 0 || (s === 10 && bar % 2)) kick(t, 1);
+  if (s === 8) { snare(t, 1.1); nz(900, 0.5, 0.6, 0.12, 'lowpass', true, t, drumBus); }
+  if (s % 4 === 2) hat(t, 0.4);
+  if (s === 12 && bar % 4 === 3) swell(t - stepLen * 4, stepLen * 4);
+  // Phase 2+: taiko and a pulsing sub bass on the root.
+  if (ph >= 2) {
+    if (s === 6 || s === 14 || (s === 11 && chance(0.5))) taiko(t, 0.7);
+    if (s % 4 === 0) bass(t, fq(chord[0] + bRoot()), stepLen * 3, 0.8);
+  }
+  // Phase 3: a frantic diminished arpeggio, stuttering hats, the siren.
+  if (ph >= 3) {
+    arp(t, DIM[s % DIM.length] + chord[0], stepLen * 0.9, 0.035);
+    if (s % 2 && chance(0.4)) { const n = pick([3, 4]); for (let k = 0; k < n; k++) hat(t + k * stepLen / n, 0.5 + 0.4 * k / n, false, 1.2); }
+    if (s === 0 && bar % 4 === 1) siren(t, stepLen * 14);
+  }
+}
+
 function scheduleMusic() {
   if (!AC || AC.state !== 'running') return;
   if (music.nextT < AC.currentTime - 0.5) music.nextT = AC.currentTime + 0.05;
   while (music.nextT < AC.currentTime + 0.14) {
     const stepLen = 60 / music.bpm / 4;
     const swing = music.step % 2 ? stepLen * (music.intensity === 0 ? 0.18 : 0.1) : 0;
-    playStep(music.step, music.nextT + swing, stepLen);
+    if (music.intensity === 3) playBossStep(music.step, music.nextT + swing * 0.3, stepLen);
+    else playStep(music.step, music.nextT + swing, stepLen);
     music.nextT += stepLen;
     music.step++;
     if (music.step >= 16) {
@@ -300,6 +426,11 @@ function scheduleMusic() {
       music.bar++;
       if (music.bar % 2 === 0) music.riff = chance(0.6) ? music.riff : Math.floor(Math.random() * RIFFS.length);
       if (music.intensity !== music.want) { music.intensity = music.want; music.bpm = BPM[music.intensity]; }
+      if (music.intensity === 3 && music.wantBoss) {
+        music.bossKind = music.wantBoss.kind;
+        music.bossPhase = music.wantBoss.phase;
+        music.bpm = BPM[3] + 4 * music.bossPhase; // the pulse quickens as the fight turns
+      }
     }
   }
 }

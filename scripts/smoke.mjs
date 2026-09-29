@@ -503,7 +503,8 @@ await step('boss marathon: each boss in phase 3 for a while', async () => {
     await wait(1500);
     await S(() => __scurry.hurtBoss(0.3));
     await wait(9000);
-    const b = await S(() => __scurry.G.boss && { kind: __scurry.G.boss.kind, phase: __scurry.G.boss.phase, hp: __scurry.G.boss.hp });
+    const b = await S(() => __scurry.G.boss && { kind: __scurry.G.boss.kind, phase: __scurry.G.boss.phase, hp: __scurry.G.boss.hp, mus: __scurry.music.intensity, mk: __scurry.music.bossKind, mp: __scurry.music.bossPhase });
+    if (b && (b.mus !== 3 || b.mk !== b.kind || b.mp !== 3)) throw new Error('boss score not playing ' + JSON.stringify(b));
     if (!b || b.phase !== 3) throw new Error('boss state ' + JSON.stringify(b) + ' game ' + (await S(() => __scurry.G.state + ' hp=' + __scurry.run.hp)));
     await S(() => __scurry.killBoss());
     await wait(300);
