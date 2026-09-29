@@ -16,6 +16,7 @@ import { giveChest } from '../game/loot.js';
 import { enterSewer } from '../game/flow.js';
 import { buffOn } from '../game/forage.js';
 import { rummage, sinkerSlam, sinkerLand } from '../game/junk.js';
+import { springTrap, trapTarget, wireIntoWater } from '../game/traps.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 
@@ -248,13 +249,16 @@ export function chewTarget() {
     if (it.kind === 'wire' && it.cd > 0) continue;
     if (Math.hypot(it.x - P.x, it.z - P.z) < 1.9 && P.y < 2) return { kind: it.kind, it, time: it.kind === 'wire' ? 0.6 : 0.8, label: it.kind === 'wire' ? 'Gnaw live wires (it bites back)' : 'Gnaw the rope — drop the can' };
   }
+  const t = trapTarget();
+  if (t) return { kind: 'trap', t, time: t.time, label: t.label };
   return null;
 }
 export function pressE() {
   if (P.carry) { dropCarry(); return; }
   const u = useTarget();
   // A bin never gets in the way of gnawing the wall you're facing.
-  if (u && !(u.kind === 'bin' && chewTarget())) { doUse(u); return; }
+  const c0 = u && u.kind === 'bin' && chewTarget();
+  if (u && !(c0 && c0.kind === 'tile')) { doUse(u); return; }
   const o = grabTarget();
   if (o) { P.carry = o; o.carried = true; P.chewing = false; return; }
   if (chewTarget()) { P.chewing = true; P.chewT = 0; }
@@ -350,6 +354,7 @@ export function openTile(gx, gz) {
 
 export function doChew(c) {
   if (c.kind === 'tile') openTile(c.gx, c.gz);
+  if (c.kind === 'trap') springTrap(c.t);
   if (c.kind === 'rope') {
     const it = c.it;
     it.used = true;
@@ -366,6 +371,7 @@ export function doChew(c) {
     const ts = W.enemies.filter(e => !e.dead && Math.hypot(e.x - it.x, e.z - it.z) < 8).slice(0, 10);
     for (const e of ts) { bolt([[it.wx, 1.8, it.wz], [e.x, e.y + e.h * 0.6, e.z]]); hit(e, 90, null, 0, 'trap'); }
     boom(it.wx, 1.8, it.wz, 3, 0x9ad0ff);
+    wireIntoWater(it.x, it.z);
     hurtP(6, null, true);
     G.shake = 0.3;
   }

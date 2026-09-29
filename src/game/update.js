@@ -20,6 +20,7 @@ import { tickForage } from './forage.js';
 import { tickJunk } from './junk.js';
 import { tickLight } from './light.js';
 import { tickScent } from './scent.js';
+import { tickTraps } from './traps.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -421,6 +422,7 @@ export function update(dt) {
   updateProjectiles(dt);
   updateObjects(dt);
   tickInteractives(dt);
+  tickTraps(dt);
   updatePickups(dt);
   const ex = G.exitD;
   if (ex && Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8) {

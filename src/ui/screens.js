@@ -262,7 +262,7 @@ function dmgTable() {
   const C = CLASSES[run.cls];
   const names = {
     ...Object.fromEntries(Object.entries(WEAP).map(([k, w]) => [k, w.name])), primary: PRIM[C.prim].name, special: SPECIALS[C.special].name,
-    dot: 'Poison, burn & bleed', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
+    dot: 'Poison, burn & bleed', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
     livewire: 'Livewire Claws', tesla: 'Tesla Coil', nailbomb: 'Nail Bomb', recoil: 'Slingshot Recoil', overclock: 'Overclock',
   };
   const dmg = Object.entries(run.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 10), mx = dmg.length ? dmg[0][1] : 1;

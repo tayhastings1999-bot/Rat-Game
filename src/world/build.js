@@ -16,6 +16,7 @@ import { M, T, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descen
 import { curD, isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
+import { placeTraps } from '../game/traps.js';
 import { addPred } from '../entities/mobs.js';
 
 export const tileMesh = {};
@@ -848,6 +849,7 @@ export function populate(info) {
     }
     if (path.length > 4) addPred(path);
   }
+  if (!trial) placeTraps(rooms, startRoom);
   const open = [];
   for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && dist[k] > 4) open.push(k);
   shuffleR(open);

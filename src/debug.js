@@ -3,6 +3,7 @@ import { startRun, menu, enterSewer, exitRoad, exitLadder } from './game/flow.js
 import { spawnBoss } from './entities/bosses.js';
 import { spawnEnemy, pickType, addPred } from './entities/mobs.js';
 import { scentInfo } from './game/scent.js';
+import { trapCount, springTrap } from './game/traps.js';
 import { giveItem, giveCursed, collectCore } from './game/loot.js';
 import { openLevelUp, renderNest, die, pause } from './ui/screens.js';
 import { dropKey, gainXP, kill } from './combat/combat.js';
@@ -18,7 +19,7 @@ export function debugApi(state) {
   return {
     ...state, M,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, giveItem, giveCursed, collectCore,
-    openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo,
+    openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {

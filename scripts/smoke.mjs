@@ -215,7 +215,7 @@ await step('volatile junk + rummaging', async () => {
   const bin = await S(() => { const b = __scurry.W.bins.find(b => !b.done); return b && { x: b.x, z: b.z, r: b.r }; });
   if (!bin) throw new Error('no bins to rummage');
   await S(b => { const P = __scurry.P; P.x = b.x + b.r + 0.6; P.z = b.z; P.y = 0; P.vx = P.vz = 0; }, bin);
-  await rawWait(150);
+  await until(() => { const u = __scurry.useTarget(); return u && u.kind === 'bin'; }, 3000);
   await page.keyboard.press('KeyE');
   await wait(200);
   if (!(await S(b => __scurry.W.bins.find(o => o.x === b.x && o.z === b.z).done, bin))) throw new Error('rummage did nothing');
@@ -306,6 +306,36 @@ await step('advanced scent: gauge, prints, gnaw points, view cones', async () =>
   if (behind !== 'patrol' || front !== 'hunt') throw new Error(`cat vision: behind=${behind} front=${front} ` + (await S(() => { const { P } = __scurry, e = __scurry.W.enemies.find(e => e.pred && e.type !== 'owl'); return JSON.stringify({ det: e.det, look: e.look, ang: e.ang, d: Math.hypot(P.x - e.x, P.z - e.z), dy: P.y - e.y, sh: P.shadow, L: P.light, hurt: e.hurt, ex: e.x, ez: e.z, px: P.x, pz: P.z }); })));
   if (!info.prints || !info.cones) throw new Error('scent overlay ' + JSON.stringify(info));
   await S(() => { const { W, run, P } = __scurry; for (const e of W.enemies) if (e.pred) __scurry.kill(e); P.scent = false; run.weapons.push(...run.wHold); run.primT = 0; });
+});
+await step('physics traps: cable into puddle, scaffold, brick pallet', async () => {
+  const tc = await S(() => __scurry.trapCount());
+  for (const k of ['cable', 'scaffold', 'debris']) if (!tc.kinds.includes(k)) throw new Error('missing trap ' + k + ' ' + JSON.stringify(tc));
+  // Bait: a few tough mawlings standing where each trap lands.
+  const bait = (x, z, tag) => S(([x, z, tag]) => { for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest' && !e.tag) __scurry.kill(e); for (let i = 0; i < 3; i++) { const e = __scurry.spawnEnemy('mawling', x + (i - 1) * 0.6, z, { hpMul: 40, plain: true }); if (e) { e.spd = 0; e.tag = tag; } } }, [x, z, tag]);
+  // Cable: gnaw it for real.
+  const c = await S(() => { const t = __scurry.W.traps.find(t => t.kind === 'cable' && !t.sprung); return { gx: t.gx, gz: t.gz, cx: t.cx, cz: t.cz }; });
+  await bait(c.cx, c.cz, 'cable');
+  await S(c => { const P = __scurry.P; P.x = c.gx; P.z = c.gz; P.y = 0; P.vx = P.vz = 0; __scurry.run.primT = 1e9; }, c);
+  await until(() => __scurry.chewTarget() && __scurry.chewTarget().kind === 'trap', 3000);
+  await page.keyboard.down('KeyE');
+  const sprung = await until(() => __scurry.W.traps.some(t => t.kind === 'cable' && t.sprung), 6000);
+  await page.keyboard.up('KeyE');
+  if (!sprung) throw new Error('cable not gnawed through');
+  if (!(await until(() => __scurry.W.shocks.length, 3000))) throw new Error('puddle never electrified');
+  if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'cable' && e.hp < e.maxHp), 4000))) throw new Error('shock hurt nothing');
+  await shot('03g-trap-cable');
+  // Brick pallet.
+  const d = await S(() => { const t = __scurry.W.traps.find(t => t.kind === 'debris' && !t.sprung); return { hx: t.hx, hz: t.hz }; });
+  await bait(d.hx, d.hz, 'debris');
+  await S(() => __scurry.springTrap(__scurry.W.traps.find(t => t.kind === 'debris' && !t.sprung)));
+  if (!(await until(() => __scurry.W.enemies.filter(e => e.tag === 'debris').every(e => e.hp < e.maxHp) || !__scurry.W.enemies.some(e => e.tag === 'debris'), 5000))) throw new Error('pallet crushed nothing');
+  // Scaffold.
+  const f = await S(() => { const t = __scurry.W.traps.find(t => t.kind === 'scaffold' && !t.sprung); return { cx: t.cx, cz: t.cz }; });
+  await bait(f.cx, f.cz, 'scaffold');
+  await S(() => __scurry.springTrap(__scurry.W.traps.find(t => t.kind === 'scaffold' && !t.sprung)));
+  if (!(await until(() => !__scurry.W.plats.some(p => p.scaffold && __scurry.W.traps.find(t => t.kind === 'scaffold' && t.sprung).plats.includes(p)) && __scurry.W.enemies.some(e => e.tag === 'scaffold' && e.hp < e.maxHp), 5000))) throw new Error('scaffold did not come down on anything');
+  await shot('03h-trap-scaffold');
+  await S(() => { __scurry.run.primT = 0; for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
 });
 await step('corrupted elites spawn and die', async () => {
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });

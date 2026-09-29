@@ -49,6 +49,14 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Advanced Scent (F).** Sniffing drains the world to grey and lights up what your nose picks up in toxic colours: trails to exits, keys and loot; predator **view cones** (magenta while patrolling, red once they're hunting you); **fresh footprints** left by predators, elites, mini-bosses and bosses (bright when fresh, fading over ~20s); and pulsing rings on **gnaw points** (boards, hollow walls, ropes, live wires, traps, bins). Scent runs on an 8-second gauge that refills while your nose rests; the Pesticide Rag makes it endless. Cats only spot you inside their cone, which sweeps side to side, or when you're right on top of them, so reading the cones lets you slip past behind them.
 
+**Physics traps.** Gnaw (hold E) a structural weak point and let the world do the fighting. Traps are placed along cat patrol routes first, and their damage scales with depth:
+- *Frayed cable* (city: utility pole over a puddle; sewer: conduit over the channel). The cable drops into the water and electrifies it for ~9s: heavy damage and stuns to anything standing in it, including you. The old live-wire boxes now also electrify any water they're next to.
+- *Scaffolding* against tall walls. It's climbable (the decks are platforms), but gnaw its pegs and it creaks, then collapses in tumbling planks that crush what's below and drop anyone on the decks.
+- *Brick pallet* on a rooftop jib (city), with a faint ring on the ground where it'll land. Gnaw the tie-off and it drops, crushes everything in the ring and leaves a rubble heap you can hop on or hide behind.
+- The sewer's rope-hung paint cans still work as before.
+
+Bosses take a capped share of trap damage (5% of max HP from a crush) plus a stagger, so traps help but can't cheese a boss.
+
 **Bosses.** Six, each with three phases (at 66% and 33% HP) that add attacks and speed, plus erratic movement:
 
 | Boss | Where | Signature |
