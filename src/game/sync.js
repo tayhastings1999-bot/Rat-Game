@@ -73,10 +73,10 @@ export function sync(dt) {
       const gy = e.fly ? floorY(e.x, e.z) : e.y;
       dummy.position.set(e.x, gy + 0.08, e.z);
       dummy.rotation.set(0, G.time * 2, 0);
-      dummy.scale.setScalar(e.r * 1.8 * (1 + 0.08 * Math.sin(G.time * 8 + e.ph)));
+      dummy.scale.setScalar(e.r * (e.champion ? 2.6 : 1.8) * (1 + 0.08 * Math.sin(G.time * 8 + e.ph)));
       dummy.updateMatrix();
       ringIM.setMatrixAt(rings, dummy.matrix);
-      ringIM.setColorAt(rings, e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x6ad0ff));
+      ringIM.setColorAt(rings, e.champion ? tmpC.setHex(0xffd040) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x6ad0ff));
       rings++;
     }
   }
@@ -119,13 +119,16 @@ export function sync(dt) {
     if (n >= 600) break;
     dummy.position.set(g.x, g.y + 0.35 + Math.sin(G.time * 3 + g.ph) * 0.08, g.z);
     dummy.rotation.set(0, G.time * 2 + g.ph, 0);
-    const s = g.v >= 10 ? 1.9 : g.v >= 3 ? 1.35 : 1;
+    // Tiers: blue < 3, green < 10, red < 30, violet beyond.
+    const s = g.v >= 30 ? 2.4 : g.v >= 10 ? 1.9 : g.v >= 3 ? 1.35 : 1;
     dummy.scale.set(s, s * 1.7, s);
     dummy.updateMatrix();
-    gemIM.setMatrixAt(n++, dummy.matrix);
+    gemIM.setMatrixAt(n, dummy.matrix);
+    gemIM.setColorAt(n++, tmpC.setHex(g.v >= 30 ? 0xc080ff : g.v >= 10 ? 0xff4a6a : g.v >= 3 ? 0x6aff6a : 0x4ad0ff));
   }
   gemIM.count = n;
   gemIM.instanceMatrix.needsUpdate = true;
+  if (gemIM.instanceColor) gemIM.instanceColor.needsUpdate = true;
   n = 0;
   for (const g of W.scraps) {
     if (n >= 300) break;
@@ -371,6 +374,7 @@ export function animate(dt) {
   G.flash = Math.max(0, G.flash - dt * 3);
   const U = post.uniforms;
   U.hurt.value = G.flash;
+  U.gold.value = G.flashGold || 0;
   U.time.value = G.time;
   U.low.value = G.state === 'play' && run.hp < st.maxHp * 0.3 ? 1 : 0;
   U.moon.value += ((run.moon && G.state !== 'menu' ? 1 : 0) - U.moon.value) * Math.min(1, 2 * dt);

@@ -34,6 +34,12 @@ const until = async (fn, ms = 5000, arg) => {
   for (const t0 = Date.now(); Date.now() - t0 < ms;) { v = await S(fn, arg); if (v) return v; await wait(100); }
   return v;
 };
+/** Like until(), but leaves level-up screens alone. */
+const rawUntil = async (fn, ms = 5000, arg) => {
+  let v;
+  for (const t0 = Date.now(); Date.now() - t0 < ms;) { v = await S(fn, arg); if (v) return v; await rawWait(100); }
+  return v;
+};
 const hold = async (key, ms) => { await page.keyboard.down(key); await wait(ms); await page.keyboard.up(key); };
 const shot = name => page.screenshot({ path: OUT + name + '.png' });
 
@@ -286,7 +292,7 @@ await step('advanced scent: gauge, prints, gnaw points, view cones', async () =>
   const cat = await S(() => {
     const { P, M, W, run, st } = __scurry;
     for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e);
-    run.wHold = run.weapons.slice(); run.weapons.length = 0; st.volt = false; st.mut = {}; run.primT = 1e9;
+    run.wHold = run.weapons.slice(); run.weapons.length = 0; st.volt = false; st.mut = {}; run.primT = 1e9; run.needHold2 = run.need; run.need = 1e12;
     const gx = Math.round(P.x / 4 + M.W / 2 - 0.5), gz = Math.round(P.z / 4 + M.H / 2 - 0.5), k = (gz + 4) * M.W + gx;
     __scurry.addPred([k, k]);
     const e = W.enemies[W.enemies.length - 1];
@@ -305,7 +311,7 @@ await step('advanced scent: gauge, prints, gnaw points, view cones', async () =>
   await shot('03f-scent');
   if (behind !== 'patrol' || front !== 'hunt') throw new Error(`cat vision: behind=${behind} front=${front} ` + (await S(() => { const { P } = __scurry, e = __scurry.W.enemies.find(e => e.pred && e.type !== 'owl'); return JSON.stringify({ det: e.det, look: e.look, ang: e.ang, d: Math.hypot(P.x - e.x, P.z - e.z), dy: P.y - e.y, sh: P.shadow, L: P.light, hurt: e.hurt, ex: e.x, ez: e.z, px: P.x, pz: P.z }); })));
   if (!info.prints || !info.cones) throw new Error('scent overlay ' + JSON.stringify(info));
-  await S(() => { const { W, run, P } = __scurry; for (const e of W.enemies) if (e.pred) __scurry.kill(e); P.scent = false; run.weapons.push(...run.wHold); run.primT = 0; });
+  await S(() => { const { W, run, P } = __scurry; for (const e of W.enemies) if (e.pred) __scurry.kill(e); P.scent = false; run.weapons.push(...run.wHold); run.primT = 0; run.need = run.needHold2; });
 });
 await step('physics traps: cable into puddle, scaffold, brick pallet', async () => {
   const tc = await S(() => __scurry.trapCount());
@@ -320,7 +326,7 @@ await step('physics traps: cable into puddle, scaffold, brick pallet', async () 
   await page.keyboard.down('KeyE');
   const sprung = await until(() => __scurry.W.traps.some(t => t.kind === 'cable' && t.sprung), 6000);
   await page.keyboard.up('KeyE');
-  if (!sprung) throw new Error('cable not gnawed through');
+  if (!sprung) throw new Error('cable not gnawed through ' + (await S(() => { const { P, G } = __scurry, c = __scurry.chewTarget(); return JSON.stringify({ st: G.state, chewing: P.chewing, chewT: P.chewT, c: c && c.kind, sq: P.squeeze, x: P.x, z: P.z }); })));
   if (!(await until(() => __scurry.W.shocks.length, 3000))) throw new Error('puddle never electrified');
   if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'cable' && e.hp < e.maxHp), 4000))) throw new Error('shock hurt nothing');
   await shot('03g-trap-cable');
@@ -366,6 +372,38 @@ await step('squeeze network: crawl in, cutaway, mobs locked out, rival nests', a
   await S(m => { const P = __scurry.P; P.x = m.sx; P.z = m.sz; P.y = 0; }, mouth);
   if (!(await until(() => __scurry.cutY() > 100, 3000))) throw new Error('cutaway stuck on');
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
+});
+await step('leveling: breakthrough trial, champion, rewards, crate, evolution', async () => {
+  // Park any boss out of the way (trials wait while a boss is on top of you).
+  await S(() => { const { W, G } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; });
+  await wait(200);
+  // Top out level 4: the bar caps at the breakthrough and the overflow is banked.
+  await S(() => { const r = __scurry.run; r.level = 4; r.need = __scurry.need(4); r.xp = 0; r.trial = null; r.trialCd = 0.5; r.btPick = 0; __scurry.gainXP(500); });
+  const cap = await S(() => ({ lv: __scurry.run.level, xp: __scurry.run.xp, need: __scurry.run.need, bank: __scurry.run.xpBank }));
+  if (cap.lv !== 4 || cap.xp !== cap.need || !(cap.bank > 0)) throw new Error('bar did not cap at the breakthrough ' + JSON.stringify(cap));
+  const trial = await until(() => !!__scurry.run.trial && __scurry.run.trial.e.champion, 8000);
+  if (!trial) throw new Error('no champion came ' + (await S(() => { const { run, G, P, M, W } = __scurry, b = G.boss; return JSON.stringify({ st: G.state, cd: run.trialCd, cue: run.trialCue, lv: run.level, xp: run.xp, need: run.need, tiles: M.spawnTiles.length, n: W.enemies.length, boss: b && { rev: b.revealed, d: Math.hypot(b.x - P.x, b.z - P.z) }, seen: Object.keys(run.seenMobs || {}) }); })));
+  await shot('03j-champion');
+  await S(() => __scurry.kill(__scurry.run.trial.e));
+  const bt = await rawUntil(() => __scurry.G.state === 'levelup' && __scurry.run.btPick > 0 && [...document.querySelectorAll('.card .role')].map(r => r.textContent), 4000);
+  if (!bt || !bt.includes('Keystone')) throw new Error('breakthrough offers ' + JSON.stringify(bt));
+  await shot('03k-breakthrough');
+  await page.keyboard.press('Digit1');
+  await wait(300);
+  const after = await S(() => ({ lv: __scurry.run.level, bt: __scurry.run.btPick, crates: __scurry.W.crates.length }));
+  if (after.lv < 5 || after.bt !== 0 || !after.crates) throw new Error('after breakthrough ' + JSON.stringify(after));
+  // Weapon crate: a free weapon level (or a new weapon).
+  const w0 = await S(() => __scurry.run.weapons.reduce((a, w) => a + w.lvl, 0));
+  await S(() => { const { P, W } = __scurry, c = W.crates.find(c => c.kind === 'crate'); P.x = c.x; P.z = c.z; P.y = c.y; P.vx = P.vz = 0; });
+  if (!(await until(w0 => __scurry.run.weapons.reduce((a, w) => a + w.lvl, 0) > w0 || __scurry.st.dmg > 1.5, 3000, w0))) throw new Error('crate gave nothing');
+  // Evolution: a level-5 weapon plus its tome evolves at the next breakthrough pick.
+  await S(() => { const r = __scurry.run; let w = r.weapons.find(w => w.id === 'claw'); if (!w) { if (r.weapons.length >= 4) r.weapons.pop(); w = { id: 'claw', lvl: 5, t: 0 }; r.weapons.push(w); } w.lvl = 5; r.tomes.might = Math.max(1, r.tomes.might || 0); r.btPick = 1; r.pendingLv = 1; __scurry.openLevelUp(); });
+  const evo = await S(() => [...document.querySelectorAll('.card .role')].findIndex(r => r.textContent === 'Evolution'));
+  if (evo < 0) throw new Error('no evolution offered');
+  await page.keyboard.press('Digit' + (evo + 1));
+  await wait(200);
+  if (!(await S(() => __scurry.run.weapons.find(w => w.id === 'claw').evo))) throw new Error('claws did not evolve');
+  await S(() => { __scurry.G.testNoBusy = false; });
 });
 await step('corrupted elites spawn and die', async () => {
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
@@ -466,7 +504,7 @@ await step('music engine running', async () => {
   console.log('     music:', JSON.stringify(m));
 });
 await step('level-up reroll', async () => {
-  await S(() => { __scurry.run.rerolls = 1; __scurry.gainXP(200); });
+  await S(() => { __scurry.run.rerolls = 1; __scurry.pendLevel(); });
   await rawWait(300);
   await page.keyboard.press('KeyR');
   await rawWait(200);

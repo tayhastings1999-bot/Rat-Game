@@ -175,3 +175,11 @@ body.touch #tip{bottom:160px}
 body.combat #hint{opacity:0}
 body.combat #mapBox{opacity:.18}
 .tb.shriek{grid-column:span 2;width:auto;height:44px;border-radius:12px;background:rgba(224,56,44,.75);border-color:#ffd040;animation:pulse .5s steps(2) infinite}
+/* Breakthroughs */
+#top.capped .xpbar i{background:linear-gradient(180deg,#fff0a0,#f2b233 60%,#a06a10);animation:capPulse .6s ease-in-out infinite alternate}
+#top.capped #lvlBig{color:var(--gold)}
+@keyframes capPulse{from{filter:brightness(.8)}to{filter:brightness(1.35)}}
+#slots .slot.evo{border-color:var(--gold);box-shadow:0 0 12px rgba(242,178,51,.7)}
+#slots .slot.evo em{color:var(--gold)}
+.panel.breakthrough{box-shadow:0 0 0 2px var(--gold),0 0 40px rgba(242,178,51,.35)}
+.panel.breakthrough h2{color:var(--gold)}

@@ -101,7 +101,7 @@ let cap = null;
 export function populateDucts(nets, addCache) {
   W.ductNets = nets;
   for (const net of nets) {
-    for (const k of [net.a, net.b]) ventFrame(k);
+    for (const k of [net.a, net.b]) { ventFrame(k); clearMouth(k); }
     if (net.chamber) {
       if (R() < 0.55) addRival(net.chamber.x, net.chamber.z);
       else addCache(net.chamber.x, 0, net.chamber.z);
@@ -121,6 +121,17 @@ export function populateDucts(nets, addCache) {
       world.add(g);
       W.ductWires.push({ k: net.wire, x, z, t: rand(0, 3), sp, tick: 0 });
     }
+  }
+}
+/** Nothing solid may block the way into a crawlspace. */
+function clearMouth(k) {
+  const x = k % M.W, z = (k / M.W) | 0;
+  for (const [dx, dz] of N4) {
+    if (!DRY(tAt(x + dx, z + dz))) continue;
+    const cx = toW(x) + dx * (T / 2 + 1.4), cz = toW(z) + dz * (T / 2 + 1.4);
+    const block = p => !p.thin && Math.abs(p.x - cx) < p.w / 2 + 1.3 && Math.abs(p.z - cz) < p.d / 2 + 1.3 && p.y < 3;
+    for (const p of W.plats) if (block(p) && p.mesh) world.remove(p.mesh);
+    for (let i = W.plats.length - 1; i >= 0; i--) if (block(W.plats[i])) W.plats.splice(i, 1);
   }
 }
 /** A steel lintel and a bent grille over each crawlspace mouth. */

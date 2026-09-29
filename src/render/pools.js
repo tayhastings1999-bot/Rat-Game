@@ -26,7 +26,7 @@ for (const k of MOB_GEOS) {
   IMG[k] = mkIM(GEO[k].glow, new THREE.MeshBasicMaterial({ vertexColors: true }), MOB_CAP, false);
 }
 
-export const gemIM = mkIM(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xff9a3a }), 600, false);
+export const gemIM = mkIM(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), 600);
 export const scrapIM = mkIM(new THREE.TorusGeometry(0.14, 0.06, 4, 6), new THREE.MeshLambertMaterial({ color: 0xa8b0b8, emissive: 0x202830, flatShading: true }), 300, false);
 export const coreIM = mkIM(new THREE.OctahedronGeometry(0.34, 0), new THREE.MeshBasicMaterial(), 40);
 export const pprojIM = mkIM(new THREE.IcosahedronGeometry(0.13, 0), new THREE.MeshBasicMaterial(), 320);

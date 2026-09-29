@@ -5,6 +5,7 @@ import { spawnEnemy, pickType, addPred } from './entities/mobs.js';
 import { scentInfo } from './game/scent.js';
 import { trapCount, springTrap } from './game/traps.js';
 import { ductInfo } from './world/ducts.js';
+import { need } from './combat/combat.js';
 import { giveItem, giveCursed, collectCore } from './game/loot.js';
 import { openLevelUp, renderNest, die, pause } from './ui/screens.js';
 import { dropKey, gainXP, kill } from './combat/combat.js';
@@ -40,6 +41,9 @@ export function debugApi(state) {
       return null;
     },
     cutY: () => cutPlane.constant,
+    need,
+    /** Queue one ordinary level-up screen (tests that need a pick without touching XP). */
+    pendLevel() { state.run.level++; state.run.pendingLv++; openLevelUp(); },
     god(on = true) { state.st.taken = on ? 0 : 1; },
     hurtBoss(f = 0.35) { const b = state.G.boss; if (b) b.hp -= b.maxHp * f; },
     killBoss() { const b = state.G.boss; if (b) kill(b); },

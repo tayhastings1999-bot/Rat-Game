@@ -8,6 +8,7 @@ import { swipeFx, boom, fx, spark, bolt, orb, orbState, puff, dnum } from '../fx
 import { sfx } from '../audio/audio.js';
 import { solidFor, tileAt, topAt, toG } from '../world/grid.js';
 import { near, sorted, nearest, hit, aoe } from './combat.js';
+import { puddle } from './hazards.js';
 
 /** Melee step-in: close most of the gap to a target just outside reach. */
 function stepIn(t, R) {
@@ -16,7 +17,7 @@ function stepIn(t, R) {
   if (d > R * 0.75 && d < R + 2.5 && P.onGround) { const s = Math.min(12, (d - R * 0.6) * 5); P.vx += dx / d * s; P.vz += dz / d * s; P.lock = 0.08; }
 }
 
-export const auraR = w => 2.6 * st.area * (1 + 0.12 * (w.lvl - 1));
+export const auraR = w => 2.6 * st.area * (1 + 0.12 * (Math.min(5, w.lvl) - 1)) * (w.evo ? 1.35 : 1);
 
 export function chain(cur, chains, dm, src, from, skipFirst = false) {
   const hs = new Set(), pts = [from];
@@ -71,48 +72,49 @@ export function glob(x, y, z, vx, vy, vz, dmg, col = 0xff4a2a, slow = false) {
 
 export const WEAP = {
   claw: {
-    name: 'Rending Claws', role: 'Melee', desc: 'Rake everything in front of you, automatically.', lv: ['+Damage, +reach', '+Damage', 'Also rakes behind you', '+Damage, +reach'], cd: () => 0.9,
+    name: 'Rending Claws', role: 'Melee', desc: 'Rake everything in front of you, automatically.', lv: ['+Damage, +reach', '+Damage', 'Also rakes behind you', '+Damage, +reach'], cd: w => 0.9 * (w.evo ? 0.7 : 1),
     fire(w) {
-      const L = w.lvl, R = 2.6 * st.area * (1 + 0.1 * (L - 1)), t = nearest(R + 3), a = t ? Math.atan2(t.x - P.x, t.z - P.z) : P.facing, dm = 20 * (1 + 0.28 * (L - 1));
-      for (const A of L >= 4 ? [a, a + Math.PI] : [a]) {
+      const L = Math.min(5, w.lvl), R = 2.6 * st.area * (1 + 0.1 * (L - 1)), t = nearest(R + 3), a = t ? Math.atan2(t.x - P.x, t.z - P.z) : P.facing, dm = 20 * (1 + 0.28 * (L - 1)) * (w.evo ? 1.6 : 1);
+      for (const A of w.evo ? [a, a + PI2, a + Math.PI, a - PI2] : L >= 4 ? [a, a + Math.PI] : [a]) {
         swipeFx(A, R, 0xffd8c0);
         for (const e of near(P.x, P.y, P.z, R + 0.3)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.25) hit(e, dm, A, 5, 'claw');
       }
     },
   },
   whip: {
-    name: 'Tail Lash', role: 'Melee', desc: 'Spin and lash everything around you, hurling it back.', lv: ['+Damage', 'Faster, +radius', '+Damage', 'Faster, +radius'], cd: w => 1.9 * (1 - 0.08 * (w.lvl - 1)),
+    name: 'Tail Lash', role: 'Melee', desc: 'Spin and lash everything around you, hurling it back.', lv: ['+Damage', 'Faster, +radius', '+Damage', 'Faster, +radius'], cd: w => 1.9 * (1 - 0.08 * (Math.min(5, w.lvl) - 1)) * (w.evo ? 0.7 : 1),
     fire(w) {
-      const L = w.lvl, R = 3 * st.area * (1 + 0.08 * (L - 1)), dm = 16 * (1 + 0.25 * (L - 1));
-      for (let k = 0; k < 3; k++) swipeFx(k * TAU / 3 + G.time * 3, R, 0xff9a7a, true);
-      for (const e of near(P.x, P.y, P.z, R)) hit(e, dm, Math.atan2(e.x - P.x, e.z - P.z), 9, 'whip');
+      const L = Math.min(5, w.lvl), R = 3 * st.area * (1 + 0.08 * (L - 1)) * (w.evo ? 1.3 : 1), dm = 16 * (1 + 0.25 * (L - 1)) * (w.evo ? 1.5 : 1);
+      for (let k = 0; k < 3; k++) swipeFx(k * TAU / 3 + G.time * 3, R, w.evo ? 0xff4a3a : 0xff9a7a, true);
+      for (const e of near(P.x, P.y, P.z, R)) { hit(e, dm, Math.atan2(e.x - P.x, e.z - P.z), 9, 'whip'); if (w.evo) e.slow = 1; }
     },
   },
   aura: {
     name: 'Plague Cloud', role: 'Area', desc: 'A choking miasma that withers and slows nearby foes.', lv: ['+Radius', '+Damage', '+Radius, +damage', '+Damage, longer slow'], cd: () => 0.45,
     fire(w) {
-      const L = w.lvl, dm = 5 * (1 + 0.32 * (L - 1));
-      for (const e of near(P.x, P.y, P.z, auraR(w))) { hit(e, dm, null, 0, 'aura', true); e.slow = L >= 5 ? 1.5 : 0.6; }
+      const L = Math.min(5, w.lvl), dm = 5 * (1 + 0.32 * (L - 1)) * (w.evo ? 1.8 : 1);
+      for (const e of near(P.x, P.y, P.z, auraR(w))) { hit(e, dm, null, 0, 'aura', true); e.slow = L >= 5 ? 1.5 : 0.6; if (w.evo) { e.pT = Math.max(e.pT, 1.5); e.pD = Math.max(e.pD || 0, 6); } }
     },
   },
   flask: {
     name: 'Rot Flask', role: 'Area', desc: 'Lob flasks of rot that burst into a caustic splash.', lv: ['+Damage', '+1 flask', '+Radius, +damage', '+1 flask'], cd: () => 2.1,
     fire(w) {
-      const L = w.lvl, ts = sorted(14);
+      const L = Math.min(5, w.lvl), ts = sorted(14);
       if (!ts.length) return false;
-      const n = 1 + (L >= 3) + (L >= 5) + Math.min(1, st.proj);
+      const n = 1 + (L >= 3) + (L >= 5) + Math.min(1, st.proj) + (w.evo ? 2 : 0);
       for (let i = 0; i < n; i++) {
-        const t = ts[randi(0, Math.min(ts.length, 6) - 1)];
-        lob(t.x + rand(-1, 1), t.y, t.z + rand(-1, 1), 2.5 * st.area * (1 + 0.1 * (L - 1)), 28 * (1 + 0.28 * (L - 1)), 'flask');
+        const t = ts[randi(0, Math.min(ts.length, 6) - 1)], x = t.x + rand(-1, 1), z = t.z + rand(-1, 1);
+        lob(x, t.y, z, 2.5 * st.area * (1 + 0.1 * (L - 1)), 28 * (1 + 0.28 * (L - 1)), 'flask');
+        if (w.evo) setTimeout(() => puddle('sludge', x, z, 1.8, 4, 'p'), 600);
       }
     },
   },
   sling: {
-    name: 'Sling Stones', role: 'Ranged', desc: 'Whip stones at the nearest threats, automatically.', lv: ['+1 stone', 'Stones pierce a foe', '+1 stone', 'Pierce two, +damage'], cd: () => 0.75,
+    name: 'Sling Stones', role: 'Ranged', desc: 'Whip stones at the nearest threats, automatically.', lv: ['+1 stone', 'Stones pierce a foe', '+1 stone', 'Pierce two, +damage'], cd: w => 0.75 * (w.evo ? 0.45 : 1),
     fire(w) {
-      const L = w.lvl, n = 1 + (L >= 2) + (L >= 4) + st.proj, ts = sorted(18);
+      const L = Math.min(5, w.lvl), n = 1 + (L >= 2) + (L >= 4) + st.proj, ts = sorted(18);
       if (!ts.length) return false;
-      const pr = L >= 5 ? 2 : L >= 3 ? 1 : 0, dm = 13 * (1 + 0.2 * (L - 1)) * (L >= 5 ? 1.2 : 1);
+      const pr = (L >= 5 ? 2 : L >= 3 ? 1 : 0) + (w.evo ? 2 : 0), dm = 13 * (1 + 0.2 * (L - 1)) * (L >= 5 ? 1.2 : 1);
       for (let i = 0; i < n; i++) {
         const t = ts[i % ts.length];
         shoot(P.x, P.y + 0.7, P.z, t.x - P.x, t.y + t.h / 2 - (P.y + 0.7), t.z - P.z, 26, dm, pr, 'sling', { col: 0xe8d8b0, arc: true });
@@ -122,16 +124,16 @@ export const WEAP = {
   arc: {
     name: 'Arc Lightning', role: 'Magic', desc: 'Lightning leaps from foe to foe.', lv: ['+1 chain', '+Damage', '+1 strike', '+2 chains'], cd: () => 1.4,
     fire(w) {
-      const L = w.lvl, ts = sorted(15);
+      const L = Math.min(5, w.lvl), ts = sorted(15);
       if (!ts.length) return false;
-      const strikes = 1 + (L >= 4) + Math.floor(st.proj / 2), chains = 2 + (L >= 2) + (L >= 5) * 2, dm = 16 * (1 + 0.25 * (L - 1)) * (L >= 3 ? 1.2 : 1);
+      const strikes = 1 + (L >= 4) + Math.floor(st.proj / 2) + (w.evo ? 1 : 0), chains = 2 + (L >= 2) + (L >= 5) * 2 + (w.evo ? 3 : 0), dm = 16 * (1 + 0.25 * (L - 1)) * (L >= 3 ? 1.2 : 1) * (w.evo ? 1.4 : 1);
       for (let s = 0; s < strikes; s++) chain(ts[s % ts.length], chains, dm, 'arc', [P.x, P.y + 1.3, P.z]);
     },
   },
   orbit: {
     name: 'Bone Halo', role: 'Magic', desc: 'Cursed teeth circle you, biting anything they touch.', lv: ['+1 tooth', '+Damage', '+1 tooth, +radius', '+1 tooth, +damage'],
     tick(w, dt) {
-      const L = w.lvl, n = 2 + L + (L >= 4) + (L >= 5) + st.proj - 1, R = 2.3 * st.area * (L >= 4 ? 1.15 : 1), dm = 10 * (1 + 0.25 * (L - 1)) * (L >= 5 ? 1.2 : 1);
+      const L = Math.min(5, w.lvl), n = 2 + L + (L >= 4) + (L >= 5) + st.proj - 1 + (w.evo ? 3 : 0), R = 2.3 * st.area * (L >= 4 ? 1.15 : 1) * (w.evo ? 1.2 : 1), dm = 10 * (1 + 0.25 * (L - 1)) * (L >= 5 ? 1.2 : 1) * (w.evo ? 1.5 : 1);
       w.a = (w.a || 0) + dt * 3.4;
       for (let i = 0; i < n; i++) {
         const o = orb(i), a = w.a + i * TAU / n, x = P.x + Math.sin(a) * R, z = P.z + Math.cos(a) * R, y = P.y + 0.7;

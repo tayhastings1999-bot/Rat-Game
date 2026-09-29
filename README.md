@@ -72,6 +72,14 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
 | The Brood Mother | sewer | tick broods, web rings, hatching egg lobs, leaps, acid rain |
 | The Rat King | sewer | ricocheting rolls, tail-whip rings, rat fans, vortex pull, prince adds |
 
+**Leveling.** Built to feel smooth, with milestones you have to earn:
+- *Even pace.* XP income rises with the threat (a tougher horde pays more), and if you fall behind the expected level for the run time you earn up to 50% extra until you catch up. Gems come in tiers: blue, green, red and violet.
+- *Every level-up is a beat of relief.* A shockwave shoves the horde back, you heal 5%, and time slows for a moment.
+- *Breakthroughs every 5 levels.* When the bar reaches level 5, 10, 15 and so on, it caps (turning gold, with extra XP banked) and a gold-ringed **Champion** elite comes for you with a few friends. Kill it within 45 seconds to break through: a big shockwave, a 30% heal, and a reward pick from 3–4 options (evolutions, **Keystones** and epic or legendary tomes). If time runs out it slinks off and comes back later; you're never locked out. Trials wait while a boss is right on top of you.
+- *Keystones* are Breakthrough-only perks: Pack Leader (faster combo, +4 nest-mates), Second Wind (once per district, a 3s invulnerability and 25% heal when you drop below 30%), Carrion Feast (kills heal), Apex Hunter (+30% vs elites, champions, predators and bosses), Scrapper (+50% salvage, longer pickup reach), and Frenzied Growth (+20% XP, +10% speed).
+- *Weapons.* A level-5 weapon plus its paired tome **evolves** at a Breakthrough: Rending Claws + Might → Butcher's Hooks, Tail Lash + Swiftness → Barbed Scourge, Plague Cloud + Hunger → Black Death, Rot Flask + Reach → Plague Barrage, Sling Stones + Plenty → Gatling Sling, Arc Lightning + Cunning → Storm Crown, Bone Halo + Hide → Ossuary Ring. Rarer tomes turn up more often as you level.
+- *Pickups.* Champions drop a **weapon crate** (a free weapon level, or a new weapon if you have a slot) and **rat musk** (every gem on the map flies to you); elites sometimes drop musk too. Food drops four times as often when you're below 35% HP.
+
 **Builds.**
 - *Mutations.* Mundane ingredient items fuse in pairs into ten synergies, such as Box Cutter + Energy Drink → Livewire Claws, Lighter + Energy Drink → Napalm Trail, and Rubber Band + Fish Hook → Slingshot Recoil. Loot favours the partner of a half-finished recipe.
 - *Cursed loot.* Six items with big upsides and permanent downsides, such as Rabid Bite: double damage, but you bleed out unless you keep hitting things.

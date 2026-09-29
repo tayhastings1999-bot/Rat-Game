@@ -12,6 +12,7 @@ import { sfx, applyVolumes } from '../audio/audio.js';
 import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
 import { startRun, checkUnlocks, bankSalvage, dominanceOf, menu } from '../game/flow.js';
 import { giveCursed } from '../game/loot.js';
+import { breakOffers, applyKeystone, evolve, EVO, KEYSTONES } from '../game/progress.js';
 import { drawMap, renderSlots, hud, banner } from './hud.js';
 import { ICON } from './icons.js';
 
@@ -52,7 +53,7 @@ export function renderMenu(m) {
       <textarea id="fg" placeholder="Paste a friend's ghost code here">${G.friendGhost ? '(friend ghost loaded: ' + fmtT(G.friendGhost.t) + ')' : ''}</textarea>`
     : '<p>Smash the nests or outlast the timer to wake the district boss. Every pick, chest and detour raises the threat, and the horde scales with it. Kill the boss to open the road, or spend a key on the manhole.</p>'}
     <div class="howto">
-      <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up the orange XP gems, and pick an upgrade each level. Stay out of the light: fill the eye meter and the owls come.</p></div>
+      <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up XP gems (blue, green, red, violet), and pick an upgrade each level. Every fifth level a Champion comes for you: kill it to break through. Stay out of the light: fill the eye meter and the owls come.</p></div>
       <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Shift</kbd> roll, hold to sprint (sprint into a wall to run up it, jump off walls to chain bounces) · <kbd>Q</kbd> special · <kbd>X</kbd> shriek when the combo bar is full · <kbd>E</kbd> use, hold to gnaw · <kbd>F</kbd> sniff out loot · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</p></div>
       <div><h3 class="px">Touch</h3><p>Left stick to move, drag anywhere else to look around. Jump, Roll, Special and Use sit on the right.</p></div>
     </div>
@@ -219,7 +220,8 @@ function makeOffers() {
     let r = Math.random() * tot, i = 0;
     for (; i < pool.length; i++) { r -= pool[i].wt; if (r <= 0) break; }
     const o = pool.splice(Math.min(i, pool.length - 1), 1)[0];
-    if (o.kind === 'tome' && !TOMES[o.id].flat) { const q = Math.random(); o.rar = q < 0.03 ? 3 : q < 0.13 ? 2 : q < 0.4 ? 1 : 0; } else o.rar = 0;
+    // Rarer tomes turn up more often as you level.
+    if (o.kind === 'tome' && !TOMES[o.id].flat) { const q = Math.random(), luck = Math.min(0.08, run.level * 0.004); o.rar = q < 0.03 + luck * 0.5 ? 3 : q < 0.13 + luck ? 2 : q < 0.4 + luck * 2 ? 1 : 0; } else o.rar = 0;
     out.push(o);
   }
   // Sometimes the devil offers a deal.
@@ -231,15 +233,18 @@ function makeOffers() {
 
 export function openLevelUp() {
   G.state = 'levelup';
-  offers = makeOffers();
+  offers = run.btPick > 0 ? breakOffers() : makeOffers();
   sfx('level');
   renderLevelUp();
 }
 function renderLevelUp() {
-  show(`<div class="panel frame"><div class="kick px">Level ${run.level}${run.pendingLv > 1 ? ` · ${run.pendingLv - 1} more to pick` : ''}</div><h2>Choose a mutation</h2>
+  const bt = run.btPick > 0;
+  show(`<div class="panel frame${bt ? ' breakthrough' : ''}"><div class="kick px">${bt ? 'Breakthrough · ' : ''}Level ${run.level}${run.pendingLv > 1 ? ` · ${run.pendingLv - 1} more to pick` : ''}</div><h2>${bt ? 'You earned this' : 'Choose a mutation'}</h2>
     <p class="px" style="font-size:12px;color:#ff7a6a">Every pick raises the threat · now ${(run.T || 0).toFixed(1)}</p>
     <div class="cards">${offers.map((o, i) => {
       if (o.kind === 'heal') return `<button class="card" data-i="${i}" style="--rc:#d8342c"><div class="row"><span class="key px">${i + 1}</span><span class="role">Heal</span></div><div class="ico">${ICON.heal}</div><b>Stale Cheese</b><span class="d">Restore half your HP.</span></button>`;
+      if (o.kind === 'evo') { const E = EVO[o.id]; return `<button class="card" data-i="${i}" style="--rc:#ffd040"><div class="row"><span class="key px">${i + 1}</span><span class="role">Evolution</span></div><div class="ico">${ICON[o.id]}</div><b>${E.name}</b><span class="d">${WEAP[o.id].name} evolves. ${E.desc}</span></button>`; }
+      if (o.kind === 'key') { const K = KEYSTONES[o.id]; return `<button class="card" data-i="${i}" style="--rc:#ff9a3a"><div class="row"><span class="key px">${i + 1}</span><span class="role">Keystone</span></div><div class="ico">${ICON.dna}</div><b>${K.name}</b><span class="d">${K.desc}</span></button>`; }
       if (o.kind === 'cursed') { const C = CURSED[o.id]; return `<button class="card cursed" data-i="${i}" style="--rc:#ff2a2a"><div class="row"><span class="key px">${i + 1}</span><span class="role">Cursed deal</span></div><div class="ico">${ICON.skull}</div><b>${C.name}</b><span class="up">+ ${C.up}</span><span class="dn">− ${C.dn}</span></button>`; }
       const T = o.kind === 'tome' ? TOMES[o.id] : null, Wp = WEAP[o.id], R = RAR[o.rar], lvl = o.kind === 'up' ? run.weapons.find(w => w.id === o.id).lvl : 0;
       const rc = o.kind === 'new' ? '#ff6a3a' : o.kind === 'up' ? '#6ad06a' : R.c, label = o.kind === 'new' ? 'New weapon · ' + Wp.role : o.kind === 'up' ? 'Level ' + (lvl + 1) : R.n + ' tome';
@@ -254,7 +259,7 @@ function renderLevelUp() {
 export function reroll() {
   if (!(run.rerolls > 0) || G.state !== 'levelup') return;
   run.rerolls--;
-  offers = makeOffers();
+  offers = run.btPick > 0 ? breakOffers() : makeOffers();
   renderLevelUp();
 }
 export function choose(o) {
@@ -263,7 +268,10 @@ export function choose(o) {
   else if (o.kind === 'up') run.weapons.find(w => w.id === o.id).lvl++;
   else if (o.kind === 'tome') { run.tomes[o.id] = (run.tomes[o.id] || 0) + 1; TOMES[o.id].ap(RAR[o.rar].m); }
   else if (o.kind === 'cursed') giveCursed(o.id);
+  else if (o.kind === 'evo') evolve(o.id);
+  else if (o.kind === 'key') applyKeystone(o.id);
   else run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.5);
+  if (run.btPick > 0) run.btPick--;
   run.pendingLv--;
   renderSlots();
   hud();
@@ -276,7 +284,7 @@ function dmgTable() {
   const C = CLASSES[run.cls];
   const names = {
     ...Object.fromEntries(Object.entries(WEAP).map(([k, w]) => [k, w.name])), primary: PRIM[C.prim].name, special: SPECIALS[C.special].name,
-    dot: 'Poison, burn & bleed', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
+    dot: 'Poison, burn & bleed', level: 'Level-up bursts', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
     livewire: 'Livewire Claws', tesla: 'Tesla Coil', nailbomb: 'Nail Bomb', recoil: 'Slingshot Recoil', overclock: 'Overclock',
   };
   const dmg = Object.entries(run.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 10), mx = dmg.length ? dmg[0][1] : 1;

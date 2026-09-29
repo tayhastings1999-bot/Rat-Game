@@ -25,10 +25,10 @@ const rt = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.NearestFilter, m
 export const post = new THREE.ShaderMaterial({
   uniforms: {
     t: { value: rt.texture }, time: { value: 0 }, res: { value: new THREE.Vector2(2, 2) },
-    hurt: { value: 0 }, low: { value: 0 }, scent: { value: 0 }, moon: { value: 0 }, dark: { value: 0 }, toxic: { value: 0 },
+    hurt: { value: 0 }, low: { value: 0 }, scent: { value: 0 }, moon: { value: 0 }, dark: { value: 0 }, toxic: { value: 0 }, gold: { value: 0 },
   },
   vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
-  fragmentShader: `uniform sampler2D t;uniform float time,hurt,low,scent,moon,dark,toxic;uniform vec2 res;varying vec2 vUv;
+  fragmentShader: `uniform sampler2D t;uniform float time,hurt,low,scent,moon,dark,toxic,gold;uniform vec2 res;varying vec2 vUv;
   float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
   void main(){
     vec2 o=(vUv-.5)*.0016;
@@ -45,6 +45,7 @@ export const post = new THREE.ShaderMaterial({
     c+=(hash(floor(vUv*res)+fract(time*7.)*vec2(37.,91.))-.5)*.03;
     vec2 q=vUv-.5;float v=dot(q,q);c*=1.-v*.55;
     c*=1.-dark*clamp(v*5.5+.25,0.,.97);
+    c=mix(c,c*vec3(1.25,1.12,.8)+vec3(.1,.08,.0),gold*.6*(1.-v*1.5));
     c=mix(c,vec3(.7,.08,.05),clamp(hurt*.45+low*v*1.8*(.6+.4*sin(time*6.)),0.,.65));
     // PS1 15-bit colour (32 levels per channel) with a 4x4 ordered dither.
     vec2 pp=mod(floor(vUv*res),4.);

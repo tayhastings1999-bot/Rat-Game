@@ -15,7 +15,7 @@ const SWARM_N = 8, SWARM_LIFE = 10;
 
 export function comboGain(v) {
   if (G.state !== 'play' || G.mode === 'trial') return;
-  run.combo = Math.min(COMBO_MAX, (run.combo || 0) + v);
+  run.combo = Math.min(COMBO_MAX, (run.combo || 0) + v * (st.comboMul || 1));
   run.comboT = 0;
   if (run.combo >= COMBO_MAX && !run.shriekReady) {
     run.shriekReady = true;
@@ -43,8 +43,9 @@ export function shriek() {
   G.shake = Math.max(G.shake, 0.5);
   for (let i = 0; i < 3; i++) fx('ring', P.x, P.y, P.z, 6 + i * 5, 0xffd040, 0.5 + i * 0.15);
   banner('The nest answers', '');
-  for (let i = 0; i < SWARM_N; i++) {
-    const a = i / SWARM_N * TAU, r = rand(1, 2.5);
+  const n = SWARM_N + (st.swarmPlus || 0);
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU, r = rand(1, 2.5);
     const x = P.x + Math.sin(a) * r, z = P.z + Math.cos(a) * r;
     W.swarm.push({ x, z, y: floorY(x, z), vx: 0, vy: 0, vz: 0, r: 0.3, h: 0.5, ang: a, life: SWARM_LIFE, bite: 0, retarget: 0, tgt: null, ph: rand(0, 6) });
     puff(x, P.y + 0.3, z, 0x8a8478, 4, 2);

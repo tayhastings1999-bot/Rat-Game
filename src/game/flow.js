@@ -22,7 +22,7 @@ export function freshStats(C) {
   const n = meta.nest;
   return {
     maxHp: C.hp + 12 * (n.hide || 0), regen: 0, armor: C.armor || 0, speed: C.speed, dmg: 1, area: C.area || 1, cd: (C.cd || 1) * (1 - 0.05 * (n.tempo || 0)), proj: 0,
-    primMul: 1 + 0.08 * (n.fang || 0), squeezeMul: C.squeeze || 1,
+    primMul: 1 + 0.08 * (n.fang || 0), squeezeMul: C.squeeze || 1, comboMul: 1, swarmPlus: 0, apex: 0, carrion: 0, secondWind: false,
     magnet: 2.6 * (1 + 0.25 * (n.nose || 0)), crit: 0.05, critMul: 2, xp: 1, jumps: C.jumps || 0, multi: 0, range: 1, shotSpd: 1, tear: 1,
     homing: false, poison: false, burn: false, split: false, shotSize: 0, thorns: 0, melee: 0, kb: 1,
     staMax: 100 + 10 * (n.lungs || 0), scentMax: C.scent || 8, staRegen: 28 * (1 + 0.15 * (n.wind || 0)), sprintMul: 1.45, sprintDrain: 22, climbCost: 20, metalClimb: false, glide: false,
@@ -86,7 +86,7 @@ export function startRun(k) {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], junk: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
     pendingLv: 0, specT: 0, primT: 0, lowWarned: false, hp: 0, sta: 100, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 3, surgeT: 90, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
-    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
+    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, xpBank: 0, trial: null, trialCd: 1.5, trialCue: false, btPick: 0, keystones: [], windUsed: false, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
   run.hp = st.maxHp;
@@ -150,6 +150,8 @@ function transition(apply, title, sub) {
   setTimeout(() => {
     apply();
     run.bossDone = false;
+    run.windUsed = false;
+    if (run.trial) { run.trial = null; run.trialCd = 4; }
     run.dStart = run.time;
     run.nests = 0;
     run.surgeT = 75;

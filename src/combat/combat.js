@@ -18,6 +18,7 @@ import { comboGain, comboBreak } from '../game/swarm.js';
 import { buffOn } from '../game/forage.js';
 import { junkHit } from '../game/junk.js';
 import { rivalDeath } from '../world/ducts.js';
+import { addXP, championDown, dropMusk } from '../game/progress.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -65,7 +66,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
     e.bonk = 0.6;
     if (base >= 25) G.shake = Math.max(G.shake, 0.1 * settings.shake);
   }
-  let d = base * st.dmg * (melee ? 1 + st.melee : 1) * (src === 'primary' ? st.primMul : 1);
+  let d = base * st.dmg * (melee ? 1 + st.melee : 1) * (src === 'primary' ? st.primMul : 1) * (st.apex && (e.elite || e.boss || e.pred || e.champion) ? st.apex : 1);
   if (st.fury && run.hp < st.maxHp * 0.5) d *= 1.3;
   const crit = Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   if (crit) d *= st.critMul;
@@ -161,6 +162,8 @@ export function kill(e) {
   decal(e.x, floorY(e.x, e.z) + 0.01, e.z, rand(1.2, 2.2) * (big ? 2.5 : 1) * (e.sc || 1), e.blood);
   gore(e);
   if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech * st.healMul);
+  if (st.carrion && !e.boss) run.hp = Math.min(st.maxHp, run.hp + st.maxHp * st.carrion * st.healMul);
+  if (e.champion) championDown(e);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
   if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {
@@ -197,9 +200,11 @@ export function kill(e) {
     dnum(e.x, e.y + 2, e.z, 'Predator slain', 'info');
     return;
   }
-  dropGem(e.x, e.y, e.z, e.xp * (e.mut ? 1.5 : 1));
+  if (e.xp) dropGem(e.x, e.y, e.z, e.xp * (e.mut ? 1.5 : 1));
   if (Math.random() < (e.mut ? 0.55 : 0.3)) scrapDrop(e.x, e.y, e.z);
-  if (Math.random() < 0.012) dropFood(e.x, e.y, e.z);
+  // Food turns up more often when you're hurting.
+  if (Math.random() < (run.hp < st.maxHp * 0.35 ? 0.05 : 0.012)) dropFood(e.x, e.y, e.z);
+  if (e.elite && !e.champion && Math.random() < 0.08) dropMusk(e.x, floorY(e.x, e.z), e.z);
 }
 
 function corruptDeath(e) {
@@ -249,10 +254,10 @@ export function dropKey(x, y, z) {
   sfx('key');
 }
 
-export const need = L => Math.floor(6 + (L - 1) * 5 + Math.pow(L - 1, 1.5));
+/** XP for the next level. Income scales with threat (see progress.js), so the pace stays even. */
+export const need = L => Math.floor(8 + (L - 1) * 6 + Math.pow(L - 1, 1.6));
 export function gainXP(v) {
-  run.xp += v * st.xp;
-  while (run.xp >= run.need) { run.xp -= run.need; run.level++; run.need = need(run.level); run.pendingLv++; }
+  addXP(v);
   if (run.pendingLv && G.state === 'play') openLevelUp();
 }
 

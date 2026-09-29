@@ -10,6 +10,7 @@ import { PRIM, SPECIALS, WEAP } from '../combat/arsenal.js';
 import { threatTier } from '../combat/combat.js';
 import { useTarget, grabTarget, chewTarget } from '../entities/player.js';
 import { activeBuffs } from '../game/forage.js';
+import { EVO, capped } from '../game/progress.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
 
 export function initHudIcons() {
@@ -24,7 +25,7 @@ export function renderSlots() {
   $('slots').innerHTML =
     `<div class="slot prim" title="${PRIM[C.prim].name}">${ICON[C.prim]}</div>` +
     `<div class="slot spec" title="Q · ${SPECIALS[C.special].name}">${ICON[C.special]}<i class="cd" id="specCd"></i><em>Q</em></div>` +
-    [0, 1, 2, 3].map(i => { const w = run.weapons[i]; return w ? `<div class="slot" title="${WEAP[w.id].name}">${ICON[w.id]}<em>${w.lvl}</em></div>` : '<div class="slot empty"></div>'; }).join('');
+    [0, 1, 2, 3].map(i => { const w = run.weapons[i]; return w ? `<div class="slot${w.evo ? ' evo' : ''}" title="${w.evo ? EVO[w.id].name : WEAP[w.id].name}">${ICON[w.id]}<em>${w.evo ? '★' : w.lvl}</em></div>` : '<div class="slot empty"></div>'; }).join('');
   $('items').innerHTML =
     run.items.map(id => `<i style="--c:${hexs(ITEMS[id].col)}" title="${ITEMS[id].name}${ITEMS[id].ing ? ' (ingredient)' : ''}"></i>`).join('') +
     run.muts.map(id => { const m = MUTATIONS.find(m => m.id === id); return `<span class="mut" style="--c:${m.col}" title="${m.name}: ${m.desc}">${ICON.dna}</span>`; }).join('') +
@@ -33,6 +34,7 @@ export function renderSlots() {
 }
 
 function objective() {
+  if (run.trial) return `BREAKTHROUGH TRIAL · kill the Champion · ${Math.ceil(run.trial.t)}s`;
   if (G.mode === 'trial') return W.valves.every(v => v.done) ? 'Reach the drain' : `Turn the valves ${W.valves.filter(v => v.done).length}/3 · F to sniff the way`;
   const key = !isSewer() ? (run.keys ? ' · Manhole unlocked: descend for premium loot' : ' · Manhole locked') : '';
   if (G.exitD) return isSewer() ? 'A ladder leads up to the streets · F to sniff it out' : `The road to ${nextSurfaceName()} is open · F to sniff it out${run.keys ? ' · or take the manhole down' : ''}`;
@@ -51,7 +53,8 @@ export function hud() {
   $('exTxt').textContent = P.shadow ? (ex > 1 ? 'IN SHADOW' : 'HIDDEN') : ex > 70 ? 'EXPOSED' : 'LIT';
   const S = SPECIALS[CLASSES[run.cls].special], cd = $('specCd');
   if (cd) cd.style.height = (run.specT / (S.cd * st.specCd * st.cd) * 100) + '%';
-  $('xpFill').style.width = (run.xp / run.need * 100) + '%';
+  $('xpFill').style.width = Math.min(100, run.xp / run.need * 100) + '%';
+  $('top').classList.toggle('capped', capped());
   $('lvlBig').textContent = String(run.level).padStart(2, '0');
   const thr = run.T || 0, tl = threatTier(thr);
   $('res').innerHTML =
