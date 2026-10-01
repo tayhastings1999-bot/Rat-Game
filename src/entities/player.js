@@ -263,10 +263,11 @@ export function chewTarget() {
 export function pressE() {
   if (P.carry) { dropCarry(); return; }
   const u = useTarget();
-  // A bin never gets in the way of gnawing the wall you're facing.
-  // A bin never steals E from a gnaw point you're closer to (or the wall you're facing).
-  const c0 = u && u.kind === 'bin' && chewTarget();
-  const gnawFirst = c0 && (c0.kind === 'tile' || Math.hypot((c0.t ? c0.t.gx : c0.it.x) - P.x, (c0.t ? c0.t.gz : c0.it.z) - P.z) < Math.hypot(u.o.x - P.x, u.o.z - P.z) - u.o.r);
+  // When something to use and something to gnaw are both in reach, E goes to whichever is closer
+  // (the wall you're facing counts as very close). Benches and the manhole always win.
+  const c0 = u && u.kind !== 'bench' && u.kind !== 'manhole' && chewTarget();
+  const cd = c0 ? (c0.kind === 'tile' ? 0.8 : Math.hypot((c0.t ? c0.t.gx : c0.cg ? c0.cg.x : c0.it.x) - P.x, (c0.t ? c0.t.gz : c0.cg ? c0.cg.z : c0.it.z) - P.z)) : 1e9;
+  const gnawFirst = c0 && cd < Math.hypot(u.o.x - P.x, u.o.z - P.z) - (u.o.r || 0.6);
   if (u && !gnawFirst) { doUse(u); return; }
   const o = grabTarget();
   if (o) { P.carry = o; o.carried = true; P.chewing = false; return; }

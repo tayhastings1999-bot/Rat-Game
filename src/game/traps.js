@@ -297,8 +297,8 @@ export function placeTraps(rooms, startRoom) {
   const take = (n, ok, build) => { let c = 0; for (const cd of cands) { if (c >= n) break; if (!cd.taken && ok(cd) && free(cd.w)) { cd.taken = true; build(cd.w); c++; } } };
   if (city) {
     take(4, c => c.dry, w => addCable(w, false));
-    take(3, c => c.dry && c.w.h >= 6, addScaffold);
-    take(3, c => c.dry && c.w.h >= 6, addDebris);
+    // Alternate, so tall walls are shared between scaffolds and brick pallets.
+    for (let i = 0; i < 3; i++) { take(1, c => c.dry && c.w.h >= 6, addDebris); take(1, c => c.dry && c.w.h >= 6, addScaffold); }
   } else {
     take(3, c => c.water, w => addCable(w, true));
     take(2, c => c.dry && c.w.h >= 4.4, addScaffold);
