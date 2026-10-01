@@ -31,7 +31,9 @@ export function spawnBoss() {
   // Wake as far from the rat as the horde can walk.
   let k = -1, bd = -1;
   for (const t of M.spawnTiles) if (M.flow[t] > bd) { bd = M.flow[t]; k = t; }
-  const x = k >= 0 ? toW(k % M.W) : P.x + 10, z = k >= 0 ? toW((k / M.W) | 0) : P.z + 10;
+  // It wakes in its lair (setpieces.js) when the district has one.
+  const A = G.arena && Math.hypot(G.arena.x - P.x, G.arena.z - P.z) > 14 ? G.arena : null;
+  const x = A ? A.x : k >= 0 ? toW(k % M.W) : P.x + 10, z = A ? A.z : k >= 0 ? toW((k / M.W) | 0) : P.z + 10;
   const mesh = creatureMesh(B.geo);
   mesh.scale.setScalar(B.sc);
   mesh.castShadow = true;

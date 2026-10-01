@@ -34,6 +34,7 @@ import { finishTrial } from '../ui/screens.js';
 import { newAnim, animateRat } from '../entities/ratAnim.js';
 import { tickRoles } from '../entities/roles.js';
 import { tickSig } from './signature.js';
+import { tickSetPieces } from '../world/setpieces.js';
 
 let seenT = 0;
 
@@ -87,6 +88,7 @@ function updateZones(dt) {
     }
   }
   if (P.inDuct) dark = Math.max(dark, 0.4); // inside the walls it's close and dark
+  if (P.inBldg) dark = Math.max(dark, 0.15);
   G.darkness += (dark - G.darkness) * Math.min(1, 3 * dt);
   if (scene.fog) {
     scene.fog.near = G.fogNear * (1 - G.darkness * 0.92);
@@ -431,7 +433,7 @@ export function update(dt) {
     M.flow = bfs(gx, gz, OPEN);
     const lo = 6, hi = M.kind === 'city' ? 13 : 11;
     M.spawnTiles = [];
-    for (let k = 0; k < M.flow.length; k++) if (M.flow[k] >= lo && M.flow[k] <= hi && DRY(M.grid[k])) M.spawnTiles.push(k);
+    for (let k = 0; k < M.flow.length; k++) if (M.flow[k] >= lo && M.flow[k] <= hi && DRY(M.grid[k]) && !M.inside[k]) M.spawnTiles.push(k);
   }
   // Carrying the cheese wheel draws the horde twice as fast.
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
@@ -455,6 +457,7 @@ export function update(dt) {
   tickPersonality(dt, st.maxHp);
   tickRoles(dt);
   tickSig(dt);
+  tickSetPieces(dt);
   updatePickups(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);

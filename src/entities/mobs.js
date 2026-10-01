@@ -542,13 +542,15 @@ function recoilBlast(e) {
 }
 
 // ---------- predators (big patrol cats) ----------
-export function addPred(path) {
-  const mesh = creatureMesh('cat');
-  mesh.scale.setScalar(1.6);
+export function addPred(path, o = {}) {
+  const mesh = creatureMesh(o.geo || 'cat');
+  mesh.scale.setScalar(o.sc || 1.6);
   mesh.castShadow = true;
   scene.add(mesh);
-  const s = path[0], x = toW(s % M.W), z = toW((s / M.W) | 0), hp = 700 * (1 + run.tier * 0.6) * (run.hpM || 1);
-  W.enemies.push({ type: 'brute', pred: true, mesh, path, pi: 0, mode: 'patrol', lost: 0, x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp, spd: 2.6, dmg: 26, r: 1.2, h: 3, sc: 1, col: 0x8a5a30, blood: 0x9a0c0c, heavy: true, bar: true, flash: 0, slow: 0, ang: 0, pT: 0, bT: 0, dT: 0, tT: 0, wind: 0, atkCd: 0, lunge: 0, mass: 4 });
+  const s = path[0], x = toW(s % M.W), z = toW((s / M.W) | 0), hp = (o.hp || 700) * (1 + run.tier * 0.6) * (run.hpM || 1);
+  const e = { type: 'brute', pred: true, mesh, path, pi: 0, mode: 'patrol', lost: 0, x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp, spd: o.spd || 2.6, dmg: o.dmg || 26, r: o.r || 1.2, h: o.h || 3, sc: 1, col: 0x8a5a30, blood: 0x9a0c0c, heavy: true, bar: true, flash: 0, slow: 0, ang: 0, pT: 0, bT: 0, dT: 0, tT: 0, wind: 0, atkCd: 0, lunge: 0, mass: 4, dog: !!o.dog };
+  W.enemies.push(e);
+  return e;
 }
 
 // ---------- per-frame update ----------
@@ -678,6 +680,13 @@ export function updateEnemies(dt, cap) {
   keep(W.enemies, e => !e.dead);
 }
 
+/** Guard dogs bark when they spot you: every mob within earshot comes running, enraged. */
+function bark(e) {
+  sfx('bark');
+  dnum(e.x, e.y + 2.6, e.z, 'WOOF!', 'crit');
+  fx('ring', e.x, e.y, e.z, 20, 0xffa020, 0.6);
+  for (const o of W.enemies) if (!o.dead && !o.boss && o !== e && Math.hypot(o.x - e.x, o.z - e.z) < 22) o.rage = 6;
+}
 function predAI(e, dt, d) {
   // Shadows all but hide you; standing in light makes you easy to spot.
   const det = P.inDuct ? 0 : (P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5) * (P.shadow ? 0.3 : 1 + (run.expo || 0) / 100);
@@ -686,7 +695,7 @@ function predAI(e, dt, d) {
   if (e.mode === 'patrol') {
     // It sees you inside its view cone (±52°), or senses you when you're right on top of it.
     const inCone = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.look)) < 0.9;
-    if ((d < det && (inCone || d < det * 0.3) && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); return false; }
+    if ((d < det && (inCone || d < det * 0.3) && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); if (e.dog) bark(e); return false; }
     const k = e.path[e.pi], tx = toW(k % M.W), tz = toW((k / M.W) | 0), vx = tx - e.x, vz = tz - e.z, l = Math.hypot(vx, vz);
     if (l < 0.8) e.pi = (e.pi + 1) % e.path.length;
     else { e.x += vx / l * e.spd * dt; e.z += vz / l * e.spd * dt; e.ang = Math.atan2(vx, vz); }

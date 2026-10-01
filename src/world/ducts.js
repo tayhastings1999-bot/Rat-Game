@@ -96,7 +96,9 @@ export function carveDucts() {
 // ---------- world dressing ----------
 const lam = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, ...o });
 const steel = lam(0x5a6068, { map: metalTex });
-let cap = null;
+let cap = null, capI = null;
+/** Interiors are cut just above the rat's head. */
+export const INT_CUT_Y = 2.6;
 
 /** Wall-face vent frames, rival nests, stashes and live wires. Called at the end of populate(). */
 export function populateDucts(nets, addCache) {
@@ -177,6 +179,8 @@ export function applyCutaway() {
   }
   cap = geos.length ? new THREE.Mesh(mergeGeometries(geos), new THREE.MeshBasicMaterial({ color: 0x0c0a10 })) : null;
   if (cap) { cap.visible = false; cap.userData.floor = true; world.add(cap); }
+  capI = geos.length ? new THREE.Mesh(mergeGeometries(geos.map(g => g.clone().translate(0, INT_CUT_Y - CUT_Y, 0))), new THREE.MeshBasicMaterial({ color: 0x0c0a10 })) : null;
+  if (capI) { capI.visible = false; capI.userData.floor = true; world.add(capI); }
   // Every building, prop and lamp in the district gets sliced by the cut plane; floors and water don't.
   const mats = new Set();
   world.traverse(o => { if (o.material && !o.userData.floor) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); });
@@ -184,15 +188,19 @@ export function applyCutaway() {
 }
 
 // ---------- runtime ----------
-let cutK = 0;
+let cutK = 0, cutMode = 1;
 export function tickDucts(dt) {
   const was = P.inDuct;
   P.inDuct = tileAt(P.x, P.z) === DUCT && P.y < DUCT_TOP;
   if (P.inDuct && !was) contract('duct');
-  // Slice the buildings down smoothly as you crawl in; restore when you're out.
-  cutK += ((P.inDuct ? 1 : 0) - cutK) * Math.min(1, 10 * dt);
-  cutPlane.constant = cutK > 0.02 ? CUT_Y + (1 - cutK) * 30 : 1e4;
-  if (cap) cap.visible = cutK > 0.5;
+  const gx = toG(P.x), gz = toG(P.z);
+  P.inBldg = !P.inDuct && inG(gx, gz) && M.inside[gi(gx, gz)] > 0 && P.y < 2;
+  if (P.inDuct) cutMode = 1; else if (P.inBldg) cutMode = 2;
+  // Slice the buildings down smoothly as you crawl in (or step inside); restore when you're out.
+  cutK += ((P.inDuct || P.inBldg ? 1 : 0) - cutK) * Math.min(1, 10 * dt);
+  cutPlane.constant = cutK > 0.02 ? (cutMode === 2 ? INT_CUT_Y : CUT_Y) + (1 - cutK) * 30 : 1e4;
+  if (cap) cap.visible = cutMode === 1 && cutK > 0.5;
+  if (capI) capI.visible = cutMode === 2 && cutK > 0.5;
   // Live wires: arc for a moment every few seconds. Time your crawl.
   for (const w of W.ductWires) {
     w.t += dt;

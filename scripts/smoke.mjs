@@ -396,7 +396,7 @@ await step('squeeze network: crawl in, cutaway, mobs locked out, rival nests', a
   if (leak) throw new Error('a mawling got into the crawlspace');
   // Out again: back on the street the cutaway lifts.
   await S(m => { const P = __scurry.P; P.x = m.sx; P.z = m.sz; P.y = 0; }, mouth);
-  if (!(await until(() => __scurry.cutY() > 100, 3000))) throw new Error('cutaway stuck on');
+  if (!(await until(() => __scurry.cutY() > 100 || (__scurry.P.inBldg && __scurry.cutY() > 2), 3000))) throw new Error('cutaway stuck on'); // a crawlspace can open into a building
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
 });
 await step('leveling: breakthrough trial, champion, rewards, crate, evolution', async () => {
@@ -835,6 +835,50 @@ await step('class signature moves', async () => {
     res[k] = !!ok;
   }
   if (Object.values(res).some(v => !v)) throw new Error('signature failed ' + JSON.stringify(res));
+  await S(() => __scurry.menu());
+  await wait(400);
+});
+await step('set pieces: interior cutaway, back door, tram, crane, stall, washer', async () => {
+  await S(() => { const s = __scurry; s.G.mode = 'survival'; s.startRun('brawler'); s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
+  await wait(600);
+  const tp = (x, z) => S(([x, z]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = 0; P.vx = P.vz = P.vy = 0; }, [x, z]);
+  // Interiors: step in and the walls are cut away.
+  const room = await S(() => { const M = __scurry.M; for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1) return { x: (k % M.W - M.W / 2 + 0.5) * 4, z: (((k / M.W) | 0) - M.H / 2 + 0.5) * 4 }; return null; });
+  if (!room) throw new Error('no enterable building');
+  await tp(room.x, room.z);
+  const cut = await until(() => __scurry.P.inBldg && __scurry.cutY() < 4, 3000);
+  if (!cut) throw new Error('no interior cutaway');
+  // A back door, if there is one: unbolt it from inside.
+  const door = await S(() => { const M = __scurry.M; for (let k = 0; k < M.secret.length; k++) if (M.secret[k] === 2) { const gx = k % M.W, gz = (k / M.W) | 0; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (gz + dz) * M.W + gx + dx; if (M.inside[j] && M.grid[j] === 1) return { k, x: (gx + dx - M.W / 2 + 0.5) * 4, z: (gz + dz - M.H / 2 + 0.5) * 4 }; } } return null; });
+  if (door) {
+    await tp(door.x, door.z);
+    await wait(200);
+    await page.keyboard.press('KeyE');
+    if (!(await until(k => __scurry.M.grid[k] === 1, 2000, door.k))) throw new Error('back door stayed bolted');
+  }
+  // Tram: put a mawling on the rails and call the tram.
+  const tram = await S(() => !!__scurry.W.tram);
+  if (tram) {
+    await S(() => { const s = __scurry, t = s.W.tram, P = s.P; P.x = t.axis === 'z' ? t.c + 8 : P.x; P.z = t.axis === 'z' ? P.z : t.c + 8; P.y = 0; const x = t.axis === 'z' ? t.c : P.x, z = t.axis === 'z' ? P.z : t.c; const e = s.spawnEnemy('mawling', x, z, { plain: true, force: true }); e.spd = 0; e.cd = 99; e.tag = 'rail'; t.state = 'idle'; t.t = 0; });
+    if (!(await until(() => { const e = __scurry.W.enemies.find(e => e.tag === 'rail'); return !e || e.dead; }, 30000))) throw new Error('the tram missed ' + JSON.stringify(await S(() => { const t = __scurry.W.tram, e = __scurry.W.enemies.find(e => e.tag === 'rail'); return { st: t.state, pos: t.pos, c: t.c, axis: t.axis, e: e && [e.x, e.z, e.y] }; })));
+  }
+  // Washers, stalls and the crane, whichever this district has.
+  const sp = await S(() => {
+    const s = __scurry, W = s.W, out = {};
+    const w = W.washers[0];
+    if (w) { W.uses.find(u => u.label.startsWith('Start a spin')).act(); out.washer = w.spin > 0; }
+    const st = W.uses.find(u => u.label.startsWith('Rob'));
+    if (st) { const n = W.enemies.length; st.act(); out.stall = W.enemies.length > n && st.done; }
+    if (W.crane) {
+      const c = W.crane;
+      for (let i = 0; i < 4; i++) { const e = s.spawnEnemy('mawling', c.x + 8, c.z + i * 0.5, { plain: true, force: true, hpMul: 30 }); if (e) { e.spd = 0; e.cd = 99; e.tag = 'crane'; } }
+      out.craneArmed = W.uses.find(u => u.label.startsWith('Work the crane')).act();
+    }
+    return out;
+  });
+  if (sp.washer === false || sp.stall === false || sp.craneArmed === false) throw new Error('set piece did nothing ' + JSON.stringify(sp));
+  if (sp.craneArmed && !(await until(() => __scurry.W.enemies.some(e => e.tag === 'crane' && (e.dead || e.hp < e.maxHp)), 12000))) throw new Error('crane drop missed');
+  console.log('     set pieces:', JSON.stringify(sp));
   await S(() => __scurry.menu());
   await wait(400);
 });

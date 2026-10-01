@@ -19,6 +19,7 @@ import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
 import { placeTraps } from '../game/traps.js';
 import { addPred } from '../entities/mobs.js';
+import { buildSetPieces } from './setpieces.js';
 
 export const tileMesh = {};
 const lam = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, ...o });
@@ -63,6 +64,7 @@ export function buildWorld() {
   for (const k in tileMesh) delete tileMesh[k];
   const D = curD(), city = M.kind === 'city';
   const floorTex = city ? sidewalkTex : texFor('f', D), brickTex = texFor('b', D);
+  const doorMat = lam(0x5a3a2a, { map: metalTex }), inner = [];
   const fl = [], road = [], grass = [], bed = [], wat = [], acd = [], met = [], roofs = [], fence = [];
   const walls = new Map(); // material key -> geometries
   const pushWall = (key, g) => { if (!walls.has(key)) walls.set(key, []); walls.get(key).push(g); };
@@ -90,7 +92,8 @@ export function buildWorld() {
 
   for (let gz = 0; gz < M.H; gz++) for (let gx = 0; gx < M.W; gx++) {
     const k = gi(gx, gz), t = M.grid[k], cx = toW(gx), cz = toW(gz), h = M.hgt[k];
-    if (t === 1 || t === 3 || t === 5 || t === 8) fl.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
+    if (t === 1 && M.inside[k]) inner.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
+    else if (t === 1 || t === 3 || t === 5 || t === 8) fl.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
     if (t === 10) road.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
     if (t === 9) grass.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
     if (t === 2 || t === 4) {
@@ -109,7 +112,7 @@ export function buildWorld() {
     }
     if (t === 3) {
       const hh = h, sec = M.secret[k];
-      const m = new THREE.Mesh(uvScale(new THREE.BoxGeometry(T, hh + 1, T), 1, (hh + 1) / (sec ? 3.2 : 4)).translate(0, (hh - 1) / 2, 0), lam(0xffffff, { map: sec ? secretTex(city ? D.palette[0] : D.brick) : city ? plywoodTex : dryTex }));
+      const m = new THREE.Mesh(uvScale(new THREE.BoxGeometry(T, hh + 1, T), 1, (hh + 1) / (sec ? 3.2 : 4)).translate(0, (hh - 1) / 2, 0), sec === 2 ? doorMat : lam(0xffffff, { map: sec ? secretTex(city ? D.palette[0] : D.brick) : city ? plywoodTex : dryTex }));
       m.position.set(cx, 0, cz);
       m.castShadow = m.receiveShadow = true;
       world.add(m);
@@ -150,6 +153,7 @@ export function buildWorld() {
   };
   add(fl, lam(0xffffff, { map: floorTex }), false, true);
   add(road, lam(0xffffff, { map: asphaltTex }), false, true);
+  add(inner, lam(0xc8a878, { map: plywoodTex }), false, true);
   add(grass, lam(0xffffff, { map: grassTex }), false, true);
   add(bed, lam(0x2a3a30), false, true);
   add(wat, waterMat, false, true);
@@ -512,7 +516,7 @@ function roofTiles() {
 /** Secret walls glow faintly, but only while the rat is sniffing (F). */
 function markSecrets() {
   for (let k = 0; k < M.W * M.H; k++) {
-    if (!M.secret[k] || M.grid[k] !== 3) continue;
+    if (M.secret[k] !== 1 || M.grid[k] !== 3) continue;
     const g = glowSprite(0xffe070, 3, world, toW(k % M.W), 1.4, toW((k / M.W) | 0), 0.55);
     g.visible = false;
     W.secrets.push({ k, g });
@@ -861,6 +865,7 @@ export function populate(info) {
   }
   if (!trial) placeTraps(rooms, startRoom);
   populateDucts(info.ducts || [], addCache);
+  buildSetPieces(info);
   const open = [];
   for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && dist[k] > 4) open.push(k);
   shuffleR(open);
@@ -922,6 +927,7 @@ export function applyLighting(D, city) {
     scene.fog = blackout ? new THREE.Fog(0x080608, 6, 30) : new THREE.Fog(D.fog, 26, 60);
     scene.background = new THREE.Color(D.fog);
   }
+  if (run.rain) { scene.fog.near *= 0.7; scene.fog.far *= 0.8; hemi.intensity *= 0.85; }
   G.fogNear = scene.fog.near;
   G.fogFar = scene.fog.far;
   lantern.intensity = blackout ? 3.4 : city ? 2.4 : 1.8;

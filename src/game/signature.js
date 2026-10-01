@@ -99,13 +99,20 @@ export const SIGS = {
     use() {
       const t = nearest(11);
       if (!t || t.boss && t.fly) return false;
-      puff(P.x, P.y + 0.5, P.z, 0x1a1a22, 14, 2.5);
-      for (const r of [1.6, 1.2, 2.2]) {
-        const x = t.x - Math.sin(t.ang) * r, z = t.z - Math.cos(t.ang) * r;
-        if (solidFor(tileAt(x, z), false) || Math.abs(floorY(x, z) - t.y) > 1) continue;
-        P.x = x; P.z = z; P.y = Math.max(floorY(x, z), t.y); P.vx = P.vz = P.vy = 0;
-        break;
+      // Behind it if there's room, otherwise the nearest free side.
+      let spot = null;
+      for (const off of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8, Math.PI]) {
+        for (const r of [1.6, 1.2, 2.2]) {
+          const a = t.ang + Math.PI + off, x = t.x + Math.sin(a) * r, z = t.z + Math.cos(a) * r;
+          if (solidFor(tileAt(x, z), false) || Math.abs(floorY(x, z) - t.y) > 1) continue;
+          spot = { x, z };
+          break;
+        }
+        if (spot) break;
       }
+      if (!spot) return false;
+      puff(P.x, P.y + 0.5, P.z, 0x1a1a22, 14, 2.5);
+      P.x = spot.x; P.z = spot.z; P.y = Math.max(floorY(spot.x, spot.z), t.y); P.vx = P.vz = P.vy = 0;
       P.facing = Math.atan2(t.x - P.x, t.z - P.z);
       P.ambush = Math.max(P.ambush || 0, 2);
       P.inv = Math.max(P.inv, 0.3);

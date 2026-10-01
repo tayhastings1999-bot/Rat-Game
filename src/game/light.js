@@ -24,6 +24,7 @@ export function lightAt(x, y, z) {
   const lampsOn = !run.mods.includes('blackout');
   if (lampsOn) for (const l of W.lamps) { const d = Math.hypot(l.x - x, l.z - z); if (d < 6.5) L = Math.max(L, 1 - d / 6.5); }
   if (lampsOn) for (const n of W.neons) { const d = Math.hypot(n.x - x, n.z - z); if (d < 4.5 && Math.abs(n.y - y) < 4) L = Math.max(L, 0.7 * (1 - d / 4.5)); }
+  if (run.rain) L *= 0.7; // rain dims the lamps
   for (const s of W.searches) if (Math.hypot(s.sx - x, s.sz - z) < s.R) L = Math.max(L, 1.6);
   for (const s of W.shafts) { const d = Math.hypot(s.x - x, s.z - z); if (d < s.R) L = Math.max(L, 0.95); }
   const b = G.boss;

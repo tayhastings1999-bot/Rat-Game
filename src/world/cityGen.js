@@ -167,6 +167,34 @@ export function genCity(seed, D) {
     hidden.push({ x: L.x + 1, y: L.y + 1, w: L.w - 2, h: L.h - 2, door: [door[0], door[1]], lair });
   }
 
+  // 7c. Enterable buildings: hollow a few more lots into rooms with a street
+  // door (and sometimes a back door bolted from the inside). A roof covers
+  // them; the camera cuts the walls away when you step in.
+  const interiors = [];
+  const KINDS = ['diner', 'workshop', 'apartment', 'laundromat'];
+  const okLot = (L, lo, hi) => L.type === 'bldg' && !L.compound && Math.min(L.w, L.h) >= lo && Math.max(L.w, L.h) >= 4 && L.w <= hi && L.h <= hi && L.x > 1 && L.y > 1 && L.x + L.w < W - 1 && L.y + L.h < W - 1 && solidLot(L);
+  // Roomy lots first; if that leaves the district with fewer than two, accept narrower ones.
+  const cands = [...shuffleR(lots.filter(L => okLot(L, 4, 9))), ...shuffleR(lots.filter(L => okLot(L, 3, 12) && !okLot(L, 4, 9)))];
+  for (const L of cands) {
+    if (interiors.length >= 4 || (interiors.length >= 2 && !okLot(L, 4, 9))) break;
+    if (!solidLot(L)) continue;
+    const doors = [];
+    for (let x = L.x + 1; x < L.x + L.w - 1; x++) { doors.push([x, L.y, 0, -1]); doors.push([x, L.y + L.h - 1, 0, 1]); }
+    for (let y = L.y + 1; y < L.y + L.h - 1; y++) { doors.push([L.x, y, -1, 0]); doors.push([L.x + L.w - 1, y, 1, 0]); }
+    const reach = ([x, y, dx, dy]) => { const k = gi(x + dx, y + dy); return OPEN(grid[k]) && dist[k] >= 0; };
+    const front = shuffleR(doors).find(reach);
+    if (!front) continue;
+    const back = doors.find(d => reach(d) && Math.abs(d[0] - front[0]) + Math.abs(d[1] - front[1]) > 3 && (d[2] !== front[2] || d[3] !== front[3]));
+    const h = hgt[gi(L.x, L.y)], id = interiors.length + 1;
+    for (let y = L.y + 1; y < L.y + L.h - 1; y++) for (let x = L.x + 1; x < L.x + L.w - 1; x++) { set(x, y, TL.FLOOR, 0); M.inside[gi(x, y)] = id; }
+    set(front[0], front[1], TL.FLOOR, 0);
+    M.inside[gi(front[0], front[1])] = id;
+    // Back door: bolted from the inside (secret = 2). Unbolt it on your way out for a shortcut.
+    if (back) { set(back[0], back[1], TL.DRY, h); M.secret[gi(back[0], back[1])] = 2; }
+    const kind = interiors.some(i => i.kind === 'laundromat') || (L.w < 5 && L.h < 5) ? KINDS[(interiors.length + ri(0, 2)) % 3] : rng.next() < 0.7 ? 'laundromat' : KINDS[ri(0, 2)];
+    interiors.push({ id, x: L.x + 1, y: L.y + 1, w: L.w - 2, h: L.h - 2, roof: h, door: front, back: back || null, kind });
+  }
+
   // 8. Street furniture spots.
   const lampSpots = [], neonSpots = [], carSpots = [], lineSpots = [], treeSpots = [], dumpSpots = [];
   for (let y = 1; y < W - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -201,5 +229,5 @@ export function genCity(seed, D) {
     }
   }
 
-  return { rooms: live, startRoom, dist, pockets: [], byDist, metal: [], lots, slots, hidden, alleys, lampSpots, neonSpots, carSpots, lineSpots, treeSpots, dumpSpots };
+  return { rooms: live, startRoom, dist, pockets: [], byDist, metal: [], lots, slots, hidden, alleys, interiors, roadsX, roadsZ, lampSpots, neonSpots, carSpots, lineSpots, treeSpots, dumpSpots };
 }

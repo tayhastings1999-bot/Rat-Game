@@ -41,6 +41,7 @@ export const RIGS = {
   lurker: { legY: 0.6, legX: 0.2, legMidZ: 0, legRoot: [0.32, 0.72], headZ: 0.5, headY: 0.95, headBoth: true, tailZ: -9, neck: [0, 0.9, 0.35], tailRoot: [0, 0, 0], K: [0.85, 0.2, 0, 0], lift: 0.1, stride: 1.6 },
   mimic: { legY: 0.2, legX: 0.1, legMidZ: 0, headY: 0.97, headZ: 9, tailZ: -9, neck: [0, 1.04, -0.42], tailRoot: [0, 0, 0], K: [0.9, 0, 0, 0], jaw: 1.2, lift: 0.08, stride: 0.6 },
   spitter: { legY: 0.32, legX: 0.18, legMidZ: 0, headZ: 0.32, tailZ: -9, neck: [0, 0.6, 0.2], tailRoot: [0, 0, 0], K: [0.5, 0.18, 0, 0], jaw: 0.5, lift: 0.1, stride: 1.0 },
+  dog: { legY: 0.75, legX: 0.15, legMidZ: 0, headZ: 0.75, tailZ: -0.7, neck: [0, 1.2, 0.65], tailRoot: [0, 1.1, -0.6], K: [0.6, 0.18, 0.7, 0], lift: 0.12, stride: 2.0 },
   ratking: { legY: -9, headZ: 9, tailZ: -9, neck: [0, 1.2, 0], tailRoot: [0, 0, 0], K: [0, 0, 0, 0], lift: 0, stride: 1.6 },
 };
 const DEF = { jaw: 0, headX: 99, legY: -9, legX: 0, legMidZ: 0, headZ: 9, headY: 99, tailZ: -9, wingX: 99, wingY: -99, neck: [0, 0, 0], tailRoot: [0, 0, 0], wingRoot: [0, 0], K: [0, 0, 0, 0], lift: 0, stride: 1 };

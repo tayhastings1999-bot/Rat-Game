@@ -420,7 +420,7 @@ export function animate(dt) {
   tgt.set(P.x + G.camOff.x, P.y + 1, P.z + G.camOff.z);
   const place = (pitch, dist) => want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   let fix = 0;
-  if (P.inDuct) fix = 0.55; // cutaway: look down on the maze
+  if (P.inDuct || P.inBldg) fix = 0.55; // cutaway: look down on the maze (or into the room)
   else if (G.state === 'play' || G.state === 'menu') {
     for (let s = 0; s <= 10; s++) {
       const f = s / 10;

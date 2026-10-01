@@ -316,6 +316,22 @@ export const GEO = {
     ]),
     glow: MG([...eyes([[-0.16, 0.98, 0.6], [0.16, 0.98, 0.6]], 0xffe040, 0.06), prt(Bx(0.34, 0.03, 0.04), 0xb050ff, [0, 0.62, 0.72])]),
   },
+  // Guard dog: a stocky junkyard mutt with a spiked collar. Patrols gardens and barks the horde awake.
+  dog: {
+    body: MG([
+      prt(Sp(0.55, 9, 6), 0x5a4030, [0, 0.95, -0.05], [0, 0, 0], [0.85, 0.8, 1.45]),
+      prt(Sp(0.42, 8, 6), 0x6a4a36, [0, 1.05, 0.55], [0, 0, 0], [1, 0.95, 0.9]),
+      prt(Sp(0.33, 8, 6), 0x5a4030, [0, 1.4, 0.92]),
+      prt(Bx(0.32, 0.26, 0.42), 0x6a4a36, [0, 1.3, 1.25]),
+      prt(Sp(0.08, 5, 4), 0x101010, [0, 1.36, 1.47]),
+      ...[-1, 1].map(s => prt(Bx(0.1, 0.36, 0.22), 0x3a2a20, [s * 0.3, 1.38, 0.82], [0, 0, s * 0.35])),
+      prt(To(0.36, 0.06, TAU), 0xa02020, [0, 1.15, 0.72], [PI2 + 0.3, 0, 0]),
+      ...[0, 1, 2, 3, 4, 5].map(i => { const a = i / 6 * TAU; return prt(Co(0.04, 0.14, 3), 0xc8c8d0, [Math.sin(a) * 0.4, 1.15 + Math.cos(a) * 0.12, 0.72 + Math.cos(a) * 0.04], [0, 0, -a]); }),
+      ...[[-0.27, 0.5], [0.27, 0.5], [-0.27, -0.55], [0.27, -0.55]].map(([x, z]) => prt(Cy(0.12, 0.09, 0.8, 5), 0x4a3426, [x, 0.4, z])),
+      prt(Cy(0.07, 0.04, 0.6, 5), 0x5a4030, [0, 1.25, -0.85], [-0.7, 0, 0]),
+    ]),
+    glow: MG([...eyes([[-0.13, 1.5, 1.18], [0.13, 1.5, 1.18]], 0xffa020, 0.05), prt(Cy(0.07, 0.07, 0.02, 6), 0xffd040, [0, 0.98, 1.0], [PI2, 0, 0]), ...maw(0, 1.18, 1.38, 0.9)]),
+  },
   // ---- boss-only models (no instancing pool) ----
   drone: {
     body: MG([
@@ -352,7 +368,7 @@ export const GEO = {
 };
 
 /** Geometry keys that get an instancing pool (bosses use their own meshes). */
-export const MOB_GEOS = Object.keys(GEO).filter(k => k !== 'drone' && k !== 'ratking' && k !== 'owl');
+export const MOB_GEOS = Object.keys(GEO).filter(k => k !== 'drone' && k !== 'ratking' && k !== 'owl' && k !== 'dog');
 
 /** Creature skin: gouraud-lit vertex colours over a coarse fur texture, with PS1 vertex snap and affine mapping. */
 export const bodyMat = () => ps1(new THREE.MeshLambertMaterial({ vertexColors: true, map: furTex }));

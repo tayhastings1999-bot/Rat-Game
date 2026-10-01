@@ -72,7 +72,7 @@ function scan() {
   gnaw.length = 0;
   const cx = toG(P.x), cz = toG(P.z), R = 12;
   for (let z = cz - R; z <= cz + R; z++) for (let x = cx - R; x <= cx + R; x++) {
-    if (!inG(x, z) || tAt(x, z) !== 3) continue;
+    if (!inG(x, z) || tAt(x, z) !== 3 || M.secret[gi(x, z)] === 2) continue;
     gnaw.push({ x: toW(x), y: 0.9, z: toW(z), s: M.secret[gi(x, z)] ? 1.5 : 1 });
   }
   for (const it of W.inter) if (!it.used && !(it.cd > 0) && Math.hypot(it.x - P.x, it.z - P.z) < 50) gnaw.push({ x: it.x, y: (it.y || 0) + 1, z: it.z, s: 1.2 });
@@ -104,7 +104,7 @@ export function tickScent(dt) {
   tickSmoke(dt);
   if (P.scentE == null) P.scentE = st.scentMax;
   if (P.scent) {
-    if (!st.rag) P.scentE -= dt;
+    if (!st.rag) P.scentE -= dt * (run.rain ? 1.6 : 1); // rain washes scent away
     if (P.scentE <= 0) { P.scentE = 0; P.scent = false; dnum(P.x, P.y + 1.6, P.z, 'Scent fades', 'info'); }
   } else P.scentE = Math.min(st.scentMax, P.scentE + dt * 0.55 * st.scentMax / 8);
   trackPrints(dt);

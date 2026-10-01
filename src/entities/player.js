@@ -22,6 +22,7 @@ import { onRoll, shadowPaw, attackRate, echo } from '../game/rules.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 import { diveLand } from '../game/signature.js';
+import { boltTarget } from '../world/setpieces.js';
 
 export const keys = {};
 /** On-screen joystick (touch). x = right, y = forward, each -1..1. */
@@ -231,6 +232,9 @@ export function useTarget() {
   for (const p of W.pipes) if (Math.hypot(p.x - P.x, p.z - P.z) < 1.8 && P.y < 1.2) return { kind: 'pipe', o: p, label: 'Squeeze into pipe' };
   for (const v of W.valves) if (!v.done && Math.hypot(v.x - P.x, v.z - P.z) < 1.9) return { kind: 'valve', o: v, label: 'Turn valve' };
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < b.r + 1 && P.y < 2) return { kind: 'bin', o: b, label: b.kind === 'dumpster' ? 'Rummage the dumpster' : b.kind === 'bin' ? 'Rummage the trash can' : 'Dig through the junk heap' };
+  for (const s of W.uses) if (!s.done && Math.hypot(s.x - P.x, s.z - P.z) < s.r && Math.abs((s.y || 0) - P.y) < 1.6) return { kind: 'set', o: s, label: s.label };
+  const bt = boltTarget();
+  if (bt) return { kind: 'bolt', o: bt, label: 'Unbolt the back door (a shortcut out)' };
   const mh = G.manhole;
   if (mh && Math.hypot(mh.x - P.x, mh.z - P.z) < 2 && P.y < 0.6) return { kind: 'manhole', o: mh, label: run.keys ? 'Unlock the manhole — descend into the sewer' : 'Manhole (locked — find a sewer key)' };
   return null;
@@ -249,7 +253,7 @@ export function chewTarget() {
   const f = P.facing, c = [];
   for (const dd of [0.9, 1.6]) {
     const x = P.x + Math.sin(f) * dd, z = P.z + Math.cos(f) * dd, gx = toG(x), gz = toG(z);
-    if (tAt(gx, gz) === 3 && P.y < topAt(gx, gz) - 0.5) { c.push({ d: dd, o: { kind: 'tile', gx, gz, time: 1.2, label: M.secret[gi(gx, gz)] ? 'This wall sounds hollow: gnaw through' : M.kind === 'city' ? 'Gnaw through the boards' : 'Gnaw through drywall' } }); break; }
+    if (tAt(gx, gz) === 3 && M.secret[gi(gx, gz)] !== 2 && P.y < topAt(gx, gz) - 0.5) { c.push({ d: dd, o: { kind: 'tile', gx, gz, time: 1.2, label: M.secret[gi(gx, gz)] ? 'This wall sounds hollow: gnaw through' : M.kind === 'city' ? 'Gnaw through the boards' : 'Gnaw through drywall' } }); break; }
   }
   for (const it of W.inter) {
     if (it.kind === 'rope' && it.used) continue;
@@ -272,7 +276,7 @@ export function pressE() {
   // (the wall you're facing counts as very close). Benches and the manhole always win.
   const c0 = u && u.kind !== 'bench' && u.kind !== 'manhole' && chewTarget();
   const cd = c0 ? (c0.kind === 'tile' ? 0.8 : Math.hypot((c0.t ? c0.t.gx : c0.cg ? c0.cg.x : c0.it.x) - P.x, (c0.t ? c0.t.gz : c0.cg ? c0.cg.z : c0.it.z) - P.z)) : 1e9;
-  const gnawFirst = c0 && cd < Math.hypot(u.o.x - P.x, u.o.z - P.z) - (u.o.r || 0.6);
+  const gnawFirst = c0 && cd < Math.hypot(u.o.x - P.x, u.o.z - P.z) - (u.o.cr ?? u.o.r ?? 0.6);
   if (u && !gnawFirst) { doUse(u); return; }
   const o = grabTarget();
   if (o) { P.carry = o; o.carried = true; P.chewing = false; return; }
@@ -303,6 +307,8 @@ export function objBlocked(o, x, z) {
 }
 
 export function doUse(u) {
+  if (u.kind === 'set') { u.o.act(); return; }
+  if (u.kind === 'bolt') { openTile(u.o.gx, u.o.gz); sfx('door'); return; }
   if (u.kind === 'chest') {
     const c = u.o;
     c.open = true;
@@ -354,7 +360,7 @@ export function openTile(gx, gz) {
   M.grid[k] = 1;
   M.hgt[k] = 0;
   M.secret[k] = 0;
-  if (secret) { banner('Secret passage', 'Something was hidden back here'); sfx('key'); }
+  if (secret === 1) { banner('Secret passage', 'Something was hidden back here'); sfx('key'); }
   const m = tileMesh[k];
   if (m) { world.remove(m); delete tileMesh[k]; }
   const x = toW(gx), z = toW(gz);

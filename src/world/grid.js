@@ -15,7 +15,7 @@ export const DUCT_TOP = 1.0;
 export const M = {
   kind: 'sewer',
   W: 40, H: 40, half: 80,
-  grid: new Uint8Array(1600), hgt: new Float32Array(1600), seen: new Uint8Array(1600), secret: new Uint8Array(1600),
+  grid: new Uint8Array(1600), hgt: new Float32Array(1600), seen: new Uint8Array(1600), secret: new Uint8Array(1600), inside: new Uint8Array(1600),
   flow: new Int16Array(1600).fill(-1), spawnTiles: [],
 };
 
@@ -27,6 +27,7 @@ export function allocMap(w, kind) {
   M.hgt = new Float32Array(w * w).fill(WH);
   M.seen = new Uint8Array(w * w);
   M.secret = new Uint8Array(w * w); // 1 = gnawable wall disguised as solid brick
+  M.inside = new Uint8Array(w * w); // n = floor inside enterable building n-1 (cutaway view)
   M.flow = new Int16Array(w * w).fill(-1);
   M.spawnTiles = [];
 }
