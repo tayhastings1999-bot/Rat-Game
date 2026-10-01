@@ -19,6 +19,7 @@ import { epitaph } from '../game/personality.js';
 import { runScore, recordDaily, shareCard, dailyKey, dailyBoard, todaysTwist } from '../game/score.js';
 import { drawMap, renderSlots, hud, banner } from './hud.js';
 import { ICON } from './icons.js';
+import { SIGS } from '../game/signature.js';
 
 const ov = $('overlay');
 export function show(h) { ov.innerHTML = h; ov.classList.remove('hide'); ov.scrollTop = 0; }
@@ -60,7 +61,7 @@ export function renderMenu(m) {
     : '<p>Smash the nests or outlast the timer to wake the district boss. Every pick, chest and detour raises the threat, and the horde scales with it. Kill the boss to open the road, or spend a key on the manhole.</p>'}
     <div class="howto">
       <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up XP gems (blue, green, red, violet), and pick an upgrade each level. Every fifth level a Champion comes for you: kill it to break through. Stay out of the light: fill the eye meter and the owls come.</p></div>
-      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Shift</kbd> roll, hold to sprint (sprint into a wall to run up it, jump off walls to chain bounces) · <kbd>Q</kbd> special · <kbd>X</kbd> shriek when the combo bar is full · <kbd>E</kbd> use, hold to gnaw · <kbd>F</kbd> sniff out loot · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</p></div>
+      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Shift</kbd> roll, hold to sprint (sprint into a wall to run up it, jump off walls to chain bounces) · <kbd>Q</kbd> special · <kbd>G</kbd> class signature move · <kbd>X</kbd> shriek when the combo bar is full · <kbd>E</kbd> use, hold to gnaw · <kbd>F</kbd> sniff out loot · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</p></div>
       <div><h3 class="px">Touch</h3><p>Left stick to move, drag anywhere else to look around. Jump, Roll, Special and Use sit on the right.</p></div>
     </div>
     <div class="kick px">Pick a rat to start</div>
@@ -69,7 +70,7 @@ export function renderMenu(m) {
       return `<button class="card${lk ? ' off' : ''}" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="" style="${lk ? 'filter:brightness(.08)' : ''}">
         <b>${lk ? 'Locked' : C.name}</b><span class="d">${lk ? UNLOCK[k].txt + (UNLOCK[k].cost ? ` · or ${UNLOCK[k].cost} salvage at the Nest` : UNLOCK[k].dom ? ` · or ${UNLOCK[k].dom} Dominance at the Nest` : '') : C.blurb}</span>
-        <span class="s">${C.hp} HP · ${PRIM[C.prim].name}<br>Q: ${SPECIALS[C.special].name}</span></button>`;
+        <span class="s">${C.hp} HP · ${PRIM[C.prim].name}<br>Q: ${SPECIALS[C.special].name}<br>G: ${SIGS[k] ? SIGS[k].name : ''}</span></button>`;
     }).join('')}</div>${m === 'survival' ? startsHTML() : ''}${skinsHTML()}
     <p class="px" style="font-size:12px">${best.time ? `Best survival: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}${pb ? ` · Trial PB ${fmtT(pb.t)}` : ''}</p></div>`);
   G.mode = m === 'daily' ? 'survival' : m;

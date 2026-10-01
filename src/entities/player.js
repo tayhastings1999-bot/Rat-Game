@@ -21,6 +21,7 @@ import { cageTarget, openCage, carryingWheel } from '../game/objectives.js';
 import { onRoll, shadowPaw, attackRate, echo } from '../game/rules.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
+import { diveLand } from '../game/signature.js';
 
 export const keys = {};
 /** On-screen joystick (touch). x = right, y = forward, each -1..1. */
@@ -130,7 +131,7 @@ export function stepPlayer(dt) {
     P.glideT = 0;
     if (!was) {
       puff(P.x, P.y, P.z, 0x9a8a7a, P.fallV > 12 ? 10 : 4, 1.6);
-      if (P.slam === 'sinker') { P.slam = false; P.lock = 0; sinkerLand(); } else if (P.slam) {
+      if (P.slam === 'dive') { P.slam = false; P.lock = 0; diveLand(); } else if (P.slam === 'sinker') { P.slam = false; P.lock = 0; sinkerLand(); } else if (P.slam) {
         P.slam = false;
         P.lock = 0;
         const R = 4.2 * st.area;

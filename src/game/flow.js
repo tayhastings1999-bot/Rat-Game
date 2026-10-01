@@ -100,6 +100,7 @@ export function startRun(k) {
     keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, rules: [], evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, contracts: [], contractDom: 0, xpBank: 0, trial: null, trialCd: 1.5, trialCue: false, btPick: 0, keystones: [], windUsed: false, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
+  Object.assign(P, { sig: null, grab: null, parry: 0, diveArm: 0 });
   run.hp = st.maxHp;
   run.sta = st.staMax;
   meta.runs = (meta.runs || 0) + 1;

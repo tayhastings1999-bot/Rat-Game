@@ -26,6 +26,7 @@ export const ICON = {
   blink: SV('<path d="M4 12h10"/><path d="m10 6 6 6-6 6"/><path d="M20 4v16"/>'),
   bulwark: SV('<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/>'),
   updraft: SV('<path d="M12 21V5"/><path d="m6 11 6-6 6 6"/><path d="M4 21h4M16 21h4"/>'),
+  sig: SV('<path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/>'),
   key: SV('<circle cx="7" cy="12" r="4"/><path d="M11 12h10M17 12v4M20 12v3"/>'),
   skull: SV('<path d="M12 3a8 8 0 0 0-8 8c0 3 1.5 5 3 6v3h10v-3c1.5-1 3-3 3-6a8 8 0 0 0-8-8z"/><circle cx="9" cy="11" r="1.5" fill="currentColor"/><circle cx="15" cy="11" r="1.5" fill="currentColor"/><path d="M10 20v-2M14 20v-2"/>'),
   junk: SV('<path d="M7 6h10l-1 14H8z"/><path d="M5 6h14M10 3h4"/><path d="M10 10l1 6M14 10l-1 6"/>'),

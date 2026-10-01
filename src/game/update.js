@@ -33,6 +33,7 @@ import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
 import { newAnim, animateRat } from '../entities/ratAnim.js';
 import { tickRoles } from '../entities/roles.js';
+import { tickSig } from './signature.js';
 
 let seenT = 0;
 
@@ -270,7 +271,14 @@ function updateProjectiles(dt) {
     if (p.g) p.vy -= p.g * dt;
     p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     if (Math.random() < 0.3) W.parts.push({ x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, life: 0.2, c: p.col, s: 0.6, ng: true });
-    if (p.y < floorY(p.x, p.z) - 0.1 || solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.7, p.col); continue; }
+    if (p.bounce > 0 && p.y >= floorY(p.x, p.z) - 0.1 && solidAt(p.x, p.y, p.z)) {
+      // Ricochet: reflect off whichever axis we crossed into the wall on.
+      const xHit = solidAt(p.x, p.y, p.z - p.vz * dt);
+      p.x -= p.vx * dt; p.z -= p.vz * dt;
+      if (xHit) p.vx = -p.vx; else p.vz = -p.vz;
+      p.bounce--; p.hs.clear(); p.life = Math.max(p.life, 0.8);
+      spark(p.x, p.y, p.z, 1, p.col); sfx('clank');
+    } else if (p.y < floorY(p.x, p.z) - 0.1 || solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.7, p.col); continue; }
     for (const e of W.enemies) {
       if (e.dead || p.hs.has(e) || e.hidden) continue;
       const dx = e.x - p.x, dz = e.z - p.z, rr = e.r + 0.22 * p.size;
@@ -446,6 +454,7 @@ export function update(dt) {
   tickRules(dt);
   tickPersonality(dt, st.maxHp);
   tickRoles(dt);
+  tickSig(dt);
   updatePickups(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);

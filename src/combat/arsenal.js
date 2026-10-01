@@ -57,7 +57,7 @@ export function shoot(x, y, z, dx, dy, dz, spd, dmg, pierce, src, o = {}) {
   W.pproj.push({
     x, y, z, vx: dx / d * spd, vy: dy / d * spd, vz: dz / d * spd, spd,
     life: (o.life || 0.75) * (pr ? st.range : 1), dmg, pierce, src, hs: new Set(), col: o.col || 0xf4efe6,
-    homing: o.homing || (pr && st.homing), split: pr && st.split && !o.child, size: 1 + (pr ? st.shotSize : 0) * (o.child ? 0.5 : 1), fx: pr,
+    homing: o.homing || (pr && st.homing), split: pr && st.split && !o.child, size: o.size || 1 + (pr ? st.shotSize : 0) * (o.child ? 0.5 : 1), fx: pr, bounce: o.bounce || 0,
   });
   if (o.arc) { const p = W.pproj[W.pproj.length - 1]; p.vy += 2.2; p.g = 9; }
   if (pr) { spark(x + dx / d * 0.5, y, z + dz / d * 0.5, 0.6, o.col || 0xffffff); P.throwT = 0.26; sfx('shoot'); }

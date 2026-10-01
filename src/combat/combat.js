@@ -29,6 +29,7 @@ import { onKill } from '../game/rules.js';
 import { scabDown } from '../game/personality.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
+import { tryParry } from '../game/signature.js';
 
 // ---------- queries ----------
 export const near = (x, y, z, R) => {
@@ -126,6 +127,7 @@ export function aoe(x, y, z, R, dm, kb, src, slow, itemFx) {
 // ---------- enemy → player ----------
 export function hurtP(d, from, raw) {
   if (G.state !== 'play') return;
+  if (!raw && tryParry(from)) return;
   if (!raw && P.inv > 0) { tryPerfectDodge(); return; }
   if (!raw && G.boss && G.boss.revealed) run.bossHit = true;
   if (P.bulwark > 0) {

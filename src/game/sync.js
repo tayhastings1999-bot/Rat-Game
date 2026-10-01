@@ -14,6 +14,7 @@ import { blob, ratExtras } from '../entities/rat.js';
 import { newAnim, animateRat } from '../entities/ratAnim.js';
 import { nearest } from '../combat/combat.js';
 import { syncScent } from './scent.js';
+import { sigPose } from './signature.js';
 
 G.camPos = new THREE.Vector3(0, 12, 12);
 G.camOff = new THREE.Vector3();
@@ -102,14 +103,14 @@ export function sync(dt) {
     IMB[e.type].setMatrixAt(i, dummy.matrix);
     IMG[e.type].setMatrixAt(i, dummy.matrix);
     IMB[e.type].setColorAt(i, mobColor(e));
-    if ((e.corrupt || e.ward > 0) && rings < 120) {
+    if ((e.corrupt || e.ward > 0 || e.hexT > 0) && rings < 120) {
       const gy = e.fly ? floorY(e.x, e.z) : e.y;
       dummy.position.set(e.x, gy + 0.08, e.z);
       dummy.rotation.set(0, G.time * 2, 0);
       dummy.scale.setScalar(e.r * (e.champion ? 2.6 : 1.8) * (1 + 0.08 * Math.sin(G.time * 8 + e.ph)));
       dummy.updateMatrix();
       ringIM.setMatrixAt(rings, dummy.matrix);
-      ringIM.setColorAt(rings, e.champion ? tmpC.setHex(0xffd040) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x6ad0ff));
+      ringIM.setColorAt(rings, e.hexT > 0 ? tmpC.setHex(0xc070ff) : e.champion ? tmpC.setHex(0xffd040) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x6ad0ff));
       rings++;
     }
   }
@@ -405,6 +406,7 @@ export function animate(dt) {
   } else {
     rat.legs.forEach(l => { l.rotation.z *= Math.max(0, 1 - dt * 12); });
   }
+  sigPose(rat);
   rat.g.visible = P.inv > 0 && P.roll <= 0 && G.state === 'play' ? Math.floor(t * 24) % 2 === 0 : true;
   rat.head.visible = P.roll <= 0;
   if (P.roll > 0) { const u = 1 - P.roll / 0.3; rat.body.rotation.x = -u * TAU; rat.body.position.y = 0.42; rat.g.scale.set(bulk, 0.8 * bulk, 0.9 * bulk); }

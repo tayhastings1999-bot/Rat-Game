@@ -554,7 +554,7 @@ export function addPred(path) {
 // ---------- per-frame update ----------
 export function updateEnemies(dt, cap) {
   for (const e of W.enemies) {
-    if (e.dead) continue;
+    if (e.dead || e.held) continue; // held: in the Brawler's paws
     e.flash -= dt; e.slow -= dt; e.tT -= dt; e.lunge -= dt; e.ward -= dt;
     if (e.invuln > 0) e.invuln -= dt;
     if (!e.fly && e.y < -3) {

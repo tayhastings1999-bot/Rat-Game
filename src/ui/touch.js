@@ -8,6 +8,7 @@ import { keys, stick, startRoll, toggleLock, useSpecial, pressE } from '../entit
 import { pause, openMap } from './screens.js';
 import { shriek } from '../game/swarm.js';
 import { toggleScent } from '../game/scent.js';
+import { useSig } from '../game/signature.js';
 
 const STICK_R = 52;
 
@@ -21,6 +22,7 @@ export function initTouch() {
       <button class="tb sm" data-b="lock" aria-label="Lock on">Lock</button>
       <button class="tb sm" data-b="scent" aria-label="Scent trails">Sniff</button>
       <button class="tb" data-b="spec" aria-label="Special">Special</button>
+      <button class="tb sig" data-b="sig" aria-label="Signature move">Sig</button>
       <button class="tb" data-b="use" aria-label="Use, grab, hold to gnaw">Use</button>
       <button class="tb" data-b="roll" aria-label="Roll, hold to sprint">Roll</button>
       <button class="tb jump" data-b="jump" aria-label="Jump, hold to climb">Jump</button>
@@ -100,6 +102,7 @@ function press(k) {
     case 'map': openMap(); break;
     case 'pause': pause(true); break;
     case 'shriek': shriek(); break;
+    case 'sig': useSig(); break;
   }
 }
 function release(k) {

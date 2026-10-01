@@ -17,6 +17,7 @@ import { objText, objTargets } from '../game/objectives.js';
 import { ROUTES } from '../game/routes.js';
 import { bossIntro } from '../game/personality.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
+import { SIGS } from '../game/signature.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
@@ -30,6 +31,7 @@ export function renderSlots() {
   $('slots').innerHTML =
     `<div class="slot prim" title="${PRIM[C.prim].name}">${ICON[C.prim]}</div>` +
     `<div class="slot spec" title="Q · ${SPECIALS[C.special].name}">${ICON[C.special]}<i class="cd" id="specCd"></i><em>Q</em></div>` +
+    (SIGS[run.cls] ? `<div class="slot sig" title="G · ${SIGS[run.cls].name}: ${SIGS[run.cls].desc}">${ICON.sig}<i class="cd" id="sigCd"></i><em>G</em></div>` : '') +
     [0, 1, 2, 3].map(i => { const w = run.weapons[i]; return w ? `<div class="slot${w.evo ? ' evo' : ''}" title="${w.evo ? EVO[w.id].name : WEAP[w.id].name}">${ICON[w.id]}<em>${w.evo ? '★' : w.lvl}</em></div>` : '<div class="slot empty"></div>'; }).join('');
   $('items').innerHTML =
     run.items.map(id => `<i style="--c:${hexs(ITEMS[id].col)}" title="${ITEMS[id].name}${ITEMS[id].ing ? ' (ingredient)' : ''}"></i>`).join('') +
@@ -62,6 +64,8 @@ export function hud() {
   $('exTxt').textContent = P.shadow ? (ex > 1 ? 'IN SHADOW' : 'HIDDEN') : ex > 70 ? 'EXPOSED' : 'LIT';
   const S = SPECIALS[CLASSES[run.cls].special], cd = $('specCd');
   if (cd) cd.style.height = (run.specT / (S.cd * st.specCd * st.cd) * 100) + '%';
+  const sc = $('sigCd'), SG = SIGS[run.cls];
+  if (sc && SG) sc.style.height = Math.max(0, run.sigT / (SG.cd * st.cd) * 100) + '%';
   $('xpFill').style.width = Math.min(100, run.xp / run.need * 100) + '%';
   $('top').classList.toggle('capped', capped());
   $('lvlBig').textContent = String(run.level).padStart(2, '0');

@@ -807,6 +807,37 @@ await step('mob roles: guard, priest, mimic, lurker, flee, rivalry, pack rage', 
   await S(() => __scurry.menu());
   await wait(400);
 });
+await step('class signature moves', async () => {
+  const res = {};
+  for (const k of ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof']) {
+    await S(k => { const s = __scurry; s.G.mode = 'survival'; s.startRun(k); s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); }, k);
+    await wait(500);
+    await S(k => {
+      const s = __scurry, P = s.P;
+      s.W.enemies.length = 0;
+      const d = k === 'sneak' ? 6 : k === 'roof' ? 3 : k === 'warlock' ? 5 : 1.6;
+      const e = s.spawnEnemy('mawling', P.x + Math.sin(P.facing) * d, P.z + Math.cos(P.facing) * d, { plain: true, force: true, hpMul: 30 });
+      if (!e) throw new Error('no space for target');
+      e.spd = 0; e.cd = 99; e.tag = 'sig'; e.fled = true;
+      if (k === 'plague') { e.pT = 3; e.pD = 6; }
+      s.run.sigT = 0;
+    }, k);
+    await page.keyboard.press('KeyG');
+    if (k === 'tank') await S(() => { const s = __scurry; s.st.taken = 1; const h = s.run.hp; s.hurtP(30, s.W.enemies[0]); s.st.taken = 0; window.__parried = s.run.hp === h; });
+    const ok = await until(k => {
+      const s = __scurry, e = s.W.enemies.find(e => e.tag === 'sig'), P = s.P;
+      if (k === 'slinger') return s.W.pproj.some(p => p.bounce > 0) || (e && e.hp < e.maxHp);
+      if (k === 'tank') return window.__parried && (s.run.parries || 0) > 0;
+      if (k === 'sneak') return e && Math.hypot(e.x - P.x, e.z - P.z) < 2.6 && P.ambush > 0;
+      if (k === 'warlock') return e && (e.hexT > 0 || e.hp < e.maxHp);
+      return !e || e.dead || e.hp < e.maxHp;
+    }, 5000, k);
+    res[k] = !!ok;
+  }
+  if (Object.values(res).some(v => !v)) throw new Error('signature failed ' + JSON.stringify(res));
+  await S(() => __scurry.menu());
+  await wait(400);
+});
 await step('soak: 20s of live horde', async () => {
   await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('slinger'); __scurry.god(true); __scurry.run.threatBase = 8; });
   for (let i = 0; i < 10; i++) { await hold(['KeyW', 'KeyA', 'KeyS', 'KeyD'][i % 4], 1000); await page.keyboard.press('Space'); await wait(1000); }
