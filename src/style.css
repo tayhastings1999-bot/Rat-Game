@@ -183,3 +183,9 @@ body.combat #mapBox{opacity:.18}
 #slots .slot.evo em{color:var(--gold)}
 .panel.breakthrough{box-shadow:0 0 0 2px var(--gold),0 0 40px rgba(242,178,51,.35)}
 .panel.breakthrough h2{color:var(--gold)}
+/* Contracts tracker */
+#contracts{position:absolute;right:28px;top:292px;font-size:11px;line-height:1.7;text-align:right;color:var(--dim);transition:opacity .4s;max-width:260px}
+body.touch #contracts{top:auto;bottom:40%;right:12px;font-size:9px}
+#contracts b{color:#c080ff}
+#contracts .done{color:#6ad06a;text-decoration:line-through}
+body.combat #contracts{opacity:.25}

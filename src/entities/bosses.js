@@ -17,6 +17,7 @@ import { spawnEnemy, mobState, moveBody, groundChase, flyTo, wait, cone, aimShot
 import { banner } from '../ui/hud.js';
 import { brainOf, think, lead, weigh, canAfford, spend, trySidestep, flankPoint } from './brain.js';
 import { addChest } from '../world/build.js';
+import { contract } from '../game/contracts.js';
 import { openGate, checkUnlocks } from '../game/flow.js';
 
 const BASE_R = { ghoul: 0.62, tick: 0.4, brute: 0.9, crow: 0.5, drone: 0.95, ratking: 1.25 };
@@ -459,6 +460,8 @@ export function onBossDeath(e) {
   run.bossDone = true;
   meta.bosses++;
   run.bosses = (run.bosses || 0) + 1;
+  if (!run.bossHit) contract('flawless');
+  run.bossHit = false;
   openGate();
   const got = checkUnlocks();
   banner(e.name + ' falls', got.length ? 'Unlocked: ' + got.join(', ') : isSewer() ? 'A ladder leads back to the streets' : 'The road is open — or take the key below');

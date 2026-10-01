@@ -27,7 +27,7 @@ const CORRUPT_KEYS = Object.keys(CORRUPT);
  * banner, and fades in over a minute instead of arriving at full strength.
  */
 export const ROSTER = {
-  surface: [['mawling', 0], ['roach', 45], ['bat', 95], ['crow', 150], ['tick', 210], ['cat', 280], ['wasp', 360], ['ghoul', 450], ['moth', 540], ['brute', 640], ['shade', 750]],
+  surface: [['mawling', 0], ['roach', 30], ['bat', 70], ['crow', 120], ['tick', 180], ['cat', 280], ['wasp', 360], ['ghoul', 450], ['moth', 540], ['brute', 640], ['shade', 750]],
   sewer: [['mawling', 0], ['tick', 0], ['roach', 30], ['bat', 70], ['ghoul', 120], ['bloat', 180], ['moth', 250], ['shade', 330], ['brute', 420], ['wasp', 500]],
 };
 const WEIGHT = { mawling: 4, roach: 2, bat: 1.6, crow: 2, tick: 2, cat: 1.3, wasp: 1.3, ghoul: 1.4, bloat: 1.3, moth: 1, brute: 0.8, shade: 1 };

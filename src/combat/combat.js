@@ -20,6 +20,9 @@ import { junkHit } from '../game/junk.js';
 import { rivalDeath } from '../world/ducts.js';
 import { addXP, championDown, dropMusk } from '../game/progress.js';
 import { onBossHit } from '../entities/brain.js';
+import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
+import { contract } from '../game/contracts.js';
+import { bountyKill } from '../game/events.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -69,7 +72,8 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   }
   let d = base * st.dmg * (melee ? 1 + st.melee : 1) * (src === 'primary' ? st.primMul : 1) * (st.apex && (e.elite || e.boss || e.pred || e.champion) ? st.apex : 1);
   if (st.fury && run.hp < st.maxHp * 0.5) d *= 1.3;
-  const crit = Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
+  const crit = perfectCrit() || Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
+  e.lastSrc = src;
   if (crit) d *= st.critMul;
   if (e.ward > 0) d *= 0.4;
   if (e.boss) d *= onBossHit(e, d); // exposed bosses take more; bursts break their poise
@@ -112,7 +116,8 @@ export function aoe(x, y, z, R, dm, kb, src, slow, itemFx) {
 // ---------- enemy → player ----------
 export function hurtP(d, from, raw) {
   if (G.state !== 'play') return;
-  if (!raw && P.inv > 0) return;
+  if (!raw && P.inv > 0) { tryPerfectDodge(); return; }
+  if (!raw && G.boss && G.boss.revealed) run.bossHit = true;
   if (P.bulwark > 0) {
     d *= 0.3;
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
@@ -166,6 +171,10 @@ export function kill(e) {
   if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech * st.healMul);
   if (st.carrion && !e.boss) run.hp = Math.min(st.maxHp, run.hp + st.maxHp * st.carrion * st.healMul);
   if (e.champion) championDown(e);
+  if (e.lastSrc === 'trap') contract('traps');
+  if (P.shadow && !e.boss) contract('shadow');
+  if (e.elite && !e.champion) contract('elites');
+  if (e.bounty) { contract('bounty'); bountyKill(e); }
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
   if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {
@@ -183,7 +192,7 @@ export function kill(e) {
     G.hitStop = Math.max(G.hitStop, 0.2);
   }
 
-  if (e.rival) { rivalDeath(e, scrapDrop, dropGem); addThreat(0.3); return; }
+  if (e.rival) { rivalDeath(e, scrapDrop, dropGem); addThreat(0.3); contract('rival'); return; }
   if (e.type === 'nest') {
     world.remove(e.mesh);
     run.nests--;
@@ -257,7 +266,8 @@ export function dropKey(x, y, z) {
 }
 
 /** XP for the next level. Income scales with threat (see progress.js), so the pace stays even. */
-export const need = L => Math.floor(8 + (L - 1) * 6 + Math.pow(L - 1, 1.6));
+// The first few levels come quickly so the opening minute has a pick in it.
+export const need = L => Math.floor((8 + (L - 1) * 6 + Math.pow(L - 1, 1.6)) * (L === 1 ? 1 : Math.min(1, 0.7 + 0.1 * L)));
 export function gainXP(v) {
   addXP(v);
   if (run.pendingLv && G.state === 'play') openLevelUp();

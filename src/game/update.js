@@ -23,6 +23,8 @@ import { tickScent } from './scent.js';
 import { tickTraps } from './traps.js';
 import { tickDucts } from '../world/ducts.js';
 import { tickProgress } from './progress.js';
+import { tickEvents } from './events.js';
+import { tickFeel } from './feel.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -429,6 +431,8 @@ export function update(dt) {
   tickInteractives(dt);
   tickTraps(dt);
   tickProgress(dt);
+  tickEvents(dt);
+  tickFeel(dt);
   updatePickups(dt);
   const ex = G.exitD;
   if (ex && Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8) {

@@ -8,7 +8,8 @@ import { ductInfo } from './world/ducts.js';
 import { need } from './combat/combat.js';
 import { giveItem, giveCursed, collectCore } from './game/loot.js';
 import { openLevelUp, renderNest, die, pause } from './ui/screens.js';
-import { dropKey, gainXP, kill, hit } from './combat/combat.js';
+import { dropKey, gainXP, kill, hit, hurtP } from './combat/combat.js';
+import { contract } from './game/contracts.js';
 import { M, T, tAt, topAt, toW, DRY, N4 } from './world/grid.js';
 import { audioReady, music, musicLevel } from './audio/audio.js';
 import { renderer, scene, cutPlane } from './render/renderer.js';
@@ -27,13 +28,13 @@ export function debugApi(state) {
       for (let k = 0; k < M.W * M.H; k++) {
         if (!DRY(M.grid[k])) continue;
         const gx = k % M.W, gz = (k / M.W) | 0;
-        if (gx < 3 || gz < 3 || gx > M.W - 4 || gz > M.H - 4) continue; // the map border caps climbs
+        if (gx < 4 || gz < 4 || gx > M.W - 5 || gz > M.H - 5) continue; // the map border caps climbs
         for (const [dx, dz] of N4) {
           if (tAt(gx + dx, gz + dz) !== 0 || topAt(gx + dx, gz + dz) < minTop || topAt(gx + dx, gz + dz) > maxTop) continue;
           if (!DRY(tAt(gx - dx, gz - dz))) continue;
           const x = toW(gx) - dx * T * 0.1, z = toW(gz) - dz * T * 0.1;
           // Clear run-up: no props, cars or boxes between the stand point and the wall.
-          const blocked = s => state.W.plats.some(p => Math.abs(p.x - (x - dx * s)) < p.w / 2 + 1.2 && Math.abs(p.z - (z - dz * s)) < p.d / 2 + 1.2);
+          const blocked = s => state.W.plats.some(p => !p.thin && Math.abs(p.x - (x + dx * s)) < p.w / 2 + 0.9 && Math.abs(p.z - (z + dz * s)) < p.d / 2 + 0.9);
           if ([-3, -2, -1, 0, 1, 2, 2.4].some(blocked) || !DRY(tAt(gx - dx * 2, gz - dz * 2)) || [1, -1].some(s => tAt(gx + dz * s, gz + dx * s) !== M.grid[k] && !DRY(tAt(gx + dz * s, gz + dx * s)))) continue;
           return { x, z, nx: -dx, nz: -dz, top: topAt(gx + dx, gz + dz) };
         }
@@ -41,6 +42,9 @@ export function debugApi(state) {
       return null;
     },
     cutY: () => cutPlane.constant,
+    hurtP, contract,
+    /** Fire a district event on the next tick. */
+    forceEvent(k) { state.run.forceEv = k; state.run.evT = 0; state.run.events.length = 0; },
     need,
     /** Queue one ordinary level-up screen (tests that need a pick without touching XP). */
     pendLevel() { state.run.level++; state.run.pendingLv++; openLevelUp(); },

@@ -18,6 +18,7 @@ import { WEAP, TOMES } from '../combat/arsenal.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { banner, renderSlots } from '../ui/hud.js';
 import { openLevelUp } from '../ui/screens.js';
+import { contract } from './contracts.js';
 
 export const BREAK_EVERY = 5;
 export const TRIAL_TIME = 45;
@@ -133,6 +134,7 @@ export function championDown(e) {
   run.need = need(run.level);
   run.pendingLv++;
   run.btPick = (run.btPick || 0) + 1;
+  contract('champ');
   levelBurst(true);
   banner(`Breakthrough · level ${run.level}`, 'Choose your reward');
   sfx('level');

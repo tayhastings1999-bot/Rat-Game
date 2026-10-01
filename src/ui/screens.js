@@ -13,6 +13,7 @@ import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
 import { startRun, checkUnlocks, bankSalvage, dominanceOf, menu } from '../game/flow.js';
 import { giveCursed } from '../game/loot.js';
 import { breakOffers, applyKeystone, evolve, EVO, KEYSTONES } from '../game/progress.js';
+import { CONTRACTS } from '../game/contracts.js';
 import { drawMap, renderSlots, hud, banner } from './hud.js';
 import { ICON } from './icons.js';
 
@@ -156,6 +157,7 @@ export function pause(on) {
   show(`<div class="panel narrow frame"><div class="kick px">${fmt(run.time)} · Lv ${run.level} · ${dName()}</div><h2>Paused</h2>
     ${run.mods.map(m => `<p><span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span> ${MODS[m].desc}</p>`).join('')}
     ${Mu}${Cu}${Ju}
+    ${(run.contracts || []).length ? `<h3 class="px" style="margin:8px 0 2px;font-size:13px;color:#c080ff">Contracts</h3>${run.contracts.map(c => `<p>${c.done ? '✓' : '◇'} <b>${CONTRACTS[c.id].name}</b> · ${CONTRACTS[c.id].desc} · ${c.p}/${CONTRACTS[c.id].n} · +${CONTRACTS[c.id].dom} Dominance</p>`).join('')}` : ''}
     ${Wp ? `<div class="tags">${Wp}</div>` : ''}${Tm ? `<div class="tags">${Tm}</div>` : ''}${It ? `<div class="tags">${It}</div>` : ''}${Au ? `<div class="tags">${Au}</div>` : ''}
     <div class="sets px">
       <label>Screen shake<input type="range" id="sSh" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
@@ -284,7 +286,7 @@ function dmgTable() {
   const C = CLASSES[run.cls];
   const names = {
     ...Object.fromEntries(Object.entries(WEAP).map(([k, w]) => [k, w.name])), primary: PRIM[C.prim].name, special: SPECIALS[C.special].name,
-    dot: 'Poison, burn & bleed', level: 'Level-up bursts', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
+    dot: 'Poison, burn & bleed', event: 'District events', level: 'Level-up bursts', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
     livewire: 'Livewire Claws', tesla: 'Tesla Coil', nailbomb: 'Nail Bomb', recoil: 'Slingshot Recoil', overclock: 'Overclock',
   };
   const dmg = Object.entries(run.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 10), mx = dmg.length ? dmg[0][1] : 1;
@@ -300,7 +302,7 @@ export function die() {
   show(`<div class="panel narrow frame"><div class="kick px">${nb ? 'New best' : 'Run over'} · ${dName()}</div><h1 style="font-size:clamp(64px,9vw,120px)">You died</h1>
     <div class="stat px"><div><b>${fmt(run.time)}</b><span>Survived</span></div><div><b>${run.kills}</b><span>Kills</span></div><div><b>${run.level}</b><span>Level</span></div><div><b>${run.tier + 1}</b><span>Districts</span></div><div><b>${(run.T || 0).toFixed(1)}</b><span>Peak threat</span></div></div>
     <p class="px" style="color:#9ad0ff;font-size:13px">+${banked.salvage} salvage · <span style="color:#c080ff">+${banked.dom} dominance</span> banked at the Nest</p>
-    <p class="px" style="font-size:11px;color:var(--dim)">Dominance: kills ${dm.parts.kills.toFixed(1)} · damage ${dm.parts.damage.toFixed(1)} · bosses ${dm.parts.bosses} · lairs ${dm.parts.lairs} · depth ${dm.parts.depth}${dm.mul > 1 ? ` · shortcut ×${dm.mul}` : ''}</p>
+    <p class="px" style="font-size:11px;color:var(--dim)">Dominance: kills ${dm.parts.kills.toFixed(1)} · damage ${dm.parts.damage.toFixed(1)} · bosses ${dm.parts.bosses} · lairs ${dm.parts.lairs} · depth ${dm.parts.depth} · contracts ${dm.parts.contracts}${dm.mul > 1 ? ` · shortcut ×${dm.mul}` : ''}</p>
     ${got.length ? `<p class="px" style="color:#f2b233;font-size:13px">Unlocked: ${got.join(' · ')}</p>` : ''}${dmgTable()}
     <div class="btns"><button class="btn" id="again">Choose a rat</button><button class="btn ghost" id="nest">The Nest</button><span class="px" style="font-size:12px;color:var(--dim)">or press R</span></div></div>`);
   $('again').onclick = menu;

@@ -78,6 +78,17 @@ Movement and signature moves:
 | The Brood Mother | sewer | skitters round to your back, webs your escape line, tick broods, hatching egg lobs, leaps, acid rain |
 | The Rat King | sewer | rolls that ricochet off walls and re-aim at you, royal decrees stamped along your path, tail-whip rings, rat fans, vortex pull, prince adds |
 
+**Moment to moment.**
+- *Perfect dodge.* Roll through an attack in the first instant of the roll and time slows. You get two seconds of guaranteed crits, the roll's stamina back and a chunk of combo.
+- *Cold open.* Runs start mid-chase, with a pack already on your tail. The first level comes quickly and the horde ramps up faster in the first district.
+- *District events* (about every 75–100s, never during a boss fight or a breakthrough trial):
+  - **Food truck crash**: a loot pile with a chest, food, salvage and gems, and the horde converging on it.
+  - **Stampede**: a line of cats charges through. Get clear or get up high.
+  - **Fumigation sweep**: a wall of gas rolls across the whole district. Get on a roof or into the walls; it shreds the horde.
+  - **Roach tide**: a flood of weak roaches, which means easy XP.
+  - **Wanted**: a marked elite with a bounty (salvage and a weapon crate). You have 60 seconds before it escapes.
+- *Contracts.* Each run deals three jobs, shown under the minimap and on the pause screen. Completing one pays Dominance plus salvage on the spot. Untouchable (5 perfect dodges), Engineer (8 trap kills), In the Walls, Turf War, Forager, Dumpster Diver, Unseen (15 kills from shadow), Pack Call, Breakthrough, Bounty Hunter, Flawless (kill a boss without being hit) and Elite Hunter.
+
 **Leveling.** Built to feel smooth, with milestones you have to earn:
 - *Even pace.* XP income rises with the threat (a tougher horde pays more), and if you fall behind the expected level for the run time you earn up to 50% extra until you catch up. Gems come in tiers: blue, green, red and violet.
 - *Every level-up is a beat of relief.* A shockwave shoves the horde back, you heal 5%, and time slows for a moment.

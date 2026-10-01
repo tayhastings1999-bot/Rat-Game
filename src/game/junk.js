@@ -9,6 +9,7 @@ import { chain } from '../combat/arsenal.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { JUNK } from '../data/items.js';
 import { banner, renderSlots } from '../ui/hud.js';
+import { contract } from './contracts.js';
 
 export function giveJunk(id) {
   const pool = Object.keys(JUNK).filter(k => !run.junk.includes(k));
@@ -28,6 +29,7 @@ export function giveJunk(id) {
 /** Dig through a dumpster, bin or sewer heap. Once each. */
 export function rummage(b) {
   b.done = true;
+  contract('bins');
   if (b.lid) b.lid.rotation.x = -1.2;
   puff(b.x, b.y + 1, b.z, 0x6a6258, 12, 2.5);
   sfx('chew');

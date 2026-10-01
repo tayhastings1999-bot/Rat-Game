@@ -54,7 +54,9 @@ await step('start brawler run (city)', async () => {
   await wait(1500);
   const s = await S(() => ({ state: __scurry.G.state, kind: __scurry.M.kind, enemies: __scurry.W.enemies.length }));
   if (s.state !== 'play' || s.kind !== 'city') throw new Error(JSON.stringify(s));
-  await S(() => { __scurry.run.expoCd = 1e9; }); // no owls mid-script; the light step re-enables spotting
+  const co = await S(() => ({ c: __scurry.run.contracts.length, open: __scurry.run.coldOpen }));
+  if (co.c !== 3 || !co.open) throw new Error('no contracts or cold open ' + JSON.stringify(co));
+  await S(() => { __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; }); // no owls or district events mid-script
 });
 await step('move, jump, roll, attack', async () => {
   await S(() => __scurry.god(true));
@@ -111,9 +113,9 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
     return null;
   });
   if (board) {
-    await S(bd => { const { P, M, G } = __scurry, T = 4, toW = g => (g - M.W / 2 + 0.5) * T; P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, board);
-    await page.keyboard.down('KeyW'); await rawWait(250);
-    await page.keyboard.down('KeyE'); await rawWait(4500); await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
+    await S(bd => { const { P, M, G, W } = __scurry, T = 4, toW = g => (g - M.W / 2 + 0.5) * T; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, board);
+    await page.keyboard.down('KeyW'); await until(() => !!__scurry.chewTarget(), 4000);
+    await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, 8000, board.k); await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
     const t = await S(k => __scurry.M.grid[k], board.k);
     if (t !== 1) throw new Error('boards not gnawed (tile ' + t + ')');
   }
@@ -152,7 +154,7 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   await S(() => { __scurry.run.district = 0; });
 });
 await step('staggered roster, secrets, lairs, melee kit', async () => {
-  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.expoCd = 1e9; });
+  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; });
   await wait(600);
   // Early on only mawlings spawn; later types unlock on schedule with a banner.
   const early = await S(() => { const s = new Set(); for (let i = 0; i < 200; i++) s.add(__scurry.pickType()); return [...s]; });
@@ -189,7 +191,7 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   if (!((await S(() => __scurry.run.blood || 0)) > 0)) throw new Error('bloodlust did not stack');
 });
 await step('scramble, wall-bounce, foraging', async () => {
-  await S(() => { __scurry.G.testFreeze = true; }); // hold any boss still through the scripted steps
+  await S(() => { __scurry.G.testFreeze = true; __scurry.W.zones.length = 0; }); // hold any boss still, and no vents shoving the rat, through the scripted steps
   // Hold off level-up screens through the scripted movement/junk/light steps.
   await wait(100);
   await S(() => { const r = __scurry.run; r.needHold = r.need; r.need = 1e12; });
@@ -201,7 +203,7 @@ await step('scramble, wall-bounce, foraging', async () => {
   await S(() => { __scurry.run.sta = __scurry.st.staMax; });
   await page.keyboard.down('KeyW'); await rawWait(150); await page.keyboard.down('ShiftLeft');
   let peak = 0, scr = false;
-  for (let i = 0; i < 20; i++) { await rawWait(60); const r = await S(() => ({ y: __scurry.P.y, s: __scurry.P.scramble })); peak = Math.max(peak, r.y); if (r.s > 0) scr = true; }
+  for (let i = 0; i < 70 && peak < 2; i++) { await rawWait(60); const r = await S(() => ({ y: __scurry.P.y, s: __scurry.P.scramble })); peak = Math.max(peak, r.y); if (r.s > 0) scr = true; }
   await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft');
   if (!scr || peak < 2) throw new Error(`scramble: triggered=${scr} peak=${peak.toFixed(2)} ` + (await S(() => { const P = __scurry.P; return JSON.stringify({ s: __scurry.G.state, carry: !!P.carry, lock: P.lock, sq: P.squeeze, sta: __scurry.run.sta, y: P.y, x: P.x, z: P.z, yaw: __scurry.G.camYaw, lockOn: !!__scurry.G.lockOn, wt: P.wallType, wtop: P.wallTop }); })) + ' wall ' + JSON.stringify(w));
   // Bounce off the wall mid-scramble.
@@ -223,8 +225,7 @@ await step('volatile junk + rummaging', async () => {
   if (!bin) throw new Error('no bins to rummage');
   await S(b => { const P = __scurry.P; P.x = b.x + b.r + 0.6; P.z = b.z; P.y = 0; P.vx = P.vz = 0; }, bin);
   await until(() => { const u = __scurry.useTarget(); return u && u.kind === 'bin'; }, 3000);
-  await page.keyboard.press('KeyE');
-  await wait(200);
+  for (let i = 0; i < 5 && !(await S(b => __scurry.W.bins.find(o => o.x === b.x && o.z === b.z).done, bin)); i++) { await page.keyboard.press('KeyE'); await wait(200); }
   if (!(await S(b => __scurry.W.bins.find(o => o.x === b.x && o.z === b.z).done, bin))) throw new Error('rummage did nothing');
   await S(() => { for (const k of ['volt', 'blade', 'rag', 'sinker']) if (!__scurry.run.junk.includes(k)) __scurry.giveJunk(k); });
   const s0 = await S(() => ({ n: __scurry.run.junk.length, tox: __scurry.st.toxImmune, heal: __scurry.st.healMul, noScr: __scurry.st.noScramble, sta: __scurry.st.staMax }));
@@ -406,6 +407,32 @@ await step('leveling: breakthrough trial, champion, rewards, crate, evolution', 
   if (!(await S(() => __scurry.run.weapons.find(w => w.id === 'claw').evo))) throw new Error('claws did not evolve');
   await S(() => { __scurry.G.testNoBusy = false; });
 });
+await step('perfect dodge, district events, contracts', async () => {
+  await S(() => { const { W, G } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; __scurry.run.sta = __scurry.st.staMax; __scurry.P.rollCd = 0; });
+  // Roll, and get "hit" in the opening of the roll.
+  await page.keyboard.press('ShiftLeft');
+  const pd = await rawUntil(() => { const { P } = __scurry; if (P.roll > 0.1) { __scurry.hurtP(10, null); return { t: P.perfectT, slow: __scurry.G.slowMo }; } return null; }, 3000);
+  if (!pd || !(pd.t > 0) || !(pd.slow > 0)) throw new Error('perfect dodge did not trigger ' + JSON.stringify(pd) + (await S(() => { const { P, run, G } = __scurry; return JSON.stringify({ st: G.state, roll: P.roll, cd: P.rollCd, sta: run.sta, sq: P.squeeze, chew: P.chewing }); })));
+  for (const k of ['feast', 'stampede', 'fumigate', 'tide', 'bounty']) {
+    await S(k => __scurry.forceEvent(k), k);
+    const on = await until(k => __scurry.run.events.some(v => v.kind === k), 4000, k);
+    if (!on) throw new Error('event did not start: ' + k);
+    if (k === 'stampede' && !(await S(() => __scurry.W.enemies.some(e => e.stampede)))) throw new Error('no stampede cats');
+    if (k === 'tide' && !(await until(() => (__scurry.run.events.find(v => v.kind === 'tide') || {}).got > 10, 6000))) throw new Error('no roach tide');
+    if (k === 'feast') { await wait(600); await shot('03l-event-feast'); }
+    if (k === 'bounty') {
+      const c0 = await S(() => __scurry.W.crates.length);
+      await S(() => __scurry.kill(__scurry.W.enemies.find(e => e.bounty)));
+      if (!(await until(c0 => __scurry.W.crates.length > c0, 2000, c0))) throw new Error('bounty paid nothing');
+    }
+    await S(() => { __scurry.run.events.length = 0; __scurry.run.evT = 999; });
+  }
+  // Contracts complete and pay Dominance.
+  await S(() => { const r = __scurry.run; r.contracts = [{ id: 'bins', p: 4, done: false }]; r.contractDom = 0; __scurry.contract('bins'); });
+  const cd = await S(() => ({ d: __scurry.run.contractDom, done: __scurry.run.contracts[0].done }));
+  if (!cd.done || !(cd.d > 0)) throw new Error('contract did not pay ' + JSON.stringify(cd));
+  await S(() => { __scurry.G.testNoBusy = false; for (const e of __scurry.W.enemies) if (e.type === 'roach' || e.stampede) __scurry.kill(e); });
+});
 await step('corrupted elites spawn and die', async () => {
   await S(() => { __scurry.G.testFreeze = false; });
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
@@ -435,8 +462,7 @@ await step('surface boss: three phases, death, exits', async () => {
   await S(() => __scurry.hitBoss(0.08));
   const stg = await S(() => ({ s: __scurry.G.boss.brain.stagger, label: document.getElementById('bossLabel').textContent }));
   if (!(stg.s > 0)) throw new Error('burst did not stagger the boss ' + JSON.stringify(stg));
-  await wait(200);
-  if (!(await S(() => document.getElementById('bossLabel').textContent.includes('STAGGERED')))) throw new Error('boss bar does not show the stagger');
+  if (!(await rawUntil(() => document.getElementById('bossLabel').textContent.includes('STAGGERED'), 1500))) throw new Error('boss bar does not show the stagger');
   await shot('04-boss');
   await S(() => __scurry.hurtBoss(0.4));
   await wait(2500);
@@ -642,6 +668,8 @@ await page.close(); // stop the desktop session's game loop competing for CPU
     await tp.locator('.card[data-k="brawler"]').scrollIntoViewIfNeeded();
     await tp.tap('.card[data-k="brawler"]');
     await tp.waitForTimeout(1200);
+    for (let i = 0; i < 10 && (await tp.evaluate(() => __scurry.G.state)) === 'levelup'; i++) { await tp.tap('.card[data-i="0"]'); await tp.waitForTimeout(200); }
+    await tp.evaluate(() => { __scurry.run.need = 1e9; __scurry.run.evT = 1e9; });
     const s = await tp.evaluate(() => ({ state: __scurry.G.state, touch: document.body.classList.contains('touch'), vis: getComputedStyle(document.getElementById('touch')).display }));
     if (s.state !== 'play' || !s.touch || s.vis !== 'block') throw new Error(JSON.stringify(s));
     await tp.evaluate(() => __scurry.god(true));

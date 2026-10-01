@@ -12,6 +12,7 @@ import { useTarget, grabTarget, chewTarget } from '../entities/player.js';
 import { activeBuffs } from '../game/forage.js';
 import { EVO, capped } from '../game/progress.js';
 import { bossStatus } from '../entities/bosses.js';
+import { contractsHTML } from '../game/contracts.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
 
 export function initHudIcons() {
@@ -43,6 +44,7 @@ function objective() {
   return `Nests left ${run.nests} · Boss wakes in ${fmt(Math.max(0, run.bossAt - (run.time - run.dStart)))}${key}`;
 }
 
+let lastC = '';
 export function hud() {
   $('hpFill').style.width = clamp(run.hp / st.maxHp * 100, 0, 100) + '%';
   $('hpTxt').textContent = Math.ceil(Math.max(0, run.hp)) + ' / ' + st.maxHp;
@@ -67,14 +69,17 @@ export function hud() {
     (P.scent ? `<span class="chip" style="--cc:#c8ff20">SCENT ${st.rag ? '∞' : Math.ceil(P.scentE) + 's'}</span>` : P.scentE < st.scentMax - 0.5 ? `<span class="chip" style="--cc:#6a7a4a">Nose ${Math.round(P.scentE / st.scentMax * 100)}%</span>` : '') +
     activeBuffs().map(b => `<span class="chip" style="--cc:${hexs(b.col)}">${b.name} ${Math.ceil(b.t)}s</span>`).join('') +
     (P.chain ? `<span class="chip" style="--cc:#ffd070">MOMENTUM ×${P.chain}</span>` : '') +
+    (P.perfectT > 0 ? '<span class="chip" style="--cc:#9af0ff">PERFECT · GUARANTEED CRITS</span>' : '') +
     (CLASSES[run.cls].prim === 'shiv' && P.ambush > 0 ? '<span class="chip" style="--cc:#6affb0">AMBUSH READY</span>' : '');
   $('dmgTotal').textContent = commas(run.dmg);
   $('kills').textContent = run.kills;
   $('clock').textContent = G.mode === 'trial' ? fmtT(run.time) : fmt(run.time);
   $('obj').textContent = objective();
+  const ch = contractsHTML();
+  if (ch !== lastC) { $('contracts').innerHTML = ch; lastC = ch; }
   // Boss UI stays hidden until you enter its arena (or hit it).
   const b = G.boss;
-  if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; banner(b.name, 'Fight or flee'); }
+  if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; run.bossHit = false; banner(b.name, 'Fight or flee'); }
   $('bossWrap').style.display = b && b.revealed ? 'flex' : 'none';
   if (b) { $('bossFill').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%'; $('bossLabel').textContent = (b.label || '') + bossStatus(b); }
   const cmb = $('combo'), ready = !!run.shriekReady;
@@ -146,6 +151,8 @@ export function drawMap(cv, px, radius) {
   if (G.manhole) dot(G.manhole, '#b070ff', 7);
   if (G.exitD) dot(G.exitD, '#ffffff', 7);
   if (G.boss) dot(G.boss, '#ff2a60', 8);
+  const em = G.evMarker;
+  if (em) dot(em.e || em, em.col, 9);
   // The pesticide rag's scent gives away every enemy, seen or not.
   if (st.rag) for (const e of W.enemies) if (!e.dead && e.type !== 'nest') { x.fillStyle = e.pred || e.boss ? '#ff2a60' : '#d04030'; x.fillRect(ox + (e.x / T + M.W / 2 - 0.5 - cx) * px - 1.5, oy + (e.z / T + M.H / 2 - 0.5 - cz) * px - 1.5, 3, 3); }
   x.save();

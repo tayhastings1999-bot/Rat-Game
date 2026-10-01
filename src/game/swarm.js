@@ -9,6 +9,7 @@ import { M, gi, toG, floorY, collideBody } from '../world/grid.js';
 import { hit } from '../combat/combat.js';
 import { openTile } from '../entities/player.js';
 import { banner } from '../ui/hud.js';
+import { contract } from './contracts.js';
 
 export const COMBO_MAX = 100;
 const SWARM_N = 8, SWARM_LIFE = 10;
@@ -39,6 +40,7 @@ export function shriek() {
   if (!run.shriekReady || G.state !== 'play') return;
   run.shriekReady = false;
   run.combo = 0;
+  contract('shriek');
   sfx('shriek');
   G.shake = Math.max(G.shake, 0.5);
   for (let i = 0; i < 3; i++) fx('ring', P.x, P.y, P.z, 6 + i * 5, 0xffd040, 0.5 + i * 0.15);

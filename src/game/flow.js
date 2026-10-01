@@ -17,6 +17,8 @@ import { setRat, clearFamiliars, makeGhostRat, FACE } from '../entities/rat.js';
 import { banner, renderSlots, hud } from '../ui/hud.js';
 import { renderMenu, hideOverlay, openLevelUp } from '../ui/screens.js';
 import { STARTS } from '../data/items.js';
+import { dealContracts } from './contracts.js';
+import { coldOpen } from './feel.js';
 
 export function freshStats(C) {
   const n = meta.nest;
@@ -40,6 +42,8 @@ export function setupWorld(seed) {
   for (const e of W.enemies) if (e.mesh && e.type !== 'nest') scene.remove(e.mesh);
   G.boss = null;
   G.lockOn = null;
+  G.evMarker = null;
+  if (run.events) run.events.length = 0;
   G.darkness = 0;
   $('bossWrap').style.display = 'none';
   const D = curD();
@@ -85,8 +89,8 @@ export function startRun(k) {
   resetObj(run, {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], junk: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
     pendingLv: 0, specT: 0, primT: 0, lowWarned: false, hp: 0, sta: 100, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
-    dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 3, surgeT: 90, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
-    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, xpBank: 0, trial: null, trialCd: 1.5, trialCue: false, btPick: 0, keystones: [], windUsed: false, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
+    dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 1.5, surgeT: 55, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
+    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, contracts: [], contractDom: 0, xpBank: 0, trial: null, trialCd: 1.5, trialCue: false, btPick: 0, keystones: [], windUsed: false, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
   run.hp = st.maxHp;
@@ -123,6 +127,8 @@ export function startRun(k) {
   hud();
   G.last = performance.now();
   banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), at ? 'Shortcut · three free picks to catch up' : run.mods.map(m => MODS[m].name).join(' · '));
+  dealContracts();
+  if (!at && G.mode !== 'trial') coldOpen();
   if (at) {
     for (let i = 0; i < 3; i++) { run.level++; run.need = need(run.level); }
     run.pendingLv = 3;
@@ -151,6 +157,7 @@ function transition(apply, title, sub) {
     apply();
     run.bossDone = false;
     run.windUsed = false;
+    run.evT = 45;
     if (run.trial) { run.trial = null; run.trialCd = 4; }
     run.dStart = run.time;
     run.nests = 0;
@@ -193,7 +200,7 @@ export function checkUnlocks() {
 /** Dominance: how hard you ruled the streets this run. */
 export function dominanceOf() {
   const parts = {
-    kills: (run.kills || 0) / 30, damage: (run.dmg || 0) / 10000, bosses: (run.bosses || 0) * 8, lairs: (run.minis || 0) * 3, depth: (run.tier || 0) * 2,
+    kills: (run.kills || 0) / 30, damage: (run.dmg || 0) / 10000, bosses: (run.bosses || 0) * 8, lairs: (run.minis || 0) * 3, depth: (run.tier || 0) * 2, contracts: run.contractDom || 0,
   };
   const raw = Object.values(parts).reduce((a, b) => a + b, 0);
   return { total: Math.floor(raw * (run.domMul || 1)), parts, mul: run.domMul || 1 };

@@ -16,6 +16,7 @@ import { sfx } from '../audio/audio.js';
 import { M, T, DUCT_TOP, gi, inG, toG, toW, tAt, tileAt, bfs, OPEN, DRY, N4 } from './grid.js';
 import { glob } from '../combat/arsenal.js';
 import { hurtP } from '../combat/combat.js';
+import { contract } from '../game/contracts.js';
 
 export const DUCT = 11;
 /** Where the cutaway slices the buildings while you're inside. */
@@ -185,7 +186,9 @@ export function applyCutaway() {
 // ---------- runtime ----------
 let cutK = 0;
 export function tickDucts(dt) {
+  const was = P.inDuct;
   P.inDuct = tileAt(P.x, P.z) === DUCT && P.y < DUCT_TOP;
+  if (P.inDuct && !was) contract('duct');
   // Slice the buildings down smoothly as you crawl in; restore when you're out.
   cutK += ((P.inDuct ? 1 : 0) - cutK) * Math.min(1, 10 * dt);
   cutPlane.constant = cutK > 0.02 ? CUT_Y + (1 - cutK) * 30 : 1e4;

@@ -58,6 +58,7 @@ function scan() {
   if (G.mode === 'survival' && G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
   if (W.keys.length) tgt(W.keys, 0xffd040);
   if (G.boss && !G.boss.revealed) tgt([G.boss], 0xff2a60);
+  if (G.evMarker) tgt([G.evMarker.e || G.evMarker], 0xffd040);
   tgt(W.caches.filter(c => !c.taken), 0xffe070);
   tgt(W.chests.filter(c => !c.open), 0xffa030);
   tgt(W.benches, 0x4aa3ff);

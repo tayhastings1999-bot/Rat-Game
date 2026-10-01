@@ -258,8 +258,10 @@ export function pressE() {
   if (P.carry) { dropCarry(); return; }
   const u = useTarget();
   // A bin never gets in the way of gnawing the wall you're facing.
+  // A bin never steals E from a gnaw point you're closer to (or the wall you're facing).
   const c0 = u && u.kind === 'bin' && chewTarget();
-  if (u && !(c0 && c0.kind === 'tile')) { doUse(u); return; }
+  const gnawFirst = c0 && (c0.kind === 'tile' || Math.hypot((c0.t ? c0.t.gx : c0.it.x) - P.x, (c0.t ? c0.t.gz : c0.it.z) - P.z) < Math.hypot(u.o.x - P.x, u.o.z - P.z) - u.o.r);
+  if (u && !gnawFirst) { doUse(u); return; }
   const o = grabTarget();
   if (o) { P.carry = o; o.carried = true; P.chewing = false; return; }
   if (chewTarget()) { P.chewing = true; P.chewT = 0; }

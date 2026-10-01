@@ -34,6 +34,7 @@ function loop(now) {
   G.time += dt;
   let sdt = dt;
   if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; }
+  else if (G.slowMo > 0) { G.slowMo -= dt; sdt = dt * 0.3; } // perfect dodge
   const t0 = performance.now();
   if (G.state === 'play') {
     update(sdt);
