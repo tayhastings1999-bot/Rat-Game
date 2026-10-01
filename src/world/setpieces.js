@@ -31,6 +31,7 @@ import { hit, hurtP, dropFood, scrapDrop, dropGem, addThreat } from '../combat/c
 import { spawnEnemy, addPred } from '../entities/mobs.js';
 import { dropCrate } from '../game/progress.js';
 import { puddle, warn } from '../combat/hazards.js';
+import { clearMouths, nearMouth } from './ducts.js';
 
 const lam = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, ...o });
 const basic = c => new THREE.MeshBasicMaterial({ color: c });
@@ -83,8 +84,10 @@ function buildInterior(I) {
   for (let y = I.y; y < I.y + I.h; y++) for (let x = I.x; x < I.x + I.w; x++) {
     if (Math.abs(x - (fx0 - fdx)) + Math.abs(y - (fz0 - fdz)) === 0) continue;
     if (I.back && Math.abs(x - (I.back[0] - I.back[2])) + Math.abs(y - (I.back[1] - I.back[3])) === 0) continue;
+    if (nearMouth(toW(x), toW(y))) continue; // keep crawlspace mouths clear
     tiles.push([x, y]);
   }
+  if (!tiles.length) return;
   shuffleR(tiles);
   const at = i => { const t = tiles[i % tiles.length]; return [toW(t[0]), toW(t[1])]; };
   const wood = lam(0x7a5838, { map: stoneTex }), steel = lam(0xb8c0c8, { map: metalTex });
@@ -192,7 +195,7 @@ function buildTram(info) {
 }
 function tickTram(dt) {
   const tr = W.tram;
-  if (!tr) return;
+  if (!tr || (G.testNoRoles && !tr.forced)) return; // debug: scripted tests park the tram unless they call it
   const perp = (x, z) => tr.axis === 'z' ? x - tr.c : z - tr.c, along = (x, z) => tr.axis === 'z' ? z : x;
   if (tr.state === 'idle') {
     tr.t -= dt;
@@ -245,7 +248,7 @@ function buildMarket(lot) {
   const stalls = [];
   for (let y = lot.y; y < lot.y + lot.h; y++) for (let x = lot.x; x < lot.x + lot.w; x++) if ((x + y) % 2 === 0 && DRY(tAt(x, y))) stalls.push([x, y]);
   shuffleR(stalls);
-  for (const [gx, gz] of stalls.slice(0, 6)) {
+  for (const [gx, gz] of stalls.filter(([x, y]) => !nearMouth(toW(x), toW(y))).slice(0, 6)) {
     const x = toW(gx), z = toW(gz), col = AWN[ri(0, AWN.length - 1)], rot = rng.next() < 0.5 ? 0 : PI2;
     const g = new THREE.Group();
     mkMesh(Bx(2.6, 1, 1.2), lam(0x6a4a2a, { map: stoneTex }), 0, 0.5, 0, g);
@@ -283,6 +286,7 @@ function robStall(u, lamp) {
 // ---------- the crane site ----------
 function buildCrane(lot) {
   const x = toW(lot.x) + (lot.w * T) / 2 - T / 2, z = toW(lot.y) + (lot.h * T) / 2 - T / 2, H = 16;
+  if (nearMouth(x, z, 6)) return;
   const steel = lam(0xe0b030, { map: metalTex }), dark = lam(0x2a2a30, { map: metalTex });
   for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mkMesh(Bx(0.18, H, 0.18), steel, x + sx * 0.6, H / 2, z + sz * 0.6);
   for (let y = 1; y < H; y += 1.6) for (const s of [-1, 1]) {
@@ -382,7 +386,7 @@ function tickCrane(dt) {
 function buildGarden(lot) {
   const soil = lam(0x4a3020, { map: furTex }), plank = lam(0x7a5838, { map: stoneTex });
   for (let y = lot.y; y < lot.y + lot.h; y++) for (let x = lot.x; x < lot.x + lot.w; x++) {
-    if ((x + y) % 2 || !DRY(tAt(x, y))) continue;
+    if ((x + y) % 2 || !DRY(tAt(x, y)) || nearMouth(toW(x), toW(y))) continue;
     const cx = toW(x), cz = toW(y);
     staticBox(cx, cz, 2.6, 1.6, 0.5, plank);
     mkMesh(Bx(2.4, 0.08, 1.4), soil, cx, 0.52, cz);
@@ -546,6 +550,12 @@ export function buildSetPieces(info) {
   if (name === 'Rust Yards' || chance(0.25)) { const L = take(l => (l.type === 'lot' || l.type === 'yard') && l.w >= 3 && l.h >= 3); if (L) buildCrane(L); }
   if (name === 'Hollow Heights' || chance(0.25)) { const L = take(l => l.type === 'park' && l.w >= 3 && l.h >= 3); if (L) buildGarden(L); }
   buildBridges();
+  clearMouths();
+  // Anything built on top of a fungus buries it.
+  for (const f of W.fungi || []) {
+    if (f.taken) continue;
+    if (W.plats.some(p => !p.thin && Math.abs(p.x - f.x) < p.w / 2 + 0.3 && Math.abs(p.z - f.z) < p.d / 2 + 0.3 && p.y > f.y + 0.4 && p.y - p.th < f.y + 1)) { f.taken = true; world.remove(f.g); }
+  }
   run.rain = (run.tier || 0) > 0 && (name === 'Hollow Heights' ? chance(0.6) : chance(0.3));
   rainOn(run.rain);
 }

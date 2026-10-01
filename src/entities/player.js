@@ -278,9 +278,12 @@ export function pressE() {
   const cd = c0 ? (c0.kind === 'tile' ? 0.8 : Math.hypot((c0.t ? c0.t.gx : c0.cg ? c0.cg.x : c0.it.x) - P.x, (c0.t ? c0.t.gz : c0.cg ? c0.cg.z : c0.it.z) - P.z)) : 1e9;
   const gnawFirst = c0 && cd < Math.hypot(u.o.x - P.x, u.o.z - P.z) - (u.o.cr ?? u.o.r ?? 0.6);
   if (u && !gnawFirst) { doUse(u); return; }
-  const o = grabTarget();
-  if (o) { P.carry = o; o.carried = true; P.chewing = false; return; }
-  if (chewTarget()) { P.chewing = true; P.chewT = 0; }
+  // Grab or gnaw: whichever is closer (a cage or board you're facing beats a crate beside you).
+  const o = grabTarget(), c = chewTarget();
+  const od = o ? Math.hypot(o.x - P.x, o.z - P.z) - Math.max(o.w, o.d) / 2 : 1e9;
+  const chd = c ? (c.kind === 'tile' ? 0.4 : Math.hypot((c.t ? c.t.gx : c.cg ? c.cg.x : c.it.x) - P.x, (c.t ? c.t.gz : c.cg ? c.cg.z : c.it.z) - P.z) * 0.5) : 1e9;
+  if (o && od <= chd) { P.carry = o; o.carried = true; P.chewing = false; return; }
+  if (c) { P.chewing = true; P.chewT = 0; }
 }
 export function dropCarry() {
   const o = P.carry;

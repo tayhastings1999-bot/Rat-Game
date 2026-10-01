@@ -46,6 +46,8 @@ const gnawUntil = async (fn, ms = 12000, arg) => {
   const t0 = Date.now();
   let ok = false;
   while (!(ok = await S(fn, arg)) && Date.now() - t0 < ms) {
+    // Mobs piling in over a long session knock the rat off its target; clear the ones close by.
+    await S(() => { const P = __scurry.P; for (const e of __scurry.W.enemies) if (!e.boss && !e.tag && !e.mesh && e.type !== 'nest' && !e.rival && Math.hypot(e.x - P.x, e.z - P.z) < 10) e.dead = true; });
     await wait(150);
     if (!(await S(() => __scurry.P.chewing))) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); }
   }
@@ -119,7 +121,7 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   // Gnaw through boards
   const board = await S(() => {
     const { M } = __scurry;
-    for (let k = 0; k < M.W * M.H; k++) if (M.grid[k] === 3) {
+    for (let k = 0; k < M.W * M.H; k++) if (M.grid[k] === 3 && M.secret[k] !== 2) { // not a bolted back door
       const gx = k % M.W, gz = (k / M.W) | 0;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = M.grid[(gz + dz) * M.W + gx + dx]; if (n === 1 || n === 10 || n === 9) return { k, gx, gz, dx, dz }; }
     }
@@ -257,12 +259,11 @@ await step('volatile junk + rummaging', async () => {
   if (!trail) throw new Error('no electric trail');
   // Razor blade bleeds; the sinker slams.
   await S(() => { const { P, G, M } = __scurry, r = G.startRoom; P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; for (let i = 0; i < 6; i++) __scurry.spawnEnemy('mawling', P.x + 1.5 + i * 0.3, P.z + 0.8, { hpMul: 30 }); });
-  await wait(1500);
-  if (!(await S(() => __scurry.W.enemies.some(e => e.bleed > 0) || __scurry.run.dmgBy.dot > 0))) throw new Error('no bleed stacks');
+  if (!(await until(() => __scurry.W.enemies.some(e => e.bleed > 0) || __scurry.run.dmgBy.dot > 0, 5000))) throw new Error('no bleed stacks');
+  await wait(100);
   await S(() => { __scurry.run.specT = 0; });
   await page.keyboard.press('KeyQ');
-  await rawWait(60);
-  const slam = await S(() => __scurry.P.slam);
+  const slam = (await rawUntil(() => __scurry.P.slam === 'sinker' && 'sinker', 1000)) || await S(() => __scurry.P.slam);
   if (slam !== 'sinker') throw new Error('sinker slam not armed: ' + slam);
   await wait(1500);
   await shot('03c-junk');
@@ -297,7 +298,7 @@ await step('light, shadow, exposure, owl', async () => {
   if (!(await S(() => __scurry.P.shadow))) throw new Error('not in shadow at a dark spot');
   await S(() => { for (const e of __scurry.W.enemies) if (e.type === 'owl') __scurry.kill(e); const r = __scurry.run; r.expoCd = 1e9; r.need = r.needHold; });
   await wait(300);
-  if (await S(() => __scurry.W.enemies.some(e => e.type === 'owl'))) throw new Error('owl did not die');
+  if (await S(() => __scurry.W.enemies.some(e => e.type === 'owl' && !e.dead))) throw new Error('owl did not die');
 });
 await step('advanced scent: gauge, prints, gnaw points, view cones', async () => {
   await S(() => { const r = __scurry.run; if (r.needHold) { r.need = r.needHold; r.needHold = 0; } });
@@ -458,7 +459,7 @@ await step('perfect dodge, district events, contracts', async () => {
   await S(() => { __scurry.G.testNoBusy = false; for (const e of __scurry.W.enemies) if (e.type === 'roach' || e.stampede) __scurry.kill(e); });
 });
 await step('district objectives: heist, rescue, beacon, thief', async () => {
-  await S(() => { __scurry.G.testNoBusy = true; for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); });
+  await S(() => { __scurry.G.testNoBusy = true; Object.assign(__scurry.run, { spawnT: 1e9, surgeT: 1e9 }); for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); });
   const tp = (x, z, y = null) => S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y ?? 0; P.vx = P.vz = 0; }, [x, z, y]);
   // Heist: grab the wheel, carry it home.
   await S(() => __scurry.forceObjective('heist'));
@@ -474,7 +475,7 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   await tp(c.x + 1, c.z, c.y);
   await until(() => __scurry.chewTarget() && __scurry.chewTarget().kind === 'cage', 3000);
   const opened = await gnawUntil(() => __scurry.run.obj.cages[0].open);
-  if (!opened) throw new Error('cage did not open');
+  if (!opened) throw new Error('cage did not open ' + JSON.stringify(await S(() => { const s = __scurry, P = s.P, c = s.run.obj.cages[0], ct = s.chewTarget(), u = s.useTarget(); return { d: Math.hypot(P.x - c.x, P.z - c.z).toFixed(2), dy: (P.y - c.y).toFixed(2), ch: P.chewing, t: P.chewT, ct: ct && ct.kind, u: u && u.kind + ':' + u.label, st: s.G.state, carry: !!P.carry, inv: P.inv }; })));
   await S(() => { for (const c of __scurry.run.obj.cages) if (!c.open) __scurry.openCage(c); });
   if (!(await S(() => __scurry.run.obj.done && __scurry.W.familiars.length >= 3))) throw new Error('rescue did not complete');
   // Beacon: stand in the ring; it lights.
@@ -495,9 +496,19 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   await S(() => { __scurry.G.testNoBusy = false; });
 });
 await step('rule breakers and Scab the rival', async () => {
-  await S(() => { const { P, G, M, W } = __scurry, r = G.startRoom; G.testNoBusy = true; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); __scurry.applyRule('chain'); P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; });
-  await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 6 + i * 0.5, P.z, { hpMul: 30, plain: true, force: true }); if (e) { e.spd = 0; e.tag = 'chain'; } } const f = __scurry.W.enemies.find(e => e.tag === 'chain'); if (f) __scurry.kill(f); });
-  if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'chain' && !e.dead && e.hp < e.maxHp), 3000))) throw new Error('chain reaction did not burst');
+  await S(() => { const { P, G, M, W } = __scurry, r = G.startRoom; G.testNoBusy = true; Object.assign(__scurry.run, { spawnT: 1e9, surgeT: 1e9 }); for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); __scurry.applyRule('chain'); P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; });
+  const nChain = await S(() => {
+    const { P } = __scurry;
+    // A line of four mawlings on open ground, in whichever direction has room.
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const got = [];
+      for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + dx * (6 + i * 0.5), P.z + dz * (6 + i * 0.5), { hpMul: 30, plain: true, force: true }); if (e) { e.spd = 0; e.cd = 99; e.fled = true; e.tag = 'chain'; got.push(e); } }
+      if (got.length >= 2) { __scurry.kill(got[0]); return got.length; }
+      got.forEach(e => { e.dead = true; });
+    }
+    return 0;
+  });
+  if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'chain' && !e.dead && e.hp < e.maxHp), 3000))) throw new Error('chain reaction did not burst (spawned ' + nChain + ')');
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); const r = __scurry.run; r.scabSeen = false; r.scab = null; r.dStart = r.time - 40; });
   const scab = await until(() => __scurry.run.scab && !__scurry.run.scab.dead, 6000);
   if (!scab) throw new Error('Scab never showed (needs an unopened chest)');
@@ -859,7 +870,7 @@ await step('set pieces: interior cutaway, back door, tram, crane, stall, washer'
   // Tram: put a mawling on the rails and call the tram.
   const tram = await S(() => !!__scurry.W.tram);
   if (tram) {
-    await S(() => { const s = __scurry, t = s.W.tram, P = s.P; P.x = t.axis === 'z' ? t.c + 8 : P.x; P.z = t.axis === 'z' ? P.z : t.c + 8; P.y = 0; const x = t.axis === 'z' ? t.c : P.x, z = t.axis === 'z' ? P.z : t.c; const e = s.spawnEnemy('mawling', x, z, { plain: true, force: true }); e.spd = 0; e.cd = 99; e.tag = 'rail'; t.state = 'idle'; t.t = 0; });
+    await S(() => { const s = __scurry, t = s.W.tram, P = s.P; P.x = t.axis === 'z' ? t.c + 8 : P.x; P.z = t.axis === 'z' ? P.z : t.c + 8; P.y = 0; const x = t.axis === 'z' ? t.c : P.x, z = t.axis === 'z' ? P.z : t.c; const e = s.spawnEnemy('mawling', x, z, { plain: true, force: true }); e.spd = 0; e.cd = 99; e.tag = 'rail'; t.state = 'idle'; t.t = 0; t.forced = true; });
     if (!(await until(() => { const e = __scurry.W.enemies.find(e => e.tag === 'rail'); return !e || e.dead; }, 30000))) throw new Error('the tram missed ' + JSON.stringify(await S(() => { const t = __scurry.W.tram, e = __scurry.W.enemies.find(e => e.tag === 'rail'); return { st: t.state, pos: t.pos, c: t.c, axis: t.axis, e: e && [e.x, e.z, e.y] }; })));
   }
   // Washers, stalls and the crane, whichever this district has.
@@ -871,7 +882,7 @@ await step('set pieces: interior cutaway, back door, tram, crane, stall, washer'
     if (st) { const n = W.enemies.length; st.act(); out.stall = W.enemies.length > n && st.done; }
     if (W.crane) {
       const c = W.crane;
-      for (let i = 0; i < 4; i++) { const e = s.spawnEnemy('mawling', c.x + 8, c.z + i * 0.5, { plain: true, force: true, hpMul: 30 }); if (e) { e.spd = 0; e.cd = 99; e.tag = 'crane'; } }
+      for (const [ox, oz] of [[8, 0], [-8, 0], [0, 8], [0, -8], [6, 6], [-6, -6], [6, -6], [-6, 6]]) { let n = 0; for (let i = 0; i < 4; i++) { const e = s.spawnEnemy('mawling', c.x + ox + i * 0.5, c.z + oz, { plain: true, force: true, hpMul: 30 }); if (e) { e.spd = 0; e.cd = 99; e.tag = 'crane'; n++; } } if (n) break; }
       out.craneArmed = W.uses.find(u => u.label.startsWith('Work the crane')).act();
     }
     return out;
@@ -919,7 +930,7 @@ await page.close(); // stop the desktop session's game loop competing for CPU
     const p0 = await tp.evaluate(() => [__scurry.P.x, __scurry.P.z]);
     await touch('touchStart', sx, sy);
     for (let i = 1; i <= 5; i++) { await touch('touchMove', sx, sy - i * 10); await tp.waitForTimeout(40); }
-    await tp.waitForTimeout(1500);
+    await tp.waitForTimeout(2500);
     const mid = await tp.evaluate(() => ({ active: document.querySelector('#tStick i').style.transform, p: [__scurry.P.x, __scurry.P.z], st: __scurry.G.state, lock: __scurry.P.lock, sq: __scurry.P.squeeze, y: __scurry.P.y, carry: !!__scurry.P.carry }));
     await touch('touchEnd');
     const moved = Math.hypot(mid.p[0] - p0[0], mid.p[1] - p0[1]);

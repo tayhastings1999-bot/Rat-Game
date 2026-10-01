@@ -59,13 +59,13 @@ export function setupWorld(seed) {
   buildWorld();
   populate(info);
   setupObjective(info);
-  placeRoles();
   unseedRng();
   clearFx();
   const s = info.startRoom;
   P.x = toW(s.cx); P.z = toW(s.cy); P.y = floorY(P.x, P.z);
   P.vx = P.vy = P.vz = 0;
   P.safe = { x: P.x, z: P.z, y: P.y };
+  placeRoles(); // after the rat is at the start, so ambushers keep their distance
   P.poisonT = 0; P.roll = 0; P.chain = 0; P.scramble = 0; P.scent = false; P.scentE = st.scentMax; P.carry = null; P.bulwark = 0; P.glideT = 0;
   G.camPos.set(P.x, 12, P.z + 12);
   G.flowT = 0;

@@ -157,13 +157,58 @@ You pick any rat, and a local best-of-the-day board keeps your top five scores.
 
 **Classes.** Melee rats (Gutter Brawler, Sewer Rat) lunge into range, heal a little on every hit, take 20% less damage from bites and build **Bloodlust** (faster attacks and movement) from kills. Gutter Brawler, Plaguebearer, Sewer Slinger, Rat Warlock, and two new ones: the **Sewer Rat** (tank: Gnash plus a reflecting Bulwark) and the **Roof Rat** (nimble: double jump, Needle Darts, Updraft glide). The **Sewer Sneak** unlocks at 60 lifetime Dominance (or buy it for 30): only 70 HP, but a 16-second scent gauge that refills twice as fast, a 70% faster squeeze, a **Shiv** that deals triple damage from ambush (after a second in shadow or smoke, or on a cat that hasn't noticed you) and 1.8× from behind, and a **Smoke Bomb** that hides you from predators and owls, makes hunting cats lose you, slows the horde inside and primes an ambush.
 
+**Signature moves (G).** Each class has one move nobody else has:
+- Gutter Brawler, *Grab & Hurl*: seize a mob and throw it into the pack (heavy mobs get shoved instead).
+- Plaguebearer, *Blight Burst*: every poisoned mob within 12 bursts, hurting and poisoning its neighbours.
+- Sewer Slinger, *Ricochet*: a piercing stone that banks off walls four times.
+- Rat Warlock, *Hex Marks*: marks up to five mobs; the marks detonate two seconds later.
+- Sewer Rat, *Shield Parry*: brace for half a second; the next hit is blocked, its attacker stunned, and nearby shots are thrown back.
+- Sewer Sneak, *Shadowstep*: vanish and reappear behind the nearest mob with the ambush shiv ready.
+- Roof Rat, *Dive Bomb*: leap, then plunge onto the nearest mob; the longer the drop, the harder it hits.
+
+**How things move.** Every creature runs on a lightweight vertex skeleton (body, head, four legs, tail, two wings), so the whole horde stays instanced while it moves like animals:
+- Strides come from the distance actually covered, so feet don't skate.
+- Mobs steer with a turn rate and acceleration of their own: brutes and ghouls commit to a line, roaches whip around.
+- They lean into turns, coil before an attack, snap out on the strike, and are briefly overextended afterwards. Hitting one then lands for +25% (**OPEN**).
+- Heads track you, idle mobs sniff and look around, hits knock them wobbling away from the blow, and kills tumble as short ragdolls.
+- Wind-ups glow by attack kind: **red = melee, purple = projectile, yellow = area** (green = a priest's heal). Ground warnings use the same colours.
+
+The rat trots, breaks into a bounding gallop at a sprint, drags its tail like a chain, tracks threats with its head and squashes on landing. When idle it sniffs, grooms, scratches and rears up to look around. It limps and bleeds below 30% HP, scars as it gets hurt, and rears up roaring when a boss falls. Each class has its own silhouette: Brawler bandana and bottle-cap knuckles, Plague beak mask, Slinger Y-sling and feather, Warlock candle crown, Tank sardine-tin shell, Sneak sock hood, and Roof Rat glider skin.
+
+**Mob roles.** Newer mobs each have a job and a counter:
+- *Lidbearers* block hits from the front with a trash-can lid: flank them, hit them while they bash, or break the guard with a big hit.
+- *Rot Priests* hang behind the pack and heal it: kill them first.
+- *Lurkers* hide in alley cracks and burst out with a pounce: their eyes glint in the dark, and scent shows them.
+- *Bin Mimics* pose as trash cans and rattle: rummage one and it bites. Each drops a weapon crate.
+- *Gob Spitters* keep their distance and spit acid volleys.
+
+Packs behave like packs:
+- A third of mawlings circle behind you before they commit.
+- Hurt fry flee, then come back enraged.
+- When an elite dies, the pack around it howls and fights harder.
+- Cats pounce on and eat mawlings.
+- The shriek scatters crows and bats.
+- The Exterminator's fire and traps hurt the horde too.
+
+**Places.** City districts are no longer only streets:
+- *Interiors.* Two to four buildings per district are enterable: diners, garages, apartments and laundromats. Each has a neon sign, and the camera cuts the walls away when you step inside. Back doors are bolted from the inside: unbolt one on your way out for a shortcut.
+- *Laundromats.* Their washers run a spin cycle that drags the horde in and shreds it.
+- *Cinder Row's night tram.* It rings its bells and sweeps one street about once a minute. Get clear, and lure the horde onto the rails.
+- *Neon Market.* Stalls can be robbed for loot, but the alarm brings a wave.
+- *Rust Yards.* A tower crane drops a steel load on the thickest crowd.
+- *Hollow Heights.* Vegetable gardens are watched by a guard dog whose bark enrages every mob in earshot.
+- *Elsewhere by chance.* Each of the above can also turn up in other districts.
+- *Rain* falls on some districts: scent fades faster, lamps are dimmer and fog closes in.
+- *Boss lairs.* Each boss wakes in a lair marked by a red beam: a rooftop garden, a dead tree full of nests, a warehouse whose gas vents poison everyone, bone arches, egg sacs that hatch ticks, the Rat King's throne.
+- *Rooftop bridges.* Plank bridges cross alleys between rooftops.
+
 **Music.** A procedural soundtrack: a distorted boom-bap drum loop with stuttering trap hi-hat rolls and a discordant phrygian/tritone synth bass. Tempo and density climb from exploring (132 BPM) to crowded fights (148). Bosses get their own **sinister score**, in a different key per boss (the Rat King's is a tritone off). While the boss is asleep you hear a detuned drone and a heartbeat. The fight brings a cold, wordless formant choir moving through a phrygian/diminished progression, a tolling FM church bell and half-time doom drums. Phase 2 adds taiko and a pulsing sub bass. Phase 3 adds a frantic diminished arpeggio, stuttering hats and the siren, and the tempo quickens from 88 to 96 BPM. Music and effects have separate volume sliders.
 
 ## Controls
 
-WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · X shriek (full combo) · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · mouse look (V toggles) · wheel zoom · Esc pause.
+WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · G class signature move · X shriek (full combo) · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · mouse look (V toggles) · wheel zoom · Esc pause.
 
-**Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Use (hold to gnaw), Shriek (when the combo is full), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
+**Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Sig (signature move), Use (hold to gnaw), Shriek (when the combo is full), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
 
 ## Code map
 
@@ -171,15 +216,16 @@ WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames)
 src/
   main.js            boot + frame loop
   core/              util (math, RNG, storage) and shared state singletons
-  render/            renderer + pixel post shader, procedural textures, creature models, instancing pools
+  render/            renderer + pixel post shader, procedural textures, creature models, instancing pools, rig.js (vertex skeleton)
   data/              classes, enemies/bosses/districts/modifiers, items/mutations/cursed/augments/Nest/corruptions, props
-  world/             tile grid + collision, sewer and city generators, mesh builder + population
-  entities/          player, rat model/portraits, mobs (AI + spawning), bosses
+  world/             tile grid + collision, sewer and city generators, mesh builder + population, setpieces.js (interiors, tram, market, crane, gardens, lairs)
+  entities/          player, rat model/portraits + ratAnim.js, mobs (AI + spawning), roles.js (new mob roles, pack behaviour), bosses
   combat/            damage/deaths/drops/threat, weapons & specials, hazards (telegraphs, puddles)
   game/              run flow (districts, sewer, banking), loot, update step, render sync + camera, input
   audio/             SFX + music sequencer
   ui/                HUD, screens (menu, Nest, pause, level-up, bench, endings), icons
 scripts/smoke.mjs    headless end-to-end test
+scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
 
 Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta` in `core/state.js`) that modules import and mutate in place. Saves go to `localStorage` under `scurry.*`. Ghost Trial codes and leaderboards keep the `scurry4.*` keys so existing ghosts still load.

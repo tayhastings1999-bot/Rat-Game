@@ -137,6 +137,10 @@ function clearMouth(k) {
     for (let i = W.plats.length - 1; i >= 0; i--) if (block(W.plats[i])) W.plats.splice(i, 1);
   }
 }
+/** Re-clear every crawlspace mouth (after later set pieces have been placed). */
+export function clearMouths() { for (const net of W.ductNets || []) for (const k of [net.a, net.b]) clearMouth(k); }
+/** True if (x, z) is within r of a crawlspace mouth. */
+export const nearMouth = (x, z, r = 4.5) => (W.ductNets || []).some(n => [n.a, n.b].some(k => Math.hypot(toW(k % M.W) - x, toW((k / M.W) | 0) - z) < r));
 /** A steel lintel and a bent grille over each crawlspace mouth. */
 function ventFrame(k) {
   const x = k % M.W, z = (k / M.W) | 0;

@@ -299,6 +299,9 @@ export function placeTraps(rooms, startRoom) {
     take(4, c => c.dry, w => addCable(w, false));
     // Alternate, so tall walls are shared between scaffolds and brick pallets.
     for (let i = 0; i < 3; i++) { take(1, c => c.dry && c.w.h >= 6, addDebris); take(1, c => c.dry && c.w.h >= 6, addScaffold); }
+    // Low-rise districts: settle for shorter walls rather than no climbing traps at all.
+    if (!W.traps.some(t => t.kind === 'scaffold')) take(1, c => c.dry && c.w.h >= 4.4, addScaffold);
+    if (!W.traps.some(t => t.kind === 'debris')) take(1, c => c.dry && c.w.h >= 4.4, addDebris);
   } else {
     take(3, c => c.water, w => addCable(w, true));
     take(2, c => c.dry && c.w.h >= 4.4, addScaffold);
