@@ -15,6 +15,7 @@ import { bossStatus } from '../entities/bosses.js';
 import { contractsHTML } from '../game/contracts.js';
 import { objText, objTargets } from '../game/objectives.js';
 import { ROUTES } from '../game/routes.js';
+import { bossIntro } from '../game/personality.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
 
 export function initHudIcons() {
@@ -84,7 +85,7 @@ export function hud() {
   if (ch !== lastC) { $('contracts').innerHTML = ch; lastC = ch; }
   // Boss UI stays hidden until you enter its arena (or hit it).
   const b = G.boss;
-  if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; run.bossHit = false; banner(b.name, 'Fight or flee'); }
+  if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; run.bossHit = false; bossIntro(b); }
   $('bossWrap').style.display = b && b.revealed ? 'flex' : 'none';
   if (b) { $('bossFill').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%'; $('bossLabel').textContent = (b.label || '') + bossStatus(b); }
   const cmb = $('combo'), ready = !!run.shriekReady;

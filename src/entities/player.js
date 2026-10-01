@@ -18,6 +18,7 @@ import { buffOn } from '../game/forage.js';
 import { rummage, sinkerSlam, sinkerLand } from '../game/junk.js';
 import { springTrap, trapTarget, wireIntoWater } from '../game/traps.js';
 import { cageTarget, openCage, carryingWheel } from '../game/objectives.js';
+import { onRoll, shadowPaw, attackRate, echo } from '../game/rules.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 
@@ -175,8 +176,9 @@ export function primary(dt) {
     dx /= L; dz /= L;
   }
   PR.fire(dx, dz, t);
+  shadowPaw(PR, t);
   const fury = st.fury && run.hp < st.maxHp * 0.5 ? 0.66 : 1;
-  run.primT = PR.cd * st.cd * st.tear * fury * (1 - 0.06 * (run.blood || 0));
+  run.primT = PR.cd * st.cd * st.tear * fury * (1 - 0.06 * (run.blood || 0)) * attackRate();
   P.aim = Math.atan2(dx, dz);
   P.aimT = 0.35;
 }
@@ -189,6 +191,7 @@ export function startRoll() {
   if (ix || iz) { dx = fx0 * iz + rx * ix; dz = fz * iz + rz * ix; const l = Math.hypot(dx, dz); dx /= l; dz /= l; }
   else { dx = Math.sin(P.facing); dz = Math.cos(P.facing); }
   P.rdx = dx; P.rdz = dz; P.roll = 0.3; P.rollCd = 0.5;
+  onRoll();
   run.sta -= 15;
   P.staT = 0.6;
   P.inv = Math.max(P.inv, 0.34);
@@ -215,7 +218,7 @@ export function toggleLock() {
 export function useSpecial() {
   if (run.specT > 0 || P.squeeze) return;
   const S = SPECIALS[CLASSES[run.cls].special];
-  if (!sinkerSlam()) S.use();
+  if (!sinkerSlam()) { S.use(); if (echo()) setTimeout(() => { if (G.state === 'play') { S.use(); useSpecialFx(); } }, 450); }
   useSpecialFx();
   run.specT = S.cd * st.specCd * st.cd;
 }

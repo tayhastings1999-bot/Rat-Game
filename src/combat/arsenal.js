@@ -12,7 +12,7 @@ import { puddle } from './hazards.js';
 
 /** Melee step-in: close most of the gap to a target just outside reach. */
 function stepIn(t, R) {
-  if (!t) return;
+  if (!t || P.noStep) return;
   const dx = t.x - P.x, dz = t.z - P.z, d = Math.hypot(dx, dz);
   if (d > R * 0.75 && d < R + 2.5 && P.onGround) { const s = Math.min(12, (d - R * 0.6) * 5); P.vx += dx / d * s; P.vz += dz / d * s; P.lock = 0.08; }
 }

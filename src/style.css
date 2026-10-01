@@ -189,3 +189,16 @@ body.touch #contracts{top:auto;bottom:40%;right:12px;font-size:9px}
 #contracts b{color:#c080ff}
 #contracts .done{color:#6ad06a;text-decoration:line-through}
 body.combat #contracts{opacity:.25}
+/* Boss intro card */
+#introCard{position:absolute;left:0;right:0;top:34%;text-align:center;pointer-events:none;opacity:0;transform:scale(1.15);transition:opacity .35s,transform .5s;z-index:6}
+#introCard.on{opacity:1;transform:scale(1)}
+#introCard h1{font-family:'Pirata One',serif;font-weight:400;margin:4px 0;font-size:clamp(44px,7vw,96px);color:#ff4a3a;text-shadow:0 0 18px rgba(0,0,0,.9),0 4px 0 #000}
+#introCard .kick{color:var(--gold);font-size:13px;letter-spacing:.2em}
+#introCard p{margin:0;font-size:18px;font-style:italic;color:var(--ink);text-shadow:0 2px 6px #000}
+/* District rank stamp */
+#rankStamp{position:absolute;left:7%;top:34%;text-align:center;pointer-events:none;opacity:0;transform:scale(2.2) rotate(-12deg);transition:opacity .25s,transform .35s cubic-bezier(.2,1.6,.4,1);z-index:6}
+#rankStamp.on{opacity:1;transform:scale(1) rotate(-8deg)}
+#rankStamp b{display:block;font:900 120px/1 serif;text-shadow:0 6px 0 #000,0 0 30px rgba(0,0,0,.8)}
+#rankStamp span{font-size:11px;color:var(--ink);text-shadow:0 2px 4px #000}
+#rankStamp .rS{color:#ffd040}#rankStamp .rA{color:#6ad06a}#rankStamp .rB{color:#6ad0ff}#rankStamp .rC{color:#c080ff}#rankStamp .rD{color:#9a96a0}
+.ranks{font:900 28px/1 serif;letter-spacing:.2em;color:#ffd040}

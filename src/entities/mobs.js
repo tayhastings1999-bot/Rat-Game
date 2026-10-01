@@ -544,6 +544,7 @@ export function updateEnemies(dt, cap) {
     }
     if (e.rival) continue; // rival nests (Squeeze Network) are static; ducts.js runs them
     if (e.thief) { thiefAI(e, dt); continue; }
+    if (e.scab) continue; // personality.js runs Scab
     if (e.corrupt) tickCorrupt(e, dt);
     const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
     let custom = false;

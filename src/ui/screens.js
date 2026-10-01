@@ -14,6 +14,9 @@ import { startRun, checkUnlocks, bankSalvage, dominanceOf, menu } from '../game/
 import { giveCursed } from '../game/loot.js';
 import { breakOffers, applyKeystone, evolve, EVO, KEYSTONES } from '../game/progress.js';
 import { CONTRACTS } from '../game/contracts.js';
+import { RULES, rulesLeft, applyRule } from '../game/rules.js';
+import { epitaph } from '../game/personality.js';
+import { runScore, recordDaily, shareCard, dailyKey, dailyBoard, todaysTwist } from '../game/score.js';
 import { drawMap, renderSlots, hud, banner } from './hud.js';
 import { ICON } from './icons.js';
 
@@ -48,10 +51,12 @@ export function renderMenu(m) {
   show(`<div class="panel frame">
     <div class="kick px">A rat roguelike · Streets above, sewer below</div><h1>Scurry</h1>
     <p>An open neighbourhood crawling with hordes. Climb brick to the rooftops and walk the power lines, gnaw through boarded gaps, squeeze through cracks and sniff out cheese. Find a sewer key and take the manhole down — the sewer is darker, meaner and richer.</p>
-    <div class="btns"><button class="btn ${m === 'survival' ? 'on' : 'ghost'}" id="mS">Survival</button><button class="btn ${m === 'trial' ? 'on' : 'ghost'}" id="mT">Ghost Trial</button><button class="btn ghost" id="mN">The Nest · ${commas(meta.salvage || 0)} salvage · ${meta.dominance || 0} dominance</button></div>
+    <div class="btns"><button class="btn ${m === 'survival' ? 'on' : 'ghost'}" id="mS">Survival</button><button class="btn ${m === 'daily' ? 'on' : 'ghost'}" id="mD">Daily Run</button><button class="btn ${m === 'trial' ? 'on' : 'ghost'}" id="mT">Ghost Trial</button><button class="btn ghost" id="mN">The Nest · ${commas(meta.salvage || 0)} salvage · ${meta.dominance || 0} dominance</button></div>
     ${m === 'trial' ? `<p>This week's map: <span class="px" style="font-size:13px">${seed}</span>. Turn three valves in the Undersewer, then dive down the drain. You race your best ghost, or a friend's if you paste their code.</p>
       <div class="lb">${lb.length ? lb.map((r, i) => `<span>${i + 1}</span><span>${CLASSES[r.c]?.name || r.c}</span><span>${fmtT(r.t)}</span>`).join('') : '<span></span><span>No times yet</span><span></span>'}</div>
       <textarea id="fg" placeholder="Paste a friend's ghost code here">${G.friendGhost ? '(friend ghost loaded: ' + fmtT(G.friendGhost.t) + ')' : ''}</textarea>`
+    : m === 'daily' ? `<p>Today's run (<span class="px" style="font-size:13px">${dailyKey()}</span>): the same districts and the same twist for everyone. Pick any rat. Twist: <b style="color:var(--gold)">${todaysTwist().name}</b> · ${todaysTwist().desc}</p>
+      <div class="lb">${dailyBoard().length ? dailyBoard().map((r, i) => `<span>${i + 1}</span><span>${CLASSES[r.c]?.name || r.c} · ${r.d} districts</span><span>${commas(r.s)}</span>`).join('') : '<span></span><span>No runs today yet</span><span></span>'}</div>`
     : '<p>Smash the nests or outlast the timer to wake the district boss. Every pick, chest and detour raises the threat, and the horde scales with it. Kill the boss to open the road, or spend a key on the manhole.</p>'}
     <div class="howto">
       <div><h3 class="px">How to play</h3><p>Your attacks aim and fire on their own. Keep moving, scoop up XP gems (blue, green, red, violet), and pick an upgrade each level. Every fifth level a Champion comes for you: kill it to break through. Stay out of the light: fill the eye meter and the owls come.</p></div>
@@ -67,7 +72,9 @@ export function renderMenu(m) {
         <span class="s">${C.hp} HP · ${PRIM[C.prim].name}<br>Q: ${SPECIALS[C.special].name}</span></button>`;
     }).join('')}</div>${m === 'survival' ? startsHTML() : ''}${skinsHTML()}
     <p class="px" style="font-size:12px">${best.time ? `Best survival: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}${pb ? ` · Trial PB ${fmtT(pb.t)}` : ''}</p></div>`);
-  G.mode = m;
+  G.mode = m === 'daily' ? 'survival' : m;
+  G.daily = m === 'daily';
+  $('mD').onclick = () => renderMenu('daily');
   $('mS').onclick = () => renderMenu('survival');
   $('mT').onclick = () => renderMenu('trial');
   $('mN').onclick = renderNest;
@@ -226,6 +233,9 @@ function makeOffers() {
     if (o.kind === 'tome' && !TOMES[o.id].flat) { const q = Math.random(), luck = Math.min(0.08, run.level * 0.004); o.rar = q < 0.03 + luck * 0.5 ? 3 : q < 0.13 + luck ? 2 : q < 0.4 + luck * 2 ? 1 : 0; } else o.rar = 0;
     out.push(o);
   }
+  // Now and then a rule-breaker turns up.
+  const rl = rulesLeft();
+  if (rl.length && out.length > 1 && Math.random() < (run.luckyRules ? 0.35 : 0.16) + run.level * 0.004) out[0] = { kind: 'rule', id: pick(rl), rar: 3 };
   // Sometimes the devil offers a deal.
   const cursedLeft = Object.keys(CURSED).filter(k => !run.cursed.includes(k));
   if (cursedLeft.length && Math.random() < 0.12 && out.length) out[out.length - 1] = { kind: 'cursed', id: pick(cursedLeft), rar: 0 };
@@ -246,6 +256,7 @@ function renderLevelUp() {
     <div class="cards">${offers.map((o, i) => {
       if (o.kind === 'heal') return `<button class="card" data-i="${i}" style="--rc:#d8342c"><div class="row"><span class="key px">${i + 1}</span><span class="role">Heal</span></div><div class="ico">${ICON.heal}</div><b>Stale Cheese</b><span class="d">Restore half your HP.</span></button>`;
       if (o.kind === 'evo') { const E = EVO[o.id]; return `<button class="card" data-i="${i}" style="--rc:#ffd040"><div class="row"><span class="key px">${i + 1}</span><span class="role">Evolution</span></div><div class="ico">${ICON[o.id]}</div><b>${E.name}</b><span class="d">${WEAP[o.id].name} evolves. ${E.desc}</span></button>`; }
+      if (o.kind === 'rule') { const R = RULES[o.id]; return `<button class="card" data-i="${i}" style="--rc:#ff4ad0"><div class="row"><span class="key px">${i + 1}</span><span class="role">Rule breaker</span></div><div class="ico">${ICON.dna}</div><b>${R.name}</b><span class="d">${R.desc}</span></button>`; }
       if (o.kind === 'key') { const K = KEYSTONES[o.id]; return `<button class="card" data-i="${i}" style="--rc:#ff9a3a"><div class="row"><span class="key px">${i + 1}</span><span class="role">Keystone</span></div><div class="ico">${ICON.dna}</div><b>${K.name}</b><span class="d">${K.desc}</span></button>`; }
       if (o.kind === 'cursed') { const C = CURSED[o.id]; return `<button class="card cursed" data-i="${i}" style="--rc:#ff2a2a"><div class="row"><span class="key px">${i + 1}</span><span class="role">Cursed deal</span></div><div class="ico">${ICON.skull}</div><b>${C.name}</b><span class="up">+ ${C.up}</span><span class="dn">− ${C.dn}</span></button>`; }
       const T = o.kind === 'tome' ? TOMES[o.id] : null, Wp = WEAP[o.id], R = RAR[o.rar], lvl = o.kind === 'up' ? run.weapons.find(w => w.id === o.id).lvl : 0;
@@ -272,6 +283,7 @@ export function choose(o) {
   else if (o.kind === 'cursed') giveCursed(o.id);
   else if (o.kind === 'evo') evolve(o.id);
   else if (o.kind === 'key') applyKeystone(o.id);
+  else if (o.kind === 'rule') applyRule(o.id);
   else run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.5);
   if (run.btPick > 0) run.btPick--;
   run.pendingLv--;
@@ -286,7 +298,7 @@ function dmgTable() {
   const C = CLASSES[run.cls];
   const names = {
     ...Object.fromEntries(Object.entries(WEAP).map(([k, w]) => [k, w.name])), primary: PRIM[C.prim].name, special: SPECIALS[C.special].name,
-    dot: 'Poison, burn & bleed', event: 'District events', level: 'Level-up bursts', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
+    dot: 'Poison, burn & bleed', rule: 'Rule breakers', event: 'District events', level: 'Level-up bursts', volt: '9-Volt Battery', swarm: 'Nest-mates', trap: 'Traps & falling debris', runt: 'The Runt', thorns: 'Thorns', shrapnel: 'Shrapnel', bonk: 'Bonks & splats', fire: 'Fire', sludge: 'Toxic sludge',
     livewire: 'Livewire Claws', tesla: 'Tesla Coil', nailbomb: 'Nail Bomb', recoil: 'Slingshot Recoil', overclock: 'Overclock',
   };
   const dmg = Object.entries(run.dmgBy).sort((a, b) => b[1] - a[1]).slice(0, 10), mx = dmg.length ? dmg[0][1] : 1;
@@ -298,14 +310,16 @@ export function die() {
   const got = checkUnlocks();
   const nb = G.mode === 'survival' && run.time > best.time;
   if (nb) { Object.assign(best, { time: run.time, kills: run.kills, district: run.tier }); saveBest(); }
-  const dm = dominanceOf(), banked = bankSalvage();
-  show(`<div class="panel narrow frame"><div class="kick px">${nb ? 'New best' : 'Run over'} · ${dName()}</div><h1 style="font-size:clamp(64px,9vw,120px)">You died</h1>
+  const dm = dominanceOf(), banked = bankSalvage(), score = runScore(), place = recordDaily(score);
+  show(`<div class="panel narrow frame"><div class="kick px">${nb ? 'New best' : 'Run over'} · ${dName()}</div><h1 style="font-size:clamp(64px,9vw,120px)">You died</h1><p style="font-style:italic;margin-top:-6px">${epitaph()}</p>
     <div class="stat px"><div><b>${fmt(run.time)}</b><span>Survived</span></div><div><b>${run.kills}</b><span>Kills</span></div><div><b>${run.level}</b><span>Level</span></div><div><b>${run.tier + 1}</b><span>Districts</span></div><div><b>${(run.T || 0).toFixed(1)}</b><span>Peak threat</span></div></div>
+    <p class="px" style="font-size:15px">Score <b style="color:var(--gold)">${commas(score)}</b>${run.daily ? ` · Daily ${run.daily}${place ? ` · #${place} today` : ''}` : ''}${(run.ranks || []).length ? ` · ranks <span class="ranks">${run.ranks.map(r => r.r).join(' ')}</span>` : ''}</p>
     <p class="px" style="color:#9ad0ff;font-size:13px">+${banked.salvage} salvage · <span style="color:#c080ff">+${banked.dom} dominance</span> banked at the Nest</p>
     <p class="px" style="font-size:11px;color:var(--dim)">Dominance: kills ${dm.parts.kills.toFixed(1)} · damage ${dm.parts.damage.toFixed(1)} · bosses ${dm.parts.bosses} · lairs ${dm.parts.lairs} · depth ${dm.parts.depth} · contracts ${dm.parts.contracts}${dm.mul > 1 ? ` · shortcut ×${dm.mul}` : ''}</p>
     ${got.length ? `<p class="px" style="color:#f2b233;font-size:13px">Unlocked: ${got.join(' · ')}</p>` : ''}${dmgTable()}
-    <div class="btns"><button class="btn" id="again">Choose a rat</button><button class="btn ghost" id="nest">The Nest</button><span class="px" style="font-size:12px;color:var(--dim)">or press R</span></div></div>`);
+    <div class="btns"><button class="btn" id="again">Choose a rat</button><button class="btn ghost" id="share">Share run card</button><button class="btn ghost" id="nest">The Nest</button><span class="px" style="font-size:12px;color:var(--dim)">or press R</span></div></div>`);
   $('again').onclick = menu;
+  $('share').onclick = async () => { const b = $('share'); b.textContent = 'Making card…'; const r = await shareCard(); b.textContent = r === 'shared' ? 'Shared' : 'Card saved'; };
   $('nest').onclick = () => { menu(); renderNest(); };
 }
 

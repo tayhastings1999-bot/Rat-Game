@@ -24,6 +24,8 @@ import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
 import { contract } from '../game/contracts.js';
 import { bountyKill } from '../game/events.js';
 import { thiefDown } from '../game/objectives.js';
+import { onKill } from '../game/rules.js';
+import { scabDown } from '../game/personality.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -126,6 +128,7 @@ export function hurtP(d, from, raw) {
   if (from && from.hp != null) d *= st.guard; // melee classes brace against bites and swipes
   d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (1 + 0.1 * run.tier) - (raw ? 0 : st.armor)));
   run.hp -= d;
+  run.dHurt = (run.dHurt || 0) + d;
   if (!raw) P.inv = 0.6;
   G.flash = Math.max(G.flash, raw ? 0.35 : 1);
   G.shake = Math.max(G.shake, raw ? 0.08 : 0.25);
@@ -177,6 +180,8 @@ export function kill(e) {
   if (e.elite && !e.champion) contract('elites');
   if (e.bounty) { contract('bounty'); bountyKill(e); }
   if (e.thief) thiefDown(e);
+  onKill(e);
+  if (e.scab) scabDown(e);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
   if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {

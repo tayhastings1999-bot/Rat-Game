@@ -26,6 +26,8 @@ import { tickProgress } from './progress.js';
 import { tickEvents } from './events.js';
 import { tickFeel } from './feel.js';
 import { tickObjective, objDone, carryingWheel } from './objectives.js';
+import { tickRules, attackRate, onFeast } from './rules.js';
+import { tickPersonality } from './personality.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -195,7 +197,7 @@ function updateWeapons(dt) {
     if (Wp.fire && (!P.squeeze || P.inDuct)) {
       const fury = st.fury && run.hp < st.maxHp * 0.5 ? 0.66 : 1;
       w.t -= dt;
-      if (w.t <= 0) w.t = Wp.fire(w) === false ? 0.15 : Wp.cd(w) * st.cd * fury;
+      if (w.t <= 0) w.t = Wp.fire(w) === false ? 0.15 : Wp.cd(w) * st.cd * fury * attackRate();
     }
   }
   for (let i = orbState.n; i < orbs.length; i++) orbs[i].visible = false;
@@ -368,6 +370,7 @@ function updatePickups(dt) {
       const h = Math.round(st.maxHp * 0.3 * st.foodMul * st.healMul);
       run.hp = Math.min(st.maxHp, run.hp + h);
       dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
+      onFeast();
       return false;
     }
     return true;
@@ -382,6 +385,7 @@ function updatePickups(dt) {
       run.hp = Math.min(st.maxHp, run.hp + h);
       for (let i = 0; i < 8; i++) W.scraps.push({ x: c.x + rand(-0.6, 0.6), y: c.y, z: c.z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
       dnum(P.x, P.y + 1.6, P.z, 'Cheese cache +' + h, 'heal');
+      onFeast();
     }
   }
 }
@@ -436,6 +440,8 @@ export function update(dt) {
   tickEvents(dt);
   tickFeel(dt);
   tickObjective(dt);
+  tickRules(dt);
+  tickPersonality(dt, st.maxHp);
   updatePickups(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);

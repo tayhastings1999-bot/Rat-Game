@@ -19,6 +19,7 @@ import { spawnEnemy } from '../entities/mobs.js';
 import { banner, renderSlots } from '../ui/hud.js';
 import { openLevelUp } from '../ui/screens.js';
 import { contract } from './contracts.js';
+import { rulesLeft } from './rules.js';
 
 export const BREAK_EVERY = 5;
 export const TRIAL_TIME = 45;
@@ -236,6 +237,8 @@ function tickPickups(dt) {
 export function breakOffers() {
   const out = [];
   for (const w of run.weapons) if (EVO[w.id] && w.lvl >= 5 && !w.evo && (run.tomes[EVO[w.id].tome] || 0) > 0) out.push({ kind: 'evo', id: w.id, rar: 3 });
+  const rl = rulesLeft();
+  if (rl.length) out.push({ kind: 'rule', id: rl[(Math.random() * rl.length) | 0], rar: 3 });
   const keys = Object.keys(KEYSTONES).filter(k => !(run.keystones || []).includes(k));
   for (let i = 0; i < 2 && keys.length; i++) out.push({ kind: 'key', id: keys.splice((Math.random() * keys.length) | 0, 1)[0], rar: 3 });
   const tomes = Object.keys(TOMES).filter(id => !TOMES[id].flat && (run.tomes[id] || 0) < (TOMES[id].max || 5));

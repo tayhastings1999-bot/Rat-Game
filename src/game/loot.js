@@ -7,6 +7,7 @@ import { boom, fx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { addThreat } from '../combat/combat.js';
 import { banner, renderSlots } from '../ui/hud.js';
+import { jackpot } from './rules.js';
 
 /** Draw an item you don't own. If you hold half a recipe, its partner is favoured. */
 export function drawItem() {
@@ -59,6 +60,7 @@ export function giveCursed(id) {
 export function giveChest(c) {
   if (c.cursed) { giveCursed(); return; }
   giveItem(drawItem());
+  if (jackpot()) setTimeout(() => giveItem(drawItem()), 700);
   if (c.premium) { setTimeout(() => giveItem(drawItem()), 1200); run.scrap += 10 * st.salvage; }
   addThreat(c.premium ? 0.5 : 0.3);
 }

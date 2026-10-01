@@ -21,6 +21,8 @@ import { dealContracts } from './contracts.js';
 import { coldOpen } from './feel.js';
 import { setupObjective } from './objectives.js';
 import { openRoutes, applyRoute } from './routes.js';
+import { storyBeat } from './personality.js';
+import { startDaily, dailySeed, districtStart, todaysTwist } from './score.js';
 
 export function freshStats(C) {
   const n = meta.nest;
@@ -90,17 +92,18 @@ export function startRun(k) {
   clearFamiliars();
   if (G.ghost) { scene.remove(G.ghost.r.g); G.ghost = null; }
   resetObj(run, {
-    cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], junk: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
+    cls: k, daily: null, twist: null, ranks: [], tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, weapons: [], items: [], cursed: [], junk: [], muts: [], tomes: {}, augs: {}, dmgBy: {},
     pendingLv: 0, specT: 0, primT: 0, lowWarned: false, hp: 0, sta: 100, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossAt: 150, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 1.5, surgeT: 55, lullT: 0, seenMobs: {}, splits: [], rec: [], recT: 0, reactor: false,
-    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, contracts: [], contractDom: 0, xpBank: 0, trial: null, trialCd: 1.5, trialCue: false, btPick: 0, keystones: [], windUsed: false, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
+    keys: meta.nest.key ? 1 : 0, bosses: 0, minis: 0, domMul: 1, rules: [], evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, contracts: [], contractDom: 0, xpBank: 0, trial: null, trialCd: 1.5, trialCue: false, btPick: 0, keystones: [], windUsed: false, combo: 0, comboT: 0, shriekReady: false, buffs: {}, forage: 0, expo: 0, expoCd: 0, rerolls: meta.nest.reroll || 0, nailT: 0, teslaT: 0, selfPoisonT: 12,
   });
   resetObj(st, freshStats(C));
   run.hp = st.maxHp;
   run.sta = st.staMax;
   meta.runs = (meta.runs || 0) + 1;
   saveMeta();
-  const seed = G.mode === 'trial' ? weekSeed() : 'S' + Date.now();
+  if (G.daily && G.mode !== 'trial') startDaily();
+  const seed = G.mode === 'trial' ? weekSeed() : run.daily ? dailySeed() : 'S' + Date.now();
   if (G.mode === 'trial') { run.layer = 'sewer'; run.sewerIdx = 0; }
   // Shortcuts from the Nest: start deeper, with a head start of level-up picks.
   const at = G.mode === 'trial' ? null : STARTS[meta.startAt] && STARTS[meta.startAt].ok(meta) && meta.startAt !== 'row' ? STARTS[meta.startAt] : null;
@@ -129,9 +132,11 @@ export function startRun(k) {
   renderSlots();
   hud();
   G.last = performance.now();
-  banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), at ? 'Shortcut · three free picks to catch up' : run.mods.map(m => MODS[m].name).join(' · '));
+  banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), at ? 'Shortcut · three free picks to catch up' : storyBeat());
   dealContracts();
+  districtStart();
   if (!at && G.mode !== 'trial') coldOpen();
+  if (run.daily) setTimeout(() => { if (G.state === 'play') banner('Daily Run · ' + todaysTwist().name, todaysTwist().desc); }, 5600);
   if (at) {
     for (let i = 0; i < 3; i++) { run.level++; run.need = need(run.level); }
     run.pendingLv = 3;
@@ -162,15 +167,17 @@ function transition(apply, title, sub) {
     run.bossDone = false;
     run.windUsed = false;
     run.evT = 45;
+    run.scabSeen = false;
     if (run.trial) { run.trial = null; run.trialCd = 4; }
     run.dStart = run.time;
     run.nests = 0;
     run.surgeT = 75;
-    run.rerolls = meta.nest.reroll || 0;
+    run.rerolls = run.twist === 'lucky' ? 3 : meta.nest.reroll || 0;
     meta.maxDistrict = Math.max(meta.maxDistrict, run.district);
     if (isSewer()) meta.maxSewer = Math.max(meta.maxSewer, run.sewerIdx);
     const got = checkUnlocks();
-    setupWorld('S' + Date.now());
+    setupWorld(run.daily ? dailySeed() : 'S' + Date.now());
+    districtStart();
     run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.3);
     const route = run.route;
     run.route = null;
@@ -178,7 +185,7 @@ function transition(apply, title, sub) {
     $('fade').style.opacity = 0;
     G.state = 'play';
     G.last = performance.now();
-    banner(title(), got.length ? 'Unlocked: ' + got.join(', ') : sub());
+    banner(title(), got.length ? 'Unlocked: ' + got.join(', ') : storyBeat());
     if (route) setTimeout(() => applyRoute(route), 1800);
   }, 450);
 }

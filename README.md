@@ -97,6 +97,37 @@ Movement and signature moves:
 
 **Choose your road.** When a boss falls, up to three exits open, each labelled with what waits at the start of the next district: **Hoard** (premium chest), **Armory** (weapon crate), **Shrine** (a free Breakthrough-grade pick), **Safe House** (full heal and food), or **Blood Road** (+1.5 threat and +10% Dominance for the rest of the run, with a cursed chest and a premium chest). F sniffs out all of them in their colours.
 
+**Rule breakers.** Rare upgrades that change how you play instead of adding a few percent. They turn up on about 1 in 6 level-ups, rising as you level, and on every Breakthrough:
+- Ricochet Roll: rolls fire every weapon.
+- Razor Roll: free rolls that slice everything you pass.
+- Chain Reaction: kills burst for a quarter of the victim's max HP, and bursts chain.
+- Shadow Paw: your primary also strikes a second target for 60%.
+- Echo: your special casts twice.
+- Glutton: food permanently adds damage.
+- Swarm Frenzy: 40% faster attacks while your combo is over half full.
+- Jackpot: an extra item from every chest.
+
+**Characters and story.**
+- *Boss intro cards.* Every boss gets an intro card with a title and a line ("Little thing. I can hear your heart from here."), plus a beat of slow-mo.
+- *The story.* Each district opens with a story beat, from your burned nest to the Rat King's Court.
+- *Scab.* Your rival rat shows up about half a minute into each district and runs for an unopened chest. He taunts you, steals the chest if he gets there, and escapes unless you catch him. Every time you beat him he comes back tougher; beat him three times and he gives up a Breakthrough-grade pick.
+- *Chatter.* Rats you've freed shout warnings and banter.
+
+**Ranks, score and sharing.**
+- *District ranks.* Every district you clear gets a rank from S to D, stamped on screen. It's based on clear time, HP lost, perfect dodges and whether you finished the district job.
+- *Run score.* Kills, damage, bosses, depth, contracts and ranks add up to a run score.
+- *Run card.* The death screen has a **Share run card** button that makes a PNG card (your rat, score, stats, ranks and contracts) to post or send to friends.
+
+**Daily Run.** On the menu. Everyone gets the same seeded districts and the same daily twist that day:
+- Glass Rat
+- Busy Streets
+- Gold Rush
+- Swift Paws
+- Feast Day
+- Lucky Day
+
+You pick any rat, and a local best-of-the-day board keeps your top five scores.
+
 **Leveling.** Built to feel smooth, with milestones you have to earn:
 - *Even pace.* XP income rises with the threat (a tougher horde pays more), and if you fall behind the expected level for the run time you earn up to 50% extra until you catch up. Gems come in tiers: blue, green, red and violet.
 - *Every level-up is a beat of relief.* A shockwave shoves the horde back, you heal 5%, and time slows for a moment.

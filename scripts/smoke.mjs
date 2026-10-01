@@ -56,7 +56,7 @@ await step('start brawler run (city)', async () => {
   if (s.state !== 'play' || s.kind !== 'city') throw new Error(JSON.stringify(s));
   const co = await S(() => ({ c: __scurry.run.contracts.length, open: __scurry.run.coldOpen }));
   if (co.c !== 3 || !co.open) throw new Error('no contracts or cold open ' + JSON.stringify(co));
-  await S(() => { __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; }); // no owls or district events mid-script
+  await S(() => { __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; }); // no owls, district events or Scab mid-script
 });
 await step('move, jump, roll, attack', async () => {
   await S(() => __scurry.god(true));
@@ -154,7 +154,7 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   await S(() => { __scurry.run.district = 0; });
 });
 await step('staggered roster, secrets, lairs, melee kit', async () => {
-  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; });
+  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
   await wait(600);
   // Early on only mawlings spawn; later types unlock on schedule with a banner.
   const early = await S(() => { const s = new Set(); for (let i = 0; i < 200; i++) s.add(__scurry.pickType()); return [...s]; });
@@ -477,6 +477,18 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   if (!(await S(() => __scurry.run.obj.done))) throw new Error('thief hunt did not complete');
   await S(() => { __scurry.G.testNoBusy = false; });
 });
+await step('rule breakers and Scab the rival', async () => {
+  await S(() => { __scurry.G.testNoBusy = true; for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); __scurry.applyRule('chain'); });
+  await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 6 + i * 0.5, P.z, { hpMul: 30, plain: true, force: true }); if (e) { e.spd = 0; e.tag = 'chain'; } } __scurry.kill(__scurry.W.enemies.find(e => e.tag === 'chain')); });
+  if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'chain' && !e.dead && e.hp < e.maxHp), 3000))) throw new Error('chain reaction did not burst');
+  await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); const r = __scurry.run; r.scabSeen = false; r.scab = null; r.dStart = r.time - 40; });
+  const scab = await until(() => __scurry.run.scab && !__scurry.run.scab.dead, 6000);
+  if (!scab) throw new Error('Scab never showed (needs an unopened chest)');
+  const c0 = await S(() => __scurry.W.crates.length);
+  await S(() => __scurry.kill(__scurry.run.scab));
+  if (!(await S(c0 => __scurry.run.scabLosses === 1 && __scurry.W.crates.length > c0, c0))) throw new Error('Scab dropped nothing');
+  await S(() => { __scurry.G.testNoBusy = false; __scurry.run.scabSeen = true; });
+});
 await step('corrupted elites spawn and die', async () => {
   await S(() => { __scurry.G.testFreeze = false; });
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
@@ -499,6 +511,7 @@ await step('surface boss: three phases, death, exits', async () => {
   if (sw.n !== want || !(sw.stun > 0)) throw new Error('shriek ' + JSON.stringify(sw));
   await wait(2500);
   if (!(await S(() => __scurry.G.boss.revealed))) throw new Error('boss not revealed in arena');
+  if (!(await S(() => document.getElementById('introCard').textContent.length > 5))) throw new Error('no boss intro card');
   // The brain has been watching; a burst of real hits breaks its poise.
   await S(() => { __scurry.G.boss.stun = 0; __scurry.G.boss.invuln = 0; });
   const br = await S(() => { const b = __scurry.G.boss.brain; return b && { range: b.range, budget: b.budget }; });
@@ -519,6 +532,8 @@ await step('surface boss: three phases, death, exits', async () => {
   const s = await S(() => ({ exit: !!__scurry.G.exitD, boss: !!__scurry.G.boss, keys: __scurry.W.keys.length, routes: (__scurry.G.exits || []).map(e => e.route) }));
   if (!s.exit || s.boss) throw new Error(JSON.stringify(s));
   if (s.routes.length < 2 || s.routes.some(r => !r)) throw new Error('no route choice after the boss ' + JSON.stringify(s));
+  const rk = await S(() => ({ n: (__scurry.run.ranks || []).length, stamp: document.getElementById('rankStamp').textContent }));
+  if (!rk.n || !rk.stamp) throw new Error('no district rank ' + JSON.stringify(rk));
 });
 await step('descend into sewer', async () => {
   await S(() => __scurry.enterSewer());
@@ -614,6 +629,7 @@ await step('death banks salvage', async () => {
   await wait(400);
   const after = await S(() => __scurry.meta.salvage);
   if (after < before + 120) throw new Error(`salvage ${before} -> ${after}`);
+  if (!(await S(() => !!document.getElementById('share') && /Score/.test(document.getElementById('overlay').textContent)))) throw new Error('death screen has no score or share card');
   if (!(await S(() => __scurry.meta.domTotal > 0))) throw new Error('no dominance banked');
   await shot('09-dead');
 });
@@ -647,6 +663,21 @@ await step('new classes play', async () => {
     await S(() => __scurry.menu());
     await wait(800);
   }
+});
+await step('daily run: seeded twist and board', async () => {
+  await S(() => __scurry.menu());
+  await wait(400);
+  await page.click('#mD');
+  await wait(200);
+  await page.click('.card[data-k="brawler"]');
+  await wait(800);
+  const d = await S(() => ({ daily: __scurry.run.daily, twist: __scurry.run.twist, st: __scurry.G.state }));
+  if (!d.daily || !d.twist) throw new Error('daily run did not start ' + JSON.stringify(d));
+  await S(() => { __scurry.god(true); __scurry.run.scrap = 10; __scurry.die(); });
+  await wait(300);
+  if (!(await S(() => /today/.test(document.getElementById('overlay').textContent)))) throw new Error('daily score not recorded');
+  await S(() => { __scurry.G.daily = false; __scurry.menu(); });
+  await wait(400);
 });
 await step('sewer sneak: shortcut start, smoke bomb, ambush shiv', async () => {
   await S(() => { __scurry.G.mode = 'survival'; __scurry.meta.startAt = 'drain'; __scurry.startRun('sneak'); __scurry.god(true); });

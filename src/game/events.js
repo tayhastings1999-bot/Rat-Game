@@ -165,6 +165,6 @@ export function tickEvents(dt) {
   const k = run.forceEv || pick(choices);
   run.forceEv = null;
   const v = START[k]();
-  run.evT = v ? rand(70, 100) : 5;
+  run.evT = v ? (run.evFast ? rand(40, 55) : rand(70, 100)) : 5;
   if (v) { run.lastEv = k; run.events.push(v); }
 }

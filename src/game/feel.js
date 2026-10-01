@@ -44,7 +44,7 @@ export function coldOpen() {
     if (t !== 1 && t !== 9 && t !== 10) continue;
     if (spawnEnemy('mawling', x, z, { plain: true })) n++;
   }
-  if (n) banner('Run!', 'They smelled you first · fight back or scatter');
+  if (n) setTimeout(() => { if (G.state === 'play') banner('Run!', 'They smelled you first · fight back or scatter'); }, 2800);
   run.coldOpen = true;
   return n;
 }
