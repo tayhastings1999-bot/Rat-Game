@@ -13,6 +13,8 @@ import { activeBuffs } from '../game/forage.js';
 import { EVO, capped } from '../game/progress.js';
 import { bossStatus } from '../entities/bosses.js';
 import { contractsHTML } from '../game/contracts.js';
+import { objText, objTargets } from '../game/objectives.js';
+import { ROUTES } from '../game/routes.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART, IC_BOLT, IC_EYE } from './icons.js';
 
 export function initHudIcons() {
@@ -39,6 +41,9 @@ function objective() {
   if (run.trial) return `BREAKTHROUGH TRIAL · kill the Champion · ${Math.ceil(run.trial.t)}s`;
   if (G.mode === 'trial') return W.valves.every(v => v.done) ? 'Reach the drain' : `Turn the valves ${W.valves.filter(v => v.done).length}/3 · F to sniff the way`;
   const key = !isSewer() ? (run.keys ? ' · Manhole unlocked: descend for premium loot' : ' · Manhole locked') : '';
+  const ot = objText();
+  if (ot && !G.boss && !G.exitD) return ot;
+  if (G.exits && G.exits.length > 1) return `Choose your road: ${G.exits.map(e => ROUTES[e.route].name).join(' · ')} · F to sniff them out${!isSewer() && run.keys ? ' · or take the manhole down' : ''}`;
   if (G.exitD) return isSewer() ? 'A ladder leads up to the streets · F to sniff it out' : `The road to ${nextSurfaceName()} is open · F to sniff it out${run.keys ? ' · or take the manhole down' : ''}`;
   if (G.boss) return G.boss.revealed ? 'Boss awake' : 'Something big is awake · F to sniff it out';
   return `Nests left ${run.nests} · Boss wakes in ${fmt(Math.max(0, run.bossAt - (run.time - run.dStart)))}${key}`;
@@ -149,7 +154,8 @@ export function drawMap(cv, px, radius) {
   W.enemies.filter(e => e.type === 'nest').forEach(e => dot(e, '#ff3a20', 6));
   W.valves.filter(v => !v.done).forEach(v => dot(v, '#6ad06a', 6));
   if (G.manhole) dot(G.manhole, '#b070ff', 7);
-  if (G.exitD) dot(G.exitD, '#ffffff', 7);
+  if (G.exits && G.exits.length) G.exits.forEach(e => dot(e, e.route ? ROUTES[e.route].css : '#ffffff', 8)); else if (G.exitD) dot(G.exitD, '#ffffff', 7);
+  objTargets().forEach(t => dot(t, '#ffd040', 7));
   if (G.boss) dot(G.boss, '#ff2a60', 8);
   const em = G.evMarker;
   if (em) dot(em.e || em, em.col, 9);

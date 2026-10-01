@@ -23,6 +23,7 @@ import { onBossHit } from '../entities/brain.js';
 import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
 import { contract } from '../game/contracts.js';
 import { bountyKill } from '../game/events.js';
+import { thiefDown } from '../game/objectives.js';
 import { banner } from '../ui/hud.js';
 import { openLevelUp, die } from '../ui/screens.js';
 
@@ -175,6 +176,7 @@ export function kill(e) {
   if (P.shadow && !e.boss) contract('shadow');
   if (e.elite && !e.champion) contract('elites');
   if (e.bounty) { contract('bounty'); bountyKill(e); }
+  if (e.thief) thiefDown(e);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
   if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {

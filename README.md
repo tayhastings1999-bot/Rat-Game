@@ -89,6 +89,14 @@ Movement and signature moves:
   - **Wanted**: a marked elite with a bounty (salvage and a weapon crate). You have 60 seconds before it escapes.
 - *Contracts.* Each run deals three jobs, shown under the minimap and on the pause screen. Completing one pays Dominance plus salvage on the spot. Untouchable (5 perfect dodges), Engineer (8 trap kills), In the Walls, Turf War, Forager, Dumpster Diver, Unseen (15 kills from shadow), Pack Call, Breakthrough, Bounty Hunter, Flawless (kill a boss without being hit) and Elite Hunter.
 
+**District jobs.** The first district is always "smash the nests". After that, each district rolls a different job. Finishing it wakes the boss early and drops a premium chest plus salvage; the timer (a little longer now) still wakes the boss if you dawdle.
+- *The Cheese Heist.* Grab the giant glowing wheel and carry it back to the gold ring at your start. It slows you, and the horde spawns twice as fast while you have it.
+- *Rescue the Caged Rats.* Gnaw open three cages; each freed rat fights beside you for the rest of the run.
+- *Light the Beacon.* Stand in the ring (usually on a rooftop) until it lights, while bats and crows come at you. The meter drains slowly when you step out.
+- *Catch the Thief.* A gold rat runs away from you along the streets, scooping up your XP gems. Catch it three times to get them back with interest.
+
+**Choose your road.** When a boss falls, up to three exits open, each labelled with what waits at the start of the next district: **Hoard** (premium chest), **Armory** (weapon crate), **Shrine** (a free Breakthrough-grade pick), **Safe House** (full heal and food), or **Blood Road** (+1.5 threat and +10% Dominance for the rest of the run, with a cursed chest and a premium chest). F sniffs out all of them in their colours.
+
 **Leveling.** Built to feel smooth, with milestones you have to earn:
 - *Even pace.* XP income rises with the threat (a tougher horde pays more), and if you fall behind the expected level for the run time you earn up to 50% extra until you catch up. Gems come in tiers: blue, green, red and violet.
 - *Every level-up is a beat of relief.* A shockwave shoves the horde back, you heal 5%, and time slows for a moment.

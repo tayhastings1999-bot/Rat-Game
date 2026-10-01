@@ -713,6 +713,7 @@ export function resetLists() {
   for (const k of Object.keys(W)) if (Array.isArray(W[k])) W[k] = [];
   W.cracks = new Map();
   G.exitD = null;
+  G.exits = [];
   G.manhole = null;
   for (const f of flasks) { f.on = false; f.m.visible = false; }
 }

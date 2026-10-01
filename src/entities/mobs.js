@@ -17,6 +17,7 @@ import { hit, hurtP, kill, gainXP, aoe } from '../combat/combat.js';
 import { warn, puddle } from '../combat/hazards.js';
 import { bossAI } from './bosses.js';
 import { owlAI } from '../game/light.js';
+import { thiefAI } from '../game/objectives.js';
 
 const CORRUPT_KEYS = Object.keys(CORRUPT);
 
@@ -542,6 +543,7 @@ export function updateEnemies(dt, cap) {
       continue;
     }
     if (e.rival) continue; // rival nests (Squeeze Network) are static; ducts.js runs them
+    if (e.thief) { thiefAI(e, dt); continue; }
     if (e.corrupt) tickCorrupt(e, dt);
     const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
     let custom = false;

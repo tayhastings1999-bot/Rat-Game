@@ -25,6 +25,7 @@ import { tickDucts } from '../world/ducts.js';
 import { tickProgress } from './progress.js';
 import { tickEvents } from './events.js';
 import { tickFeel } from './feel.js';
+import { tickObjective, objDone, carryingWheel } from './objectives.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
@@ -417,8 +418,9 @@ export function update(dt) {
     M.spawnTiles = [];
     for (let k = 0; k < M.flow.length; k++) if (M.flow[k] >= lo && M.flow[k] <= hi && DRY(M.grid[k])) M.spawnTiles.push(k);
   }
-  const cap = spawnTick(dt * (G.boss ? 0.6 : 1));
-  if (G.mode !== 'trial' && !run.bossDone && !G.boss && (run.time - run.dStart >= run.bossAt || run.nests <= 0) && M.spawnTiles.length) spawnBoss();
+  // Carrying the cheese wheel draws the horde twice as fast.
+  const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
+  if (G.mode !== 'trial' && !run.bossDone && !G.boss && (run.time - run.dStart >= run.bossAt || objDone()) && M.spawnTiles.length) spawnBoss();
   updateEnemies(dt, cap);
   tickSwarm(dt);
   tickForage(dt);
@@ -433,9 +435,12 @@ export function update(dt) {
   tickProgress(dt);
   tickEvents(dt);
   tickFeel(dt);
+  tickObjective(dt);
   updatePickups(dt);
-  const ex = G.exitD;
-  if (ex && Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8) {
+  const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
+  const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);
+  if (ex) {
+    run.route = ex.route || null;
     if (G.mode === 'trial') { if (W.valves.every(v => v.done)) finishTrial(); }
     else if (ex.kind === 'road') exitRoad();
     else if (ex.kind === 'ladder') exitLadder();

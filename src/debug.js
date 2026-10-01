@@ -10,6 +10,7 @@ import { giveItem, giveCursed, collectCore } from './game/loot.js';
 import { openLevelUp, renderNest, die, pause } from './ui/screens.js';
 import { dropKey, gainXP, kill, hit, hurtP } from './combat/combat.js';
 import { contract } from './game/contracts.js';
+import { setupObjective, objDone, openCage } from './game/objectives.js';
 import { M, T, tAt, topAt, toW, DRY, N4 } from './world/grid.js';
 import { audioReady, music, musicLevel } from './audio/audio.js';
 import { renderer, scene, cutPlane } from './render/renderer.js';
@@ -42,7 +43,8 @@ export function debugApi(state) {
       return null;
     },
     cutY: () => cutPlane.constant,
-    hurtP, contract,
+    hurtP, contract, objDone, openCage,
+    forceObjective(k) { setupObjective(state.G.objInfo, k); },
     /** Fire a district event on the next tick. */
     forceEvent(k) { state.run.forceEv = k; state.run.evT = 0; state.run.events.length = 0; },
     need,

@@ -34,6 +34,7 @@ for (const k in CORRUPT) corruptCol[k] = new THREE.Color(CORRUPT[k].col);
 function mobColor(e) {
   const t = G.time;
   if (e.flash > 0) return tmpC.setScalar(3.5);
+  if (e.thief) return tmpC.setRGB(2, 1.6, 0.3);
   if (e.wind > 0 || e.tel > 0) return tmpC.setRGB(2.4 + Math.sin(t * 40) * 0.6, 0.6, 0.45);
   if (P.scent) return tmpC.setRGB(2.4, 0.5, 0.4);
   if (e.bT > 0) return tmpC.setRGB(1.6, 0.8, 0.4);

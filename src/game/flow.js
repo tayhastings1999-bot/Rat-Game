@@ -19,6 +19,8 @@ import { renderMenu, hideOverlay, openLevelUp } from '../ui/screens.js';
 import { STARTS } from '../data/items.js';
 import { dealContracts } from './contracts.js';
 import { coldOpen } from './feel.js';
+import { setupObjective } from './objectives.js';
+import { openRoutes, applyRoute } from './routes.js';
 
 export function freshStats(C) {
   const n = meta.nest;
@@ -53,6 +55,7 @@ export function setupWorld(seed) {
   run.mods = G.mode === 'trial' || !D.haz ? pool.slice(0, 2) : [D.haz, pool[0]];
   buildWorld();
   populate(info);
+  setupObjective(info);
   unseedRng();
   clearFx();
   const s = info.startRoom;
@@ -146,7 +149,8 @@ export function openGate() {
   // Walled in (e.g. inside a boarded slot): fall back to the farthest room as the crow flies.
   if (bk < 0) for (const r of W.rooms) { const d = Math.hypot(toW(r.cx) - P.x, toW(r.cy) - P.z); if (d > bd) { bd = d; bk = gi(r.cx, r.cy); } }
   if (bk < 0) return;
-  addExit(toW(bk % M.W), toW((bk / M.W) | 0), isSewer() ? 'ladder' : 'road');
+  openRoutes(isSewer() ? 'ladder' : 'road');
+  if (!G.exits || !G.exits.length) addExit(toW(bk % M.W), toW((bk / M.W) | 0), isSewer() ? 'ladder' : 'road');
 }
 
 function transition(apply, title, sub) {
@@ -168,11 +172,14 @@ function transition(apply, title, sub) {
     const got = checkUnlocks();
     setupWorld('S' + Date.now());
     run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.3);
+    const route = run.route;
+    run.route = null;
     $('zoneName').textContent = dName();
     $('fade').style.opacity = 0;
     G.state = 'play';
     G.last = performance.now();
     banner(title(), got.length ? 'Unlocked: ' + got.join(', ') : sub());
+    if (route) setTimeout(() => applyRoute(route), 1800);
   }, 450);
 }
 

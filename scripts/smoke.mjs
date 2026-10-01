@@ -231,8 +231,13 @@ await step('volatile junk + rummaging', async () => {
   const s0 = await S(() => ({ n: __scurry.run.junk.length, tox: __scurry.st.toxImmune, heal: __scurry.st.healMul, noScr: __scurry.st.noScramble, sta: __scurry.st.staMax }));
   if (s0.n !== 4 || !s0.tox || s0.heal > 0.3 || !s0.noScr) throw new Error('junk stats ' + JSON.stringify(s0));
   // Roll with the battery: electric trail.
-  await page.keyboard.down('KeyW'); await page.keyboard.press('ShiftLeft');
-  const trail = await until(() => __scurry.W.volt.length, 3000);
+  let trail = 0;
+  await page.keyboard.down('KeyW');
+  for (let i = 0; i < 4 && !trail; i++) {
+    await S(() => { const { P, run, st } = __scurry; run.sta = st.staMax; P.rollCd = 0; P.chewing = false; P.squeeze = false; });
+    await page.keyboard.press('ShiftLeft');
+    trail = await rawUntil(() => __scurry.W.volt.length, 1500);
+  }
   await page.keyboard.up('KeyW');
   if (!trail) throw new Error('no electric trail');
   // Razor blade bleeds; the sinker slams.
@@ -433,6 +438,45 @@ await step('perfect dodge, district events, contracts', async () => {
   if (!cd.done || !(cd.d > 0)) throw new Error('contract did not pay ' + JSON.stringify(cd));
   await S(() => { __scurry.G.testNoBusy = false; for (const e of __scurry.W.enemies) if (e.type === 'roach' || e.stampede) __scurry.kill(e); });
 });
+await step('district objectives: heist, rescue, beacon, thief', async () => {
+  await S(() => { __scurry.G.testNoBusy = true; for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); });
+  const tp = (x, z, y = null) => S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y ?? 0; P.vx = P.vz = 0; }, [x, z, y]);
+  // Heist: grab the wheel, carry it home.
+  await S(() => __scurry.forceObjective('heist'));
+  const h = await S(() => { const o = __scurry.run.obj; return { x: o.x, z: o.z, hx: o.home.x, hz: o.home.z }; });
+  await tp(h.x, h.z, 0);
+  if (!(await until(() => __scurry.run.obj.carried, 3000))) throw new Error('could not pick up the cheese wheel');
+  await shot('03m-heist');
+  await tp(h.hx, h.hz, 0);
+  if (!(await until(() => __scurry.run.obj.done && __scurry.objDone(), 3000))) throw new Error('wheel delivery did not complete');
+  // Rescue: gnaw one cage for real, open the rest.
+  await S(() => __scurry.forceObjective('rescue'));
+  const c = await S(() => { const c = __scurry.run.obj.cages[0]; return { x: c.x, z: c.z, y: c.y, n: __scurry.run.obj.cages.length }; });
+  await tp(c.x + 1, c.z, c.y);
+  await until(() => __scurry.chewTarget() && __scurry.chewTarget().kind === 'cage', 3000);
+  await page.keyboard.down('KeyE');
+  const opened = await until(() => __scurry.run.obj.cages[0].open, 5000);
+  await page.keyboard.up('KeyE');
+  if (!opened) throw new Error('cage did not open');
+  await S(() => { for (const c of __scurry.run.obj.cages) if (!c.open) __scurry.openCage(c); });
+  if (!(await S(() => __scurry.run.obj.done && __scurry.W.familiars.length >= 3))) throw new Error('rescue did not complete');
+  // Beacon: stand in the ring; it lights.
+  await S(() => __scurry.forceObjective('hold'));
+  const b = await S(() => { const o = __scurry.run.obj; return { x: o.x, z: o.z, y: o.y }; });
+  await tp(b.x, b.z, b.y);
+  if (!(await until(() => __scurry.run.obj.p > 0.5, 4000))) throw new Error('beacon not charging');
+  await S(() => { __scurry.run.obj.p = 34.8; });
+  await tp(b.x, b.z, b.y);
+  if (!(await until(() => __scurry.run.obj.done, 3000))) throw new Error('beacon never lit');
+  // Thief: it spawns, runs, and three catches finish the job.
+  await S(() => __scurry.forceObjective('hunt'));
+  for (let i = 0; i < 3; i++) {
+    if (!(await until(() => __scurry.run.obj.thief && !__scurry.run.obj.thief.dead, 12000))) throw new Error('no thief spawned ' + i);
+    await S(() => __scurry.kill(__scurry.run.obj.thief));
+  }
+  if (!(await S(() => __scurry.run.obj.done))) throw new Error('thief hunt did not complete');
+  await S(() => { __scurry.G.testNoBusy = false; });
+});
 await step('corrupted elites spawn and die', async () => {
   await S(() => { __scurry.G.testFreeze = false; });
   await S(() => { const { P } = __scurry; for (const c of ['fire', 'ward', 'split', 'volatile', 'leech', 'haste']) __scurry.spawnEnemy('mawling', P.x + 3, P.z + 3, { elite: true, corrupt: c }); });
@@ -472,8 +516,9 @@ await step('surface boss: three phases, death, exits', async () => {
   if (ph !== 3) throw new Error('boss phase ' + ph);
   await S(() => __scurry.killBoss());
   await wait(1000);
-  const s = await S(() => ({ exit: !!__scurry.G.exitD, boss: !!__scurry.G.boss, keys: __scurry.W.keys.length }));
+  const s = await S(() => ({ exit: !!__scurry.G.exitD, boss: !!__scurry.G.boss, keys: __scurry.W.keys.length, routes: (__scurry.G.exits || []).map(e => e.route) }));
   if (!s.exit || s.boss) throw new Error(JSON.stringify(s));
+  if (s.routes.length < 2 || s.routes.some(r => !r)) throw new Error('no route choice after the boss ' + JSON.stringify(s));
 });
 await step('descend into sewer', async () => {
   await S(() => __scurry.enterSewer());

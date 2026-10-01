@@ -17,6 +17,7 @@ import { enterSewer } from '../game/flow.js';
 import { buffOn } from '../game/forage.js';
 import { rummage, sinkerSlam, sinkerLand } from '../game/junk.js';
 import { springTrap, trapTarget, wireIntoWater } from '../game/traps.js';
+import { cageTarget, openCage, carryingWheel } from '../game/objectives.js';
 import { banner } from '../ui/hud.js';
 import { openBench } from '../ui/screens.js';
 
@@ -46,7 +47,7 @@ export function stepPlayer(dt) {
   // Momentum: sprinting is remembered briefly, and chained wall-bounces stack speed until you settle.
   P.sprintMem = P.sprinting ? 0.35 : (P.sprintMem || 0) - dt;
   if (P.onGround && P.chain) { P.chainT -= dt; if (P.chainT <= 0) P.chain = 0; }
-  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (1 + 0.1 * (P.chain || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1);
+  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (1 + 0.1 * (P.chain || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1) * (carryingWheel() ? 0.78 : 1);
   if (P.sprinting) { run.sta -= st.sprintDrain * dt * (buffOn('slime') ? 0 : 1); P.staT = 0.6; }
   P.rollCd -= dt;
   if (P.roll > 0) {
@@ -252,6 +253,8 @@ export function chewTarget() {
   }
   const t = trapTarget();
   if (t) return { kind: 'trap', t, time: t.time, label: t.label };
+  const cg = cageTarget();
+  if (cg) return { kind: 'cage', cg, time: 1.1, label: 'Gnaw the cage open' };
   return null;
 }
 export function pressE() {
@@ -358,6 +361,7 @@ export function openTile(gx, gz) {
 export function doChew(c) {
   if (c.kind === 'tile') openTile(c.gx, c.gz);
   if (c.kind === 'trap') springTrap(c.t);
+  if (c.kind === 'cage') openCage(c.cg);
   if (c.kind === 'rope') {
     const it = c.it;
     it.used = true;

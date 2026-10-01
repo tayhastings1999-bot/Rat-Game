@@ -10,6 +10,8 @@ import { mkIM, dummy, tmpC } from '../render/pools.js';
 import { dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, gi, inG, toG, toW, tAt, floorY, descend, nearOpen } from '../world/grid.js';
+import { objTargets } from './objectives.js';
+import { ROUTES } from './routes.js';
 
 export const TOX = { cone: 0xff2ad8, print: 0xc8ff20, gnaw: 0x20ffc8, alert: 0xff3a20 };
 
@@ -54,7 +56,9 @@ function scan() {
     }
     if (b) W.scentPaths.push({ col, p: descend(M.flow, b[0], b[1], 120) });
   };
-  if (G.mode === 'survival' && G.exitD) tgt([G.exitD], 0x6ad06a);
+  if (G.mode === 'survival' && G.exits && G.exits.length) for (const e of G.exits) tgt([e], ROUTES[e.route] ? ROUTES[e.route].col : 0x6ad06a);
+  else if (G.mode === 'survival' && G.exitD) tgt([G.exitD], 0x6ad06a);
+  { const ts = objTargets(); if (ts.length) tgt(ts, 0xffd040); }
   if (G.mode === 'survival' && G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
   if (W.keys.length) tgt(W.keys, 0xffd040);
   if (G.boss && !G.boss.revealed) tgt([G.boss], 0xff2a60);
