@@ -50,22 +50,26 @@ const START = {
     return { kind: 'feast', x: s.x, z: s.z, t: 30, spawned: 0, st: 0 };
   },
   stampede() {
-    const a = rand(0, 6.3), dx = Math.sin(a), dz = Math.cos(a), px = -dz, pz = dx, head = a + Math.PI;
-    let n = 0;
-    for (let i = -3; i <= 3; i++) {
-      const x = P.x + dx * 20 + px * i * 2.6, z = P.z + dz * 20 + pz * i * 2.6;
-      if (!open(tileAt(x, z))) continue;
-      const e = spawnEnemy('cat', x, z, { plain: true });
-      if (!e) continue;
-      e.stampede = true;
-      chargeStart(e, 1.1, 18, 2.6, () => head);
-      fx('warn', x, floorY(x, z), z, 1.6, 0xff2a1a, 1.1, 0, 0.45);
-      n++;
+    // Try a few directions until one has street to charge along.
+    for (let tries = 0; tries < 6; tries++) {
+      const a = rand(0, 6.3), dx = Math.sin(a), dz = Math.cos(a), px = -dz, pz = dx, head = a + Math.PI;
+      let n = 0;
+      for (let i = -3; i <= 3; i++) {
+        const x = P.x + dx * 20 + px * i * 2.6, z = P.z + dz * 20 + pz * i * 2.6;
+        if (!open(tileAt(x, z))) continue;
+        const e = spawnEnemy('cat', x, z, { plain: true, force: true });
+        if (!e) continue;
+        e.stampede = true;
+        chargeStart(e, 1.1, 18, 2.6, () => head);
+        fx('warn', x, floorY(x, z), z, 1.6, 0xff2a1a, 1.1, 0, 0.45);
+        n++;
+      }
+      if (!n) continue;
+      sfx('screech');
+      banner('Stampede!', 'Cats are charging through · get clear or get up high');
+      return { kind: 'stampede', t: 5 };
     }
-    if (!n) return null;
-    sfx('screech');
-    banner('Stampede!', 'Cats are charging through · get clear or get up high');
-    return { kind: 'stampede', t: 5 };
+    return null;
   },
   fumigate() {
     const ax = Math.random() < 0.5 ? 'x' : 'z', dir = Math.random() < 0.5 ? 1 : -1;

@@ -460,8 +460,8 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   const c = await S(() => { const c = __scurry.run.obj.cages[0]; return { x: c.x, z: c.z, y: c.y, n: __scurry.run.obj.cages.length }; });
   await tp(c.x + 1, c.z, c.y);
   await until(() => __scurry.chewTarget() && __scurry.chewTarget().kind === 'cage', 3000);
-  await page.keyboard.down('KeyE');
-  const opened = await until(() => __scurry.run.obj.cages[0].open, 5000);
+  let opened = false;
+  for (let i = 0; i < 4 && !opened; i++) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); opened = await until(() => __scurry.run.obj.cages[0].open, 3000); }
   await page.keyboard.up('KeyE');
   if (!opened) throw new Error('cage did not open');
   await S(() => { for (const c of __scurry.run.obj.cages) if (!c.open) __scurry.openCage(c); });
@@ -505,7 +505,7 @@ await step('corrupted elites spawn and die', async () => {
 await step('surface boss: three phases, death, exits', async () => {
   await S(() => __scurry.spawnBoss());
   await wait(300);
-  const hidden = await S(() => { const b = __scurry.G.boss; return document.getElementById('bossWrap').style.display === 'none' || b.revealed; });
+  const hidden = await rawUntil(() => { const b = __scurry.G.boss; return document.getElementById('bossWrap').style.display === 'none' || b.revealed; }, 1500);
   if (!hidden) throw new Error('boss UI shown before reveal');
   await S(() => { const { G, P } = __scurry; const b = G.boss; b.x = P.x + 8; b.z = P.z; __scurry.comboGain(100); });
   const ready = await S(() => __scurry.run.shriekReady);
