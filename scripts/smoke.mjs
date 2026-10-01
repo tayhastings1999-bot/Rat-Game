@@ -40,6 +40,18 @@ const rawUntil = async (fn, ms = 5000, arg) => {
   for (const t0 = Date.now(); Date.now() - t0 < ms;) { v = await S(fn, arg); if (v) return v; await rawWait(100); }
   return v;
 };
+/** Hold E until fn() holds, re-pressing only if gnawing stopped (re-pressing resets gnaw progress). */
+const gnawUntil = async (fn, ms = 12000, arg) => {
+  await page.keyboard.down('KeyE');
+  const t0 = Date.now();
+  let ok = false;
+  while (!(ok = await S(fn, arg)) && Date.now() - t0 < ms) {
+    await wait(150);
+    if (!(await S(() => __scurry.P.chewing))) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); }
+  }
+  await page.keyboard.up('KeyE');
+  return ok;
+};
 const hold = async (key, ms) => { await page.keyboard.down(key); await wait(ms); await page.keyboard.up(key); };
 const shot = name => page.screenshot({ path: OUT + name + '.png' });
 
@@ -115,8 +127,8 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   if (board) {
     await S(bd => { const { P, M, G, W } = __scurry, T = 4, toW = g => (g - M.W / 2 + 0.5) * T; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, board);
     await page.keyboard.down('KeyW'); await until(() => !!__scurry.chewTarget(), 4000);
-    for (let i = 0; i < 4 && (await S(k => __scurry.M.grid[k], board.k)) !== 1; i++) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, i < 3 ? 2500 : 8000, board.k); }
-    await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
+    await gnawUntil(k => __scurry.M.grid[k] === 1, 12000, board.k);
+    await page.keyboard.up('KeyW');
     const t = await S(k => __scurry.M.grid[k], board.k);
     if (t !== 1) throw new Error('boards not gnawed (tile ' + t + ')');
   }
@@ -170,8 +182,8 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   await S(bd => { const { P, M, G } = __scurry, toW = g => (g - M.W / 2 + 0.5) * 4; P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, sec);
   await page.keyboard.down('KeyW'); await until(() => !!__scurry.chewTarget(), 4000);
   // E may open a chest standing right there first; keep pressing until the wall is being gnawed.
-  for (let i = 0; i < 4 && (await S(k => __scurry.M.grid[k], sec.k)) !== 1; i++) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, i < 3 ? 2500 : 8000, sec.k); }
-  await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
+  await gnawUntil(k => __scurry.M.grid[k] === 1, 12000, sec.k);
+  await page.keyboard.up('KeyW');
   if ((await S(k => __scurry.M.grid[k], sec.k)) !== 1) throw new Error('secret wall not gnawed');
   // Lair: walk in, mini-boss wakes; kill it, hoard appears.
   const lair = await S(() => { const L = __scurry.W.lairs[0]; return L && { x: L.cx, z: L.cz }; });
@@ -212,7 +224,7 @@ await step('scramble, wall-bounce, foraging', async () => {
   await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 2.5; P.z = w.z + w.nz * 2.5; P.y = 0; P.vx = P.vy = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, w);
   await page.keyboard.down('KeyW'); await rawWait(150); await page.keyboard.down('ShiftLeft');
   let chain = 0;
-  for (let i = 0; i < 25 && !chain; i++) { await rawWait(50); if (await S(() => __scurry.P.scramble > 0)) { await page.keyboard.press('Space'); await rawWait(80); chain = await S(() => __scurry.P.chain); } }
+  for (let i = 0; i < 80 && !chain; i++) { await rawWait(50); if (await S(() => __scurry.P.scramble > 0)) { await page.keyboard.press('Space'); await rawWait(80); chain = await S(() => __scurry.P.chain); } }
   await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft');
   if (!chain) throw new Error('wall-bounce did not chain');
   const f = await S(() => { const f = __scurry.W.fungi.find(f => !f.taken); return f && { x: f.x, y: f.y, z: f.z, k: f.kind }; });
@@ -460,9 +472,7 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   const c = await S(() => { const c = __scurry.run.obj.cages[0]; return { x: c.x, z: c.z, y: c.y, n: __scurry.run.obj.cages.length }; });
   await tp(c.x + 1, c.z, c.y);
   await until(() => __scurry.chewTarget() && __scurry.chewTarget().kind === 'cage', 3000);
-  let opened = false;
-  for (let i = 0; i < 4 && !opened; i++) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); opened = await until(() => __scurry.run.obj.cages[0].open, 3000); }
-  await page.keyboard.up('KeyE');
+  const opened = await gnawUntil(() => __scurry.run.obj.cages[0].open);
   if (!opened) throw new Error('cage did not open');
   await S(() => { for (const c of __scurry.run.obj.cages) if (!c.open) __scurry.openCage(c); });
   if (!(await S(() => __scurry.run.obj.done && __scurry.W.familiars.length >= 3))) throw new Error('rescue did not complete');
