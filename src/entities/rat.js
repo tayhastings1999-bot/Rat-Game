@@ -131,8 +131,95 @@ export function makeRat(C) {
     add(new THREE.TorusGeometry(0.42, 0.04, 4, 14), gear, 0, 0.05, 0.1, body, [0, PI2, -0.8]);
     for (let i = 0; i < 5; i++) add(Co(0.02, 0.18, 3), L(0xd8e8ff), Math.sin(i * 0.4 - 0.8) * 0.4, 0.2 + Math.cos(i * 0.4 - 0.8) * 0.2, 0.1, body);
   }
+  // ---- signature silhouettes: one unmistakable shape per class ----
+  const flames = [], glider = [];
+  if (C.prim === 'rake') {
+    // Gutter Brawler: a red bandana with trailing knots, and bottle-cap knuckles.
+    const red = L(0xc02a1a);
+    add(new THREE.TorusGeometry(0.24, 0.05, 4, 10), red, 0, 0.1, 0.0, head, [PI2 - 0.25, 0, 0]);
+    add(Bx(0.06, 0.04, 0.28), red, 0.06, 0.12, -0.32, head, [0.5, 0.25, 0]);
+    add(Bx(0.06, 0.04, 0.24), red, -0.05, 0.08, -0.3, head, [0.8, -0.3, 0]);
+    const cap = L(0xd8b040, { map: stoneTex });
+    for (const i of [0, 1]) for (let k = -1; k <= 1; k++) add(Cy(0.06, 0.06, 0.03, 8), cap, k * 0.07, -0.36, 0.17, legs[i], [PI2, 0, 0]);
+    body.scale.set(1.08, 1, 1);
+  }
+  if (C.prim === 'blight') {
+    // Plaguebearer: a bone-white beak mask and bubbling vials strapped on.
+    add(Co(0.13, 0.5, 5), L(0xe8e0cc), 0, -0.02, 0.48, head, [PI2 + 0.15, 0, 0]);
+    for (const s of [-1, 1]) { add(Cy(0.07, 0.07, 0.22, 6), L(0x4a6a2a), s * 0.2, 0.32, -0.25, body); add(Sp(0.07, 5, 4), new THREE.MeshBasicMaterial({ color: 0xb8f060 }), s * 0.2, 0.32, -0.25, body); }
+    flames.push(glow(0xa8e060, 0.4, body, 0.2, 0.48, -0.25, 0.7), glow(0xa8e060, 0.4, body, -0.2, 0.48, -0.25, 0.7));
+  }
+  if (C.prim === 'hex') {
+    // Rat Warlock: a crown of dripping candle stubs.
+    add(new THREE.TorusGeometry(0.17, 0.03, 4, 10), L(0xe8dcc0), 0, 0.5, -0.12, head, [PI2, 0, 0]);
+    for (let k = 0; k < 3; k++) {
+      const a = (k - 1) * 0.9, x = Math.sin(a) * 0.15, z = -0.12 + Math.cos(a) * 0.06;
+      add(Cy(0.035, 0.04, 0.16 + k % 2 * 0.06, 5), L(0xf0e8d0), x, 0.6 + k % 2 * 0.03, z, head);
+      flames.push(glow(0xffb040, 0.32, head, x, 0.72 + k % 2 * 0.06, z, 0.95));
+    }
+  }
+  if (C.prim === 'stone') {
+    // Sewer Slinger: a rubber-band Y-sling across the back and a feather cap.
+    const wood = L(0x6a4a2a);
+    add(Cy(0.025, 0.025, 0.5, 4), wood, 0, 0.35, -0.3, body, [0.6, 0, 0]);
+    add(Cy(0.02, 0.02, 0.24, 4), wood, -0.08, 0.6, -0.1, body, [0.6, 0, 0.45]);
+    add(Cy(0.02, 0.02, 0.24, 4), wood, 0.08, 0.6, -0.1, body, [0.6, 0, -0.45]);
+    add(Bx(0.18, 0.015, 0.015), L(0xc84a3a), 0, 0.7, -0.03, body, [0.6, 0, 0]);
+    add(Bx(0.03, 0.42, 0.08), L(0xd84a2a), 0.1, 0.42, -0.12, head, [-0.5, 0, -0.3]);
+  }
+  if (C.prim === 'gnash') {
+    // Sewer Rat: a dented sardine-tin shell with its key still rolled up.
+    const tin = L(0xb8c0c8, { map: stoneTex });
+    add(new THREE.CylinderGeometry(0.42, 0.42, 1.0, 8, 1, true, -PI2, Math.PI), tin, 0, 0.12, -0.1, body, [PI2, 0, 0]);
+    add(new THREE.TorusGeometry(0.08, 0.025, 4, 8), metal, 0.44, 0.15, -0.55, body, [0, PI2, 0]);
+    add(Bx(0.02, 0.02, 0.3), metal, 0.44, 0.15, -0.4, body);
+  }
+  if (C.prim === 'shiv') {
+    // Sewer Sneak: a striped sock pulled over the head, trailing down the back, and a bandit mask.
+    const sockA = L(0x3a5a48, { map: furTex }), sockB = L(0xd0c8b0, { map: furTex });
+    for (let k = 0; k < 4; k++) add(Cy(0.27 - k * 0.05, 0.25 - k * 0.05, 0.16, 6), k % 2 ? sockB : sockA, 0, 0.12 - k * 0.04, -0.06 - k * 0.15, head, [PI2 - 0.4 - k * 0.15, 0, 0]);
+    add(Sp(0.07, 5, 4), sockB, 0, -0.06, -0.7, head);
+    add(Bx(0.42, 0.06, 0.1), L(0x101010), 0, 0.07, 0.18, head);
+  }
+  if (C.prim === 'darts') {
+    // Roof Rat: glider skin between the legs and a longer whip tail.
+    const skinM = L(0x5a4e5a);
+    for (const s of [-1, 1]) {
+      const m = add(Bx(0.36, 0.025, 0.8), skinM, s * 0.38, -0.12, 0.0, body, [0, 0, s * 0.15]);
+      glider.push(m);
+    }
+    let tp = tail[tail.length - 1];
+    for (let i = 0; i < 3; i++) {
+      const sg = new THREE.Group();
+      sg.position.z = -0.3;
+      const m = new THREE.Mesh(Cy(0.012, 0.016, 0.32, 4), tB);
+      m.rotation.x = PI2;
+      m.position.z = -0.15;
+      sg.add(m);
+      tp.add(sg);
+      tail.push(sg);
+      tp = sg;
+    }
+  }
+  // ---- wear: scars and a torn ear appear as the rat gets hurt ----
+  const scarM = L(0x5a1a1a), wear = [];
+  wear.push(add(Bx(0.04, 0.24, 0.02), scarM, 0.34, 0.06, 0.15, body, [0.3, 0, 0.6]));
+  wear.push(add(Bx(0.04, 0.2, 0.02), scarM, -0.33, 0.1, -0.2, body, [-0.4, 0, -0.5]));
+  wear.push(add(Sp(0.1, 5, 4), L(0x6a0e0e), -0.18, 0.24, 0.0, head, null, [1, 0.5, 1]));
+  wear.push(add(Bx(0.05, 0.14, 0.02), scarM, 0.12, 0.12, 0.25, head, [0, 0, 0.4]));
+  for (const w of wear) w.visible = false;
   if (C.bulk) g.userData.bulk = C.bulk;
-  return { g, body, head, legs, tail, jaw, bulk: C.bulk || 1 };
+  return { g, body, head, legs, tail, jaw, bulk: C.bulk || 1, flames, glider, wear };
+}
+
+/** Per-frame class and wear details: flickering flames, the glider opening in the air, scars as HP falls. */
+export function ratExtras(rat, A, hpF) {
+  const t = G.time;
+  rat.flames.forEach((f, i) => { const k = 0.85 + Math.sin(t * 17 + i * 2.1) * 0.12 + Math.random() * 0.08; f.scale.set(f.userData.s0 ?? (f.userData.s0 = f.scale.x), (f.userData.s0) * k * 1.3, 1); });
+  const open = !P.onGround && !P.climbing ? 1 : 0.25;
+  rat.glider.forEach((m, i) => { m.scale.x += (open - m.scale.x) * 0.2; m.rotation.z = (i ? 1 : -1) * (0.15 - open * 0.1) + Math.sin(t * 9) * 0.04 * open; });
+  rat.wear.forEach((w, i) => { w.visible = hpF < [0.75, 0.55, 0.35, 0.2][i]; });
+  if (hpF < 0.3 && P.onGround && Math.random() < 0.06) W.parts.push({ x: P.x + rand(-0.2, 0.2), y: P.y + 0.5, z: P.z + rand(-0.2, 0.2), vx: 0, vy: -1, vz: 0, life: 0.5, c: 0x8a0a0a, s: 0.6 });
 }
 
 export function setRat(C) {

@@ -449,6 +449,7 @@ export function bossStatus(e) {
 }
 
 export function onBossDeath(e) {
+  G.victoryT = 2.6; // the rat rears up and roars (ratAnim.js)
   scene.remove(e.mesh);
   laser.visible = false;
   G.boss = null;

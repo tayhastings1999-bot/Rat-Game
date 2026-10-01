@@ -10,7 +10,9 @@ import { animTick, writePose, rigTime } from '../render/rig.js';
 import { M, G as GRAV, toW, floorY, segBlocked, forPlatsNear } from '../world/grid.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
-import { blob } from '../entities/rat.js';
+import { blob, ratExtras } from '../entities/rat.js';
+import { newAnim, animateRat } from '../entities/ratAnim.js';
+import { nearest } from '../combat/combat.js';
 import { syncScent } from './scent.js';
 
 G.camPos = new THREE.Vector3(0, 12, 12);
@@ -345,27 +347,34 @@ export function sync(dt) {
 export function animate(dt) {
   const rat = G.rat;
   if (!rat) return;
-  const mv = Math.hypot(P.vx, P.vz), r01 = Math.min(1, mv / 5), t = G.time, bulk = rat.bulk || 1;
+  const t = G.time, bulk = rat.bulk || 1;
   rat.g.position.set(P.x, P.y, P.z);
   rat.g.rotation.y += angD(P.facing, rat.g.rotation.y) * (1 - Math.exp(-18 * dt));
+  const A = rat.anim || (rat.anim = newAnim());
+  if (A.php != null && run.hp < A.php - 0.5) A.hurt = 1;
+  A.php = run.hp;
+  if (G.victoryT > 0) { A.victory = G.victoryT; G.victoryT = 0; }
+  const lk = G.lockOn && !G.lockOn.dead ? G.lockOn : nearest(8);
+  const hpF = clamp(run.hp / (st.maxHp || 1), 0, 1);
+  animateRat(rat, A, {
+    x: P.x, y: P.y, z: P.z, onGround: P.onGround, vy: P.vy, sprint: P.sprinting, climbing: P.climbing, t,
+    attacking: P.swing > 0 || P.throwT > 0 || P.atk > 0, hurt01: 1 - hpF,
+    lookYaw: lk ? angD(Math.atan2(lk.x - P.x, lk.z - P.z), rat.g.rotation.y) : null,
+  }, dt);
   const at = P.atk > 0 ? Math.sin(P.atk / 0.22 * Math.PI) : 0, chew = P.chewing ? Math.abs(Math.sin(t * 22)) : 0;
-  rat.body.position.y = 0.52 + (P.onGround ? Math.abs(Math.sin(t * 16)) * 0.05 * r01 : 0);
-  rat.body.position.z = at * 0.18;
-  rat.body.rotation.x = P.climbing ? -1.1 : P.onGround ? 0.06 * r01 + at * 0.15 : -0.12;
-  rat.head.position.y = 0.78 + (P.onGround ? Math.sin(t * 16) * 0.025 * r01 : 0.04);
-  rat.head.position.z = 0.66 + at * 0.2;
-  rat.head.rotation.x = P.climbing ? -1 : chew * 0.2;
-  rat.jaw.rotation.x = 0.22 + at * 0.7 + chew * 0.6 + (P.carry ? 0.5 : 0);
-  let sx = 1, sy = P.onGround ? 1 : clamp(1 + P.vy * 0.012, 0.88, 1.15), sz = 1;
+  if (at) {
+    rat.body.position.z += at * 0.18;
+    rat.body.rotation.x += at * 0.15;
+    rat.head.position.z += at * 0.2;
+    rat.legs[0].rotation.x -= at * 1.4;
+    rat.legs[1].rotation.x -= at * 1.4;
+  }
+  rat.head.rotation.x += chew * 0.2;
+  rat.jaw.rotation.x += at * 0.7 + chew * 0.6 + (P.carry ? 0.5 : 0);
+  let sx = 1, sy = rat.g.userData.sq || 1, sz = 1;
   if (P.squeeze) { sy = 0.55; sx = 0.72; sz = 1.25; }
   rat.g.scale.set(sx / Math.sqrt(sy) * bulk, sy * bulk, sz / Math.sqrt(sy) * bulk);
-  rat.legs.forEach((l, i) => {
-    l.rotation.x = P.climbing ? Math.sin(t * 18 + i * 1.6) * 0.9 - 1 : P.onGround ? Math.sin(t * 16 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.7 * r01 + (i < 2 ? -at * 1.4 : 0) : (i < 2 ? -0.6 : 0.6);
-  });
-  rat.tail.forEach((s, i) => {
-    s.rotation.y = Math.sin(t * (3 + r01 * 5) - i * 0.8) * (0.16 + r01 * 0.1);
-    s.rotation.x = i ? 0.1 + (P.onGround ? 0 : 0.03) + (P.glideT > 0 ? -0.05 : 0) : 0.2;
-  });
+  ratExtras(rat, A, hpF, dt);
   // Melee swing: wind-up twist, a fast strike with the leading forepaw and a bite, then follow-through.
   if (P.swing > 0) {
     const len = P.swingHeavy ? 0.3 : 0.24, u = 1 - P.swing / len, side = P.swingSide || 1;
@@ -389,8 +398,6 @@ export function animate(dt) {
     rat.head.rotation.x = -0.25 * Math.sin(u * Math.PI);
     rat.body.rotation.y = 0.2 * Math.sin(u * Math.PI);
   } else {
-    rat.body.rotation.y *= Math.max(0, 1 - dt * 12);
-    rat.head.rotation.y *= Math.max(0, 1 - dt * 12);
     rat.legs.forEach(l => { l.rotation.z *= Math.max(0, 1 - dt * 12); });
   }
   rat.g.visible = P.inv > 0 && P.roll <= 0 && G.state === 'play' ? Math.floor(t * 24) % 2 === 0 : true;

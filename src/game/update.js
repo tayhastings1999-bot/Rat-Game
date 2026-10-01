@@ -31,6 +31,7 @@ import { tickPersonality } from './personality.js';
 import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
+import { newAnim, animateRat } from '../entities/ratAnim.js';
 
 let seenT = 0;
 
@@ -212,8 +213,9 @@ function updateWeapons(dt) {
       f.a = Math.atan2(t.x - f.x, t.z - f.z);
       if (f.t <= 0) { f.t = 0.75 * st.tear; shoot(f.x, f.y + 0.4, f.z, t.x - f.x, t.y + t.h / 2 - (f.y + 0.4), t.z - f.z, 18, 5, 0, 'runt', { col: 0xffd070 }); }
     }
-    f.r.g.position.set(f.x, f.y + Math.abs(Math.sin(G.time * 12 + i)) * 0.05, f.z);
-    f.r.g.rotation.y = t ? f.a : P.facing;
+    f.r.g.position.set(f.x, f.y, f.z);
+    f.r.g.rotation.y += angD(t ? f.a : P.facing, f.r.g.rotation.y) * Math.min(1, dt * 10);
+    animateRat(f.r, f.anim || (f.anim = newAnim()), { x: f.x, y: f.y, z: f.z, onGround: true, vy: 0, sprint: P.sprinting, climbing: false, t: G.time + i, attacking: !!t, hurt01: 0, lookYaw: null, scale: 0.42 }, dt);
   });
   if (P.carry) {
     const o = P.carry, f = P.facing, half = o.kind === 'swab' ? 2.4 : Math.max(OBJ[o.kind].w, OBJ[o.kind].d) / 2;
