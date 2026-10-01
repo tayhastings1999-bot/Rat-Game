@@ -4,6 +4,7 @@ import { PI2 } from '../core/util.js';
 import { scene } from './renderer.js';
 import { GEO, MOB_GEOS, bodyMat, Bx } from './models.js';
 import { atlasTex } from './textures.js';
+import { rigGeo, rigMat, rigPool } from './rig.js';
 
 export const dummy = new THREE.Object3D();
 export const tmpC = new THREE.Color();
@@ -21,9 +22,26 @@ export function mkIM(geo, mat, cap, col = true) {
 }
 
 export const IMB = {}, IMG = {};
+for (const k in GEO) { rigGeo(GEO[k].body, k); rigGeo(GEO[k].glow, k); }
 for (const k of MOB_GEOS) {
-  IMB[k] = mkIM(GEO[k].body, bodyMat(), MOB_CAP); // no real-time shadows: mobs get PS1-style blob shadows
-  IMG[k] = mkIM(GEO[k].glow, new THREE.MeshBasicMaterial({ vertexColors: true }), MOB_CAP, false);
+  IMB[k] = mkIM(GEO[k].body.clone(), rigMat(bodyMat(), k), MOB_CAP); // no real-time shadows: mobs get PS1-style blob shadows
+  IMG[k] = mkIM(GEO[k].glow.clone(), rigMat(new THREE.MeshBasicMaterial({ vertexColors: true }), k), MOB_CAP, false);
+  rigPool(IMB[k], IMG[k], MOB_CAP);
+}
+
+/**
+ * A single rigged creature mesh (bosses, owls, patrol cats): body plus glow
+ * child sharing one pose. Pose lives in mesh.userData.rig {rA, rB}.
+ */
+export function creatureMesh(k) {
+  const bm = rigMat(bodyMat(), k), gm = rigMat(new THREE.MeshBasicMaterial({ vertexColors: true }), k);
+  gm.userData.rig.rA = bm.userData.rig.rA;
+  gm.userData.rig.rB = bm.userData.rig.rB;
+  const mesh = new THREE.Mesh(GEO[k].body, bm);
+  mesh.add(new THREE.Mesh(GEO[k].glow, gm));
+  mesh.userData.rig = bm.userData.rig;
+  mesh.userData.rigKey = k;
+  return mesh;
 }
 
 export const gemIM = mkIM(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), 600);

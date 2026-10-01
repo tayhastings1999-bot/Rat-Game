@@ -27,8 +27,8 @@ export function puddle(kind, x, z, R, t, own) {
 /** Telegraph a circle on the ground, then hit whatever is still inside when it fires. */
 export function warn(x, z, R, t, dmg, o = {}) {
   const y = o.y ?? floorY(x, z);
-  fx('warn', x, y, z, R, o.col || 0xff2a1a, t, 0, 0.5);
-  fx('ring', x, y, z, R, o.col || 0xff5a3a, t, 0, 0.9);
+  fx('warn', x, y, z, R, o.col || 0xffb020, t, 0, 0.5);
+  fx('ring', x, y, z, R, o.col || 0xffd040, t, 0, 0.9);
   W.hazQ.push({ x, y, z, R, t, dmg, o });
 }
 

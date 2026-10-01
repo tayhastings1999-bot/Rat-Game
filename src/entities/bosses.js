@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { GEO, bodyMat } from '../render/models.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, inG, toW, floorY, collideBody } from '../world/grid.js';
@@ -20,6 +19,7 @@ import { addChest } from '../world/build.js';
 import { contract } from '../game/contracts.js';
 import { rankDistrict } from '../game/score.js';
 import { openGate, checkUnlocks } from '../game/flow.js';
+import { creatureMesh } from '../render/pools.js';
 
 const BASE_R = { ghoul: 0.62, tick: 0.4, brute: 0.9, crow: 0.5, drone: 0.95, ratking: 1.25 };
 const BASE_H = { ghoul: 1.3, tick: 0.55, brute: 2.1, crow: 0.6, drone: 1.8, ratking: 1.7 };
@@ -32,8 +32,7 @@ export function spawnBoss() {
   let k = -1, bd = -1;
   for (const t of M.spawnTiles) if (M.flow[t] > bd) { bd = M.flow[t]; k = t; }
   const x = k >= 0 ? toW(k % M.W) : P.x + 10, z = k >= 0 ? toW((k / M.W) | 0) : P.z + 10;
-  const mesh = new THREE.Mesh(GEO[B.geo].body, bodyMat());
-  mesh.add(new THREE.Mesh(GEO[B.geo].glow, new THREE.MeshBasicMaterial({ vertexColors: true })));
+  const mesh = creatureMesh(B.geo);
   mesh.scale.setScalar(B.sc);
   mesh.castShadow = true;
   scene.add(mesh);
@@ -55,6 +54,9 @@ export function spawnBoss() {
   G.shake = 0.5;
   boom(x, gy + 1.5, z, 6, 0xff3a20);
 }
+
+// Telegraph language: what each boss move's wind-up glows as.
+const BOSS_TK = { hair: 'shot', volley: 'shot', tornado: 'shot', spray: 'shot', missiles: 'shot', gun: 'shot', spit: 'shot', spiral: 'shot', rats: 'shot', snipe: 'shot', storm: 'area', web: 'area', roar: 'area', whip: 'area', gulp: 'area', decree: 'area', slam: 'area', quake: 'area' };
 
 /** Queue fn to run after `t` seconds (boss-local timeline). */
 const later = (e, t, fn) => e.seq.push({ t, fn });
@@ -93,7 +95,7 @@ function choose(e, list) {
   let tot = 0;
   for (const a of opts) { a.ww = a.w * weigh(e, a); tot += a.ww; }
   let r = Math.random() * tot;
-  for (const a of opts) { r -= a.ww; if (r <= 0) { e.last = a.id; spend(e, a.cost ?? 4); a.go(); return; } }
+  for (const a of opts) { r -= a.ww; if (r <= 0) { e.last = a.id; spend(e, a.cost ?? 4); e.tkNext = BOSS_TK[a.id] || 'melee'; a.go(); e.tkNext = null; return; } }
 }
 
 /**

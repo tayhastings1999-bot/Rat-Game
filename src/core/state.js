@@ -34,7 +34,7 @@ export const G = {
 export const W = {
   rooms: [], objs: [], plats: [], inter: [], benches: [], chests: [], caches: [], pipes: [],
   lamps: [], valves: [], zones: [], enemies: [], gems: [], scraps: [], cores: [], keys: [],
-  pproj: [], eproj: [], parts: [], foods: [], familiars: [], scentPaths: [], baits: [], gibs: [],
+  pproj: [], eproj: [], parts: [], foods: [], familiars: [], scentPaths: [], baits: [], gibs: [], corpses: [],
   puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [], neons: [], searches: [], shafts: [], prints: [], traps: [], falling: [], shocks: [], smokes: [], ductWires: [], ductNets: [], crates: [],
   cracks: new Map(),
 };

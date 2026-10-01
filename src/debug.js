@@ -1,7 +1,8 @@
 // Hooks for automated smoke tests and manual debugging (window.__scurry).
 import { startRun, menu, enterSewer, exitRoad, exitLadder } from './game/flow.js';
 import { spawnBoss } from './entities/bosses.js';
-import { spawnEnemy, pickType, addPred } from './entities/mobs.js';
+import { spawnEnemy, pickType, addPred, mobState, moveBody, wait } from './entities/mobs.js';
+import { angD } from './core/util.js';
 import { scentInfo } from './game/scent.js';
 import { trapCount, springTrap } from './game/traps.js';
 import { ductInfo } from './world/ducts.js';
@@ -20,11 +21,23 @@ import { comboGain, shriek } from './game/swarm.js';
 import { giveJunk, rummage } from './game/junk.js';
 import { lightAt, spawnOwl } from './game/light.js';
 
+/** Animation gallery: each demo creature walks a small loop and attacks every couple of seconds. */
+function demoAI(e, dt) {
+  e.dt0 = (e.dt0 ?? Math.random() * 3) + dt;
+  if (mobState(e, dt, Math.sin(e.ang), Math.cos(e.ang))) return;
+  const a = e.dt0 * 0.9 + e.ph, tx = e.ax + Math.sin(a) * 1.6, tz = e.az + Math.cos(a) * 1.6;
+  if (e.fly) { e.x += (tx - e.x) * Math.min(1, dt * 3); e.z += (tz - e.z) * Math.min(1, dt * 3); e.ang = a + Math.PI / 2; return; }
+  const dx = tx - e.x, dz = tz - e.z, l = Math.hypot(dx, dz) || 1, sp = e.spd * (Math.sin(e.dt0 * 0.7) > -0.3 ? 1 : 0);
+  moveBody(e, dt, dx / l * sp, dz / l * sp);
+  if (sp) e.ang += angD(Math.atan2(dx, dz), e.ang) * Math.min(1, dt * 8);
+  if (e.dt0 % 3 < dt) wait(e, 0.5, e => { e.lunge = 0.2; }, 0, ['melee', 'shot', 'area'][(Math.random() * 3) | 0]);
+}
+
 export function debugApi(state) {
   return {
-    ...state, M,
+    ...state, M, demoAI,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, giveItem, giveCursed, collectCore,
-    openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {

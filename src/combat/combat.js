@@ -79,10 +79,13 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   e.lastSrc = src;
   if (crit) d *= st.critMul;
   if (e.ward > 0) d *= 0.4;
+  if (e.recov > 0 && !e.boss) { d *= 1.25; if (!e.openShown) { e.openShown = true; dnum(e.x, e.y + e.h + 0.6, e.z, 'OPEN', 'crit'); } } // punish the overextension
   if (e.boss) d *= onBossHit(e, d); // exposed bosses take more; bursts break their poise
   d = Math.max(1, Math.round(d));
   e.hp -= d;
   e.flash = 0.1;
+  e.hitT = G.time;
+  if (ang != null) e.hitA = ang;
   e.hurt = true;
   P.lastHitT = G.time;
   if (src !== 'swarm' && src !== 'dot') comboGain(Math.min(4, 0.6 + d / 12));
@@ -171,7 +174,13 @@ export function kill(e) {
   puff(e.x, e.y + e.h / 2, e.z, e.col, e.boss ? 20 : 5, 3.5);
   boom(e.x, e.y + e.h * 0.5, e.z, (big ? 5 : 1.6) * (e.sc || 1), e.blood);
   decal(e.x, floorY(e.x, e.z) + 0.01, e.z, rand(1.2, 2.2) * (big ? 2.5 : 1) * (e.sc || 1), e.blood);
-  gore(e);
+  // Small fry die with a short ragdoll tumble (sync.js) and lose a few chunks now.
+  const rag = !e.boss && !e.pred && !e.mesh && !e.rival && e.type !== 'nest';
+  gore(e, rag ? 0.6 : 1);
+  if (rag && W.corpses.length < 60) {
+    const a = e.hitA ?? e.ang + Math.PI, v = e.fly ? 2 : 3.5 + Math.min(6, Math.hypot(e.kx || 0, e.kz || 0) * 0.4);
+    W.corpses.push({ type: e.type, x: e.x, y: e.y, z: e.z, ang: e.ang, sc: e.sc || 1, ph: e.ph || 0, vx: Math.sin(a) * v, vy: e.fly ? 0 : rand(3, 5.5), vz: Math.cos(a) * v, rx: 0, rz: 0, sx: rand(-9, 9), sz: rand(-9, 9), t: 0, life: e.fly ? 0.9 : 0.6, fly: e.fly, blood: e.blood, col: e.col, h: e.h, gph: e.gph || 0 });
+  }
   if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech * st.healMul);
   if (st.carrion && !e.boss) run.hp = Math.min(st.maxHp, run.hp + st.maxHp * st.carrion * st.healMul);
   if (e.champion) championDown(e);

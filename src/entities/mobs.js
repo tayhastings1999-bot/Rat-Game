@@ -1,11 +1,10 @@
 // The horde: spawning (threat-scaled, corrupted elites, mutated sewer mobs),
 // movement helpers, telegraphed attack patterns per mob type, and the
 // per-frame enemy update.
-import * as THREE from 'three';
+
 import { rand, randi, clamp, angD, pick, keep, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { GEO, bodyMat } from '../render/models.js';
 import { fx, puff, spark, blood, boom, dnum, swipeFx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { banner } from '../ui/hud.js';
@@ -18,6 +17,7 @@ import { warn, puddle } from '../combat/hazards.js';
 import { bossAI } from './bosses.js';
 import { owlAI } from '../game/light.js';
 import { thiefAI } from '../game/objectives.js';
+import { creatureMesh } from '../render/pools.js';
 
 const CORRUPT_KEYS = Object.keys(CORRUPT);
 
@@ -138,6 +138,9 @@ export function moveBody(e, dt, vx, vz) {
 }
 const slowMul = e => st.foeSpd * (e.slow > 0 ? 0.5 : 1) * (e.y < G.tideY - 0.2 ? 0.55 : 1) * ((tileAt(e.x, e.z) === 2 && e.y < -0.4) ? 0.65 : 1);
 
+// Turn rate (rad/s) and acceleration (1/s) per body type.
+const TURN = { mawling: 7, roach: 16, tick: 12, ghoul: 3.2, bloat: 2.6, brute: 2.8, cat: 8, shade: 6, ratling: 11 };
+const ACCEL = { mawling: 7, roach: 14, tick: 14, ghoul: 3, bloat: 2.5, brute: 2.2, cat: 6, shade: 5, ratling: 10 };
 export function groundChase(e, dt, sp, lat = 0) {
   const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
   const dir = flowDir(e);
@@ -151,8 +154,20 @@ export function groundChase(e, dt, sp, lat = 0) {
     mx /= l; mz /= l;
   }
   sp *= slowMul(e);
-  if (sp > 0) e.ang = Math.atan2(mx, mz);
-  const g = moveBody(e, dt, mx * sp, mz * sp);
+  let vx = mx * sp, vz = mz * sp;
+  if (sp > 0) {
+    // Steering: heading turns at a capped rate and speed eases in and out,
+    // so heavy mobs commit to their line and skitterers whip around.
+    const want = Math.atan2(mx, mz);
+    if (e.hd == null) { e.hd = want; e.cs = 0; }
+    const tr = (TURN[e.type] || 8) * (e.elite ? 0.85 : 1), da = angD(want, e.hd);
+    e.hd += clamp(da, -tr * dt, tr * dt);
+    const align = Math.max(0.3, Math.cos(da));
+    e.cs += (sp * align - e.cs) * Math.min(1, (ACCEL[e.type] || 8) * dt);
+    vx = Math.sin(e.hd) * e.cs; vz = Math.cos(e.hd) * e.cs;
+    e.ang = e.hd;
+  } else e.cs = 0;
+  const g = moveBody(e, dt, vx, vz);
   if (e.hw && P.y > e.y + 0.6 && d < 8) {
     if (e.type === 'roach') e.vy = 7; // roaches scale walls like the rat does
     else if (g) e.vy = Math.sqrt(2 * GRAV * (Math.min(P.y - e.y, 6) + 1));
@@ -172,7 +187,9 @@ export function flyTo(e, dt, tx, ty, tz, sp) {
 
 // ---------- attack building blocks (shared with bosses) ----------
 /** Wind up for t seconds (flashing red), then run fn. */
-export function wait(e, t, fn, up = 0) { e.st = 'wind'; e.tt = t; e.tel = t; e.act = fn; e.up = up; }
+export function wait(e, t, fn, up = 0, tk) { e.st = 'wind'; e.tt = t; e.tel = t; e.tel0 = t; e.act = fn; e.up = up; e.tk = tk || e.tkNext || 'melee'; }
+/** Telegraph colours: red = melee, purple = projectile, yellow = area. */
+export const TK_COL = { melee: 0xff2a1a, shot: 0xb050ff, area: 0xffc020 };
 export function bite(e, R, dmg) {
   e.lunge = 0.2;
   if (Math.hypot(P.x - e.x, P.z - e.z) < R + e.r * 0.5 && P.y < e.y + e.h + 0.4 && P.y + 0.9 > e.y - 0.4) hurtP(dmg, e);
@@ -199,7 +216,7 @@ export function lobAt(e, tx, ty, tz, spd, dmg, col, pud, size = 1.4) {
   p.size = size;
   p.r = 0.5 + size * 0.3;
   p.life = 4;
-  fx('ring', tx, ty, tz, 1.4, 0xff3a20, ft, 0, 0.7);
+  fx('ring', tx, ty, tz, 1.4, TK_COL.shot, ft, 0, 0.7);
   return p;
 }
 export function pounceAt(e, wind, dur, hgt, dmg, R, after, target, roof) {
@@ -344,7 +361,7 @@ export const MOBAI = {
     if (e.dash) groundChase(e, dt, sp * 2.1, e.lat); else moveBody(e, dt, 0, 0);
     if (e.cd <= 0) {
       if (d < 3.6) { e.cd = 1.5; pounceAt(e, 0.22, 0.34, 1.3, e.dmg, 1.2); }
-      else if (d < 9 && Math.random() < 0.35) { e.cd = 2; wait(e, 0.25, e => aimShot(e, 14, e.dmg * 0.7, 0xc01818)); }
+      else if (d < 9 && Math.random() < 0.35) { e.cd = 2; wait(e, 0.25, e => aimShot(e, 14, e.dmg * 0.7, 0xc01818), 0, 'shot'); }
       else e.cd = 0.4;
     }
   },
@@ -352,8 +369,8 @@ export const MOBAI = {
     groundChase(e, dt, sp, Math.sin(G.time * 1.3 + e.ph) * 0.7);
     if (e.cd <= 0) {
       if (d < 2.3) { e.cd = 1.5; wait(e, 0.38, e => cone(e, 2.8, 1, e.dmg)); }
-      else if (d < 3.6 && Math.random() < 0.4) { e.cd = 3.2; warn(e.x, e.z, 3.4, 0.75, e.dmg * 1.2, { y: e.y, kb: 1 }); wait(e, 0.75, null); }
-      else if (d < 8 && Math.random() < 0.5) { e.cd = 3; wait(e, 0.5, e => { for (let k = -2; k <= 2; k++) { const p = aimShot(e, 8, e.dmg * 0.6, 0x9ad040, 1, k * 0.2); p.pud = 'poison'; } }); }
+      else if (d < 3.6 && Math.random() < 0.4) { e.cd = 3.2; warn(e.x, e.z, 3.4, 0.75, e.dmg * 1.2, { y: e.y, kb: 1 }); wait(e, 0.75, null, 0, 'area'); }
+      else if (d < 8 && Math.random() < 0.5) { e.cd = 3; wait(e, 0.5, e => { for (let k = -2; k <= 2; k++) { const p = aimShot(e, 8, e.dmg * 0.6, 0x9ad040, 1, k * 0.2); p.pud = 'poison'; } }, 0, 'shot'); }
       else e.cd = 0.5;
     }
   },
@@ -364,16 +381,16 @@ export const MOBAI = {
     e.ang = Math.atan2(dx, dz);
     if (e.cd <= 0) {
       if (d < 4.2 && Math.random() < 0.45) { e.cd = 3; chargeStart(e, 0.5, 13, 0.6); }
-      else if (d < 17) { e.cd = 2.3; wait(e, 0.35, e => lobAt(e, P.x + P.vx * 0.6, P.y, P.z + P.vz * 0.6, 11, e.dmg, 0x9be06a, 'poison')); }
+      else if (d < 17) { e.cd = 2.3; wait(e, 0.35, e => lobAt(e, P.x + P.vx * 0.6, P.y, P.z + P.vz * 0.6, 11, e.dmg, 0x9be06a, 'poison'), 0, 'shot'); }
       else e.cd = 0.5;
     }
   },
   brute(e, dt, dx, dz, d, sp) {
     groundChase(e, dt, sp, 0);
     if (e.cd <= 0) {
-      if (d < 3.4) { e.cd = 2.6; warn(e.x, e.z, 3.9, 0.75, e.dmg * 1.2, { y: e.y, kb: 1 }); wait(e, 0.75, null); }
+      if (d < 3.4) { e.cd = 2.6; warn(e.x, e.z, 3.9, 0.75, e.dmg * 1.2, { y: e.y, kb: 1 }); wait(e, 0.75, null, 0, 'area'); }
       else if (d > 4 && d < 13 && Math.random() < 0.55) { e.cd = 3.4; chargeStart(e, 0.65, 17, 0.85); }
-      else if (d > 6 && Math.random() < 0.5) { e.cd = 3; wait(e, 0.55, e => lobAt(e, P.x, P.y, P.z, 13, e.dmg, 0x7a6a5a, null, 2.4)); }
+      else if (d > 6 && Math.random() < 0.5) { e.cd = 3; wait(e, 0.55, e => lobAt(e, P.x, P.y, P.z, 13, e.dmg, 0x7a6a5a, null, 2.4), 0, 'shot'); }
       else e.cd = 0.5;
     }
   },
@@ -384,7 +401,7 @@ export const MOBAI = {
     if (e.cd <= 0) {
       if (d < 2) { e.cd = 1.2; wait(e, 0.24, e => { cone(e, 2.2, 1.1, e.dmg); wait(e, 0.16, e => cone(e, 2.2, 1.1, e.dmg * 0.8)); }); }
       else if (d < 9 && (low || Math.random() < 0.55)) { e.cd = low ? 1.6 : 2.3; pounceAt(e, 0.48, 0.5, 2.4, e.dmg * 1.4, 1.8); }
-      else if (d > 4) { e.cd = 2.4; wait(e, 0.4, e => { for (let i = 0; i < (low ? 3 : 1); i++) lobAt(e, P.x + P.vx * 0.5 + rand(-1.5, 1.5) * i, P.y, P.z + P.vz * 0.5 + rand(-1.5, 1.5) * i, 10, e.dmg * 0.8, 0xa08060, null, 1.6); }); }
+      else if (d > 4) { e.cd = 2.4; wait(e, 0.4, e => { for (let i = 0; i < (low ? 3 : 1); i++) lobAt(e, P.x + P.vx * 0.5 + rand(-1.5, 1.5) * i, P.y, P.z + P.vz * 0.5 + rand(-1.5, 1.5) * i, 10, e.dmg * 0.8, 0xa08060, null, 1.6); }, 0, 'shot'); }
       else e.cd = 0.3;
     }
   },
@@ -402,7 +419,7 @@ export const MOBAI = {
       if (d < 10 && Math.random() < 0.55) {
         e.cd = 2.6; sfx('screech');
         wait(e, 0.5, e => { const tx = P.x, ty = P.y + 0.5, tz = P.z; fx('ring', tx, floorY(tx, tz), tz, 1.4, 0xff3a20, 0.45, 0, 0.9); Object.assign(e, { st: 'dive', tt: 0.9, tx, ty, tz, hitP: 0 }); }, 3.5);
-      } else if (d < 6) { e.cd = 4; sfx('screech'); warn(e.x, e.z, 4.4, 0.85, e.dmg * 0.9, { y: Math.min(e.y - 1, P.y), slow: 1, col: 0xb080ff }); wait(e, 0.85, null); }
+      } else if (d < 6) { e.cd = 4; sfx('screech'); warn(e.x, e.z, 4.4, 0.85, e.dmg * 0.9, { y: Math.min(e.y - 1, P.y), slow: 1, col: 0xffb040 }); wait(e, 0.85, null, 0, 'area'); }
       else e.cd = 0.4;
     }
   },
@@ -414,7 +431,7 @@ export const MOBAI = {
     flyTo(e, dt, P.x + Math.sin(e.oa) * r, Math.max(P.y, 0) + 3.4 + Math.sin(G.time * 2.6 + e.ph) * 1.2, P.z + Math.cos(e.oa) * r, sp * 1.7);
     if (e.cd <= 0) {
       if (d < 13 && Math.random() < 0.6) { e.cd = 2.4; sfx('caw'); wait(e, 0.35, e => swoop(e, 1)); }
-      else if (d < 16) { e.cd = 2.8; wait(e, 0.3, e => { for (let k = -1; k <= 1; k++) aimShot(e, 19, e.dmg * 0.6, 0x3a3040, 0.9, k * 0.18, 0.7); }); }
+      else if (d < 16) { e.cd = 2.8; wait(e, 0.3, e => { for (let k = -1; k <= 1; k++) aimShot(e, 19, e.dmg * 0.6, 0x3a3040, 0.9, k * 0.18, 0.7); }, 0, 'shot'); }
       else e.cd = 0.4;
     }
   },
@@ -450,7 +467,7 @@ export const MOBAI = {
       Object.assign(e, { st: 'dart', tt: 0.22, cx: vx, cz: vz, dy: ty, hitP: 0 });
       return;
     }
-    if (e.cd <= 0 && d < 14) { e.cd = 1.9; wait(e, 0.28, e => aimShot(e, 20, e.dmg * 0.7, 0xf0d040, 0.8, 0, 0.7)); }
+    if (e.cd <= 0 && d < 14) { e.cd = 1.9; wait(e, 0.28, e => aimShot(e, 20, e.dmg * 0.7, 0xf0d040, 0.8, 0, 0.7), 0, 'shot'); }
   },
   // Shade: weaving approach, blinks behind you and slashes, or fires a slow homing hex.
   shade(e, dt, dx, dz, d, sp) {
@@ -468,7 +485,7 @@ export const MOBAI = {
       wait(e, 0.4, e => cone(e, 2.2, 1.2, e.dmg));
     } else if (e.cd <= 0 && d > 5 && d < 16) {
       e.cd = 3;
-      wait(e, 0.45, e => { const p = aimShot(e, 7, e.dmg * 0.8, 0x8040c0, 3); p.home = 1; });
+      wait(e, 0.45, e => { const p = aimShot(e, 7, e.dmg * 0.8, 0x8040c0, 3); p.home = 1; }, 0, 'shot');
     }
   },
 };
@@ -497,8 +514,7 @@ function recoilBlast(e) {
 
 // ---------- predators (big patrol cats) ----------
 export function addPred(path) {
-  const mesh = new THREE.Mesh(GEO.cat.body, bodyMat());
-  mesh.add(new THREE.Mesh(GEO.cat.glow, new THREE.MeshBasicMaterial({ vertexColors: true })));
+  const mesh = creatureMesh('cat');
   mesh.scale.setScalar(1.6);
   mesh.castShadow = true;
   scene.add(mesh);
@@ -542,6 +558,7 @@ export function updateEnemies(dt, cap) {
       }
       continue;
     }
+    if (e.demo && G.demo) { G.demo(e, dt); continue; } // debug animation gallery
     if (e.rival) continue; // rival nests (Squeeze Network) are static; ducts.js runs them
     if (e.thief) { thiefAI(e, dt); continue; }
     if (e.scab) continue; // personality.js runs Scab
@@ -591,6 +608,8 @@ export function updateEnemies(dt, cap) {
     } else if (e.atkCd <= 0 && d < reach && yok) {
       const big = e.heavy || e.elite || e.type === 'brute';
       e.wind = e.fly ? 0.22 : big ? 0.55 : 0.36;
+      e.tel0 = e.wind;
+      e.tk = 'melee';
       e.atkCd = 1 + e.wind;
       if (big) fx('ring', e.x, e.y, e.z, reach + 0.6, 0xff3020, e.wind, 0, 0.9);
     }

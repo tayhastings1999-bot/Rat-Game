@@ -6,7 +6,6 @@ import * as THREE from 'three';
 import { rand, angD, TAU } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { GEO, bodyMat } from '../render/models.js';
 import { spark, puff, dnum, fx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { floorY } from '../world/grid.js';
@@ -14,6 +13,7 @@ import { isSewer } from '../data/world.js';
 import { hurtP, addThreat } from '../combat/combat.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { banner } from '../ui/hud.js';
+import { creatureMesh } from '../render/pools.js';
 
 export const EXPO_MAX = 100;
 const _up = new THREE.Vector3(0, -1, 0), _d = new THREE.Vector3();
@@ -82,8 +82,7 @@ function spotted() {
 
 // ---------- owl ----------
 export function spawnOwl() {
-  const mesh = new THREE.Mesh(GEO.owl.body, bodyMat());
-  mesh.add(new THREE.Mesh(GEO.owl.glow, new THREE.MeshBasicMaterial({ vertexColors: true })));
+  const mesh = creatureMesh('owl');
   mesh.scale.setScalar(1.5);
   scene.add(mesh);
   const a = rand(0, TAU), hp = 260 * (1 + run.tier * 0.5) * (run.hpM || 1);

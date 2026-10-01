@@ -18,6 +18,14 @@ export function prt(geo, col, p = [0, 0, 0], r = [0, 0, 0], s = [1, 1, 1]) {
   const c = new THREE.Color(col), n = geo.attributes.position.count, a = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
   geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
+  // Every vertex remembers its part's centre and top, so rig.js can give
+  // whole parts (a leg, an ear, a wing) to one bone and swing them rigidly.
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox, cx = (bb.min.x + bb.max.x) / 2, cy = (bb.min.y + bb.max.y) / 2, cz = (bb.min.z + bb.max.z) / 2;
+  const pc = new Float32Array(n * 3), pt = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { pc.set([cx, cy, cz], i * 3); pt.set([cx, bb.max.y, cz], i * 3); }
+  geo.setAttribute('pc', new THREE.BufferAttribute(pc, 3));
+  geo.setAttribute('pt', new THREE.BufferAttribute(pt, 3));
   return geo;
 }
 // PS1-era budgets: spheres and cylinders are capped at a handful of segments.

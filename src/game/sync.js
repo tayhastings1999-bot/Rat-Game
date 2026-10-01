@@ -5,7 +5,8 @@ import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
 import { camera, sun, lantern, lampL, post } from '../render/renderer.js';
 import { IMB, IMG, MOB_CAP, shadowIM, gemIM, scrapIM, coreIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
-import { decal, tickFx, PART_CAP } from '../fx/fx.js';
+import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
+import { animTick, writePose, rigTime } from '../render/rig.js';
 import { M, G as GRAV, toW, floorY, segBlocked, forPlatsNear } from '../world/grid.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
@@ -31,12 +32,14 @@ for (let i = 0; i < BAR_N; i++) {
 const corruptCol = {};
 for (const k in CORRUPT) corruptCol[k] = new THREE.Color(CORRUPT[k].col);
 
+const TK_RGB = { melee: [2.6, 0.55, 0.42], shot: [1.8, 0.65, 2.7], area: [2.7, 2.1, 0.4] };
 function mobColor(e) {
   const t = G.time;
   if (e.flash > 0) return tmpC.setScalar(3.5);
   if (e.thief) return tmpC.setRGB(2, 1.6, 0.3);
   if (e.scab) return tmpC.setRGB(1.5, 0.6, 1.8);
-  if (e.wind > 0 || e.tel > 0) return tmpC.setRGB(2.4 + Math.sin(t * 40) * 0.6, 0.6, 0.45);
+  if (e.wind > 0 || e.tel > 0) { const c = TK_RGB[e.tk] || TK_RGB.melee, f = 0.8 + 0.25 * Math.sin(t * 40); return tmpC.setRGB(c[0] * f, c[1] * f, c[2] * f); }
+  if (e.recov > 0) return tmpC.setRGB(1.35, 1.5, 1.75); // overextended: open for a punish
   if (P.scent) return tmpC.setRGB(2.4, 0.5, 0.4);
   if (e.bT > 0) return tmpC.setRGB(1.6, 0.8, 0.4);
   if (e.pT > 0) return tmpC.setRGB(0.7, 1.4, 0.6);
@@ -47,7 +50,25 @@ function mobColor(e) {
   return tmpC.setScalar(1);
 }
 
+/**
+ * Whole-body pose for an instanced creature: gait bob, crouch on the wind-up,
+ * stretch on the strike, landing squash, a lean into turns and a wobble away
+ * from the last hit. Limbs, head, tail and wings are posed by the rig shader.
+ */
+function poseMatrix(e) {
+  const sc = e.sc || 1, coil = Math.max(0, -(e.ap || 0)), strike = Math.max(0, e.ap || 0), fl = e.fl || 0;
+  const rel = angD(e.hitA ?? e.ang, e.ang), fwd = strike * 0.12 * sc;
+  const bob = e.fly ? Math.sin(G.time * 6 + e.ph) * 0.15 : Math.abs(Math.sin(e.gph || 0)) * 0.07 * (e.gam || 0) * sc + Math.sin(G.time * 2.2 + e.ph) * 0.01 * sc;
+  dummy.position.set(e.x + Math.sin(e.ang) * fwd, e.y + bob, e.z + Math.cos(e.ang) * fwd);
+  dummy.rotation.set((e.pitch || 0) + coil * 0.14 - strike * 0.06 + Math.cos(rel) * fl * 0.3 + (e.recov > 0 ? 0.08 : 0), e.ang,
+    (e.roll || 0) + (e.lean || 0) * (e.fly ? 1 : 0.5) - Math.sin(rel) * fl * 0.3 + (e.fly ? Math.sin(G.time * 10 + e.ph) * 0.12 : 0));
+  const sy = clamp(1 - coil * 0.16 - strike * 0.07 + (e.sq || 0) - (e.flash > 0 ? 0.1 : 0), 0.6, 1.4), sz = 1 + strike * 0.16 + coil * 0.04;
+  dummy.scale.set(sc / Math.sqrt(sy), sc * sy, sc * sz / Math.sqrt(sy));
+  dummy.updateMatrix();
+}
+
 export function sync(dt) {
+  rigTime.value = G.time;
   const cnt = {};
   for (const k in IMB) cnt[k] = 0;
   let rings = 0;
@@ -55,20 +76,22 @@ export function sync(dt) {
     if (e.mesh) {
       if (e.type === 'nest' || e.rival) continue;
       e.mesh.visible = !e.hidden;
-      e.mesh.position.set(e.x, e.y, e.z);
-      e.mesh.rotation.set(e.pitch || 0, e.ang, e.roll || 0);
+      const rg = e.mesh.userData.rig;
+      if (rg) { animTick(e, dt, e.mesh.userData.rigKey, P.x, P.z); writePose(e, rg.rA.value, rg.rB.value); }
+      const fl = e.fl || 0, rel = angD(e.hitA ?? e.ang, e.ang), coil = Math.max(0, -(e.ap || 0));
+      e.mesh.position.set(e.x, e.y + (e.fly ? 0 : Math.abs(Math.sin(e.gph || 0)) * 0.08 * (e.gam || 0)), e.z);
+      e.mesh.rotation.set((e.pitch || 0) + coil * 0.08 + Math.cos(rel) * fl * 0.12, e.ang, (e.roll || 0) + (e.lean || 0) * 0.4 - Math.sin(rel) * fl * 0.12);
       const em = e.invuln > 0 ? 0.4 + 0.3 * Math.sin(G.time * 30) : e.flash > 0 ? 0.5 : (e.st === 'wind' || e.tel > 0 || e.wind > 0) ? 0.3 + 0.2 * Math.sin(G.time * 40) : e.pred && e.mode === 'hunt' ? 0.12 : 0;
       if (e.brain && (e.brain.exposed > 0 || e.brain.stagger > 0)) e.mesh.material.emissive.setRGB(0.45 + 0.25 * Math.sin(G.time * 16), 0.35, 0.05);
+      else if (e.st === 'wind' || e.tel > 0 || e.wind > 0) { const c = TK_RGB[e.tk] || TK_RGB.melee; e.mesh.material.emissive.setRGB(c[0] * em * 0.5, c[1] * em * 0.5, c[2] * em * 0.5); }
       else e.mesh.material.emissive.setScalar(em);
       continue;
     }
     const i = cnt[e.type]++;
     if (i >= MOB_CAP) continue;
-    const lg = e.lunge > 0 ? Math.sin(e.lunge / 0.2 * Math.PI) * 0.35 : 0, sq = e.flash > 0 ? 0.82 : e.wind > 0 || e.st === 'wind' ? 1.12 : 1;
-    dummy.position.set(e.x + Math.sin(e.ang) * lg, e.y + (e.fly ? Math.sin(G.time * 6 + e.ph) * 0.15 : Math.abs(Math.sin(G.time * 12 + e.ph)) * 0.05), e.z + Math.cos(e.ang) * lg);
-    dummy.rotation.set(e.pitch || 0, e.ang, (e.fly ? Math.sin(G.time * 10 + e.ph) * 0.25 : 0) + (e.roll || 0));
-    dummy.scale.set(e.sc / Math.sqrt(sq), e.sc * sq * (e.fly ? 1 : 1 + Math.sin(G.time * 12 + e.ph) * 0.04), e.sc / Math.sqrt(sq));
-    dummy.updateMatrix();
+    animTick(e, dt, e.type, P.x, P.z);
+    writePose(e, IMB[e.type].userData.rA, IMB[e.type].userData.rB, i);
+    poseMatrix(e);
     IMB[e.type].setMatrixAt(i, dummy.matrix);
     IMG[e.type].setMatrixAt(i, dummy.matrix);
     IMB[e.type].setColorAt(i, mobColor(e));
@@ -103,16 +126,44 @@ export function sync(dt) {
   for (const s of W.swarm) {
     const i = cnt.ratling++;
     if (i >= MOB_CAP) break;
-    dummy.position.set(s.x, s.y + Math.abs(Math.sin(G.time * 18 + s.ph)) * 0.08, s.z);
-    dummy.rotation.set(0, s.ang, 0);
-    dummy.scale.setScalar(s.life < 0.5 ? s.life * 2 : 1);
-    dummy.updateMatrix();
+    animTick(s, dt, 'ratling', P.x, P.z);
+    writePose(s, IMB.ratling.userData.rA, IMB.ratling.userData.rB, i);
+    s.sc = s.life < 0.5 ? s.life * 2 : 1;
+    poseMatrix(s);
     IMB.ratling.setMatrixAt(i, dummy.matrix);
     IMG.ratling.setMatrixAt(i, dummy.matrix);
     IMB.ratling.setColorAt(i, tmpC.setScalar(1));
   }
+  // Ragdoll corpses: a short tumble along the killing blow, then they pop.
+  keep(W.corpses, c => {
+    c.t += dt;
+    if (c.t >= c.life) {
+      puff(c.x, c.y + 0.2, c.z, c.col, 4, 2);
+      decal(c.x, floorY(c.x, c.z) + 0.012, c.z, rand(0.7, 1.2) * c.sc, c.blood);
+      return false;
+    }
+    const gy = floorY(c.x, c.z);
+    c.vy -= GRAV * 1.3 * dt;
+    c.x += c.vx * dt; c.z += c.vz * dt; c.y += c.vy * dt;
+    if (c.y <= gy) { c.y = gy; c.vy = Math.abs(c.vy) > 3 ? -c.vy * 0.3 : 0; c.vx *= 0.6; c.vz *= 0.6; c.sx *= 0.5; c.sz *= 0.5; }
+    c.rx += c.sx * dt; c.rz += c.sz * dt;
+    const i = cnt[c.type]++;
+    if (i >= MOB_CAP || !IMB[c.type]) return true;
+    const u = c.t / c.life, shrink = u > 0.7 ? 1 - (u - 0.7) / 0.3 * 0.6 : 1;
+    dummy.position.set(c.x, c.y, c.z);
+    dummy.rotation.set(c.rx, c.ang, c.rz + (c.fly ? c.t * 9 : 0));
+    dummy.scale.set(c.sc * shrink, c.sc * shrink * (u > 0.7 ? 0.7 : 1), c.sc * shrink);
+    dummy.updateMatrix();
+    IMB[c.type].setMatrixAt(i, dummy.matrix);
+    IMG[c.type].setMatrixAt(i, dummy.matrix);
+    IMB[c.type].setColorAt(i, tmpC.setScalar(0.45));
+    IMB[c.type].userData.rA.setXYZW(i, c.gph, 0.6, 1, c.ph);
+    IMB[c.type].userData.rB.setXYZW(i, 0, 0, Math.sin(c.t * 30) * 0.6, c.t * 30);
+    return true;
+  });
   for (const k in IMB) {
     const n = Math.min(MOB_CAP, cnt[k]);
+    IMB[k].userData.rA.needsUpdate = IMB[k].userData.rB.needsUpdate = true;
     IMB[k].count = IMG[k].count = n;
     IMB[k].instanceMatrix.needsUpdate = IMG[k].instanceMatrix.needsUpdate = true;
     if (IMB[k].instanceColor) IMB[k].instanceColor.needsUpdate = true;
