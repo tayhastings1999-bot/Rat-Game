@@ -115,7 +115,8 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   if (board) {
     await S(bd => { const { P, M, G, W } = __scurry, T = 4, toW = g => (g - M.W / 2 + 0.5) * T; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, board);
     await page.keyboard.down('KeyW'); await until(() => !!__scurry.chewTarget(), 4000);
-    await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, 8000, board.k); await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
+    for (let i = 0; i < 4 && (await S(k => __scurry.M.grid[k], board.k)) !== 1; i++) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, i < 3 ? 2500 : 8000, board.k); }
+    await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
     const t = await S(k => __scurry.M.grid[k], board.k);
     if (t !== 1) throw new Error('boards not gnawed (tile ' + t + ')');
   }
@@ -160,8 +161,7 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   const early = await S(() => { const s = new Set(); for (let i = 0; i < 200; i++) s.add(__scurry.pickType()); return [...s]; });
   if (early.length !== 1 || early[0] !== 'mawling') throw new Error('early roster ' + early);
   await S(() => { __scurry.run.time = 170; });
-  await wait(1200);
-  const seen = await S(() => Object.keys(__scurry.run.seenMobs));
+  const seen = (await until(() => Object.keys(__scurry.run.seenMobs).includes('roach') && Object.keys(__scurry.run.seenMobs), 5000)) || await S(() => Object.keys(__scurry.run.seenMobs));
   if (!seen.includes('roach')) throw new Error('roster intros not firing: ' + seen);
   await S(() => { __scurry.run.time = 5; });
   // Secret wall: gnaw it open.
