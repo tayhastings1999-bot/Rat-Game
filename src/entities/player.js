@@ -243,22 +243,26 @@ export function grabTarget() {
   }
   return b;
 }
+/** The nearest thing you could gnaw right now (the wall you're facing counts as close; objective cages win ties). */
 export function chewTarget() {
-  const f = P.facing;
+  const f = P.facing, c = [];
   for (const dd of [0.9, 1.6]) {
     const x = P.x + Math.sin(f) * dd, z = P.z + Math.cos(f) * dd, gx = toG(x), gz = toG(z);
-    if (tAt(gx, gz) === 3 && P.y < topAt(gx, gz) - 0.5) return { kind: 'tile', gx, gz, time: 1.2, label: M.secret[gi(gx, gz)] ? 'This wall sounds hollow: gnaw through' : M.kind === 'city' ? 'Gnaw through the boards' : 'Gnaw through drywall' };
+    if (tAt(gx, gz) === 3 && P.y < topAt(gx, gz) - 0.5) { c.push({ d: dd, o: { kind: 'tile', gx, gz, time: 1.2, label: M.secret[gi(gx, gz)] ? 'This wall sounds hollow: gnaw through' : M.kind === 'city' ? 'Gnaw through the boards' : 'Gnaw through drywall' } }); break; }
   }
   for (const it of W.inter) {
     if (it.kind === 'rope' && it.used) continue;
     if (it.kind === 'wire' && it.cd > 0) continue;
-    if (Math.hypot(it.x - P.x, it.z - P.z) < 1.9 && P.y < 2) return { kind: it.kind, it, time: it.kind === 'wire' ? 0.6 : 0.8, label: it.kind === 'wire' ? 'Gnaw live wires (it bites back)' : 'Gnaw the rope — drop the can' };
+    const d = Math.hypot(it.x - P.x, it.z - P.z);
+    if (d < 1.9 && P.y < 2) c.push({ d, o: { kind: it.kind, it, time: it.kind === 'wire' ? 0.6 : 0.8, label: it.kind === 'wire' ? 'Gnaw live wires (it bites back)' : 'Gnaw the rope — drop the can' } });
   }
   const t = trapTarget();
-  if (t) return { kind: 'trap', t, time: t.time, label: t.label };
+  if (t) c.push({ d: Math.hypot(t.gx - P.x, t.gz - P.z), o: { kind: 'trap', t, time: t.time, label: t.label } });
   const cg = cageTarget();
-  if (cg) return { kind: 'cage', cg, time: 1.1, label: 'Gnaw the cage open' };
-  return null;
+  if (cg) c.push({ d: Math.hypot(cg.x - P.x, cg.z - P.z) * 0.5, o: { kind: 'cage', cg, time: 1.1, label: 'Gnaw the cage open' } });
+  if (!c.length) return null;
+  c.sort((a, b) => a.d - b.d);
+  return c[0].o;
 }
 export function pressE() {
   if (P.carry) { dropCarry(); return; }
