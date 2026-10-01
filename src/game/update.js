@@ -32,6 +32,7 @@ import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
 import { finishTrial } from '../ui/screens.js';
 import { newAnim, animateRat } from '../entities/ratAnim.js';
+import { tickRoles } from '../entities/roles.js';
 
 let seenT = 0;
 
@@ -444,6 +445,7 @@ export function update(dt) {
   tickObjective(dt);
   tickRules(dt);
   tickPersonality(dt, st.maxHp);
+  tickRoles(dt);
   updatePickups(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);

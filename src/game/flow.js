@@ -23,6 +23,7 @@ import { setupObjective } from './objectives.js';
 import { openRoutes, applyRoute } from './routes.js';
 import { storyBeat } from './personality.js';
 import { startDaily, dailySeed, districtStart, todaysTwist } from './score.js';
+import { placeRoles } from '../entities/roles.js';
 
 export function freshStats(C) {
   const n = meta.nest;
@@ -58,6 +59,7 @@ export function setupWorld(seed) {
   buildWorld();
   populate(info);
   setupObjective(info);
+  placeRoles();
   unseedRng();
   clearFx();
   const s = info.startRoom;

@@ -18,7 +18,8 @@ import { comboGain, comboBreak } from '../game/swarm.js';
 import { buffOn } from '../game/forage.js';
 import { junkHit } from '../game/junk.js';
 import { rivalDeath } from '../world/ducts.js';
-import { addXP, championDown, dropMusk } from '../game/progress.js';
+import { guardMul, maybeFlee, packRage } from '../entities/roles.js';
+import { addXP, championDown, dropMusk, dropCrate } from '../game/progress.js';
 import { onBossHit } from '../entities/brain.js';
 import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
 import { contract } from '../game/contracts.js';
@@ -43,7 +44,7 @@ export const near = (x, y, z, R) => {
 export const sorted = R => {
   const o = [];
   for (const e of W.enemies) {
-    if (e.dead || (e.pred && e.mode === 'patrol' && !e.hurt) || e.hidden) continue;
+    if (e.dead || (e.pred && e.mode === 'patrol' && !e.hurt) || e.hidden || e.disguise) continue;
     const d = (e.x - P.x) ** 2 + (e.z - P.z) ** 2;
     if (d < R * R) o.push([d, e]);
   }
@@ -79,6 +80,8 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   e.lastSrc = src;
   if (crit) d *= st.critMul;
   if (e.ward > 0) d *= 0.4;
+  const gm = guardMul(e, ang, base);
+  if (gm < 1) { d *= gm; kb *= 0.2; }
   if (e.recov > 0 && !e.boss) { d *= 1.25; if (!e.openShown) { e.openShown = true; dnum(e.x, e.y + e.h + 0.6, e.z, 'OPEN', 'crit'); } } // punish the overextension
   if (e.boss) d *= onBossHit(e, d); // exposed bosses take more; bursts break their poise
   d = Math.max(1, Math.round(d));
@@ -109,6 +112,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   junkHit(e, d, src);
   if (melee && st.mut.livewire && Math.random() < 0.35) chain(e, 2, d * 0.5, 'livewire', [e.x, e.y + e.h * 0.6, e.z], true);
   if (e.hp <= 0) kill(e);
+  else maybeFlee(e);
 }
 
 export function aoe(x, y, z, R, dm, kb, src, slow, itemFx) {
@@ -189,6 +193,8 @@ export function kill(e) {
   if (e.elite && !e.champion) contract('elites');
   if (e.bounty) { contract('bounty'); bountyKill(e); }
   if (e.thief) thiefDown(e);
+  packRage(e);
+  if (e.type === 'mimic') { const gy = floorY(e.x, e.z); dropCrate(e.x, gy, e.z); for (let i = 0; i < 8; i++) scrapDrop(e.x, gy, e.z); if (e.bin) e.bin.done = true; }
   onKill(e);
   if (e.scab) scabDown(e);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }

@@ -130,7 +130,7 @@ function nz(freq, q, dur, vol, type = 'bandpass', wet, t = AC.currentTime, out =
   s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
 }
 
-const GAP = { hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
+const GAP = { clank: 70, rattle: 400, heal: 300, hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
 export function sfx(n) {
   if (!audioReady()) return;
   const now = performance.now();
@@ -160,6 +160,9 @@ export function sfx(n) {
     case 'shriek': for (let i = 0; i < 5; i++) { tone(2200 + i * 300, 900 + i * 120, 0.35, 'sawtooth', 0.05, true, AC.currentTime + i * 0.05); } nz(3000, 3, 0.6, 0.2, 'bandpass', true); break;
     case 'sniff': nz(1600, 2, 0.09, 0.1); nz(2200, 2, 0.09, 0.08, 'bandpass', false, AC.currentTime + 0.12); break;
     case 'perfect': tone(1760, 2640, 0.18, 'triangle', 0.08, true); nz(6000, 2, 0.2, 0.08, 'highpass', true); break;
+    case 'clank': tone(1400, 1100, 0.18, 'square', 0.05); tone(2100, 1700, 0.14, 'triangle', 0.05); nz(5000, 3, 0.1, 0.12); break;
+    case 'rattle': for (let i = 0; i < 4; i++) nz(rand(500, 900), 2, 0.05, 0.12, 'bandpass', false, AC.currentTime + i * 0.06); break;
+    case 'heal': [392, 466, 587].forEach((f, i) => tone(f, f * 0.98, 0.7, 'sine', 0.05, true, AC.currentTime + i * 0.05)); break;
     case 'buy': tone(660, 990, 0.12, 'square', 0.06); tone(990, 1320, 0.14, 'square', 0.05, false, AC.currentTime + 0.08); break;
   }
 }

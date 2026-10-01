@@ -10,6 +10,7 @@ import { hit } from '../combat/combat.js';
 import { openTile } from '../entities/player.js';
 import { banner } from '../ui/hud.js';
 import { contract } from './contracts.js';
+import { scatterBirds } from '../entities/roles.js';
 
 export const COMBO_MAX = 100;
 const SWARM_N = 8, SWARM_LIFE = 10;
@@ -44,7 +45,7 @@ export function shriek() {
   sfx('shriek');
   G.shake = Math.max(G.shake, 0.5);
   for (let i = 0; i < 3; i++) fx('ring', P.x, P.y, P.z, 6 + i * 5, 0xffd040, 0.5 + i * 0.15);
-  banner('The nest answers', '');
+  banner('The nest answers', scatterBirds() ? 'The birds scatter' : '');
   const n = SWARM_N + (st.swarmPlus || 0);
   for (let i = 0; i < n; i++) {
     const a = i / n * TAU, r = rand(1, 2.5);

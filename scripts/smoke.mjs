@@ -58,6 +58,7 @@ const shot = name => page.screenshot({ path: OUT + name + '.png' });
 await step('load menu', async () => {
   await page.goto('http://localhost:5199/?debug');
   await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
+  await S(() => { __scurry.G.testNoRoles = true; }); // placed lurkers and mimics would ambush scripted steps
   await wait(1500);
   await shot('01-menu');
 });
@@ -733,6 +734,78 @@ await step('ghost trial', async () => {
   await shot('10b-trial-done');
   await S(() => __scurry.menu());
   await wait(500);
+});
+await step('mob roles: guard, priest, mimic, lurker, flee, rivalry, pack rage', async () => {
+  await S(() => { const s = __scurry; s.G.testNoRoles = false; s.G.mode = 'survival'; s.startRun('brawler'); s.G.testNoRoles = true; s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); });
+  await wait(600);
+  const placed = await S(() => ({ lurk: __scurry.W.enemies.filter(e => e.type === 'lurker' && e.hidden).length, mimic: __scurry.W.enemies.filter(e => e.type === 'mimic' && e.disguise).length }));
+  if (!placed.lurk || !placed.mimic) throw new Error('roles not placed ' + JSON.stringify(placed));
+  const g = await S(() => {
+    const s = __scurry, P = s.P;
+    s.W.enemies.length = 0;
+    const g = s.spawnEnemy('shieldrat', P.x + 3, P.z, { plain: true, force: true, hpMul: 50 });
+    g.ang = Math.atan2(P.x - g.x, P.z - g.z); g.cd = 99; g.spd = 0;
+    let h = g.hp; s.hit(g, 20, Math.atan2(g.x - P.x, g.z - P.z), 0, 'primary'); const front = h - g.hp;
+    h = g.hp; s.hit(g, 20, Math.atan2(P.x - g.x, P.z - g.z), 0, 'primary'); const back = h - g.hp;
+    g.dead = true;
+    return { front, back };
+  });
+  if (!(g.back > g.front * 3)) throw new Error('lid did not block ' + JSON.stringify(g));
+  // Priest heals a hurt ally.
+  await S(() => {
+    const s = __scurry, P = s.P;
+    const pr = s.spawnEnemy('priest', P.x + 10, P.z, { plain: true, force: true }); pr.cd = 0; pr.spd = 0; pr.tag = 'pr';
+    const m = s.spawnEnemy('mawling', P.x + 11, P.z + 1, { plain: true, force: true, hpMul: 10 }); m.spd = 0; m.cd = 99; m.hp = m.maxHp * 0.4; m.fled = true; m.tag = 'hurt';
+  });
+  const healed = await until(() => { const m = __scurry.W.enemies.find(e => e.tag === 'hurt'); return m && m.hp > m.maxHp * 0.55; }, 6000);
+  if (!healed) throw new Error('priest never healed');
+  // A mimic springs when rummaged.
+  await S(() => {
+    const s = __scurry, P = s.P;
+    s.W.enemies.length = 0;
+    const e = s.spawnEnemy('mimic', P.x + 1.6, P.z, { plain: true, force: true });
+    Object.assign(e, { disguise: true, bar: false, tag: 'mim' });
+    e.bin = { x: e.x, z: e.z, y: e.y, r: 0.6, kind: 'bin', done: false, mimic: e };
+    s.W.bins.push(e.bin);
+    P.facing = Math.atan2(e.x - P.x, e.z - P.z);
+  });
+  await page.keyboard.press('KeyE');
+  const sprung = await until(() => { const m = __scurry.W.enemies.find(e => e.tag === 'mim'); return m && !m.disguise; }, 3000);
+  if (!sprung) throw new Error('mimic stayed disguised');
+  // A hidden lurker bursts out when the rat comes close.
+  await S(() => {
+    const s = __scurry, P = s.P;
+    s.W.enemies.length = 0;
+    const e = s.spawnEnemy('lurker', P.x + 9, P.z, { plain: true, force: true });
+    Object.assign(e, { hidden: true, bar: false, tag: 'lurk' });
+  });
+  await rawWait(400);
+  if (!(await S(() => __scurry.W.enemies.find(e => e.tag === 'lurk').hidden))) throw new Error('lurker revealed itself too early');
+  await S(() => { const P = __scurry.P, e = __scurry.W.enemies.find(e => e.tag === 'lurk'); P.x = e.x - 3; P.z = e.z; P.vx = P.vz = 0; });
+  if (!(await until(() => !__scurry.W.enemies.find(e => e.tag === 'lurk').hidden, 3000))) throw new Error('lurker never burst out');
+  // Hurt fry flee; an elite's death enrages the pack; cats eat mawlings.
+  const pack = await S(() => {
+    const s = __scurry, P = s.P;
+    s.W.enemies.length = 0;
+    const m = s.spawnEnemy('mawling', P.x + 4, P.z, { plain: true, force: true, hpMul: 10 });
+    s.hit(m, m.maxHp * 0.7 / (s.st.dmg * 3), Math.atan2(m.x - P.x, m.z - P.z), 0, 'event');
+    const el = s.spawnEnemy('mawling', P.x - 6, P.z, { elite: true, force: true });
+    const buddy = s.spawnEnemy('mawling', P.x - 7, P.z + 1, { plain: true, force: true });
+    s.kill(el);
+    return { flee: m.fleeT > 0 || m.hp <= 0 || m.hp > m.maxHp * 0.35, rage: buddy.rage > 0 };
+  });
+  if (!pack.rage) throw new Error('pack did not rage ' + JSON.stringify(pack));
+  await S(() => {
+    const s = __scurry, P = s.P;
+    s.W.enemies.length = 0;
+    const c = s.spawnEnemy('cat', P.x + 14, P.z, { plain: true, force: true }); c.cd = 0;
+    const m = s.spawnEnemy('mawling', P.x + 16, P.z, { plain: true, force: true }); m.spd = 0; m.cd = 99; m.tag = 'snack';
+  });
+  const ate = await until(() => (__scurry.run.catMeals || 0) > 0, 6000);
+  if (!ate) throw new Error('cat ignored the mawling');
+  await shot('11c-roles');
+  await S(() => __scurry.menu());
+  await wait(400);
 });
 await step('soak: 20s of live horde', async () => {
   await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('slinger'); __scurry.god(true); __scurry.run.threatBase = 8; });

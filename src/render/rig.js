@@ -36,9 +36,14 @@ export const RIGS = {
   shade: { legY: 0.7, legX: 0.25, legMidZ: -9, headY: 0.95, headZ: 9, tailZ: -9, neck: [0, 0.9, 0.1], tailRoot: [0, 0, 0], legRoot: [0.3, 0.8], K: [0.9, 0.2, 0, 0], lift: 0.05, stride: 1.4 },
   ratling: { legY: 0.15, legX: 0.1, legMidZ: 0, headZ: 0.3, tailZ: -0.5, neck: [0, 0.3, 0.3], tailRoot: [0, 0.26, -0.4], K: [0.8, 0.1, 0.45, 0], lift: 0.05, stride: 0.7 },
   drone: { legY: 1.0, legX: 0.25, legMidZ: 9, wingX: 0.9, wingY: 1.4, headZ: 9, tailZ: -9, neck: [0, 1.3, 0], tailRoot: [0, 0, 0], wingRoot: [0.5, 1.45], legRoot: [0.35, 1.1], K: [0.3, 0, 0, 0.12], lift: 0, stride: 1 },
+  shieldrat: { legY: 0.3, legX: 0.1, legMidZ: 0, headY: 0.85, headZ: 9, tailZ: -0.6, neck: [0, 0.85, 0.1], tailRoot: [0, 0.45, -0.55], K: [0.6, 0.12, 0.3, 0], lift: 0.07, stride: 1.1 },
+  priest: { legY: -9, headY: 1.15, headX: 0.25, headZ: 9, tailZ: -9, neck: [0, 1.15, 0.05], tailRoot: [0, 0, 0], K: [0, 0.12, 0, 0], lift: 0, stride: 1.2 },
+  lurker: { legY: 0.6, legX: 0.2, legMidZ: 0, legRoot: [0.32, 0.72], headZ: 0.5, headY: 0.95, headBoth: true, tailZ: -9, neck: [0, 0.9, 0.35], tailRoot: [0, 0, 0], K: [0.85, 0.2, 0, 0], lift: 0.1, stride: 1.6 },
+  mimic: { legY: 0.2, legX: 0.1, legMidZ: 0, headY: 0.97, headZ: 9, tailZ: -9, neck: [0, 1.04, -0.42], tailRoot: [0, 0, 0], K: [0.9, 0, 0, 0], jaw: 1.2, lift: 0.08, stride: 0.6 },
+  spitter: { legY: 0.32, legX: 0.18, legMidZ: 0, headZ: 0.32, tailZ: -9, neck: [0, 0.6, 0.2], tailRoot: [0, 0, 0], K: [0.5, 0.18, 0, 0], jaw: 0.5, lift: 0.1, stride: 1.0 },
   ratking: { legY: -9, headZ: 9, tailZ: -9, neck: [0, 1.2, 0], tailRoot: [0, 0, 0], K: [0, 0, 0, 0], lift: 0, stride: 1.6 },
 };
-const DEF = { legY: -9, legX: 0, legMidZ: 0, headZ: 9, headY: 99, tailZ: -9, wingX: 99, wingY: -99, neck: [0, 0, 0], tailRoot: [0, 0, 0], wingRoot: [0, 0], K: [0, 0, 0, 0], lift: 0, stride: 1 };
+const DEF = { jaw: 0, headX: 99, legY: -9, legX: 0, legMidZ: 0, headZ: 9, headY: 99, tailZ: -9, wingX: 99, wingY: -99, neck: [0, 0, 0], tailRoot: [0, 0, 0], wingRoot: [0, 0], K: [0, 0, 0, 0], lift: 0, stride: 1 };
 export const rigOf = k => ({ ...DEF, ...(RIGS[k] || {}) });
 
 /** Bake bone index (rb) and pivot (rp) attributes into a merged creature geometry. */
@@ -56,7 +61,7 @@ export function rigGeo(geo, key) {
       else front = z > R.legMidZ;
       b = (front ? BONE.fl : BONE.bl) + (s > 0 ? 1 : 0);
       p = R.legRoot ? [s * R.legRoot[0], R.legRoot[1], z] : [x, pt.getY(i), z];
-    } else if ((R.headBoth ? z > R.headZ && y > R.headY : z > R.headZ || y > R.headY)) { b = BONE.head; p = R.neck; }
+    } else if (Math.abs(x) < R.headX && (R.headBoth ? z > R.headZ && y > R.headY : z > R.headZ || y > R.headY)) { b = BONE.head; p = R.neck; }
     else if (z < R.tailZ) { b = BONE.tail; p = R.tailRoot; }
     rb[i] = b;
     rp.set(p, i * 3);
@@ -81,6 +86,7 @@ uniform vec4 rB;
 #endif
 uniform vec4 rigK;
 uniform float rigL;
+uniform float rigJ;
 uniform float rigT;
 mat3 rX(float a) { float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
 mat3 rY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
@@ -102,7 +108,7 @@ mat3 rigR(out vec3 off) {
   }
   if (b == 1) {
     float sniff = idle * max(0.0, sin(rigT * 0.8 + seed * 3.0)) * sin(rigT * 15.0 + seed) * 0.12;
-    float pitch = sin(ph * 2.0) * amp * 0.08 - min(atk, 0.0) * 0.45 - max(atk, 0.0) * 0.12 - rB.z * 0.6 + sniff;
+    float pitch = sin(ph * 2.0) * amp * 0.08 - min(atk, 0.0) * 0.45 - max(atk, 0.0) * (0.12 + rigJ) - rB.z * 0.6 + sniff - abs(sin(ph * 2.0)) * amp * rigJ * 0.5;
     float yaw = rB.y + idle * sin(rigT * 0.55 + seed * 2.0) * 0.35;
     off = vec3(0.0, min(atk, 0.0) * rigK.y * 0.6, atk * rigK.y);
     return rY(yaw) * rX(pitch);
@@ -126,7 +132,7 @@ mat3 rigR(out vec3 off) {
  */
 export function rigMat(mat, key) {
   const R = rigOf(key);
-  const u = { rA: { value: new THREE.Vector4(0, 0, 0, Math.random() * 6) }, rB: { value: new THREE.Vector4() }, rigK: { value: new THREE.Vector4(...R.K) }, rigL: { value: R.lift }, rigT: rigTime };
+  const u = { rA: { value: new THREE.Vector4(0, 0, 0, Math.random() * 6) }, rB: { value: new THREE.Vector4() }, rigK: { value: new THREE.Vector4(...R.K) }, rigL: { value: R.lift }, rigJ: { value: R.jaw }, rigT: rigTime };
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     if (prev) prev(sh, r);

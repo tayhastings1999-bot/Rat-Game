@@ -301,14 +301,14 @@ const AI = {
     const p = e.phase, dmg = e.dmg;
     choose(e, [
       { id: 'spray', w: 3, tag: 'zone', go: () => { e.cd = 2; wait(e, 0.4, e => { const q = predictAt(e, 0.6, 0.3); for (let k = 0; k < 6; k++) later(e, k * 0.06, () => { const a = Math.atan2(q.x - e.x, q.z - e.z) + (k - 2.5) * 0.18, r = Math.min(Math.hypot(q.x - e.x, q.z - e.z), 9) * rand(0.6, 1.1); lobAt(e, e.x + Math.sin(a) * r, P.y, e.z + Math.cos(a) * r, 12, dmg * 0.5, 0x9be06a, 'poison', 1.2); }); }); } },
-      { id: 'traps', w: 2.4, tag: 'punish', go: () => { e.cd = 2.3; for (let i = 0; i < 3 + p; i++) { const q = predictAt(e, 0.5 + i * 0.3, 0.6), x = q.x + rand(-1.5, 1.5), z = q.z + rand(-1.5, 1.5); warn(x, z, 1.5, 1.2, dmg * 1.3, { col: 0xffd040 }); } } },
+      { id: 'traps', w: 2.4, tag: 'punish', go: () => { e.cd = 2.3; for (let i = 0; i < 3 + p; i++) { const q = predictAt(e, 0.5 + i * 0.3, 0.6), x = q.x + rand(-1.5, 1.5), z = q.z + rand(-1.5, 1.5); warn(x, z, 1.5, 1.2, dmg * 1.3, { col: 0xffd040, all: true }); } } },
       { id: 'missiles', w: 2.2, tag: 'zone', big: true, go: () => { e.cd = 2.8; wait(e, 0.35, e => { for (let i = 0; i < 4 + p; i++) later(e, i * 0.12, () => { const q = predictAt(e, 1.2, 0.5); lobAt(e, q.x + rand(-2.5, 2.5), P.y, q.z + rand(-2.5, 2.5), 14, dmg, 0xff6a2a, 'fire', 1.8); }); }); } },
       { id: 'snipe', w: 2.2, tag: 'gap', cost: 5, go: () => { e.cd = 2.4; e.snipe = 1.3 - 0.15 * p; } },
       { id: 'gun', w: 2.5, tag: 'zone', ok: p >= 2, go: () => { e.cd = 2.6; wait(e, 0.4, e => { for (let i = 0; i < 16; i++) later(e, i * 0.08, () => aimShot(e, 24, dmg * 0.35, 0xffe060, 0.9, rand(-0.12, 0.12), 0.6, lead(e, 24, 0.4))); }); } },
       { id: 'flame', w: 2, tag: 'close', ok: p >= 2, go: () => {
         e.cd = 3;
         const a = Math.atan2(P.x - e.x, P.z - e.z);
-        for (let i = 1; i <= 7; i++) { const x = e.x + Math.sin(a) * i * 1.8, z = e.z + Math.cos(a) * i * 1.8; later(e, i * 0.07, () => warn(x, z, 1.5, 0.55, dmg * 0.7, { col: 0xff7a2a, fn: () => puddle('fire', x, z, 1.5, 3, 'e') })); }
+        for (let i = 1; i <= 7; i++) { const x = e.x + Math.sin(a) * i * 1.8, z = e.z + Math.cos(a) * i * 1.8; later(e, i * 0.07, () => warn(x, z, 1.5, 0.55, dmg * 0.7, { col: 0xff7a2a, all: true, fn: () => puddle('fire', x, z, 1.5, 3, 'all') })); }
       } },
       { id: 'fumigate', w: 2, big: true, cost: 6, ok: p >= 3, go: () => { e.cd = 4; rain(e, 8, 0.2, 2.6, dmg * 0.6, 'poison', 0x9be06a); e.oa += Math.PI; e.mvT = 0; } },
     ]);

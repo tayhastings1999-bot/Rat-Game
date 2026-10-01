@@ -13,6 +13,11 @@ export const EN = {
   ghoul: { hp: 34, spd: 3.4, dmg: 12, r: 0.62, h: 1.3, xp: 3, col: 0x2a2028, blood: 0x5a0606, mass: 1.8 },
   bloat: { hp: 40, spd: 2.2, dmg: 10, r: 0.66, h: 1.3, xp: 3, col: 0x8e9a70, blood: 0x8ac030, mass: 2 },
   bat: { hp: 12, spd: 5.6, dmg: 7, r: 0.45, h: 0.55, xp: 2, col: 0x221c26, blood: 0xa01010, fly: true },
+  shieldrat: { hp: 45, spd: 2.9, dmg: 12, r: 0.55, h: 1.15, xp: 4, col: 0x6a5e54, blood: 0x9a0c0c, mass: 2.2 },
+  priest: { hp: 38, spd: 3.3, dmg: 8, r: 0.5, h: 2, xp: 6, col: 0x3a4a2a, blood: 0x6a8a2a },
+  lurker: { hp: 30, spd: 6.2, dmg: 15, r: 0.5, h: 1.1, xp: 4, col: 0x2a3028, blood: 0x7a9a2a },
+  mimic: { hp: 60, spd: 6.5, dmg: 14, r: 0.5, h: 1.1, xp: 8, col: 0x5a6068, blood: 0x8a1a10, mass: 2 },
+  spitter: { hp: 22, spd: 3.6, dmg: 9, r: 0.5, h: 0.95, xp: 3, col: 0x5a6a3a, blood: 0x9ac040 },
   brute: { hp: 140, spd: 3, dmg: 20, r: 0.9, h: 2.1, xp: 10, col: 0x5a2a20, blood: 0x9a0c0c, bar: true, mass: 3 },
 };
 

@@ -44,6 +44,7 @@ export function tickHaz(dt) {
       if (h.o.pull) { P.vy = Math.max(P.vy, 9); }
     }
     if (!h.o.silent) boom(h.x, h.y + 0.4, h.z, Math.min(h.R * 1.2, 6), h.o.col || 0xff6a3a);
+    if (h.o.all) for (const e of W.enemies) if (!e.dead && !e.boss && e.type !== 'nest' && Math.hypot(e.x - h.x, e.z - h.z) < h.R + e.r) hit(e, h.dmg * 2, Math.atan2(e.x - h.x, e.z - h.z), 6, 'event', true);
     if (h.o.fn) h.o.fn();
   }
   keep(W.hazQ, h => !h.done);
@@ -55,9 +56,10 @@ export function tickHaz(dt) {
     const D = PUD[p.kind];
     if (p.tick <= 0) {
       p.tick = 0.45;
-      if (p.own === 'e') {
+      if (p.own === 'e' || p.own === 'all') {
         if (!(st.toxImmune && p.kind === 'poison') && Math.hypot(P.x - p.x, P.z - p.z) < p.R && Math.abs(P.y - p.y) < 1.2) hurtP(D[1] * (1 + (run.T || 0) * 0.06), null, true);
-      } else {
+      }
+      if (p.own !== 'e') {
         for (const e of W.enemies) {
           if (!e.dead && !e.fly && Math.hypot(e.x - p.x, e.z - p.z) < p.R + e.r && Math.abs(e.y - p.y) < 1.5) {
             hit(e, D[1], null, 0, p.kind === 'sludge' ? 'sludge' : 'fire', true);

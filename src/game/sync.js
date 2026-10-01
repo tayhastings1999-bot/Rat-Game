@@ -34,12 +34,15 @@ for (let i = 0; i < BAR_N; i++) {
 const corruptCol = {};
 for (const k in CORRUPT) corruptCol[k] = new THREE.Color(CORRUPT[k].col);
 
-const TK_RGB = { melee: [2.6, 0.55, 0.42], shot: [1.8, 0.65, 2.7], area: [2.7, 2.1, 0.4] };
+const TK_RGB = { melee: [2.6, 0.55, 0.42], shot: [1.8, 0.65, 2.7], area: [2.7, 2.1, 0.4], heal: [0.6, 2.4, 0.5] };
 function mobColor(e) {
   const t = G.time;
   if (e.flash > 0) return tmpC.setScalar(3.5);
   if (e.thief) return tmpC.setRGB(2, 1.6, 0.3);
   if (e.scab) return tmpC.setRGB(1.5, 0.6, 1.8);
+  if (e.disguise) return P.scent ? tmpC.setRGB(2.4, 0.5, 0.4) : tmpC.setScalar(1);
+  if (e.hidden) return tmpC.setRGB(0.6, 2.2, 0.5);
+  if (e.rage > 0) return tmpC.setRGB(1.7, 0.75, 0.6);
   if (e.wind > 0 || e.tel > 0) { const c = TK_RGB[e.tk] || TK_RGB.melee, f = 0.8 + 0.25 * Math.sin(t * 40); return tmpC.setRGB(c[0] * f, c[1] * f, c[2] * f); }
   if (e.recov > 0) return tmpC.setRGB(1.35, 1.5, 1.75); // overextended: open for a punish
   if (P.scent) return tmpC.setRGB(2.4, 0.5, 0.4);
@@ -61,7 +64,7 @@ function poseMatrix(e) {
   const sc = e.sc || 1, coil = Math.max(0, -(e.ap || 0)), strike = Math.max(0, e.ap || 0), fl = e.fl || 0;
   const rel = angD(e.hitA ?? e.ang, e.ang), fwd = strike * 0.12 * sc;
   const bob = e.fly ? Math.sin(G.time * 6 + e.ph) * 0.15 : Math.abs(Math.sin(e.gph || 0)) * 0.07 * (e.gam || 0) * sc + Math.sin(G.time * 2.2 + e.ph) * 0.01 * sc;
-  dummy.position.set(e.x + Math.sin(e.ang) * fwd, e.y + bob, e.z + Math.cos(e.ang) * fwd);
+  dummy.position.set(e.x + Math.sin(e.ang) * fwd, e.y + (e.disguise ? 0 : bob) + (e.lift || 0), e.z + Math.cos(e.ang) * fwd);
   dummy.rotation.set((e.pitch || 0) + coil * 0.14 - strike * 0.06 + Math.cos(rel) * fl * 0.3 + (e.recov > 0 ? 0.08 : 0), e.ang,
     (e.roll || 0) + (e.lean || 0) * (e.fly ? 1 : 0.5) - Math.sin(rel) * fl * 0.3 + (e.fly ? Math.sin(G.time * 10 + e.ph) * 0.12 : 0));
   const sy = clamp(1 - coil * 0.16 - strike * 0.07 + (e.sq || 0) - (e.flash > 0 ? 0.1 : 0), 0.6, 1.4), sz = 1 + strike * 0.16 + coil * 0.04;
@@ -89,10 +92,12 @@ export function sync(dt) {
       else e.mesh.material.emissive.setScalar(em);
       continue;
     }
+    if (e.hidden && !P.scent) continue; // lurkers in their cracks: only your nose finds them
     const i = cnt[e.type]++;
     if (i >= MOB_CAP) continue;
     animTick(e, dt, e.type, P.x, P.z);
     writePose(e, IMB[e.type].userData.rA, IMB[e.type].userData.rB, i);
+    if (e.disguise) { IMB[e.type].userData.rA.setXYZW(i, 0, 1, 0, 0); IMB[e.type].userData.rB.setXYZW(i, 0, 0, e.fl * 0.6, 0); }
     poseMatrix(e);
     IMB[e.type].setMatrixAt(i, dummy.matrix);
     IMG[e.type].setMatrixAt(i, dummy.matrix);

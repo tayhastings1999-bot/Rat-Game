@@ -17,6 +17,7 @@ import { warn, puddle } from '../combat/hazards.js';
 import { bossAI } from './bosses.js';
 import { owlAI } from '../game/light.js';
 import { thiefAI } from '../game/objectives.js';
+import { ROLE_AI, tickFlee, catHunt } from './roles.js';
 import { creatureMesh } from '../render/pools.js';
 
 const CORRUPT_KEYS = Object.keys(CORRUPT);
@@ -28,10 +29,10 @@ const CORRUPT_KEYS = Object.keys(CORRUPT);
  * banner, and fades in over a minute instead of arriving at full strength.
  */
 export const ROSTER = {
-  surface: [['mawling', 0], ['roach', 30], ['bat', 70], ['crow', 120], ['tick', 180], ['cat', 280], ['wasp', 360], ['ghoul', 450], ['moth', 540], ['brute', 640], ['shade', 750]],
-  sewer: [['mawling', 0], ['tick', 0], ['roach', 30], ['bat', 70], ['ghoul', 120], ['bloat', 180], ['moth', 250], ['shade', 330], ['brute', 420], ['wasp', 500]],
+  surface: [['mawling', 0], ['roach', 30], ['bat', 70], ['crow', 120], ['tick', 180], ['shieldrat', 220], ['spitter', 250], ['cat', 280], ['priest', 330], ['wasp', 360], ['ghoul', 450], ['moth', 540], ['brute', 640], ['shade', 750]],
+  sewer: [['mawling', 0], ['tick', 0], ['roach', 30], ['bat', 70], ['spitter', 90], ['ghoul', 120], ['shieldrat', 150], ['bloat', 180], ['priest', 220], ['moth', 250], ['shade', 330], ['brute', 420], ['wasp', 500]],
 };
-const WEIGHT = { mawling: 4, roach: 2, bat: 1.6, crow: 2, tick: 2, cat: 1.3, wasp: 1.3, ghoul: 1.4, bloat: 1.3, moth: 1, brute: 0.8, shade: 1 };
+const WEIGHT = { shieldrat: 1, spitter: 1.1, priest: 0.45, mawling: 4, roach: 2, bat: 1.6, crow: 2, tick: 2, cat: 1.3, wasp: 1.3, ghoul: 1.4, bloat: 1.3, moth: 1, brute: 0.8, shade: 1 };
 export const INTRO = {
   mawling: ['Mawlings', 'They bite up close and pounce from mid range'],
   roach: ['Roaches', 'They swarm in packs and scale walls'],
@@ -45,6 +46,9 @@ export const INTRO = {
   moth: ['Moths', 'They blink around and drop poison clouds'],
   brute: ['Brutes', 'They charge in straight lines: sidestep'],
   shade: ['Shades', 'They blink behind you: keep moving'],
+  shieldrat: ['Lidbearers', 'Their lids block hits from the front: get behind them, or hit them as they bash'],
+  spitter: ['Gob Spitters', 'They hang back and spit acid: close in, they hop away slowly'],
+  priest: ['Rot Priests', 'They heal the horde around them: kill them first'],
 };
 const rosterClock = () => (run.time || 0) + (run.tier || 0) * 45;
 const roster = () => ROSTER[isSewer() ? 'sewer' : 'surface'];
@@ -106,7 +110,7 @@ export function spawnEnemy(type, x, z, o = {}) {
     elite: el, mut, corrupt: el ? o.corrupt || pick(CORRUPT_KEYS) : null, bar: D.bar || el,
     pT: 0, pD: 0, bT: 0, bD: 0, dT: 0, tT: 0, lunge: 0, acid: 0, wind: 0, atkCd: 0, ward: 0, trailT: 0, wardT: 0,
     st: 'move', tt: 0, cd: rand(0.6, 1.6), jk: 0, lat: 0, oa: rand(0, TAU), ow: (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1.2),
-    ax: x, az: z, hv: rand(0.3, 0.9), darts: 0, bl: rand(1.5, 3), tel: 0, mass: (D.mass || 1) * (el ? 1.5 : 1), ai: !!MOBAI[type],
+    ax: x, az: z, hv: rand(0.3, 0.9), darts: 0, bl: rand(1.5, 3), tel: 0, mass: (D.mass || 1) * (el ? 1.5 : 1), ai: !!(MOBAI[type] || ROLE_AI[type]), flank: type === 'mawling' && Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0,
   };
   W.enemies.push(e);
   spark(e.x, e.y + 0.5, e.z, 1.2, el ? CORRUPT[e.corrupt].col : 0xff3a20);
@@ -139,8 +143,33 @@ export function moveBody(e, dt, vx, vz) {
 const slowMul = e => st.foeSpd * (e.slow > 0 ? 0.5 : 1) * (e.y < G.tideY - 0.2 ? 0.55 : 1) * ((tileAt(e.x, e.z) === 2 && e.y < -0.4) ? 0.65 : 1);
 
 // Turn rate (rad/s) and acceleration (1/s) per body type.
-const TURN = { mawling: 7, roach: 16, tick: 12, ghoul: 3.2, bloat: 2.6, brute: 2.8, cat: 8, shade: 6, ratling: 11 };
-const ACCEL = { mawling: 7, roach: 14, tick: 14, ghoul: 3, bloat: 2.5, brute: 2.2, cat: 6, shade: 5, ratling: 10 };
+const TURN = { mawling: 7, roach: 16, tick: 12, ghoul: 3.2, bloat: 2.6, brute: 2.8, cat: 8, shade: 6, ratling: 11, shieldrat: 2.1, priest: 4, lurker: 9, mimic: 6, spitter: 5 };
+const ACCEL = { mawling: 7, roach: 14, tick: 14, ghoul: 3, bloat: 2.5, brute: 2.2, cat: 6, shade: 5, ratling: 10, shieldrat: 3, priest: 4, lurker: 10, mimic: 9, spitter: 6 };
+/**
+ * Steering: heading turns at a capped rate and speed eases in and out, so
+ * heavy mobs commit to their line and skitterers whip around. (mx, mz) is a
+ * unit direction. Returns whether the mob is on the ground.
+ */
+export function steer(e, dt, mx, mz, sp) {
+  let vx = mx * sp, vz = mz * sp;
+  if (sp > 0) {
+    const want = Math.atan2(mx, mz);
+    if (e.hd == null) { e.hd = want; e.cs = 0; }
+    const tr = (TURN[e.type] || 8) * (e.elite ? 0.85 : 1), da = angD(want, e.hd);
+    e.hd += clamp(da, -tr * dt, tr * dt);
+    const align = Math.max(0.3, Math.cos(da));
+    e.cs += (sp * align - e.cs) * Math.min(1, (ACCEL[e.type] || 8) * dt);
+    vx = Math.sin(e.hd) * e.cs; vz = Math.cos(e.hd) * e.cs;
+    e.ang = e.hd;
+  } else e.cs = 0;
+  return moveBody(e, dt, vx, vz);
+}
+/** Head for a point (flanking spots, cover behind the pack) instead of the rat. */
+export function seekPoint(e, dt, tx, tz, sp) {
+  const dx = tx - e.x, dz = tz - e.z, l = Math.hypot(dx, dz);
+  if (l < 0.4) return moveBody(e, dt, 0, 0);
+  return steer(e, dt, dx / l, dz / l, sp * slowMul(e) * Math.min(1, l / 1.5 + 0.3));
+}
 export function groundChase(e, dt, sp, lat = 0) {
   const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
   const dir = flowDir(e);
@@ -154,20 +183,7 @@ export function groundChase(e, dt, sp, lat = 0) {
     mx /= l; mz /= l;
   }
   sp *= slowMul(e);
-  let vx = mx * sp, vz = mz * sp;
-  if (sp > 0) {
-    // Steering: heading turns at a capped rate and speed eases in and out,
-    // so heavy mobs commit to their line and skitterers whip around.
-    const want = Math.atan2(mx, mz);
-    if (e.hd == null) { e.hd = want; e.cs = 0; }
-    const tr = (TURN[e.type] || 8) * (e.elite ? 0.85 : 1), da = angD(want, e.hd);
-    e.hd += clamp(da, -tr * dt, tr * dt);
-    const align = Math.max(0.3, Math.cos(da));
-    e.cs += (sp * align - e.cs) * Math.min(1, (ACCEL[e.type] || 8) * dt);
-    vx = Math.sin(e.hd) * e.cs; vz = Math.cos(e.hd) * e.cs;
-    e.ang = e.hd;
-  } else e.cs = 0;
-  const g = moveBody(e, dt, vx, vz);
+  const g = steer(e, dt, mx, mz, sp);
   if (e.hw && P.y > e.y + 0.6 && d < 8) {
     if (e.type === 'roach') e.vy = 7; // roaches scale walls like the rat does
     else if (g) e.vy = Math.sqrt(2 * GRAV * (Math.min(P.y - e.y, 6) + 1));
@@ -230,7 +246,7 @@ export function pounceAt(e, wind, dur, hgt, dmg, R, after, target, roof) {
       st: 'leap', tt: dur, lt: dur, sx: e.x, sy: e.y, sz: e.z, tx, ty, tz, lh: hgt,
       land: e => {
         puff(e.x, e.y + 0.2, e.z, 0x9a8a7a, 6, 2);
-        if (Math.hypot(P.x - e.x, P.z - e.z) < R + 0.3 && Math.abs(P.y - e.y) < 1.6) hurtP(dmg, e);
+        if (dmg && Math.hypot(P.x - e.x, P.z - e.z) < R + 0.3 && Math.abs(P.y - e.y) < 1.6) hurtP(dmg, e);
         if (after && !e.dead) after(e);
       },
     });
@@ -337,12 +353,22 @@ export function mobState(e, dt, dx, dz) {
   return false;
 }
 
+/** Scattered by the shriek: flee up and away for a few seconds. */
+function scattered(e, dt, dx, dz, d) {
+  if (!(e.scatterT > 0)) return false;
+  e.scatterT -= dt;
+  flyTo(e, dt, e.x - dx / d * 10, Math.max(P.y, 0) + 9, e.z - dz / d * 10, e.spd * 1.8);
+  return true;
+}
+
 /** Per-type AI: movement style plus a set of attacks chosen by distance (and sometimes the rat's HP). */
 export const MOBAI = {
   mawling(e, dt, dx, dz, d, sp) {
     e.jk -= dt;
     if (e.jk <= 0) { e.jk = rand(0.3, 0.8); e.lat = rand(-1.2, 1.2); }
-    groundChase(e, dt, sp, d < 7 ? e.lat : e.lat * 0.3);
+    // Flankers circle round behind you before they commit.
+    if (e.flank && d < 12 && d > 2.6) { const a = P.facing + Math.PI + e.flank * 0.9; seekPoint(e, dt, P.x + Math.sin(a) * 3.2, P.z + Math.cos(a) * 3.2, sp * 1.15); }
+    else groundChase(e, dt, sp, d < 7 ? e.lat : e.lat * 0.3);
     if (e.cd <= 0) {
       if (d < 1.7) { e.cd = 1; wait(e, 0.26, e => bite(e, 1.5, e.dmg)); }
       else if (d > 2.5 && d < 5.5 && Math.random() < 0.45) { e.cd = 2.2; pounceAt(e, 0.4, 0.42, 1.8, e.dmg * 1.2, 1.4); }
@@ -397,6 +423,7 @@ export const MOBAI = {
   // Feral cat: telegraphed pounce, a two-hit swipe up close, hairballs at range — more pounces when the rat is hurt.
   cat(e, dt, dx, dz, d, sp) {
     const low = run.hp < st.maxHp * 0.4;
+    if (catHunt(e, dt, d)) return;
     groundChase(e, dt, sp * (d > 6 ? 1.15 : 0.75), d < 6 ? Math.sin(G.time * 2.2 + e.ph) * 1.1 : 0);
     if (e.cd <= 0) {
       if (d < 2) { e.cd = 1.2; wait(e, 0.24, e => { cone(e, 2.2, 1.1, e.dmg); wait(e, 0.16, e => cone(e, 2.2, 1.1, e.dmg * 0.8)); }); }
@@ -407,6 +434,7 @@ export const MOBAI = {
   },
   // Infected bat: sine-wave weave, screech then dive-bomb, or a sonic screech ring that slows.
   bat(e, dt, dx, dz, d, sp) {
+    if (scattered(e, dt, dx, dz, d)) return;
     const a = Math.atan2(dx, dz), w = Math.cos(G.time * 5 + e.ph) * 1.7, f = d > 2.5 ? 1 : -0.6;
     const vx = (Math.sin(a) * f + Math.cos(a) * w) * sp, vz = (Math.cos(a) * f - Math.sin(a) * w) * sp;
     e.x += (vx * st.foeSpd + e.kx) * dt;
@@ -425,6 +453,7 @@ export const MOBAI = {
   },
   // Territorial crow: erratic orbit that flips direction, swoops through you, or a three-feather volley.
   crow(e, dt, dx, dz, d, sp) {
+    if (scattered(e, dt, dx, dz, d)) return;
     e.oa += dt * e.ow * (1 + 0.5 * Math.sin(G.time * 0.9 + e.ph));
     if (Math.random() < dt * 0.35) e.ow *= -1;
     const r = 6.5 + Math.sin(G.time * 0.7 + e.ph) * 2.5;
@@ -568,9 +597,9 @@ export function updateEnemies(dt, cap) {
     if (e.boss) custom = bossAI(e, dt, dx, dz, d);
     else if (e.ai) {
       custom = true;
-      const haste = e.corrupt === 'haste';
-      e.cd -= dt * (run.atkM || 1) * (haste ? 1.6 : 1);
-      if (!mobState(e, dt, dx, dz)) MOBAI[e.type](e, dt, dx, dz, d, e.spd * (haste ? 1.4 : 1));
+      const haste = e.corrupt === 'haste', rage = e.rage > 0 ? 1.3 : 1;
+      e.cd -= dt * (run.atkM || 1) * (haste ? 1.6 : 1) * rage;
+      if (!mobState(e, dt, dx, dz) && !tickFlee(e, dt, dx, dz, d)) (MOBAI[e.type] || ROLE_AI[e.type])(e, dt, dx, dz, d, e.spd * (haste ? 1.4 : 1) * rage);
     }
     if (e.type === 'owl') custom = owlAI(e, dt);
     else if (e.pred && !custom) custom = predAI(e, dt, d);
