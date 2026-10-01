@@ -169,7 +169,9 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   if (!sec) throw new Error('no reachable secret wall in the city');
   await S(bd => { const { P, M, G } = __scurry, toW = g => (g - M.W / 2 + 0.5) * 4; P.x = toW(bd.gx) + bd.dx * 2.9; P.z = toW(bd.gz) + bd.dz * 2.9; P.y = 0; P.facing = Math.atan2(-bd.dx, -bd.dz); G.camYaw = P.facing; }, sec);
   await page.keyboard.down('KeyW'); await until(() => !!__scurry.chewTarget(), 4000);
-  await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, 8000, sec.k); await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
+  // E may open a chest standing right there first; keep pressing until the wall is being gnawed.
+  for (let i = 0; i < 4 && (await S(k => __scurry.M.grid[k], sec.k)) !== 1; i++) { await page.keyboard.up('KeyE'); await page.keyboard.down('KeyE'); await until(k => __scurry.M.grid[k] === 1, i < 3 ? 2500 : 8000, sec.k); }
+  await page.keyboard.up('KeyE'); await page.keyboard.up('KeyW');
   if ((await S(k => __scurry.M.grid[k], sec.k)) !== 1) throw new Error('secret wall not gnawed');
   // Lair: walk in, mini-boss wakes; kill it, hoard appears.
   const lair = await S(() => { const L = __scurry.W.lairs[0]; return L && { x: L.cx, z: L.cz }; });
@@ -482,8 +484,8 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   await S(() => { __scurry.G.testNoBusy = false; });
 });
 await step('rule breakers and Scab the rival', async () => {
-  await S(() => { __scurry.G.testNoBusy = true; for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); __scurry.applyRule('chain'); });
-  await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 6 + i * 0.5, P.z, { hpMul: 30, plain: true, force: true }); if (e) { e.spd = 0; e.tag = 'chain'; } } __scurry.kill(__scurry.W.enemies.find(e => e.tag === 'chain')); });
+  await S(() => { const { P, G, M, W } = __scurry, r = G.startRoom; G.testNoBusy = true; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); __scurry.applyRule('chain'); P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; });
+  await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 6 + i * 0.5, P.z, { hpMul: 30, plain: true, force: true }); if (e) { e.spd = 0; e.tag = 'chain'; } } const f = __scurry.W.enemies.find(e => e.tag === 'chain'); if (f) __scurry.kill(f); });
   if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'chain' && !e.dead && e.hp < e.maxHp), 3000))) throw new Error('chain reaction did not burst');
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); const r = __scurry.run; r.scabSeen = false; r.scab = null; r.dStart = r.time - 40; });
   const scab = await until(() => __scurry.run.scab && !__scurry.run.scab.dead, 6000);
