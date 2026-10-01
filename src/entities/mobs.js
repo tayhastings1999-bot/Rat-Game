@@ -89,7 +89,7 @@ function rosterIntros(dt) {
  * o.corrupt picks a specific corruption.
  */
 export function spawnEnemy(type, x, z, o = {}) {
-  if (W.enemies.length >= 220) return null;
+  if (W.enemies.length >= 220 && !o.force) return null; // story-critical spawns (thief, champion, bounty) ignore the cap
   const D = EN[type], gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();

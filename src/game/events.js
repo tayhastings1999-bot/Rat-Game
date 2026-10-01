@@ -83,7 +83,7 @@ const START = {
     const s = siteNear(18, 40);
     if (!s) return null;
     const type = pick(['brute', 'ghoul', 'cat'].filter(t => run.seenMobs && run.seenMobs[t]).concat(['mawling']));
-    const e = spawnEnemy(type, s.x, s.z, { elite: true, sc: 1.5, hpMul: 3, name: 'Wanted' });
+    const e = spawnEnemy(type, s.x, s.z, { elite: true, sc: 1.5, hpMul: 3, name: 'Wanted', force: true });
     if (!e) return null;
     Object.assign(e, { bounty: true, bar: true, xp: (e.xp || 1) * 3 });
     G.evMarker = { e, col: '#ffd040' };

@@ -94,7 +94,7 @@ function startTrial() {
   // Somewhere on the edge of the fight, not on top of you.
   const tiles = M.spawnTiles || [];
   let e = null;
-  const opts = { elite: true, corrupt: pick(['haste', 'ward', 'fire', 'leech']), sc: 1.7, name: 'Champion' };
+  const opts = { elite: true, corrupt: pick(['haste', 'ward', 'fire', 'leech']), sc: 1.7, name: 'Champion', force: true };
   for (let i = 0; i < 16 && !e && tiles.length; i++) {
     const k = tiles[(Math.random() * tiles.length) | 0], x = toW(k % M.W), z = toW((k / M.W) | 0), d = Math.hypot(x - P.x, z - P.z);
     if (d < 10 || d > 44) continue;

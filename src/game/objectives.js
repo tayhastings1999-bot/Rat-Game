@@ -218,7 +218,13 @@ export function tickObjective(dt) {
         const tiles = M.spawnTiles || [];
         for (let i = 0; i < 12 && !o.thief && tiles.length; i++) {
           const k = tiles[(Math.random() * tiles.length) | 0];
-          const e = spawnEnemy('mawling', toW(k % M.W), toW((k / M.W) | 0), { plain: true, sc: 1.3, hpMul: 6 + run.tier * 2 });
+          const e = spawnEnemy('mawling', toW(k % M.W), toW((k / M.W) | 0), { plain: true, sc: 1.3, hpMul: 6 + run.tier * 2, force: true });
+          if (e) { Object.assign(e, { thief: true, spd: e.spd * 1.55, bar: true, name: 'Thief', xp: 0 }); o.thief = e; }
+        }
+        for (let i = 0; i < 16 && !o.thief; i++) {
+          const a = rand(0, 6.3), r = rand(10, 18), x = P.x + Math.sin(a) * r, z = P.z + Math.cos(a) * r, t = tAt(toG(x), toG(z));
+          if (t !== 1 && t !== 9 && t !== 10) continue;
+          const e = spawnEnemy('mawling', x, z, { plain: true, sc: 1.3, hpMul: 6 + run.tier * 2, force: true });
           if (e) { Object.assign(e, { thief: true, spd: e.spd * 1.55, bar: true, name: 'Thief', xp: 0 }); o.thief = e; }
         }
         if (o.thief) dnum(o.thief.x, o.thief.y + 2, o.thief.z, 'Thief!', 'crit');
