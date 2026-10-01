@@ -7,6 +7,7 @@ import { camera, sun, lantern, lampL, post } from '../render/renderer.js';
 import { IMB, IMG, MOB_CAP, shadowIM, gemIM, scrapIM, coreIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
 import { animTick, writePose, rigTime } from '../render/rig.js';
+import { tickAmbient } from '../fx/ambient.js';
 import { M, G as GRAV, toW, floorY, segBlocked, forPlatsNear } from '../world/grid.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
@@ -22,6 +23,7 @@ const camLook = new THREE.Vector3();
 const _fwd = new THREE.Vector3(0, 0, 1), _dir = new THREE.Vector3();
 const want = new THREE.Vector3(), tgt = new THREE.Vector3(), shakeV = new THREE.Vector3();
 let camFix = 0; // 0..1: how much the camera has lifted/pulled in to see past buildings
+const lead = { x: 0, z: 0 };
 
 const BAR_N = 16;
 const barPool = [];
@@ -69,12 +71,16 @@ function poseMatrix(e) {
   dummy.rotation.set((e.pitch || 0) + coil * 0.14 - strike * 0.06 + Math.cos(rel) * fl * 0.3 + (e.recov > 0 ? 0.08 : 0), e.ang,
     (e.roll || 0) + (e.lean || 0) * (e.fly ? 1 : 0.5) - Math.sin(rel) * fl * 0.3 + (e.fly ? Math.sin(G.time * 10 + e.ph) * 0.12 : 0));
   const sy = clamp(1 - coil * 0.16 - strike * 0.07 + (e.sq || 0) - (e.flash > 0 ? 0.1 : 0), 0.6, 1.4), sz = 1 + strike * 0.16 + coil * 0.04;
-  dummy.scale.set(sc / Math.sqrt(sy), sc * sy, sc * sz / Math.sqrt(sy));
+  // Clawing up out of the gutter (or dropping in from above) when it spawns.
+  const em = e.emT > 0 ? 1 - e.emT / 0.5 : 1, es = 0.55 + 0.45 * em;
+  if (em < 1) dummy.position.y += e.fly ? (1 - em) * 3 : -(1 - em) * (1 - em) * (e.h || 1) * 0.9;
+  dummy.scale.set(sc / Math.sqrt(sy) * es, sc * sy * es, sc * sz / Math.sqrt(sy) * es);
   dummy.updateMatrix();
 }
 
 export function sync(dt) {
   rigTime.value = G.time;
+  tickAmbient(dt);
   const cnt = {};
   for (const k in IMB) cnt[k] = 0;
   let rings = 0;
@@ -417,7 +423,13 @@ export function animate(dt) {
   blob.scale.setScalar(clamp(1 - (P.y - gy) * 0.08, 0.4, 1));
 
   // Camera: orbit the rat; if a building would hide it, lift the camera and then pull it in.
-  tgt.set(P.x + G.camOff.x, P.y + 1, P.z + G.camOff.z);
+  // Look a little ahead of where the rat is running; widen the lens at a sprint or a dive.
+  const play = G.state === 'play';
+  lead.x += ((play ? P.vx * 0.16 : 0) - lead.x) * Math.min(1, dt * 3);
+  lead.z += ((play ? P.vz * 0.16 : 0) - lead.z) * Math.min(1, dt * 3);
+  const fov = 55 + (play && P.sprinting ? 5 : 0) + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
+  if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
+  tgt.set(P.x + G.camOff.x + (P.inDuct || P.inBldg ? 0 : lead.x), P.y + 1, P.z + G.camOff.z + (P.inDuct || P.inBldg ? 0 : lead.z));
   const place = (pitch, dist) => want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   let fix = 0;
   if (P.inDuct || P.inBldg) fix = 0.55; // cutaway: look down on the maze (or into the room)

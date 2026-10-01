@@ -114,6 +114,7 @@ export function spawnEnemy(type, x, z, o = {}) {
   };
   W.enemies.push(e);
   spark(e.x, e.y + 0.5, e.z, 1.2, el ? CORRUPT[e.corrupt].col : 0xff3a20);
+  if (!o.force || o.emerge) { e.emT = 0.5; puff(e.x, e.y + 0.1, e.z, 0x5a4e44, D.fly ? 2 : 6, 2); }
   if (type === 'roach' && !o.pack) for (let i = 0; i < 3; i++) spawnEnemy('roach', x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), { pack: 1, plain: true });
   return e;
 }
@@ -557,6 +558,7 @@ export function addPred(path, o = {}) {
 export function updateEnemies(dt, cap) {
   for (const e of W.enemies) {
     if (e.dead || e.held) continue; // held: in the Brawler's paws
+    if (e.emT > 0) { e.emT -= dt; continue; } // still climbing out
     e.flash -= dt; e.slow -= dt; e.tT -= dt; e.lunge -= dt; e.ward -= dt;
     if (e.invuln > 0) e.invuln -= dt;
     if (!e.fly && e.y < -3) {
