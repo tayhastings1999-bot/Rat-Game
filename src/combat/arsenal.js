@@ -292,7 +292,7 @@ export const PRIM = {
     name: 'Sling Stone', range: 13, cd: 0.3,
     fire(dx, dz, t) {
       const n = 1 + st.multi, dy = t ? (t.y + t.h * 0.5 - (P.y + 0.7)) / Math.max(1, Math.hypot(t.x - P.x, t.z - P.z)) : 0;
-      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.16; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 20 * st.shotSpd, 7, 0, 'primary', { col: 0xf4efe6, arc: true }); }
+      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.16; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 20 * st.shotSpd, 10, 1, 'primary', { col: 0xf4efe6, arc: true }); }
     },
   },
   darts: {

@@ -63,12 +63,15 @@ export const capped = () => isBreak(run.level + 1) && run.xp >= run.need;
 export function addXP(v, raw) {
   const gain = raw ? v : v * st.xp * xpMul();
   if (!raw) run.xpTotal = (run.xpTotal || 0) + gain;
-  if (capped()) { run.xpBank = (run.xpBank || 0) + gain; return; }
+  // While the bar waits on a Breakthrough, at most one level's worth banks up, so a long
+  // stall doesn't turn into a burst of levels afterwards (found by the pace bots).
+  const bankCap = () => need(run.level + 1);
+  if (capped()) { run.xpBank = Math.min(bankCap(), (run.xpBank || 0) + gain); return; }
   run.xp += gain;
   while (run.xp >= run.need) {
     if (isBreak(run.level + 1)) {
       // The bar caps; the overflow is banked until you break through.
-      run.xpBank = (run.xpBank || 0) + (run.xp - run.need);
+      run.xpBank = Math.min(bankCap(), (run.xpBank || 0) + (run.xp - run.need));
       run.xp = run.need;
       if (!run.trial && !run.trialCue) { run.trialCue = true; run.trialCd = Math.min(run.trialCd || 0, 1.5); banner('Breakthrough ready', 'A champion is coming for you'); }
       break;
@@ -116,7 +119,8 @@ function startTrial() {
   }
   if (!e) { run.trialCd = 1; return; }
   // Scales with your level more than with the threat, so a run that levels slowly can still break through.
-  const hp = 150 * (1 + L * 0.15) * (1 + (run.T || 0) * 0.1) * (isSewer() ? 1.3 : 1);
+  // Each failed attempt sends a weaker champion (down to 40%), so no build gets stuck at a Breakthrough.
+  const hp = 150 * (1 + L * 0.15) * (1 + (run.T || 0) * 0.1) * (isSewer() ? 1.3 : 1) * Math.max(0.4, Math.pow(0.8, run.trialFails || 0));
   Object.assign(e, { champion: true, hp, maxHp: hp, bar: true, dmg: e.dmg * 1.15, xp: 0 });
   run.trial = { L, e, t: TRIAL_TIME };
   run.trialCue = false;
@@ -128,17 +132,19 @@ function startTrial() {
 }
 function failTrial() {
   const e = run.trial.e;
+  run.trialFails = (run.trialFails || 0) + 1;
   if (!e.dead) { e.dead = true; puff(e.x, e.y + 1, e.z, 0x6a6a6a, 20, 4); }
   run.trial = null;
   run.trialCd = 18;
   run.trialCue = true;
-  banner('The champion slinks away', 'It will be back · the bar stays full');
+  banner('The champion slinks away', 'It will be back, weaker · the bar stays full');
 }
 /** Called from kill(): the Champion is down. */
 export function championDown(e) {
   if (!run.trial || run.trial.e !== e) return;
   run.trial = null;
   run.trialCd = 0;
+  run.trialFails = 0;
   run.xp = 0;
   run.level++;
   run.need = need(run.level);

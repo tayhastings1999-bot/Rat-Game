@@ -37,7 +37,7 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Hidden places.** Cracked walls that look like plain brick hide secret passages (sniff with F to spot them; gnaw with E). Behind them: courtyards and pockets with premium loot, and each district's hidden **lair**, where a mini-boss (Alley Tom, Scrap Brute, Crow Matriarch, Bloated Queen, Ghoul Lord, Tick Hive) guards a premium hoard. Dead-end alleys always hold loot; fire escapes give a stamina-free way onto the roofs.
 
-**Enemies.** Twelve types, each with several telegraphed attacks chosen by distance and sometimes by your HP. Flyers move erratically: bats weave on sine waves, screech and dive-bomb; crows orbit, reverse direction, swoop and fire feather volleys; moths drift in lissajous paths, drop poison clouds and blink; wasps dart. Big patrol cats hunt in packs. **Corrupted elites** have double HP plus a modifier: Burning (fire trail), Warding (shields allies), Frenzied, Brood-bloated (splits), Leeching or Volatile (explodes on death). They drop cores that give an item and salvage.
+**Enemies.** Twelve types, each with several telegraphed attacks chosen by distance and sometimes by your HP. Flyers move erratically: bats weave on sine waves, screech and dive-bomb; crows orbit, reverse direction, swoop and fire feather volleys; moths drift in lissajous paths, drop poison clouds and blink; wasps dart. Big patrol cats hunt in packs. **Corrupted elites** have double HP plus a modifier: Burning (fire trail), Warding (shields allies), Frenzied, Brood-bloated (splits), Leeching or Volatile (explodes on death). About one in five drops a core (an item and salvage), up to a budget of 2 + the district number per district; the rest drop salvage.
 
 **Swarm combo.** Hits and kills fill a combo meter that drains fast and empties when you get hurt. Fill it to unlock the **territorial shriek** (X): eight nest-mates pour in for 10 seconds, biting everything nearby, staggering any boss within earshot and chewing through barricades. In a fight the controls hint and minimap fade out, and the boss bar only appears once you enter its arena.
 
@@ -128,13 +128,15 @@ Movement and signature moves:
 
 You pick any rat, and a local best-of-the-day board keeps your top five scores.
 
-**Leveling.** Built to feel smooth, with milestones you have to earn:
-- *Even pace.* XP income rises with the threat (a tougher horde pays more), and if you fall behind the expected level for the run time you earn up to 50% extra until you catch up. Gems come in tiers: blue, green, red and violet.
+**Leveling.** Levels are earned, and the pace holds steady from the first minute to the thirtieth:
+- *A steep curve with a rubber band.* The target pace is about level 6 at 2 minutes, 10 at 5, 16 at 10 and 25 at 20. Fall behind it and you earn up to 30% extra XP; race ahead and you earn up to 60% less, so strong builds stay near the curve instead of escaping it. A tougher horde pays a little more, up to threat 10. Gems come in tiers: blue, green, red and violet.
 - *Every level-up is a beat of relief.* A shockwave shoves the horde back, you heal 5%, and time slows for a moment.
-- *Breakthroughs every 5 levels.* When the bar reaches level 5, 10, 15 and so on, it caps (turning gold, with extra XP banked) and a gold-ringed **Champion** elite comes for you with a few friends. Kill it within 45 seconds to break through: a big shockwave, a 30% heal, and a reward pick from 3–4 options (evolutions, **Keystones** and epic or legendary tomes). If time runs out it slinks off and comes back later; you're never locked out. Trials wait while a boss is right on top of you.
+- *Breakthroughs every 5 levels.* When the bar reaches level 5, 10, 15 and so on, it caps (turning gold, with extra XP banked) and a gold-ringed **Champion** elite comes for you with a few friends. Its HP follows your level more than the threat. Kill it within 45 seconds to break through: a big shockwave, a 30% heal, and a reward pick from 3–4 options (evolutions, **Keystones** and epic or legendary tomes). If time runs out it slinks off and comes back later; you're never locked out. Trials wait while a boss is right on top of you.
 - *Keystones* are Breakthrough-only perks: Pack Leader (faster combo, +4 nest-mates), Second Wind (once per district, a 3s invulnerability and 25% heal when you drop below 30%), Carrion Feast (kills heal), Apex Hunter (+30% vs elites, champions, predators and bosses), Scrapper (+50% salvage, longer pickup reach), and Frenzied Growth (+20% XP, +10% speed).
-- *Weapons.* A level-5 weapon plus its paired tome **evolves** at a Breakthrough: Rending Claws + Might → Butcher's Hooks, Tail Lash + Swiftness → Barbed Scourge, Plague Cloud + Hunger → Black Death, Rot Flask + Reach → Plague Barrage, Sling Stones + Plenty → Gatling Sling, Arc Lightning + Cunning → Storm Crown, Bone Halo + Hide → Ossuary Ring. Rarer tomes turn up more often as you level.
-- *Pickups.* Champions drop a **weapon crate** (a free weapon level, or a new weapon if you have a slot) and **rat musk** (every gem on the map flies to you); elites sometimes drop musk too. Food drops four times as often when you're below 35% HP.
+- *Weapons.* A level-5 weapon plus its paired tome **evolves** at a Breakthrough: Rending Claws + Might → Butcher's Hooks, Tail Lash + Swiftness → Barbed Scourge, Plague Cloud + Hunger → Black Death, Rot Flask + Reach → Plague Barrage, Sling Stones + Plenty → Gatling Sling, Arc Lightning + Cunning → Storm Crown, Bone Halo + Hide → Ossuary Ring. Rarer tomes turn up a little more often as you level.
+- *Tomes have diminishing returns.* Each further copy of the same tome is worth less (100%, 77%, 63%, 53%), and you can hold four of each. Rarity multiplies a tome by 1×, 1.35×, 1.7× or 2.2×. The card shows which copy you're taking.
+- *Chests cost salvage.* The first costs 12, and each one you open costs 35% more. Cursed chests are free. Moldy Cheese (what you get once you own every item) only raises max HP for the first five.
+- *Pickups.* Champions drop a **weapon crate** (a free weapon level, a new weapon if you have a slot, or a heal and salvage once everything is maxed) and **rat musk** (every gem on the map flies to you); elites sometimes drop musk too. Food drops four times as often when you're below 35% HP.
 
 **Builds.**
 - *Mutations.* Mundane ingredient items fuse in pairs into ten synergies, such as Box Cutter + Energy Drink → Livewire Claws, Lighter + Energy Drink → Napalm Trail, and Rubber Band + Fish Hook → Slingshot Recoil. Loot favours the partner of a half-finished recipe.
@@ -233,6 +235,16 @@ flowchart LR
 The bots (`src/qa/bot.js`, only loaded with `?debug`) play through the same inputs a player uses. *Novice* reacts in about 0.65s and dodges 15% of attacks; *average* in 0.3s and half; *expert* in 0.12s and 90%, keeping range and building toward evolutions. They take goals such as "kill the boss", "go inside a building", "loot every chest", "reach the manhole", "fail the run" or "break the level". Fast-forward steps the logic without drawing, roughly 25–100× real time. "Balancing" here is heuristic bots plus statistics, not trained models.
 
 The game is single-player with no server, so the horde stress test stands in for online load. The bots measure stability, pacing and numbers. They can't tell whether movement feels good, the UI is clear or a story beat lands. That still needs people.
+
+## Performance
+
+Everything that comes in large numbers (mobs, gems, salvage, projectiles, particles, gibs, blood decals, blob shadows) is drawn as instanced meshes, a few draw calls in total. The scene renders at a low PS1-like resolution that drops automatically when frames run long. Late in a run the cost is the horde itself, so:
+
+- *AI level of detail.* Mobs more than 34 units away (off-screen) think every third frame and catch up on the time they skipped. Bosses, champions and patrolling predators always run at full rate.
+- *Off-screen culling.* Mobs outside the camera view skip animation and GPU upload.
+- *Caps.* The shriek swarm holds at most two shrieks' worth of nest-mates; gems, salvage, particles and gibs have fixed pools.
+
+Profiling a 7-minute late-game scene showed mob AI at 26µs per mob and 300+ nest-mates piling up; after these changes it's about 10µs per mob, and frame CPU fell by roughly a third with more mobs on screen.
 
 ## Code map
 
