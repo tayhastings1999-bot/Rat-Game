@@ -210,6 +210,26 @@ WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames)
 
 **Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Sig (signature move), Use (hold to gnaw), Shriek (when the combo is full), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
 
+## Automated playtesting
+
+`npm run playtest` (or `--quick` for the short CI version) lets bots play the game and writes `scripts/out/playtest/REPORT.md`, `report.json` and screenshots of anything odd. The bots (`src/qa/bot.js`, only loaded with `?debug`) play through the same inputs a player uses: the stick, roll, special, signature move, shriek and E. They come in three skill levels:
+
+- *Novice:* reacts in about 0.65s, dodges 15% of attacks, wanders into crowds and picks upgrades at random.
+- *Average:* reacts in about 0.3s, dodges half of attacks and kites a little.
+- *Expert:* reacts in about 0.12s, dodges 90%, keeps its range and builds toward evolutions.
+
+They take plain-language goals such as "kill the boss", "go inside a building", "loot every chest", "explore the district", "reach the manhole" or "fail the run". A fast-forward mode steps the game logic without drawing, roughly 25–100× real time, so long sessions take minutes.
+
+| Pillar | What runs | What it catches |
+|---|---|---|
+| **Performance** | Telemetry on every simulated step: game-logic cost, rendered-frame probes, JS heap, GPU geometry and texture counts at each district start, entity counts. A horde stress test at 25–230 mobs. | Frame and logic spikes, logged with position and the last seconds of state. Leaks, failed if geometries or textures grow between districts. Cost as the horde scales. |
+| **Playability** | Static checks on many generated districts. Autonomous exploration. The plain-language goals. The critical path, district after district. | Unreachable or buried pickups and nests, blocked doorways and crawlspace mouths, broken lairs. Stuck spots, falling out of the world, ending up inside walls, level-up soft-locks. Progression blockers. |
+| **Enjoyment** | Every class at every skill level, for repeated sessions. | Death rate and survival time, how far each gets, level curve and stalls, salvage per minute, time-to-kill per enemy, damage by source, boss fight length, gaps between classes. |
+
+Anomalies are written to `report.json` with the last seconds of game state attached: position, HP, nearby enemies, and the bot's goal and input. The CI workflow (`.github/workflows/qa.yml`) runs lint, build, the smoke test and the quick playtest on every push and pull request, and attaches the report to the run. The full version runs on demand.
+
+The game is single-player with no server, so there's no online load to simulate; the horde stress test stands in for it. The bots measure stability, pacing and numbers. They can't tell whether movement feels good, the UI is clear or a story beat lands. That still needs people.
+
 ## Code map
 
 ```
@@ -225,6 +245,7 @@ src/
   audio/             SFX + music sequencer
   ui/                HUD, screens (menu, Nest, pause, level-up, bench, endings), icons
 scripts/smoke.mjs    headless end-to-end test
+scripts/playtest.mjs bot playtests: performance, playability, balance (src/qa/ holds the bots and level checks)
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
 

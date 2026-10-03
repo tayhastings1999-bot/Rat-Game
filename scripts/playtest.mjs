@@ -13,7 +13,7 @@
 // Exits non-zero on playability failures (errors, blockers, broken levels).
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, appendFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
 const QUICK = args.includes('--quick');
@@ -296,6 +296,12 @@ V.fails = fails; V.warnings = warns; V.pass = !fails.length;
 report.anomalies = report.anomalies.map(a => ({ ...a, context: a.context.slice(-12) }));
 writeFileSync(OUT + 'report.json', JSON.stringify(report, null, 1));
 writeFileSync(OUT + 'REPORT.md', markdown(report));
+// On GitHub Actions: failures and warnings become annotations, and the report the job summary.
+if (process.env.GITHUB_ACTIONS) {
+  for (const f of fails) console.log('::error title=Playtest::' + f);
+  for (const w of warns.slice(0, 9)) console.log('::warning title=Playtest::' + w);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown(report));
+}
 log(V.pass ? 'PASS' : 'FAIL', fails.join('; '));
 if (warns.length) log('warnings:', warns.length);
 await browser.close();
