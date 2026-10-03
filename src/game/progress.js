@@ -55,7 +55,7 @@ export const PACE = t => 1 + 3.2 * Math.pow(t / 60, 0.68);
  */
 export function xpMul() {
   const off = PACE(run.time) - run.level;
-  const band = off > 0 ? 1 + Math.min(0.3, off * 0.05) : Math.max(0.4, 1 + off * 0.08);
+  const band = off > 0 ? 1 + Math.min(0.5, off * 0.1) : Math.max(0.4, 1 + off * 0.08);
   return (1 + 0.03 * Math.min(10, run.T || 0)) * band;
 }
 export const capped = () => isBreak(run.level + 1) && run.xp >= run.need;
