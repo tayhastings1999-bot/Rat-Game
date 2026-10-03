@@ -51,6 +51,8 @@ await check('the game loop advances and draws', async () => {
   if (png.length < 20000) throw new Error('screen looks blank');
 });
 await check('pause and resume', async () => {
+  // A slow runner may have levelled up by now: pick upgrades until back in play.
+  for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) !== 'play'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(150); }
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => __scurry.G.state === 'paused', null, { timeout: 5000 });
   await page.click('#resumeBtn');
