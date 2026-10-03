@@ -19,7 +19,7 @@ page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.
 const step = async (name, fn) => {
   const t0 = Date.now();
   try { await fn(); console.log(`ok   ${name} (${Date.now() - t0}ms)`); }
-  catch (e) { errors.push(`step "${name}": ${e.message}`); console.log(`FAIL ${name}: ${e.message}`); }
+  catch (e) { errors.push(`step "${name}": ${e.message}`); console.log(`FAIL ${name}: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::error title=Smoke test::${name}: ${e.message.replace(/\n/g, ' ').slice(0, 600)}`); }
 };
 const S = (fn, arg) => page.evaluate(fn, arg);
 const rawWait = ms => page.waitForTimeout(ms);
