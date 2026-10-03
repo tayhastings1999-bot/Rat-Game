@@ -12,7 +12,7 @@ import { CLASSES } from '../data/classes.js';
 import { PRIM, SPECIALS, useSpecialFx } from '../combat/arsenal.js';
 import { nearest, near, aoe, hit, hurtP, scrapDrop } from '../combat/combat.js';
 import { puddle } from '../combat/hazards.js';
-import { giveChest } from '../game/loot.js';
+import { giveChest, chestCost } from '../game/loot.js';
 import { enterSewer } from '../game/flow.js';
 import { buffOn } from '../game/forage.js';
 import { rummage, sinkerSlam, sinkerLand } from '../game/junk.js';
@@ -227,7 +227,11 @@ export function useSpecial() {
 
 // ---------- interaction ----------
 export function useTarget() {
-  for (const c of W.chests) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < 1.9 && Math.abs(c.y - P.y) < 1.3) return { kind: 'chest', o: c, label: c.cursed ? 'Open the cursed chest' : 'Open chest' };
+  for (const c of W.chests) {
+    if (c.open || Math.hypot(c.x - P.x, c.z - P.z) >= 1.9 || Math.abs(c.y - P.y) >= 1.3) continue;
+    const cost = chestCost(c);
+    return { kind: 'chest', o: c, label: c.cursed ? 'Open the cursed chest' : run.scrap >= cost ? `Open chest · ${cost} salvage` : `Chest · needs ${cost} salvage` };
+  }
   for (const b of W.benches) if (Math.hypot(b.x - P.x, b.z - P.z) < 2.4 && P.y < 2) return { kind: 'bench', o: b, label: 'Use workbench' };
   for (const p of W.pipes) if (Math.hypot(p.x - P.x, p.z - P.z) < 1.8 && P.y < 1.2) return { kind: 'pipe', o: p, label: 'Squeeze into pipe' };
   for (const v of W.valves) if (!v.done && Math.hypot(v.x - P.x, v.z - P.z) < 1.9) return { kind: 'valve', o: v, label: 'Turn valve' };
@@ -313,7 +317,11 @@ export function doUse(u) {
   if (u.kind === 'set') { u.o.act(); return; }
   if (u.kind === 'bolt') { openTile(u.o.gx, u.o.gz); sfx('door'); return; }
   if (u.kind === 'chest') {
-    const c = u.o;
+    const c = u.o, cost = chestCost(c);
+    if (run.scrap < cost) { dnum(c.x, c.y + 1.6, c.z, `Need ${cost} salvage`, 'info'); sfx('pickup'); return; }
+    run.scrap -= cost;
+    run.scrapSpent += cost;
+    if (!c.cursed) run.chestsOpened = (run.chestsOpened || 0) + 1;
     c.open = true;
     c.lid.rotation.x = -1.9;
     boom(c.x, c.y + 0.8, c.z, 2.4, c.cursed ? 0xff3a3a : 0xffd070);

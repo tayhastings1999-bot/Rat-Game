@@ -97,7 +97,7 @@ export function spawnEnemy(type, x, z, o = {}) {
   const D = EN[type], gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
-  const eliteP = run.time < 90 ? 0 : Math.min(0.3, 0.02 + (run.T || 0) * 0.012 + (sewer ? 0.07 : 0));
+  const eliteP = run.time < 90 ? 0 : Math.min(0.2, 0.02 + (run.T || 0) * 0.008 + (sewer ? 0.05 : 0));
   const el = !o.plain && (!!o.elite || Math.random() < eliteP);
   const mut = sewer && G.mode !== 'trial';
   const hpm = (run.hpM || 1) * (el ? 2 : 1) * (mut ? 1.5 : 1), sc = (D.sc || 1) * (el ? 1.3 : 1) * (o.sc || 1);
@@ -555,9 +555,24 @@ export function addPred(path, o = {}) {
 }
 
 // ---------- per-frame update ----------
-export function updateEnemies(dt, cap) {
+/**
+ * AI level of detail: mobs far off-screen think every third frame and catch up on
+ * the time they skipped. Bosses, champions and patrolling predators always run at
+ * full rate. (Late-game lag fix: mob AI was the biggest per-frame CPU cost.)
+ */
+const LOD_R2 = 34 * 34;
+let lodTick = 0;
+export function updateEnemies(dt0, cap) {
+  lodTick = (lodTick + 1) % 3;
   for (const e of W.enemies) {
     if (e.dead || e.held) continue; // held: in the Brawler's paws
+    let dt = dt0;
+    if (!e.boss && !e.pred && !e.champion && e.type !== 'nest' && (e.x - P.x) ** 2 + (e.z - P.z) ** 2 > LOD_R2) {
+      e._lod = (e._lod || 0) + dt0;
+      if (((e._i || 0) + lodTick) % 3) continue;
+      dt = Math.min(0.12, e._lod);
+    }
+    e._lod = 0;
     if (e.emT > 0) { e.emT -= dt; continue; } // still climbing out
     e.flash -= dt; e.slow -= dt; e.tT -= dt; e.lunge -= dt; e.ward -= dt;
     if (e.invuln > 0) e.invuln -= dt;

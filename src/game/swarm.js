@@ -47,6 +47,13 @@ export function shriek() {
   for (let i = 0; i < 3; i++) fx('ring', P.x, P.y, P.z, 6 + i * 5, 0xffd040, 0.5 + i * 0.15);
   banner('The nest answers', scatterBirds() ? 'The birds scatter' : '');
   const n = SWARM_N + (st.swarmPlus || 0);
+  // At most two shrieks' worth of nest-mates: a new shriek sends the oldest home.
+  // Without a cap, late-game combos stacked 300+ of them (found profiling the lag).
+  const over = W.swarm.length + n - n * 2;
+  if (over > 0) {
+    W.swarm.sort((a, b) => a.life - b.life);
+    for (const s of W.swarm.splice(0, over)) puff(s.x, s.y + 0.3, s.z, 0x8a8478, 3, 2);
+  }
   for (let i = 0; i < n; i++) {
     const a = i / n * TAU, r = rand(1, 2.5);
     const x = P.x + Math.sin(a) * r, z = P.z + Math.cos(a) * r;

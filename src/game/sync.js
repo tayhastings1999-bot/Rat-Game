@@ -78,8 +78,14 @@ function poseMatrix(e) {
   dummy.updateMatrix();
 }
 
+// Mobs outside the camera view skip animation and GPU upload (late-game lag fix).
+const frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4(), _sph = new THREE.Sphere();
+const onScreen = e => { _sph.center.set(e.x, e.y + (e.h || 1) * 0.5, e.z); _sph.radius = (e.r || 0.5) * (e.sc || 1) + 1.5; return frustum.intersectsSphere(_sph); };
+
 export function sync(dt) {
   rigTime.value = G.time;
+  camera.updateMatrixWorld();
+  frustum.setFromProjectionMatrix(_m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse.copy(camera.matrixWorld).invert()));
   tickAmbient(dt);
   const cnt = {};
   for (const k in IMB) cnt[k] = 0;
@@ -100,6 +106,7 @@ export function sync(dt) {
       continue;
     }
     if (e.hidden && !P.scent) continue; // lurkers in their cracks: only your nose finds them
+    if (!onScreen(e)) continue;
     const i = cnt[e.type]++;
     if (i >= MOB_CAP) continue;
     animTick(e, dt, e.type, P.x, P.z);
@@ -123,7 +130,7 @@ export function sync(dt) {
   // Blob shadows under every creature.
   let sh = 0;
   for (const e of W.enemies) {
-    if (e.dead || e.hidden || e.type === 'nest' || sh >= 260) continue;
+    if (e.dead || e.hidden || e.type === 'nest' || sh >= 260 || !onScreen(e)) continue;
     const gy = floorY(e.x, e.z), hgt = Math.max(0, e.y - gy);
     dummy.position.set(e.x, (e.y >= gy - 0.2 ? gy : e.y) + 0.04, e.z);
     dummy.rotation.set(0, 0, 0);

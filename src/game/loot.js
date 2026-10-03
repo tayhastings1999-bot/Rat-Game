@@ -57,6 +57,9 @@ export function giveCursed(id) {
   renderSlots();
 }
 
+/** Chests cost salvage, and each one opened this run costs more (cursed chests are free: they are the gamble). */
+export const chestCost = c => (c.cursed ? 0 : Math.round(12 * Math.pow(1.35, run.chestsOpened || 0)));
+
 export function giveChest(c) {
   if (c.cursed) { giveCursed(); return; }
   giveItem(drawItem());

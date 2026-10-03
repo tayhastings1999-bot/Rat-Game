@@ -86,7 +86,7 @@ await step('move, jump, roll, attack', async () => {
   await shot('02-city-play');
 });
 await step('level up + choose', async () => {
-  await S(() => __scurry.gainXP(60));
+  await S(() => { const s = __scurry, r = s.run; if ((r.level + 1) % 5 === 0) { r.level++; r.need = s.need(r.level); r.xp = 0; } s.gainXP(s.need(r.level) * 3); }); // skip a capped Breakthrough level; enough XP even with the pace rubber band
   await rawWait(400);
   if ((await S(() => __scurry.G.state)) !== 'levelup') throw new Error('no level-up screen');
   await shot('03-levelup');

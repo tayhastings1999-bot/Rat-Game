@@ -6,7 +6,7 @@ import { CLASSES, UNLOCK, SKINS, isUnl, skinOk } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
 import { ITEMS, MUTATIONS, CURSED, JUNK, AUG, NEST, DOMNEST, STARTS } from '../data/items.js';
-import { WEAP, TOMES, RAR, PRIM, SPECIALS } from '../combat/arsenal.js';
+import { WEAP, TOMES, RAR, PRIM, SPECIALS, tomeMax, tomeDim } from '../combat/arsenal.js';
 import { addThreat } from '../combat/combat.js';
 import { sfx, applyVolumes } from '../audio/audio.js';
 import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
@@ -223,7 +223,7 @@ function makeOffers() {
   const pool = [];
   for (const w of run.weapons) if (w.lvl < 5) pool.push({ kind: 'up', id: w.id, wt: 3 });
   if (run.weapons.length < 4) for (const id in WEAP) if (!run.weapons.some(w => w.id === id)) pool.push({ kind: 'new', id, wt: 2.2 });
-  for (const id in TOMES) if ((run.tomes[id] || 0) < (TOMES[id].max || 5)) pool.push({ kind: 'tome', id, wt: 2 });
+  for (const id in TOMES) if ((run.tomes[id] || 0) < tomeMax(id)) pool.push({ kind: 'tome', id, wt: 2 });
   const out = [];
   while (out.length < 3 && pool.length) {
     const tot = pool.reduce((a, b) => a + b.wt, 0);
@@ -231,7 +231,7 @@ function makeOffers() {
     for (; i < pool.length; i++) { r -= pool[i].wt; if (r <= 0) break; }
     const o = pool.splice(Math.min(i, pool.length - 1), 1)[0];
     // Rarer tomes turn up more often as you level.
-    if (o.kind === 'tome' && !TOMES[o.id].flat) { const q = Math.random(), luck = Math.min(0.08, run.level * 0.004); o.rar = q < 0.03 + luck * 0.5 ? 3 : q < 0.13 + luck ? 2 : q < 0.4 + luck * 2 ? 1 : 0; } else o.rar = 0;
+    if (o.kind === 'tome' && !TOMES[o.id].flat) { const q = Math.random(), luck = Math.min(0.05, run.level * 0.002); o.rar = q < 0.02 + luck * 0.5 ? 3 : q < 0.09 + luck ? 2 : q < 0.32 + luck * 2 ? 1 : 0; } else o.rar = 0;
     out.push(o);
   }
   // Now and then a rule-breaker turns up.
@@ -263,7 +263,7 @@ function renderLevelUp() {
       const T = o.kind === 'tome' ? TOMES[o.id] : null, Wp = WEAP[o.id], R = RAR[o.rar], lvl = o.kind === 'up' ? run.weapons.find(w => w.id === o.id).lvl : 0;
       const rc = o.kind === 'new' ? '#ff6a3a' : o.kind === 'up' ? '#6ad06a' : R.c, label = o.kind === 'new' ? 'New weapon · ' + Wp.role : o.kind === 'up' ? 'Level ' + (lvl + 1) : R.n + ' tome';
       return `<button class="card" data-i="${i}" style="--rc:${rc}"><div class="row"><span class="key px">${i + 1}</span><span class="role">${label}</span></div><div class="ico">${T ? ICON.tome : ICON[o.id]}</div>
-        <b>${T ? T.name : Wp.name}</b><span class="d">${T ? T.d(R.m) : o.kind === 'new' ? Wp.desc : Wp.lv[lvl - 1]}</span></button>`;
+        <b>${T ? T.name : Wp.name}</b><span class="d">${T ? T.d(R.m * tomeDim(o.id)) + (run.tomes[o.id] ? ` <i class="dim">(copy ${run.tomes[o.id] + 1} of ${tomeMax(o.id)})</i>` : '') : o.kind === 'new' ? Wp.desc : Wp.lv[lvl - 1]}</span></button>`;
     }).join('')}</div>
     ${run.rerolls > 0 ? `<div class="btns"><button class="btn ghost" id="rr">${ICON.reroll} Reroll (${run.rerolls} left) · R</button></div>` : ''}</div>`);
   ov.querySelectorAll('.card').forEach(b => { b.onclick = () => choose(offers[+b.dataset.i]); });
@@ -280,7 +280,7 @@ export function choose(o) {
   addThreat(0.2);
   if (o.kind === 'new') run.weapons.push({ id: o.id, lvl: meta.nest.arms ? 2 : 1, t: 0 });
   else if (o.kind === 'up') run.weapons.find(w => w.id === o.id).lvl++;
-  else if (o.kind === 'tome') { run.tomes[o.id] = (run.tomes[o.id] || 0) + 1; TOMES[o.id].ap(RAR[o.rar].m); }
+  else if (o.kind === 'tome') { const m = RAR[o.rar].m * tomeDim(o.id); run.tomes[o.id] = (run.tomes[o.id] || 0) + 1; TOMES[o.id].ap(m); }
   else if (o.kind === 'cursed') giveCursed(o.id);
   else if (o.kind === 'evo') evolve(o.id);
   else if (o.kind === 'key') applyKeystone(o.id);

@@ -164,7 +164,14 @@ export const TOMES = {
   cunning: { name: 'Tome of Cunning', d: v => `+${Math.round(v * 6)}% crit chance`, ap: v => { st.crit += 0.06 * v; } },
   greed: { name: 'Tome of Greed', d: v => `+${Math.round(v * 15)}% XP`, ap: v => { st.xp += 0.15 * v; } },
 };
-export const RAR = [{ n: 'Common', m: 1, c: '#9a96a0' }, { n: 'Rare', m: 1.5, c: '#4aa3ff' }, { n: 'Epic', m: 2, c: '#b35cff' }, { n: 'Legendary', m: 3, c: '#ffb020' }];
+export const RAR = [{ n: 'Common', m: 1, c: '#9a96a0' }, { n: 'Rare', m: 1.35, c: '#4aa3ff' }, { n: 'Epic', m: 1.7, c: '#b35cff' }, { n: 'Legendary', m: 2.2, c: '#ffb020' }];
+/** Copies of one tome a run can hold. */
+export const tomeMax = id => TOMES[id].max || 4;
+/**
+ * Diminishing returns: each further copy of the same tome is worth less
+ * (100%, 77%, 63%, 53%), so stacking one stat can't run away with the game.
+ */
+export const tomeDim = id => (TOMES[id].flat ? 1 : 1 / (1 + 0.3 * (run.tomes[id] || 0)));
 
 /** Overclock mutation: every special also releases a shock nova. */
 function overclockNova() {

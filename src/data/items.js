@@ -29,7 +29,7 @@ export const ITEMS = {
   foot: { name: 'Rabbit Foot', flav: 'Crit chance up', col: 0xf2e0b0, ap: () => { st.crit += 0.1; } },
   gland: { name: 'Swollen Gland', flav: 'Bigger shots, bigger blasts', col: 0xa0b060, ap: () => { st.area += 0.25; st.shotSize += 0.5; } },
   barbs: { name: 'Barbed Hide', flav: 'Enemies that touch you bleed', col: 0x8a6a5a, ap: () => { st.thorns += 15; } },
-  cheese: { name: 'Moldy Cheese', flav: 'Max HP up, a little', col: 0xe8b84a, ap: () => { st.maxHp += 15; run.hp = Math.min(st.maxHp, run.hp + 30); } },
+  cheese: { name: 'Moldy Cheese', flav: 'Max HP up, a little', col: 0xe8b84a, ap: () => { run.cheese = (run.cheese || 0) + 1; if (run.cheese <= 5) st.maxHp += 15; run.hp = Math.min(st.maxHp, run.hp + 30); } }, // max HP only for the first five
   // ---- mundane ingredients: weak alone, wild in pairs ----
   razor: { name: 'Box Cutter', flav: 'Melee hits harder', col: 0x9a8a7a, ing: true, ap: () => { st.melee += 0.2; } },
   drink: { name: 'Spilled Energy Drink', flav: 'A little faster at everything', col: 0x3aff9a, ing: true, ap: () => { st.speed *= 1.05; st.cd *= 0.95; } },

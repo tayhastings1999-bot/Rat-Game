@@ -15,7 +15,9 @@ import { setupObjective, objDone, openCage } from './game/objectives.js';
 import { applyRule } from './game/rules.js';
 import { M, T, tAt, topAt, toW, DRY, N4 } from './world/grid.js';
 import { audioReady, music, musicLevel } from './audio/audio.js';
-import { renderer, scene, cutPlane } from './render/renderer.js';
+import { renderer, scene, cutPlane, world } from './render/renderer.js';
+import { update } from './game/update.js';
+import { sync, animate } from './game/sync.js';
 import { chewTarget, useTarget, grabTarget, dropCarry } from './entities/player.js';
 import { comboGain, shriek } from './game/swarm.js';
 import { giveJunk, rummage } from './game/junk.js';
@@ -42,7 +44,7 @@ export function debugApi(state) {
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, giveItem, giveCursed, collectCore,
-    hit, openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {

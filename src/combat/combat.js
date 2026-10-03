@@ -246,7 +246,11 @@ export function kill(e) {
 
 function corruptDeath(e) {
   for (let i = 0; i < 5; i++) scrapDrop(e.x, e.y, e.z);
-  dropCore(e.x, e.y, e.z);
+  // Cores (a free item each) are rationed: 1 in 5 elites, a budget per district.
+  // Uncapped, elites fed items and threat fed elites, and runs snowballed (found by the bots).
+  if (run.coreD !== run.district) { run.coreD = run.district; run.coreN = 0; }
+  if (e.champion || (run.coreN < 2 + run.tier && Math.random() < 0.2)) { run.coreN++; dropCore(e.x, e.y, e.z); }
+  else for (let i = 0; i < 3; i++) scrapDrop(e.x, e.y, e.z);
   if (!isSewer() && !run.keys && !W.keys.length && Math.random() < 0.22) dropKey(e.x, e.y, e.z);
   if (e.corrupt === 'split') {
     for (let i = 0; i < 3; i++) spawnEnemy(e.type, e.x + rand(-1, 1), e.z + rand(-1, 1), { plain: true, sc: 0.75 });
@@ -291,9 +295,12 @@ export function dropKey(x, y, z) {
   sfx('key');
 }
 
-/** XP for the next level. Income scales with threat (see progress.js), so the pace stays even. */
-// The first few levels come quickly so the opening minute has a pick in it.
-export const need = L => Math.floor((8 + (L - 1) * 6 + Math.pow(L - 1, 1.6)) * (L === 1 ? 1 : Math.min(1, 0.7 + 0.1 * L)));
+/**
+ * XP for the next level. Steep enough that levels stay meaningful deep into a run:
+ * an average player is around level 6 at 2 minutes, 10 at 5, 16 at 10 and 25 at 20
+ * (see PACE in progress.js). The first level still comes inside the opening minute.
+ */
+export const need = L => Math.round(12 + 9 * (L - 1) + 2.2 * Math.pow(L - 1, 1.7));
 export function gainXP(v) {
   addXP(v);
   if (run.pendingLv && G.state === 'play') openLevelUp();
@@ -313,8 +320,9 @@ export function updThreat(dt) {
     run.items.length * 0.2 + run.cursed.length * 0.6 + run.spike + Math.sin(run.time * 0.23) * 0.3 + Math.sin(run.time * 0.061 + 1) * 0.45,
   ) * (G.mode === 'trial' ? 0.3 : 1);
   run.T = TL;
-  run.hpM = 1 + TL * 0.3;
-  run.dmgM = 1 + TL * 0.1;
+  // Gentler than before the leveling overhaul: player power now grows more slowly, so the horde does too.
+  run.hpM = 1 + TL * 0.2;
+  run.dmgM = 1 + TL * 0.075;
   run.spdM = 1 + Math.min(0.55, TL * 0.03);
   run.atkM = 1 + Math.min(1.4, TL * 0.07);
 }

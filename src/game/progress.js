@@ -14,7 +14,7 @@ import { sfx } from '../audio/audio.js';
 import { M, toW, floorY, tileAt } from '../world/grid.js';
 import { isSewer } from '../data/world.js';
 import { hit, near, need } from '../combat/combat.js';
-import { WEAP, TOMES } from '../combat/arsenal.js';
+import { WEAP, TOMES, tomeMax } from '../combat/arsenal.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { banner, renderSlots } from '../ui/hud.js';
 import { openLevelUp } from '../ui/screens.js';
@@ -46,15 +46,23 @@ export const KEYSTONES = {
 };
 
 // ---------- XP ----------
-/** A tougher horde pays more; falling behind the pace pays a little extra. */
+/** The level an average player should be at after `t` seconds (the catch-up target). */
+export const PACE = t => 1 + 3.2 * Math.pow(t / 60, 0.68);
+/**
+ * A tougher horde pays a little more (up to threat 10). The pace is rubber-banded:
+ * falling behind pays up to 30% extra, racing ahead pays up to 60% less, so a strong
+ * build stays near the curve instead of escaping it.
+ */
 export function xpMul() {
-  const expected = 1 + run.time / 48, behind = expected - run.level;
-  return (1 + 0.05 * (run.T || 0)) * (behind > 0 ? 1 + Math.min(0.5, behind * 0.1) : 1);
+  const off = PACE(run.time) - run.level;
+  const band = off > 0 ? 1 + Math.min(0.3, off * 0.05) : Math.max(0.4, 1 + off * 0.08);
+  return (1 + 0.03 * Math.min(10, run.T || 0)) * band;
 }
 export const capped = () => isBreak(run.level + 1) && run.xp >= run.need;
 
 export function addXP(v, raw) {
   const gain = raw ? v : v * st.xp * xpMul();
+  if (!raw) run.xpTotal = (run.xpTotal || 0) + gain;
   if (capped()) { run.xpBank = (run.xpBank || 0) + gain; return; }
   run.xp += gain;
   while (run.xp >= run.need) {
@@ -107,7 +115,8 @@ function startTrial() {
     if (t === 1 || t === 9 || t === 10) e = spawnEnemy(type, x, z, opts);
   }
   if (!e) { run.trialCd = 1; return; }
-  const hp = 180 * (1 + L * 0.12) * (run.hpM || 1) * (isSewer() ? 1.3 : 1);
+  // Scales with your level more than with the threat, so a run that levels slowly can still break through.
+  const hp = 150 * (1 + L * 0.15) * (1 + (run.T || 0) * 0.1) * (isSewer() ? 1.3 : 1);
   Object.assign(e, { champion: true, hp, maxHp: hp, bar: true, dmg: e.dmg * 1.15, xp: 0 });
   run.trial = { L, e, t: TRIAL_TIME };
   run.trialCue = false;
@@ -212,7 +221,12 @@ function openCrate() {
     const id = pick(Object.keys(WEAP).filter(k => !run.weapons.some(w => w.id === k)));
     run.weapons.push({ id, lvl: meta.nest.arms ? 2 : 1, t: 0 });
     banner('Weapon crate', WEAP[id].name);
-  } else { st.dmg += 0.06; banner('Weapon crate', 'Everything is maxed · +6% damage'); }
+  } else {
+    // Everything maxed: patch up and salvage the crate (it used to add damage forever).
+    run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.25 * st.healMul);
+    run.scrap += 15 * st.salvage;
+    banner('Weapon crate', 'Everything is maxed · patched up and salvaged');
+  }
   renderSlots();
 }
 function tickPickups(dt) {
@@ -241,7 +255,7 @@ export function breakOffers() {
   if (rl.length) out.push({ kind: 'rule', id: rl[(Math.random() * rl.length) | 0], rar: 3 });
   const keys = Object.keys(KEYSTONES).filter(k => !(run.keystones || []).includes(k));
   for (let i = 0; i < 2 && keys.length; i++) out.push({ kind: 'key', id: keys.splice((Math.random() * keys.length) | 0, 1)[0], rar: 3 });
-  const tomes = Object.keys(TOMES).filter(id => !TOMES[id].flat && (run.tomes[id] || 0) < (TOMES[id].max || 5));
+  const tomes = Object.keys(TOMES).filter(id => !TOMES[id].flat && (run.tomes[id] || 0) < tomeMax(id));
   while (out.length < 4 && tomes.length) out.push({ kind: 'tome', id: tomes.splice((Math.random() * tomes.length) | 0, 1)[0], rar: Math.random() < 0.4 ? 3 : 2 });
   // Everything taken (long runs): never open an empty screen, which would soft-lock the game. Found by the playtest bots.
   if (!out.length) out.push({ kind: 'heal', rar: 0 });
