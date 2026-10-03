@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
-import { scene } from '../render/renderer.js';
+import { scene, dropCreature } from '../render/renderer.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, inG, toW, floorY, collideBody } from '../world/grid.js';
@@ -452,7 +452,7 @@ export function bossStatus(e) {
 
 export function onBossDeath(e) {
   G.victoryT = 2.6; // the rat rears up and roars (ratAnim.js)
-  scene.remove(e.mesh);
+  dropCreature(e.mesh);
   laser.visible = false;
   G.boss = null;
   $('bossWrap').style.display = 'none';

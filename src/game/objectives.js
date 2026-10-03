@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { rand, pick, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
-import { world } from '../render/renderer.js';
+import { world, bury } from '../render/renderer.js';
 import { Bx, Cy } from '../render/models.js';
 import { metalTex, flameTex } from '../render/textures.js';
 import { boom, puff, fx, dnum } from '../fx/fx.js';
@@ -195,7 +195,7 @@ export function tickObjective(dt) {
       // On your back, bobbing as you run.
       o.g.position.set(P.x - Math.sin(P.facing) * 0.6, P.y + 0.9 + Math.abs(Math.sin(G.time * 10)) * 0.08, P.z - Math.cos(P.facing) * 0.6);
       o.g.scale.setScalar(0.55);
-      if (Math.hypot(P.x - o.home.x, P.z - o.home.z) < 2.6) { world.remove(o.g); finish(o, o.home.x, o.home.z); o.hg.visible = false; }
+      if (Math.hypot(P.x - o.home.x, P.z - o.home.z) < 2.6) { bury(o.g); finish(o, o.home.x, o.home.z); o.hg.visible = false; }
     }
   } else if (o.kind === 'hold') {
     const inside = Math.hypot(P.x - o.x, P.z - o.z) < 4 && Math.abs(P.y - o.y) < 2.2;

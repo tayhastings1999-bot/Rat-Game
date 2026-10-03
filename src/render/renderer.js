@@ -17,6 +17,16 @@ export const scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 190);
 /** Everything that belongs to the current district; cleared on regeneration. */
 export const world = new THREE.Group();
+/**
+ * Take an object out of the district mid-play (a destroyed nest, an eaten
+ * fungus, a gnawed board). It's kept until the district is torn down so its
+ * geometry and materials get freed with everything else (buildWorld).
+ * Removing with world.remove() leaked them; found by the soak test.
+ */
+export const buried = [];
+export function bury(o) { if (!o) return; world.remove(o); buried.push(o); }
+/** Remove a creature mesh (boss, patrol cat, dog, owl) and free its own materials (geometry is shared). */
+export function dropCreature(m) { if (!m) return; scene.remove(m); m.traverse(o => { if (o.material) o.material.dispose(); }); }
 scene.add(world);
 
 // The scene is drawn at a low, PS1-like resolution into `rt`, then upscaled with nearest filtering.

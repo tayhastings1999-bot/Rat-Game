@@ -9,8 +9,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src scripts",
+    "test:boot": "node scripts/boot.mjs",
+    "test:system": "node scripts/system.mjs",
     "smoke": "node scripts/smoke.mjs",
     "playtest": "node scripts/playtest.mjs",
+    "soak": "node scripts/soak.mjs",
     "artifact": "vite build && node scripts/artifact.mjs"
   },
   "dependencies": {

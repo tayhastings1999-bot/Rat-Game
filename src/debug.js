@@ -34,11 +34,13 @@ function demoAI(e, dt) {
 }
 
 import { qa } from './qa/bot.js';
+import { hud, renderSlots } from './ui/hud.js';
+import { dropFood } from './combat/combat.js';
 import { staticChecks } from './qa/checks.js';
 
 export function debugApi(state) {
   return {
-    ...state, M, demoAI, qa: { ...qa, staticChecks },
+    ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, giveItem, giveCursed, collectCore,
     hit, openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */

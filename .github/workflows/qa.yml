@@ -1,7 +1,11 @@
-# Regression gate: on every push and pull request, lint, build, run the
-# scripted smoke test, then let the playtest bots replay the critical path,
-# check freshly generated districts and run a short balance sweep.
-# The playtest report is attached to the run as an artifact.
+# The QA pipeline on every push and pull request, cheapest checks first:
+#   1. boot gate       build, launch the production bundle, menu, start a run
+#   2. system          scripted smoke test + UI sweep, math checks and fuzzing
+#   3/4. playtest      bots: level checks, goals, critical path, a short
+#                      adversarial run, horde stress, synergy and balance sweep
+# Each stage only runs if the one before passed. The long stages (hours of
+# adversarial exploration, the full balance sweep and the soak) run nightly
+# in nightly.yml.
 name: QA
 
 on:
@@ -9,34 +13,53 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-    inputs:
-      full:
-        description: Run the full playtest (all classes, longer sessions)
-        type: boolean
-        default: false
 
 jobs:
-  qa:
+  boot:
+    name: 1 · Boot gate
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+        with: { node-version: 22, cache: npm }
       - run: npm ci
-      - name: Install Chromium
-        run: npx playwright-core install --with-deps chromium
+      - run: npx playwright-core install --with-deps chromium
       - run: npm run lint
       - run: npm run build
-      - name: Smoke test
+      - run: npm run test:boot
+
+  system:
+    name: 2 · System, UI and fuzz
+    needs: boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - name: Smoke test (scripted end to end)
         run: npm run smoke
-      - name: Playtest bots
-        run: npm run playtest -- ${{ inputs.full && ' ' || '--quick' }}
-      - name: Upload playtest report
-        if: always()
+      - name: UI sweep, math checks, fuzzing
+        run: npm run test:system
+      - if: always()
         uses: actions/upload-artifact@v4
-        with:
-          name: playtest-report
-          path: scripts/out/playtest/
+        with: { name: system-results, path: scripts/out/system/ }
+
+  playtest:
+    name: 3/4 · Playtest bots (quick)
+    needs: system
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run playtest -- --quick
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: playtest-report, path: scripts/out/playtest/ }

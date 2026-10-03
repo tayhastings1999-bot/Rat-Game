@@ -1,7 +1,7 @@
 // One simulation step of a running district.
 import { rand, randi, clamp, angD, keep, TAU } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
-import { world, scene } from '../render/renderer.js';
+import { scene, bury } from '../render/renderer.js';
 import { puff, spark, boom, bolt, dnum, auraG, orbs, orbState, shieldM } from '../fx/fx.js';
 import { sfx, setMusic } from '../audio/audio.js';
 import { M, G as GRAV, DUCT_TOP, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
@@ -131,10 +131,10 @@ function updateMods(dt) {
   for (const b of W.baits) {
     if (b.gone) continue;
     b.m.rotation.y += dt * 2;
-    if (Math.hypot(P.x - b.x, P.z - b.z) < 0.8 && P.y < 0.6) { b.gone = true; world.remove(b.m); P.poisonT = 4; dnum(P.x, P.y + 1.6, P.z, 'Poisoned', 'poison'); continue; }
+    if (Math.hypot(P.x - b.x, P.z - b.z) < 0.8 && P.y < 0.6) { b.gone = true; bury(b.m); P.poisonT = 4; dnum(P.x, P.y + 1.6, P.z, 'Poisoned', 'poison'); continue; }
     for (const e of W.enemies) {
       if (e.dead || e.fly || e.heavy) continue;
-      if (Math.abs(e.x - b.x) < 0.7 && Math.abs(e.z - b.z) < 0.7) { b.gone = true; world.remove(b.m); e.pT = 8; e.pD = Math.max(10, e.maxHp * 0.2); puff(b.x, 0.4, b.z, 0x9be06a, 6, 2); break; }
+      if (Math.abs(e.x - b.x) < 0.7 && Math.abs(e.z - b.z) < 0.7) { b.gone = true; bury(b.m); e.pT = 8; e.pD = Math.max(10, e.maxHp * 0.2); puff(b.x, 0.4, b.z, 0x9be06a, 6, 2); break; }
     }
   }
   for (const [k, c] of W.cracks) {
@@ -367,7 +367,7 @@ function updatePickups(dt) {
     k.g.rotation.y += dt * 2;
     k.g.position.y = k.y + 0.8 + Math.sin(G.time * 3) * 0.15;
     if (Math.hypot(P.x - k.x, P.z - k.z) < 1.4 && Math.abs(P.y - k.y) < 1.6) {
-      world.remove(k.g);
+      bury(k.g);
       run.keys++;
       sfx('key');
       banner('Sewer key', 'The manhole will open for you · M to find it');
@@ -379,7 +379,7 @@ function updatePickups(dt) {
     f.m.position.set(f.x, f.y + 0.4 + Math.sin(G.time * 3) * 0.1, f.z);
     f.m.rotation.y += dt * 2;
     if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) {
-      world.remove(f.m);
+      bury(f.m);
       const h = Math.round(st.maxHp * 0.3 * st.foodMul * st.healMul);
       run.hp = Math.min(st.maxHp, run.hp + h);
       dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
@@ -393,7 +393,7 @@ function updatePickups(dt) {
     c.g.rotation.y += dt;
     if (Math.hypot(P.x - c.x, P.z - c.z) < 1.2 && Math.abs(P.y - c.y) < 1.3) {
       c.taken = true;
-      world.remove(c.g);
+      bury(c.g);
       const h = Math.round(st.maxHp * 0.4 * st.foodMul * st.healMul);
       run.hp = Math.min(st.maxHp, run.hp + h);
       for (let i = 0; i < 8; i++) W.scraps.push({ x: c.x + rand(-0.6, 0.6), y: c.y, z: c.z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });

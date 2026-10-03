@@ -8,7 +8,7 @@
 //                district after district (progression blockers)
 //   enjoyment    novice/average/expert bots across classes: survival, deaths,
 //                time-to-kill, level curve, economy, boss fight length
-// Usage: node scripts/playtest.mjs [--quick] [--suites=static,goals,critical,explore,perf,stress,balance]
+// Usage: node scripts/playtest.mjs [--quick] [--hours=N] [--suites=static,goals,critical,explore,adversarial,stress,synergy,balance]
 // Writes scripts/out/playtest/report.json and REPORT.md (+ anomaly screenshots).
 // Exits non-zero on playability failures (errors, blockers, broken levels).
 import { chromium } from 'playwright-core';
@@ -173,6 +173,67 @@ if (want('explore')) {
   report.playability.explore = res;
 }
 
+// ---------------------------------------------------------------- adversarial exploration (stage 3)
+// Bots told to "break the level": shove into walls and corners, run off the
+// map edge, climb and drop off roofs, carry and throw props. Runs for
+// --hours of wall time (a few minutes in --quick), across classes and districts.
+if (want('adversarial')) {
+  const hours = +((args.find(a => a.startsWith('--hours=')) || '').slice(8) || (QUICK ? 0.05 : 0.5));
+  log(`adversarial exploration for ${hours}h`);
+  const until = Date.now() + hours * 3600e3, classes = ['roof', 'tank', 'sneak', 'brawler', 'slinger', 'warlock', 'plague'];
+  const out = { sessions: 0, simSecs: 0, tactics: 0, districts: 0, anomalies: {} };
+  for (let i = 0; Date.now() < until; i++) {
+    await begin(classes[i % classes.length], { profile: 'expert', goal: 'break the level', assist: true });
+    // Every other session starts deeper (city districts 2-4, or the sewer).
+    for (let d = 0; d < i % 4; d++) { await settle(); await S(() => { __scurry.G.state = 'play'; __scurry.exitRoad(); }); await sleep(700); await settle(); }
+    await S(() => { const s = __scurry; s.qa.start({ profile: 'expert', goal: 'break the level', assist: true }); });
+    await play(Math.min(600, Math.max(60, (until - Date.now()) / 1000 * 10)), 6);
+    const T = await tele();
+    out.sessions++; out.simSecs += T.simTime; out.tactics += T.tactics || 0; out.districts++;
+    for (const a of T.anomalies) out.anomalies[a.kind] = (out.anomalies[a.kind] || 0) + 1;
+    report.anomalies.push(...T.anomalies.map(a => ({ ...a, suite: 'adversarial' })));
+  }
+  out.simHours = r1(out.simSecs / 3600);
+  report.playability.adversarial = out;
+  log(`  ${out.sessions} sessions, ${out.simHours} simulated hours, ${out.tactics} break attempts, anomalies: ${JSON.stringify(out.anomalies)}`);
+}
+
+// ---------------------------------------------------------------- synergy sweep (stage 4)
+// Every weapon maxed, every evolution, rule breaker, keystone and mutation, and
+// random combinations, each played at a fixed threat by the same bot. Builds far
+// above the median trivialize the game; far below are dead picks.
+if (want('synergy')) {
+  log('synergy sweep');
+  const cat = await S(() => __scurry.qa.catalog());
+  const builds = [{ name: 'baseline' }];
+  for (const w of cat.weapons) builds.push({ name: 'max ' + w, weapons: [[w, 5]] });
+  for (const w of cat.evolutions) builds.push({ name: 'evo ' + w, weapons: [[w, 5, true]] });
+  for (const r of cat.rules) builds.push({ name: 'rule ' + r, rules: [r] });
+  for (const k of cat.keystones) builds.push({ name: 'key ' + k, keystones: [k] });
+  for (const m of cat.mutations) builds.push({ name: 'mut ' + m.id, items: [m.a, m.b] });
+  const rnd = a => a[Math.floor(Math.random() * a.length)];
+  for (let i = 0; i < (QUICK ? 4 : 24); i++) builds.push({ name: 'combo ' + i, weapons: [[rnd(cat.weapons), 5, Math.random() < 0.5], [rnd(cat.weapons), 4]], rules: [rnd(cat.rules)], items: (m => [m.a, m.b])(rnd(cat.mutations)) });
+  const list = QUICK ? builds.filter((b, i) => i === 0 || i % 4 === 1).slice(0, 12) : builds;
+  const secs = QUICK ? 75 : 150, reps = QUICK ? 1 : 2, rows = [];
+  for (const b of list) for (let r = 0; r < reps; r++) {
+    await begin('brawler', { profile: 'average', goal: 'survive' });
+    await S(b => { const s = __scurry; s.run.threatBase = 6; s.qa.applyBuild(b); }, b);
+    const d0 = await S(() => __scurry.run.dmg);
+    const st = await play(secs, 5);
+    const x = await S(() => ({ t: __scurry.qa.telemetry().simTime, kills: __scurry.run.kills, dmg: __scurry.run.dmg, taken: __scurry.qa.telemetry().dmgTaken, dead: __scurry.G.state === 'dead' }));
+    rows.push({ build: b.name, killsPerMin: r1(x.kills / (x.t / 60)), dmgPerMin: Math.round((x.dmg - d0) / (x.t / 60)), takenPerMin: Math.round(x.taken / (x.t / 60)), survived: !x.dead, secs: r1(x.t), status: st });
+  }
+  // Average repeats per build, then compare to the median.
+  const by = {};
+  for (const r of rows) (by[r.build] || (by[r.build] = [])).push(r);
+  const agg = Object.entries(by).map(([build, rs]) => ({ build, killsPerMin: r1(rs.reduce((a, r) => a + r.killsPerMin, 0) / rs.length), dmgPerMin: Math.round(rs.reduce((a, r) => a + r.dmgPerMin, 0) / rs.length), takenPerMin: Math.round(rs.reduce((a, r) => a + r.takenPerMin, 0) / rs.length), survival: r1(rs.filter(r => r.survived).length / rs.length * 100), secs: r1(rs.reduce((a, r) => a + r.secs, 0) / rs.length) }));
+  const mDmg = med(agg.map(a => a.dmgPerMin)) || 1, mSecs = med(agg.map(a => a.secs)) || 1;
+  for (const a of agg) { a.power = r1(a.dmgPerMin / mDmg); a.flag = a.power > 3 ? 'trivializes' : a.power < 0.4 || a.secs < mSecs * 0.4 ? 'dead pick' : ''; }
+  agg.sort((a, b) => b.power - a.power);
+  report.balance.synergy = { secs, reps, medianDmgPerMin: mDmg, builds: agg };
+  log(`  ${agg.length} builds · top: ${agg.slice(0, 3).map(a => `${a.build} ${a.power}x`).join(', ')} · bottom: ${agg.slice(-2).map(a => `${a.build} ${a.power}x`).join(', ')}`);
+}
+
 // ---------------------------------------------------------------- performance under load
 if (want('stress')) {
   log('horde stress');
@@ -238,6 +299,18 @@ if (want('balance') || want('perf')) {
       bossFights: e.flatMap(x => x.bosses).map(b => r1(b.secs)), perfects: med(e.map(x => x.perfects)),
     };
   });
+  // Difficulty spikes: damage taken per 5s window, against that episode's own median.
+  const spikes = [];
+  for (const [ei, x] of episodes.entries()) {
+    const sm = mem.filter(m => m.ep === ei);
+    const win = sm.slice(1).map((m, i) => ({ t: m.t, d: m.dmgTaken - sm[i].dmgTaken, maxHp: m.maxHp, threat: m.threat, district: m.district, near: m.near, alive: m.alive }));
+    const base = med(win.map(w => w.d).filter(v => v > 0)) || 1;
+    for (const [i, w] of win.entries()) if (w.d > Math.max(base * 3, w.maxHp * 0.35)) {
+      const fatal = win.slice(i, i + 3).some(v => !v.alive) || (x.died && Math.abs(x.secs - w.t) < 15);
+      spikes.push({ prof: x.prof, cls: x.cls, t: w.t, district: w.district + 1, threat: w.threat, dmg: w.d, pctHp: Math.round(w.d / w.maxHp * 100), fatal, near: Object.entries(w.near || {}).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k}×${v}`).join(' ') });
+    }
+  }
+  report.balance.spikes = spikes.sort((a, b) => b.pctHp - a.pctHp).slice(0, 30);
   report.balance.byClass = classes.map(c => { const e = episodes.filter(x => x.cls === c); return { cls: c, deathRate: r1(e.filter(x => x.died).length / e.length * 100), medianSurvival: r1(med(e.map(x => x.secs))), medianLevel: med(e.map(x => x.level)), medianKills: med(e.map(x => x.kills)) }; });
   // Long-session performance and memory (leaks are judged per district entry, below).
   report.perf.session = {
@@ -286,6 +359,10 @@ for (const p of report.balance.byProfile || []) {
   for (const b of p.bossFights) if (b > 240) warns.push(`${p.profile}: a boss fight lasted ${b}s`);
   if (p.bossFights.length && med(p.bossFights) < 25) warns.push(`${p.profile}: bosses die in ${r1(med(p.bossFights))}s (median): boss fights may be too short`);
 }
+for (const b of (report.balance.synergy || {}).builds || []) if (b.flag) warns.push(`build "${b.build}": ${b.flag} (${b.power}x median damage, ${b.survival}% survival)`);
+const fatalSpikes = (report.balance.spikes || []).filter(s => s.fatal && s.prof === 'expert');
+if (fatalSpikes.length) warns.push(`${fatalSpikes.length} difficulty spike(s) killed an expert bot (e.g. district ${fatalSpikes[0].district}, ${fatalSpikes[0].pctHp}% HP in 5s from ${fatalSpikes[0].near})`);
+for (const k of ['out-of-bounds', 'levelup-loop', 'empty-levelup']) { const n = report.anomalies.filter(a => a.kind === k).length; if (n) fails.push(`${n} ${k} anomaly(ies)`); }
 // Class balance: one class never dying while another always does is a red flag.
 const bc = report.balance.byClass || [];
 if (bc.length > 1) {
@@ -299,6 +376,8 @@ writeFileSync(OUT + 'REPORT.md', markdown(report));
 // On GitHub Actions: failures and warnings become annotations, and the report the job summary.
 if (process.env.GITHUB_ACTIONS) {
   for (const f of fails) console.log('::error title=Playtest::' + f);
+  for (const e of ((report.playability.static || {}).errors || []).slice(0, 10)) console.log(`::error title=Level check::${e.kind} in ${e.where} at tile ${e.gx},${e.gz} (seed ${e.seed})`);
+  for (const a of report.anomalies.filter(a => a.kind !== 'stuck').slice(0, 10)) console.log(`::error title=Anomaly::${a.kind} in district ${a.district + 1} at ${a.pos.join(',')} (${a.suite})`);
   for (const w of warns.slice(0, 9)) console.log('::warning title=Playtest::' + w);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown(report));
 }
@@ -323,6 +402,7 @@ function markdown(R) {
   if (R.playability.static) { const s = R.playability.static; L.push(`Static checks on ${s.districts} generated districts: ${s.errors.length} errors, ${s.warnings.length} warnings, ${s.interiors} interiors, ~${s.avgReachTiles} tiles reachable on foot each; ${s.viaAbility} items reachable only by climbing, gnawing or squeezing (by design).`, ''); if (s.errors.length) tbl(['Issue', 'Where', 'Tile', 'Seed'], s.errors.slice(0, 25).map(i => [i.kind, i.where, `${i.gx},${i.gz}`, i.seed])); }
   if (R.playability.goals) tbl(['Goal (plain language)', 'Parsed as', 'Class', 'Met', 'Sim time'], R.playability.goals.map(g => [g.goal, g.parsed, g.cls, g.met ? 'yes' : '**no**', g.simSecs + 's']));
   if (R.playability.critical) tbl(['District', 'Reached next', 'Time', 'Objective', 'Boss down'], R.playability.critical.perDistrict.map(p => [p.district + 1, p.reachedNext ? 'yes' : '**no**', p.secs + 's', p.obj || '-', p.bossDone || p.reachedNext ? 'yes' : 'no']));
+  if (R.playability.adversarial) { const a = R.playability.adversarial; L.push(`Adversarial bots: ${a.sessions} sessions, ${a.simHours} simulated hours, ${a.tactics} attempts to break walls, corners, map edges, roofs and props. Anomalies: ${Object.entries(a.anomalies).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}.`, ''); }
   if (R.playability.explore) tbl(['Class', 'Coverage', 'Stuck spots', 'Other anomalies'], R.playability.explore.map(e => [e.cls, e.coverage + '%', e.stuck, e.other.join(', ') || '-']));
   if (R.anomalies.length) { L.push('### Anomalies', ''); tbl(['Kind', 'Suite', 'District', 'Pos', 'Tile', 'Screenshot'], R.anomalies.slice(0, 40).map(a => [a.kind, a.suite, a.district + 1, a.pos.join(', '), a.tile ? `${a.tile.gx},${a.tile.gz} t${a.tile.t}` : '-', a.shot || '-'])); L.push('Each anomaly in report.json carries the last seconds of game state (position, HP, nearby enemies, the bot\'s goal and input) for reproduction.', ''); }
   L.push('## Balance', '');
@@ -331,6 +411,8 @@ function markdown(R) {
     tbl(['Profile', 'Time to kill (median s)', 'Top damage sources', 'Boss fights'], R.balance.byProfile.map(p => [p.profile, Object.entries(p.ttk).sort().map(([k, v]) => `${k} ${v}`).join(', '), p.topDamage.map(([k, v]) => `${k} ${v}%`).join(', '), p.bossFights.length ? p.bossFights.map(s => s + 's').join(', ') : '-']));
     tbl(['Class', 'Death rate', 'Median survival', 'Median level', 'Median kills'], R.balance.byClass.map(c => [c.cls, c.deathRate + '%', c.medianSurvival + 's', c.medianLevel, c.medianKills]));
   }
+  if (R.balance.synergy) { L.push(`### Synergy sweep (fixed threat 6, ${R.balance.synergy.secs}s each, power = damage/min vs median)`, ''); tbl(['Build', 'Power', 'Kills/min', 'Damage/min', 'Taken/min', 'Survival', 'Flag'], R.balance.synergy.builds.map(b => [b.build, b.power + 'x', b.killsPerMin, b.dmgPerMin, b.takenPerMin, b.survival + '%', b.flag || '-'])); }
+  if (R.balance.spikes && R.balance.spikes.length) { L.push('### Difficulty spikes (damage in a 5s window, 3x the run median and at least 35% HP)', ''); tbl(['Profile', 'Class', 'District', 'Threat', 'HP lost', 'Fatal', 'Around the rat'], R.balance.spikes.slice(0, 15).map(s => [s.prof, s.cls, s.district, s.threat, s.pctHp + '%', s.fatal ? '**yes**' : 'no', s.near])); }
   if (R.errors.length) { L.push('## Runtime errors', ''); R.errors.slice(0, 20).forEach(e => L.push('- `' + e.msg + '` ' + (e.stack || ''))); L.push(''); }
   L.push('## Not covered', '', 'The bots measure stability, pacing and numbers. They cannot judge feel: whether movement is satisfying, the UI is clear, or the story lands. That still needs people playing.', '');
   return L.join('\n');

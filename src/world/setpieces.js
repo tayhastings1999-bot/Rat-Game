@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, rr, ri, rng, shuffleR, PI2, TAU } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
-import { world, scene, camera } from '../render/renderer.js';
+import { world, scene, camera, bury } from '../render/renderer.js';
 import { Bx, Cy, Co, Sp } from '../render/models.js';
 import { stoneTex, metalTex, plywoodTex, furTex, roofTex } from '../render/textures.js';
 import { M, T, gi, inG, tAt, toW, toG, floorY, DRY, N4, OPEN } from './grid.js';
@@ -575,14 +575,14 @@ export function buildSetPieces(info) {
     for (let i = W.plats.length - 1; i >= 0; i--) {
       const p = W.plats[i];
       if (p.thin || p.y > 2.6 || p.y - p.th > 1.5 || Math.abs(p.x - x) > p.w / 2 + 1 || Math.abs(p.z - z) > p.d / 2 + 1) continue;
-      if (p.mesh) world.remove(p.mesh);
+      if (p.mesh) bury(p.mesh);
       W.plats.splice(i, 1);
     }
   }
   // Anything built on top of a fungus buries it.
   for (const f of W.fungi || []) {
     if (f.taken) continue;
-    if (W.plats.some(p => !p.thin && Math.abs(p.x - f.x) < p.w / 2 + 0.3 && Math.abs(p.z - f.z) < p.d / 2 + 0.3 && p.y > f.y + 0.4 && p.y - p.th < f.y + 1)) { f.taken = true; world.remove(f.g); }
+    if (W.plats.some(p => !p.thin && Math.abs(p.x - f.x) < p.w / 2 + 0.3 && Math.abs(p.z - f.z) < p.d / 2 + 0.3 && p.y > f.y + 0.4 && p.y - p.th < f.y + 1)) { f.taken = true; bury(f.g); }
   }
   run.rain = (run.tier || 0) > 0 && (name === 'Hollow Heights' ? chance(0.6) : chance(0.3));
   rainOn(run.rain);

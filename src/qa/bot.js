@@ -10,7 +10,7 @@
 // rendering, so long sessions take minutes instead of hours.
 import { rand, pick } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
-import { renderer, world } from '../render/renderer.js';
+import { renderer, world, scene } from '../render/renderer.js';
 import { M, gi, inG, toG, toW, tAt, topAt, solidFor, N4, N8 } from '../world/grid.js';
 import { update } from '../game/update.js';
 import { sync, animate } from '../game/sync.js';
@@ -19,6 +19,12 @@ import { useSig, SIGS } from '../game/signature.js';
 import { shriek } from '../game/swarm.js';
 import { currentOffers, choose } from '../ui/screens.js';
 import { objTargets } from '../game/objectives.js';
+import { WEAP } from '../combat/arsenal.js';
+import { EVO, KEYSTONES, evolve, applyKeystone } from '../game/progress.js';
+import { RULES, applyRule } from '../game/rules.js';
+import { MUTATIONS } from '../data/items.js';
+import { giveItem } from '../game/loot.js';
+import { grabTarget, dropCarry } from '../entities/player.js';
 
 // ---------- skill profiles ----------
 export const PROFILES = {
@@ -35,6 +41,7 @@ const RANGED = { slinger: 1, warlock: 1, plague: 1, roof: 1 };
 /** Turns "reach the manhole" / "kill the boss" / "fail the run" into a goal id. */
 export function parseGoal(text = '') {
   const t = text.toLowerCase();
+  if (/break|glitch|out of bounds|clip/.test(t)) return 'break';
   if (/die|fail|lose/.test(t)) return 'die';
   if (/manhole|sewer|descend/.test(t)) return 'manhole';
   if (/nest/.test(t)) return 'nests';
@@ -172,6 +179,7 @@ function chooseTarget() {
     return m ? { x: m.x, z: m.z, kind: 'mob', e: m } : exploreTarget();
   }
   if (run.hp < st.maxHp * 0.4 && Math.random() < pr.heal && foods.length) { const f = nearestOf(foods); if (f) return { x: f.x, z: f.z, kind: 'food' }; }
+  if (B.goal === 'break') return breakTarget();
   // A Breakthrough trial: the Champion has to die in time or the level cap holds.
   const champ = W.enemies.find(e => e.champion && !e.dead);
   if (champ && B.goal !== 'die') return { x: champ.x, z: champ.z, kind: 'mob', e: champ };
@@ -194,6 +202,41 @@ function chooseTarget() {
   const mob = nearestOf(W.enemies.filter(e => !e.dead && !e.hidden && !e.disguise && !e.mesh));
   if (mob && Math.random() < 0.6) return { x: mob.x, z: mob.z, kind: 'mob', e: mob };
   return exploreTarget();
+}
+
+// ---------- adversarial exploration: try to break the level ----------
+// Cycles through tactics a tester would use: shove into walls and corners at
+// full sprint, run off the edge of the map, climb a wall and drop off the
+// roof edge, squeeze into cracks, and pick up props and throw them around.
+const TACTICS = ['wall', 'edge', 'climb', 'prop', 'corner'];
+function breakTarget() {
+  const tac = TACTICS[(B.tac = ((B.tac ?? -1) + 1) % TACTICS.length)];
+  B.tacT = 0;
+  const pickTile = ok => { for (let i = 0; i < 300; i++) { const k = (Math.random() * M.W * M.H) | 0, x = k % M.W, z = (k / M.W) | 0; if (ok(x, z) && Math.hypot(toW(x) - P.x, toW(z) - P.z) < 60) return [x, z]; } return null; };
+  const wallSide = (x, z) => walk(tAt(x, z)) && N4.some(([dx, dz]) => tAt(x + dx, z + dz) === 0);
+  if (tac === 'wall' || tac === 'climb') { const t = pickTile(wallSide); if (t) { const [x, z] = t, d = N4.find(([dx, dz]) => tAt(x + dx, z + dz) === 0); return { x: toW(x), z: toW(z), kind: 'break-' + tac, push: [d[0], d[1]] }; } }
+  if (tac === 'corner') { const t = pickTile((x, z) => walk(tAt(x, z)) && N4.filter(([dx, dz]) => !walk(tAt(x + dx, z + dz))).length >= 2); if (t) return { x: toW(t[0]), z: toW(t[1]), kind: 'break-corner', push: [Math.random() < 0.5 ? 1 : -1, Math.random() < 0.5 ? 1 : -1] }; }
+  if (tac === 'edge') { const t = pickTile((x, z) => walk(tAt(x, z)) && (x < 3 || z < 3 || x > M.W - 4 || z > M.H - 4)); if (t) return { x: toW(t[0]), z: toW(t[1]), kind: 'break-edge', push: [t[0] < 3 ? -1 : t[0] > M.W - 4 ? 1 : 0, t[1] < 3 ? -1 : t[1] > M.H - 4 ? 1 : 0] }; }
+  if (tac === 'prop' && W.objs.length) { const o = nearestOf(W.objs.filter(o => !o.carried)); if (o) return { x: o.x, z: o.z, kind: 'break-prop', o }; }
+  return exploreTarget();
+}
+/** Once at the spot: push, jump, roll and sprint into it for a while. */
+function breakAct(tg, dt) {
+  B.tacT = (B.tacT || 0) + dt;
+  const [px, pz] = tg.push || [0, 0];
+  if (tg.kind === 'break-prop') {
+    if (!P.carry && B.tacT < 0.4) { const o = grabTarget(); if (o) pressE(); }
+    if (P.carry) setDir(Math.sin(B.tacT * 3), Math.cos(B.tacT * 3));
+    if (P.carry && B.tacT > 2.5) dropCarry();
+    if (B.tacT > 3.5) { if (P.carry) dropCarry(); startRoll(); tg.done = true; }
+    return;
+  }
+  setDir(px + rand(-0.3, 0.3), pz + rand(-0.3, 0.3));
+  B.sprint = true;
+  keys.Space = tg.kind === 'break-climb' || Math.random() < 0.3;
+  if (Math.random() < 0.15) { P.buffer = 0.13; startRoll(); }
+  if (tg.kind === 'break-climb' && P.y > 3 && B.tacT > 2) setDir(-px, -pz); // run off the roof edge
+  if (B.tacT > 4) { keys.Space = false; tg.done = true; T.tactics = (T.tactics || 0) + 1; }
 }
 
 // ---------- the agent ----------
@@ -235,7 +278,8 @@ function think(dt) {
   }
   if (B.thinkT > 0) return;
   B.thinkT = 0.1 + pr.react * 0.3;
-  if (!B.target || B.target.done || Math.random() < 0.08 || (B.target.e && B.target.e.dead)) B.target = chooseTarget();
+  const keep = B.target && B.target.kind && B.target.kind.startsWith('break-'); // finish a break attempt before re-planning
+  if (!B.target || B.target.done || (!keep && Math.random() < 0.08) || (B.target.e && B.target.e.dead)) B.target = chooseTarget();
   const tg = B.target;
   let d = [0, 0];
   if (tg) {
@@ -243,6 +287,7 @@ function think(dt) {
     const dist = Math.hypot(tg.x - P.x, tg.z - P.z);
     const fight = tg.kind === 'boss' || tg.kind === 'mob' || tg.kind === 'nest';
     const want = fight ? (RANGED[run.cls] ? 6.5 : 1.6) : 0.6;
+    if (tg.kind.startsWith('break-') && (dist < 1.6 || B.tacT > 0)) { breakAct(tg, 0.1 + B.profile.react * 0.3); return; }
     if (dist > want) d = steerTo(tg.x, tg.z) || (B.banned.add(toG(tg.x) + ',' + toG(tg.z)), B.target = null, [0, 0]);
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
@@ -316,6 +361,7 @@ function watchdogs(dt) {
   // Out of the world / NaN.
   if (!Number.isFinite(P.x) || !Number.isFinite(P.y) || !Number.isFinite(P.z)) anomaly('nan-position');
   else if (P.y < -6 && tAt(toG(P.x), toG(P.z)) !== 7) anomaly('fell-out-of-world');
+  else if (Math.abs(P.x) > M.half + 2 || Math.abs(P.z) > M.half + 2) anomaly('out-of-bounds', { half: M.half });
   // Inside a wall (not squeezing through a crawlspace).
   const gx = toG(P.x), gz = toG(P.z), t = tAt(gx, gz);
   const depth = Math.min(P.x - (toW(gx) - 2), toW(gx) + 2 - P.x, P.z - (toW(gz) - 2), toW(gz) + 2 - P.z);
@@ -326,12 +372,21 @@ function watchdogs(dt) {
 
 function sample() {
   T.peakEnemies = Math.max(T.peakEnemies, W.enemies.length);
+  // Mobs that should be chasing but haven't moved since the last sample (path-finding or physics trouble).
+  let stuckMobs = 0;
+  for (const e of W.enemies) {
+    if (e.dead || e.mesh || e.type === 'nest' || e.hidden || e.disguise || e.demo) continue;
+    if (e.qx != null && Math.hypot(e.x - e.qx, e.z - e.qz) < 0.1 && Math.hypot(e.x - P.x, e.z - P.z) > 4 && !(e.stun > 0)) stuckMobs++;
+    e.qx = e.x; e.qz = e.z;
+  }
+  const near = W.enemies.filter(e => !e.dead && Math.hypot(e.x - P.x, e.z - P.z) < 12).reduce((m, e) => { m[e.type] = (m[e.type] || 0) + 1; return m; }, {});
   const mem = performance.memory ? performance.memory.usedJSHeapSize : 0;
   const ri = renderer.info;
   T.samples.push({
     t: +run.time.toFixed(1), district: run.tier, lvl: run.level, hp: Math.round(run.hp), scrap: Math.round(run.scrap), kills: run.kills, threat: +(run.T || 0).toFixed(2),
     enemies: W.enemies.length, parts: W.parts.length, gibs: W.gibs.length, corpses: W.corpses.length, puddles: W.puddles.length, eproj: W.eproj.length, pproj: W.pproj.length,
-    geo: ri.memory.geometries, tex: ri.memory.textures, calls: ri.render.calls, objects: world.children.length, heapMB: +(mem / 1048576).toFixed(1),
+    geo: ri.memory.geometries, tex: ri.memory.textures, objects: world.children.length, sceneN: scene.children.length, heapMB: +(mem / 1048576).toFixed(1),
+    dmgTaken: Math.round(T.dmgTaken), stuckMobs, near, maxHp: st.maxHp, alive: G.state !== 'dead',
   });
 }
 
@@ -397,6 +452,25 @@ export const qa = {
   },
   goalMet,
   telemetry: () => T,
+  /** Step the game with no bot input (physics fuzzing); returns anomalies seen. */
+  stepRaw(secs, dt = 1 / 30) {
+    const was = B.on;
+    B.on = false;
+    G.qaHold = true;
+    for (let t = 0; t < secs && G.state === 'play'; t += dt) { G.time += dt; update(dt); watchdogs(dt); }
+    sync(secs); animate(secs);
+    B.on = was;
+    return T.anomalies.length;
+  },
+  /** Everything a build can be made of (for the synergy sweep). */
+  catalog: () => ({ weapons: Object.keys(WEAP), evolutions: Object.keys(EVO), rules: Object.keys(RULES), keystones: Object.keys(KEYSTONES), mutations: MUTATIONS.map(m => ({ id: m.id, a: m.a, b: m.b })) }),
+  /** Give the current run a build: { weapons: [[id, lvl, evo]], rules: [], keystones: [], items: [] }. */
+  applyBuild(b) {
+    for (const [id, lvl, evo] of b.weapons || []) { let w = run.weapons.find(w => w.id === id); if (!w) { w = { id, lvl: 1, t: 0 }; run.weapons.push(w); } w.lvl = lvl || 5; if (evo) evolve(id); }
+    for (const r of b.rules || []) applyRule(r);
+    for (const k of b.keystones || []) applyKeystone(k);
+    for (const it of b.items || []) giveItem(it, true);
+  },
   /** Rendered-frame cost probe (real rAF frames, with rendering). */
   async frameProbe(n = 30) {
     G.qaHold = true;

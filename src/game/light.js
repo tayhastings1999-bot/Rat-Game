@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { rand, angD, TAU } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
-import { scene } from '../render/renderer.js';
+import { scene, dropCreature } from '../render/renderer.js';
 import { spark, puff, dnum, fx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { floorY } from '../world/grid.js';
@@ -133,7 +133,7 @@ export function owlAI(e, dt) {
     if (e.t <= 0) { e.st = 'circle'; e.t = rand(3, 5); }
   } else if (e.st === 'leave') {
     flyTo(e.x + (e.x - P.x), P.y + 30, e.z + (e.z - P.z), 14);
-    if (e.t <= 0) { e.dead = true; scene.remove(e.mesh); fx('ring', e.x, e.y, e.z, 1, 0xd8ccb8, 0.2); return true; }
+    if (e.t <= 0) { e.dead = true; dropCreature(e.mesh); fx('ring', e.x, e.y, e.z, 1, 0xd8ccb8, 0.2); return true; }
   }
   e.x += (e.vx + e.kx) * dt;
   e.y += e.vy * dt;

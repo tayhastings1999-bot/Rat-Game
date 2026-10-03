@@ -1,0 +1,55 @@
+# The long stages, nightly (and on demand):
+#   3. hours of adversarial exploration plus the full playtest
+#      (every class and skill level, synergy sweep, difficulty spikes)
+#   5. the hybrid soak: a scripted driver keeps the game running while bots
+#      play, watching for slow leaks, degradation and save corruption.
+# GitHub-hosted runners stop a job at 6 hours, so the hosted soak runs 5.5h.
+# For a 24-hour soak, run it on a self-hosted runner (choose it below) or
+# locally: npm run soak -- --hours=24
+name: Nightly QA
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      soak_hours:
+        description: Soak length in hours (keep under 5.5 on GitHub-hosted runners)
+        default: '5.5'
+      explore_hours:
+        description: Adversarial exploration, in hours
+        default: '2'
+      runner:
+        description: Runner label (use your self-hosted label for 24h soaks)
+        default: ubuntu-latest
+
+jobs:
+  playtest:
+    name: 3/4 · Full playtest + adversarial exploration
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run playtest -- --hours=${{ inputs.explore_hours || '2' }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: nightly-playtest, path: scripts/out/playtest/ }
+
+  soak:
+    name: 5 · Soak
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run soak -- --hours=${{ inputs.soak_hours || '5.5' }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: soak-report, path: scripts/out/soak/ }

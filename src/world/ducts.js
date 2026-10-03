@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, rng, shuffleR, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
-import { world, cutPlane } from '../render/renderer.js';
+import { world, cutPlane, bury } from '../render/renderer.js';
 import { Bx, Co, Cy } from '../render/models.js';
 import { metalTex, furTex, flameTex } from '../render/textures.js';
 import { spark, bolt, dnum, puff } from '../fx/fx.js';
@@ -133,7 +133,7 @@ function clearMouth(k) {
     if (!DRY(tAt(x + dx, z + dz))) continue;
     const cx = toW(x) + dx * (T / 2 + 1.4), cz = toW(z) + dz * (T / 2 + 1.4);
     const block = p => !p.thin && Math.abs(p.x - cx) < p.w / 2 + 1.3 && Math.abs(p.z - cz) < p.d / 2 + 1.3 && p.y < 3;
-    for (const p of W.plats) if (block(p) && p.mesh) world.remove(p.mesh);
+    for (const p of W.plats) if (block(p) && p.mesh) bury(p.mesh);
     for (let i = W.plats.length - 1; i >= 0; i--) if (block(W.plats[i])) W.plats.splice(i, 1);
   }
 }
@@ -235,7 +235,7 @@ export function tickDucts(dt) {
 }
 /** Loot when a rival nest is gnawed or clawed apart. */
 export function rivalDeath(e, scrapDrop, dropGem) {
-  world.remove(e.mesh);
+  bury(e.mesh);
   for (let i = 0; i < 10; i++) scrapDrop(e.x, 0, e.z);
   dropGem(e.x, 0.3, e.z, 12);
   dnum(e.x, 1.6, e.z, 'Rival nest cleared', 'info');

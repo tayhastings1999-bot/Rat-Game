@@ -210,25 +210,29 @@ WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames)
 
 **Touch:** left stick moves, drag anywhere else to orbit the camera. Jump (hold on walls to climb), Roll (hold to sprint), Special, Sig (signature move), Use (hold to gnaw), Shriek (when the combo is full), Lock and Sniff sit on the right; Map and Pause at the top. Attacks aim themselves, so that's the whole game.
 
-## Automated playtesting
+## QA pipeline
 
-`npm run playtest` (or `--quick` for the short CI version) lets bots play the game and writes `scripts/out/playtest/REPORT.md`, `report.json` and screenshots of anything odd. The bots (`src/qa/bot.js`, only loaded with `?debug`) play through the same inputs a player uses: the stick, roll, special, signature move, shriek and E. They come in three skill levels:
+Five stages, cheapest first. Anything a script can check deterministically is a script; bots are used only where play is dynamic (exploration, balance, long sessions).
 
-- *Novice:* reacts in about 0.65s, dodges 15% of attacks, wanders into crowds and picks upgrades at random.
-- *Average:* reacts in about 0.3s, dodges half of attacks and kites a little.
-- *Expert:* reacts in about 0.12s, dodges 90%, keeps its range and builds toward evolutions.
+| Stage | Command | Kind | Time | What it checks | Runs |
+|---|---|---|---|---|---|
+| 1 · Boot gate | `npm run build && npm run test:boot` | Deterministic | ~15s | Production bundle loads, menu and every class card render, a run starts from the real button, the loop advances and draws, pause and resume, no console errors. | Every push |
+| 2 · System, UI, fuzz | `npm run smoke && npm run test:system` | Deterministic + fuzz | ~2 min | Every button on every screen from fresh state. Damage, armour and i-frames; HP and XP bars; food healing and cap; kills and drops; mutation fusion; stamina; save round-trip. Random input, random teleports and random clicks with crash/NaN/out-of-bounds checks. | Every push |
+| 3 · Exploration | `npm run playtest -- --hours=2` | Bots | hours | Static level checks over many districts, plain-language goals, the critical path, and an adversarial bot that tries to break out of the map: wall-hugging, edge and climb exploits, prop jumps, corner traps. | Quick version every push, full nightly |
+| 4 · Combat + synergy | part of `npm run playtest` | Bots + statistics | ~20 min | Every class at three skill levels; every weapon at max, every evolution, rule, keystone and mutation, plus random combos, against a fixed horde. Flags builds that trivialise combat (>3× median damage) or do nothing, and damage spikes that take a third of HP in 5s. | Quick every push, full nightly |
+| 5 · Soak | `npm run soak -- --hours=24` | Script driving bots | 24h+ | Back-to-back runs through the real menus with Nest purchases and page reloads. Heap, geometry, texture and scene-object trends per hour, logic cost as mobs scale, and save integrity (every key parses, lifetime totals never go down, the run counter goes up by exactly one). | Nightly (5.5h hosted) |
 
-They take plain-language goals such as "kill the boss", "go inside a building", "loot every chest", "explore the district", "reach the manhole" or "fail the run". A fast-forward mode steps the game logic without drawing, roughly 25–100× real time, so long sessions take minutes.
+```mermaid
+flowchart LR
+  A[1 Boot gate] --> B[2 System + fuzz] --> C[3/4 Quick playtest]
+  N[Nightly] --> D[3 Exploration, hours] & E[4 Full balance sweep] & F[5 Soak]
+```
 
-| Pillar | What runs | What it catches |
-|---|---|---|
-| **Performance** | Telemetry on every simulated step: game-logic cost, rendered-frame probes, JS heap, GPU geometry and texture counts at each district start, entity counts. A horde stress test at 25–230 mobs. | Frame and logic spikes, logged with position and the last seconds of state. Leaks, failed if geometries or textures grow between districts. Cost as the horde scales. |
-| **Playability** | Static checks on many generated districts. Autonomous exploration. The plain-language goals. The critical path, district after district. | Unreachable or buried pickups and nests, blocked doorways and crawlspace mouths, broken lairs. Stuck spots, falling out of the world, ending up inside walls, level-up soft-locks. Progression blockers. |
-| **Enjoyment** | Every class at every skill level, for repeated sessions. | Death rate and survival time, how far each gets, level curve and stalls, salvage per minute, time-to-kill per enemy, damage by source, boss fight length, gaps between classes. |
+`.github/workflows/qa.yml` runs stages 1, 2 and the quick 3/4 on every push and pull request; each stage only starts if the previous one passed, and failures show as annotations on the run. `.github/workflows/nightly.yml` runs the long stages. GitHub-hosted jobs stop at 6 hours, so the hosted soak runs 5.5h; for 24 hours, pick a self-hosted runner when dispatching it, or run it locally. Reports land in `scripts/out/{system,playtest,soak}/`.
 
-Anomalies are written to `report.json` with the last seconds of game state attached: position, HP, nearby enemies, and the bot's goal and input. The CI workflow (`.github/workflows/qa.yml`) runs lint, build, the smoke test and the quick playtest on every push and pull request, and attaches the report to the run. The full version runs on demand.
+The bots (`src/qa/bot.js`, only loaded with `?debug`) play through the same inputs a player uses. *Novice* reacts in about 0.65s and dodges 15% of attacks; *average* in 0.3s and half; *expert* in 0.12s and 90%, keeping range and building toward evolutions. They take goals such as "kill the boss", "go inside a building", "loot every chest", "reach the manhole", "fail the run" or "break the level". Fast-forward steps the logic without drawing, roughly 25–100× real time. "Balancing" here is heuristic bots plus statistics, not trained models.
 
-The game is single-player with no server, so there's no online load to simulate; the horde stress test stands in for it. The bots measure stability, pacing and numbers. They can't tell whether movement feels good, the UI is clear or a story beat lands. That still needs people.
+The game is single-player with no server, so the horde stress test stands in for online load. The bots measure stability, pacing and numbers. They can't tell whether movement feels good, the UI is clear or a story beat lands. That still needs people.
 
 ## Code map
 
@@ -244,7 +248,9 @@ src/
   game/              run flow (districts, sewer, banking), loot, update step, render sync + camera, input
   audio/             SFX + music sequencer
   ui/                HUD, screens (menu, Nest, pause, level-up, bench, endings), icons
+scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
 scripts/smoke.mjs    headless end-to-end test
+scripts/soak.mjs     stage 5 long soak: leaks, degradation, save integrity
 scripts/playtest.mjs bot playtests: performance, playability, balance (src/qa/ holds the bots and level checks)
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```

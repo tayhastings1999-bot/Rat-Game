@@ -1,6 +1,6 @@
 // Fungal foraging: eat mushrooms and molds for short buffs.
 import { G, P, W, run, st } from '../core/state.js';
-import { world } from '../render/renderer.js';
+import { bury } from '../render/renderer.js';
 import { puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { aoe } from '../combat/combat.js';
@@ -30,7 +30,7 @@ export function tickForage(dt) {
 function eat(f) {
   const F = FUNGI[f.kind];
   f.taken = true;
-  world.remove(f.g);
+  bury(f.g);
   run.buffs[f.kind] = FUNGUS_T;
   contract('forage');
   run.forage = (run.forage || 0) + 1;

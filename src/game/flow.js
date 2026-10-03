@@ -2,7 +2,7 @@
 // sewer, unlocks and banking salvage into the Nest.
 import { pick, resetObj, unseedRng, shuffleR, weekSeed, loadJSON, $ } from '../core/util.js';
 import { G, P, W, run, st, meta, saveMeta } from '../core/state.js';
-import { scene } from '../render/renderer.js';
+import { scene, dropCreature } from '../render/renderer.js';
 import { clearFx } from '../fx/fx.js';
 import { M, gi, toW, floorY } from '../world/grid.js';
 import { genCity } from '../world/cityGen.js';
@@ -44,7 +44,7 @@ export function freshStats(C) {
 const ALL_MODS = Object.keys(MODS);
 
 export function setupWorld(seed) {
-  for (const e of W.enemies) if (e.mesh && e.type !== 'nest') scene.remove(e.mesh);
+  for (const e of W.enemies) if (e.mesh && e.type !== 'nest') dropCreature(e.mesh);
   G.boss = null;
   G.lockOn = null;
   G.evMarker = null;

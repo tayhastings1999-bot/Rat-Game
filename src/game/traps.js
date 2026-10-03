@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { rand, keep, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
-import { world } from '../render/renderer.js';
+import { world, bury } from '../render/renderer.js';
 import { Bx, Cy } from '../render/models.js';
 import { metalTex, stoneTex, flameTex, waterTex } from '../render/textures.js';
 import { boom, puff, spark, bolt, fx, dnum } from '../fx/fx.js';
@@ -123,7 +123,7 @@ function tickShocks(dt) {
     }
     if (P.onGround && P.y < floorY(P.x, P.z) + 0.3 && inShock(s, P.x, P.z)) { hurtP(7, null, true); spark(P.x, P.y + 0.4, P.z, 1, 0x9ad0ff); }
   }
-  for (const s of W.shocks) if (s.t <= 0 && s.glow) { world.remove(s.glow); s.glow = null; }
+  for (const s of W.shocks) if (s.t <= 0 && s.glow) { bury(s.glow); s.glow = null; }
   keep(W.shocks, s => s.t > 0);
 }
 
@@ -203,7 +203,7 @@ export function springTrap(t) {
   const S = scaleDmg;
   if (t.kind === 'cable') {
     // The frayed end whips down into the water a beat later.
-    world.remove(t.hang);
+    bury(t.hang);
     const down = new THREE.Vector3(t.cx, floorY(t.cx, t.cz) + 0.05, t.cz);
     t.g.add(new THREE.Mesh(new THREE.TubeGeometry(cableCurve(t.a, down, 0.2), 10, 0.05, 4), cableMat));
     t.spk.position.copy(down);
@@ -228,9 +228,9 @@ export function springTrap(t) {
       for (const e of W.enemies) if (!e.dead && !e.fly && e.y > 1.5 && Math.hypot(e.x - t.cx, e.z - t.cz) < 3) { e.vy = 0; hit(e, S(60), null, 0, 'trap'); }
     }, 500);
   } else if (t.kind === 'debris') {
-    world.remove(t.post);
-    world.remove(t.chain);
-    world.remove(t.mark);
+    bury(t.post);
+    bury(t.chain);
+    bury(t.mark);
     puff(t.gx, 0.8, t.gz, 0x8a6038, 8, 2);
     drop(t.load, { sx: rand(-1, 1), sz: rand(-1, 1), crush: { R: 3, dmg: S(220), label: 'Crushed', after: rubble } });
   }

@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { rand, pick, keep } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
-import { world } from '../render/renderer.js';
+import { world, bury } from '../render/renderer.js';
 import { Bx, Cy } from '../render/models.js';
 import { flameTex } from '../render/textures.js';
 import { boom, fx, puff, spark, dnum } from '../fx/fx.js';
@@ -220,7 +220,7 @@ function tickPickups(dt) {
     c.g.rotation.y += dt * 1.5;
     c.g.position.y = c.y + Math.sin(G.time * 3 + c.x) * 0.1;
     if (Math.hypot(P.x - c.x, P.z - c.z) > 1.3 || Math.abs(P.y - c.y) > 1.6) return true;
-    world.remove(c.g);
+    bury(c.g);
     sfx('key');
     if (c.kind === 'crate') openCrate();
     else {
@@ -243,6 +243,8 @@ export function breakOffers() {
   for (let i = 0; i < 2 && keys.length; i++) out.push({ kind: 'key', id: keys.splice((Math.random() * keys.length) | 0, 1)[0], rar: 3 });
   const tomes = Object.keys(TOMES).filter(id => !TOMES[id].flat && (run.tomes[id] || 0) < (TOMES[id].max || 5));
   while (out.length < 4 && tomes.length) out.push({ kind: 'tome', id: tomes.splice((Math.random() * tomes.length) | 0, 1)[0], rar: Math.random() < 0.4 ? 3 : 2 });
+  // Everything taken (long runs): never open an empty screen, which would soft-lock the game. Found by the playtest bots.
+  if (!out.length) out.push({ kind: 'heal', rar: 0 });
   return out.slice(0, 4);
 }
 export function applyKeystone(id) {

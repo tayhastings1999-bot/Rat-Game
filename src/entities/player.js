@@ -4,7 +4,7 @@ import { angD, fmtT, $ } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { puff, spark, boom, fx, bolt, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { world } from '../render/renderer.js';
+import { bury } from '../render/renderer.js';
 import { M, G as GRAV, DUCT_TOP, gi, toG, toW, tAt, tileAt, topAt, floorY, solidFor, collideBody } from '../world/grid.js';
 import { tileMesh, syncObj, addObj } from '../world/build.js';
 import { curD, isSewer } from '../data/world.js';
@@ -365,7 +365,7 @@ export function openTile(gx, gz) {
   M.secret[k] = 0;
   if (secret === 1) { banner('Secret passage', 'Something was hidden back here'); sfx('key'); }
   const m = tileMesh[k];
-  if (m) { world.remove(m); delete tileMesh[k]; }
+  if (m) { bury(m); delete tileMesh[k]; }
   const x = toW(gx), z = toW(gz);
   puff(x, 1.5, z, 0xc8b894, 24, 4);
   boom(x, 1.2, z, 3, 0xe8d8b0);
@@ -383,7 +383,7 @@ export function doChew(c) {
   if (c.kind === 'rope') {
     const it = c.it;
     it.used = true;
-    world.remove(it.post);
+    bury(it.post);
     it.rope.visible = false;
     it.falling = true;
     it.vy = 0;
@@ -415,7 +415,7 @@ export function tickInteractives(dt) {
       const gy = floorY(it.cx, it.cz);
       if (it.can.position.y <= gy + 0.5) {
         it.falling = false;
-        world.remove(it.can);
+        bury(it.can);
         for (const e of near(it.cx, gy, it.cz, 3.2)) hit(e, 150, Math.atan2(e.x - it.cx, e.z - it.cz), 10, 'trap');
         if (Math.hypot(P.x - it.cx, P.z - it.cz) < 1.4) hurtP(15, { x: it.cx, z: it.cz });
         boom(it.cx, gy + 0.8, it.cz, 6, 0xffd0a0);

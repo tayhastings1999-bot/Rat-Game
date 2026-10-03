@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { rand, randi, TAU } from '../core/util.js';
 import { G, P, W, run, st, meta, settings } from '../core/state.js';
-import { world, scene } from '../render/renderer.js';
+import { world, bury, dropCreature } from '../render/renderer.js';
 import { Cy } from '../render/models.js';
 import { flameTex } from '../render/textures.js';
 import { blood, spark, puff, boom, decal, gore, dnum } from '../fx/fx.js';
@@ -220,7 +220,7 @@ export function kill(e) {
 
   if (e.rival) { rivalDeath(e, scrapDrop, dropGem); addThreat(0.3); contract('rival'); return; }
   if (e.type === 'nest') {
-    world.remove(e.mesh);
+    bury(e.mesh);
     run.nests--;
     addThreat(0.8);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
@@ -231,7 +231,7 @@ export function kill(e) {
   }
   if (e.boss) { onBossDeath(e); return; }
   if (e.pred) {
-    scene.remove(e.mesh);
+    dropCreature(e.mesh);
     for (let i = 0; i < 15; i++) scrapDrop(e.x, e.y, e.z);
     dropFood(e.x, e.y, e.z);
     dnum(e.x, e.y + 2, e.z, 'Predator slain', 'info');

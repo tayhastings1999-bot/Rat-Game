@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
 import { G, W, run } from '../core/state.js';
-import { scene, world, hemi, sun, lantern, lampL } from '../render/renderer.js';
+import { scene, world, hemi, sun, lantern, lampL, buried } from '../render/renderer.js';
 import {
   furTex, stoneTex, flameTex, metalTex, dryTex, plywoodTex, waterTex, acidTex, crackTex, arrowTex, texFor,
   asphaltTex, sidewalkTex, grassTex, roofTex, facade, glassTex, secretTex, graffitiTex,
@@ -63,13 +63,16 @@ function uvScale(g, u, v) {
 export function buildWorld() {
   // Free the last district's GPU resources: geometries, materials, and every texture
   // made for it (facades, signs). Shared module textures stay. (Leak found by the playtest bots.)
-  world.traverse(o => {
+  const free = o => {
     if (o.geometry) o.geometry.dispose();
     for (const m of o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []) {
       for (const k of ['map', 'emissiveMap']) if (m[k] && !SHARED_TEX.has(m[k])) m[k].dispose();
       m.dispose();
     }
-  });
+  };
+  world.traverse(free);
+  for (const o of buried) o.traverse(free); // pieces removed during the district (see bury)
+  buried.length = 0;
   world.clear();
   for (const k in tileMesh) delete tileMesh[k];
   const D = curD(), city = M.kind === 'city';
