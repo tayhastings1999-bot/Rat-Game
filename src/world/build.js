@@ -441,10 +441,11 @@ function neonSigns(spots) {
 }
 const wheelMat = new THREE.MeshLambertMaterial({ color: 0x101012, flatShading: true });
 const CAR_COLS = [0x7a2a24, 0x2a3a5a, 0x5a5a60, 0x2a4a3a, 0x8a7a50, 0x1e1e22, 0x6a4a6a];
-function cars(spots) {
+function cars(spots, start) {
   for (const s of shuffleR(spots.slice()).slice(0, 34)) {
     const x = toW(s.gx) + rr(-0.5, 0.5), z = toW(s.gy) + rr(-0.5, 0.5), alongZ = s.along === 'z';
     if (!DRY(tAt(s.gx, s.gy))) continue;
+    if (start && Math.abs(s.gx - start.cx) < 2 && Math.abs(s.gy - start.cy) < 2) continue; // never park on the rat's start (found by the level checks)
     const w = alongZ ? 1.8 : 3.6, d = alongZ ? 3.6 : 1.8, col = CAR_COLS[ri(0, CAR_COLS.length - 1)];
     staticBox(x, z, w, d, 1.15, lam(col, { map: stoneTex }), 0.15);
     const cab = mkMesh(new THREE.BoxGeometry(alongZ ? 1.55 : 1.9, 0.7, alongZ ? 1.9 : 1.55), lam(0x1a2230, { emissive: 0x0a1018 }), x, 1.65, z);
@@ -747,7 +748,7 @@ export function populate(info) {
   if (city) {
     streetLamps(info.lampSpots);
     neonSigns(info.neonSpots);
-    cars(info.carSpots);
+    cars(info.carSpots, info.startRoom);
     dumpsters(info.dumpSpots);
     trees(info.treeSpots);
     powerLines(info.lineSpots);

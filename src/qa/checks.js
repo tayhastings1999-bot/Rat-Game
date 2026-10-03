@@ -5,7 +5,8 @@
 import { G, P, W } from '../core/state.js';
 import { M, gi, inG, toG, toW, tAt, topAt, N4 } from '../world/grid.js';
 
-const walk = t => t === 1 || t === 2 || t === 9 || t === 10;
+// Acid (4) hurts but can be crossed, as the generators assume.
+const walk = t => t === 1 || t === 2 || t === 4 || t === 9 || t === 10;
 
 export function staticChecks() {
   const issues = [];
