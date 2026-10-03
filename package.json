@@ -13,6 +13,7 @@
     "test:system": "node scripts/system.mjs",
     "smoke": "node scripts/smoke.mjs",
     "playtest": "node scripts/playtest.mjs",
+    "pace": "node scripts/pace.mjs",
     "soak": "node scripts/soak.mjs",
     "artifact": "vite build && node scripts/artifact.mjs"
   },

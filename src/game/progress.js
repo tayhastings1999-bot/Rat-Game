@@ -50,7 +50,7 @@ export const KEYSTONES = {
 export const PACE = t => 1 + 3.2 * Math.pow(t / 60, 0.68);
 /**
  * A tougher horde pays a little more (up to threat 10). The pace is rubber-banded:
- * falling behind pays up to 30% extra, racing ahead pays up to 60% less, so a strong
+ * falling behind pays up to 50% extra, racing ahead pays up to 60% less, so a strong
  * build stays near the curve instead of escaping it.
  */
 export function xpMul() {
