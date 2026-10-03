@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint src scripts",
     "smoke": "node scripts/smoke.mjs",
+    "playtest": "node scripts/playtest.mjs",
     "artifact": "vite build && node scripts/artifact.mjs"
   },
   "dependencies": {

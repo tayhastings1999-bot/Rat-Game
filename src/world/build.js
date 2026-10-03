@@ -14,6 +14,8 @@ import { clearDecals, ringGeo, discGeo } from '../fx/fx.js';
 import { flasks } from '../combat/arsenal.js';
 import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
 import { populateDucts, applyCutaway } from './ducts.js';
+import * as TEX from '../render/textures.js';
+const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
 import { curD, isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
@@ -59,7 +61,15 @@ function uvScale(g, u, v) {
 
 // ---------- terrain ----------
 export function buildWorld() {
-  world.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  // Free the last district's GPU resources: geometries, materials, and every texture
+  // made for it (facades, signs). Shared module textures stay. (Leak found by the playtest bots.)
+  world.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []) {
+      for (const k of ['map', 'emissiveMap']) if (m[k] && !SHARED_TEX.has(m[k])) m[k].dispose();
+      m.dispose();
+    }
+  });
   world.clear();
   for (const k in tileMesh) delete tileMesh[k];
   const D = curD(), city = M.kind === 'city';
@@ -903,6 +913,7 @@ export function populate(info) {
       W.cracks.set(k, { t: -1, m });
     });
   }
+  unbury();
   indexPlats();
   // Small props don't cast real-time shadows (cheaper; buildings and big set pieces still do).
   world.traverse(o => {
@@ -912,6 +923,25 @@ export function populate(info) {
   });
   applyCutaway();
   applyLighting(D, city);
+}
+
+/** Move any ground pickup or nest that ended up inside another prop to the nearest free floor. */
+function unbury() {
+  const inside = (x, z, own) => W.plats.some(p => !p.thin && Math.hypot(p.x - own.x, p.z - own.z) > 0.35 && Math.abs(p.x - x) < p.w / 2 + 0.6 && Math.abs(p.z - z) < p.d / 2 + 0.6 && p.y > 0.6 && p.y - p.th < 0.5);
+  const free = (x, z, o) => DRY(tAt(Math.floor(x / T + M.W / 2), Math.floor(z / T + M.H / 2))) && !inside(x, z, o);
+  const items = [...W.chests.filter(c => c.y < 0.6), ...W.caches.filter(c => c.y < 0.6), ...W.enemies.filter(e => e.type === 'nest')];
+  for (const o of items) {
+    if (!inside(o.x, o.z, o)) continue;
+    let spot = null;
+    for (let r = 1.2; r <= 9 && !spot; r += 0.8) for (let a = 0; a < 12 && !spot; a++) {
+      const x = o.x + Math.sin(a / 12 * TAU) * r, z = o.z + Math.cos(a / 12 * TAU) * r;
+      if (free(x, z, o)) spot = [x, z];
+    }
+    if (!spot) continue;
+    [o.x, o.z] = spot;
+    const g = o.g || o.mesh;
+    if (g) { g.position.x = o.x; g.position.z = o.z; }
+  }
 }
 
 export function applyLighting(D, city) {

@@ -46,7 +46,7 @@ function sign(text, col, x, y, z, dx, dz, w = 3.2) {
   g.fillStyle = col; g.font = 'bold 34px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.shadowColor = col; g.shadowBlur = 12;
   g.fillText(text, 128, 34);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); // disposed with the district (build.js)
   m.position.set(x, y, z);
   m.rotation.y = Math.atan2(dx, dz);
   world.add(m);
@@ -54,6 +54,12 @@ function sign(text, col, x, y, z, dx, dz, w = 3.2) {
   return m;
 }
 /** A use-point for E (see player.js useTarget). */
+/** Somewhere a new prop must not go: a crawlspace mouth, or on top of a chest, cache, nest, bench or bin already placed. */
+function blocked(x, z, r = 2.2) {
+  if (nearMouth(x, z)) return true;
+  const hit = o => Math.hypot(o.x - x, o.z - z) < r;
+  return W.chests.some(hit) || (W.caches || []).some(hit) || W.benches.some(hit) || W.bins.some(hit) || W.enemies.some(e => e.type === 'nest' && hit(e));
+}
 const usePoint = (x, z, r, label, act, y = 0) => { const u = { x, z, y, r, cr: 0.3, label, act, done: false }; W.uses.push(u); return u; };
 
 // ---------- interiors ----------
@@ -84,7 +90,7 @@ function buildInterior(I) {
   for (let y = I.y; y < I.y + I.h; y++) for (let x = I.x; x < I.x + I.w; x++) {
     if (Math.abs(x - (fx0 - fdx)) + Math.abs(y - (fz0 - fdz)) === 0) continue;
     if (I.back && Math.abs(x - (I.back[0] - I.back[2])) + Math.abs(y - (I.back[1] - I.back[3])) === 0) continue;
-    if (nearMouth(toW(x), toW(y))) continue; // keep crawlspace mouths clear
+    if (blocked(toW(x), toW(y))) continue; // keep crawlspace mouths and earlier loot clear
     tiles.push([x, y]);
   }
   if (!tiles.length) return;
@@ -248,7 +254,7 @@ function buildMarket(lot) {
   const stalls = [];
   for (let y = lot.y; y < lot.y + lot.h; y++) for (let x = lot.x; x < lot.x + lot.w; x++) if ((x + y) % 2 === 0 && DRY(tAt(x, y))) stalls.push([x, y]);
   shuffleR(stalls);
-  for (const [gx, gz] of stalls.filter(([x, y]) => !nearMouth(toW(x), toW(y))).slice(0, 6)) {
+  for (const [gx, gz] of stalls.filter(([x, y]) => !blocked(toW(x), toW(y), 2.6)).slice(0, 6)) {
     const x = toW(gx), z = toW(gz), col = AWN[ri(0, AWN.length - 1)], rot = rng.next() < 0.5 ? 0 : PI2;
     const g = new THREE.Group();
     mkMesh(Bx(2.6, 1, 1.2), lam(0x6a4a2a, { map: stoneTex }), 0, 0.5, 0, g);
@@ -286,7 +292,7 @@ function robStall(u, lamp) {
 // ---------- the crane site ----------
 function buildCrane(lot) {
   const x = toW(lot.x) + (lot.w * T) / 2 - T / 2, z = toW(lot.y) + (lot.h * T) / 2 - T / 2, H = 16;
-  if (nearMouth(x, z, 6)) return;
+  if (nearMouth(x, z, 6) || blocked(x, z, 3) || blocked(x + 2.4, z + 1.2, 1.8)) return;
   const steel = lam(0xe0b030, { map: metalTex }), dark = lam(0x2a2a30, { map: metalTex });
   for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mkMesh(Bx(0.18, H, 0.18), steel, x + sx * 0.6, H / 2, z + sz * 0.6);
   for (let y = 1; y < H; y += 1.6) for (const s of [-1, 1]) {
@@ -386,7 +392,7 @@ function tickCrane(dt) {
 function buildGarden(lot) {
   const soil = lam(0x4a3020, { map: furTex }), plank = lam(0x7a5838, { map: stoneTex });
   for (let y = lot.y; y < lot.y + lot.h; y++) for (let x = lot.x; x < lot.x + lot.w; x++) {
-    if ((x + y) % 2 || !DRY(tAt(x, y)) || nearMouth(toW(x), toW(y))) continue;
+    if ((x + y) % 2 || !DRY(tAt(x, y)) || blocked(toW(x), toW(y), 2.4)) continue;
     const cx = toW(x), cz = toW(y);
     staticBox(cx, cz, 2.6, 1.6, 0.5, plank);
     mkMesh(Bx(2.4, 0.08, 1.4), soil, cx, 0.52, cz);
@@ -484,7 +490,19 @@ const ARENA = {
 function buildArena(info) {
   const r = info.byDist && info.byDist[0];
   if (!r || G.mode === 'trial') return;
-  const kind = curD().boss, x = toW(r.cx), z = toW(r.cy);
+  // Centre the lair on dry ground the rat can walk to, in the farthest room that has some
+  // (a room's centre can be a pit or deep water; found by the playtest bots).
+  let cx = r.cx, cz = r.cy;
+  outer: for (const rm of info.byDist) {
+    let bd = 1e9, got = null;
+    for (let y = rm.y; y < rm.y + rm.h; y++) for (let x = rm.x; x < rm.x + rm.w; x++) {
+      if (!DRY(tAt(x, y)) || !info.dist || info.dist[gi(x, y)] < 0) continue;
+      const d = Math.hypot(x - rm.cx, y - rm.cy);
+      if (d < bd) { bd = d; got = [x, y]; }
+    }
+    if (got) { [cx, cz] = got; break outer; }
+  }
+  const kind = curD().boss, x = toW(cx), z = toW(cz);
   G.arena = { x, z, kind };
   if (ARENA[kind]) ARENA[kind](x, z);
   // A red beam marks the lair from anywhere in the district.
@@ -551,6 +569,16 @@ export function buildSetPieces(info) {
   if (name === 'Hollow Heights' || chance(0.25)) { const L = take(l => l.type === 'park' && l.w >= 3 && l.h >= 3); if (L) buildGarden(L); }
   buildBridges();
   clearMouths();
+  // Nothing may stand in an interior doorway (street clutter is placed before the interiors are furnished).
+  for (const I of info.interiors || []) for (const d of [I.door, I.back].filter(Boolean)) for (const s of [0, 1, -1]) {
+    const x = toW(d[0]) - d[2] * s * T, z = toW(d[1]) - d[3] * s * T;
+    for (let i = W.plats.length - 1; i >= 0; i--) {
+      const p = W.plats[i];
+      if (p.thin || p.y > 2.6 || p.y - p.th > 1.5 || Math.abs(p.x - x) > p.w / 2 + 1 || Math.abs(p.z - z) > p.d / 2 + 1) continue;
+      if (p.mesh) world.remove(p.mesh);
+      W.plats.splice(i, 1);
+    }
+  }
   // Anything built on top of a fungus buries it.
   for (const f of W.fungi || []) {
     if (f.taken) continue;

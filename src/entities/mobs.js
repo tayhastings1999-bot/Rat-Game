@@ -107,7 +107,7 @@ export function spawnEnemy(type, x, z, o = {}) {
     spd: D.spd * rand(0.9, 1.1) * (run.spdM || 1) * (mut ? 1.1 : 1), dmg: D.dmg * (run.dmgM || 1) * 1.25 * (mut ? 1.25 : 1),
     r: D.r * (el ? 1.3 : 1) * (o.sc || 1), h: D.h * (el ? 1.3 : 1) * (o.sc || 1), sc, xp: D.xp * (el ? 4 : 1),
     fly: D.fly, col: D.col, blood: D.blood, flash: 0, slow: 0, atk: rand(1, 2.5), ph: rand(0, 6), ang: rand(0, TAU),
-    elite: el, mut, corrupt: el ? o.corrupt || pick(CORRUPT_KEYS) : null, bar: D.bar || el,
+    born: run.time || 0, elite: el, mut, corrupt: el ? o.corrupt || pick(CORRUPT_KEYS) : null, bar: D.bar || el,
     pT: 0, pD: 0, bT: 0, bD: 0, dT: 0, tT: 0, lunge: 0, acid: 0, wind: 0, atkCd: 0, ward: 0, trailT: 0, wardT: 0,
     st: 'move', tt: 0, cd: rand(0.6, 1.6), jk: 0, lat: 0, oa: rand(0, TAU), ow: (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1.2),
     ax: x, az: z, hv: rand(0.3, 0.9), darts: 0, bl: rand(1.5, 3), tel: 0, mass: (D.mass || 1) * (el ? 1.5 : 1), ai: !!(MOBAI[type] || ROLE_AI[type]), flank: type === 'mawling' && Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0,

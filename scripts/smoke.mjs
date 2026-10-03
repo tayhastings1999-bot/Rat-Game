@@ -2,11 +2,11 @@
 // real key presses, and fails on any console error or page exception.
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, existsSync } from 'node:fs';
 
 const OUT = new URL('./out/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
-const exe = process.env.CHROMIUM || '/opt/pw-browsers/chromium';
+const exe = process.env.CHROMIUM || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined); // else Playwright's own download (CI)
 
 const server = await createServer({ server: { port: 5199, strictPort: true }, logLevel: 'error' });
 await server.listen();

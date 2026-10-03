@@ -36,7 +36,7 @@ function loop(now) {
   if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; }
   else if (G.slowMo > 0) { G.slowMo -= dt; sdt = dt * 0.3; } // perfect dodge
   const t0 = performance.now();
-  if (G.state === 'play') {
+  if (G.state === 'play' && !G.qaHold) { // qaHold: the QA bot is stepping the simulation itself
     update(sdt);
     hudT -= dt;
     if (hudT <= 0 && G.state === 'play') { hudT = 0.08; hud(); }

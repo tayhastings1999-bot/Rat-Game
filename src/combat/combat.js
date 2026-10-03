@@ -138,6 +138,7 @@ export function hurtP(d, from, raw) {
   d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (1 + 0.1 * run.tier) - (raw ? 0 : st.armor)));
   run.hp -= d;
   run.dHurt = (run.dHurt || 0) + d;
+  if (G.qa) G.qa.hurt(d, from, raw);
   if (!raw) P.inv = 0.6;
   G.flash = Math.max(G.flash, raw ? 0.35 : 1);
   G.shake = Math.max(G.shake, raw ? 0.08 : 0.25);
@@ -168,6 +169,7 @@ export function hurtP(d, from, raw) {
 export function kill(e) {
   if (e.dead) return;
   e.dead = true;
+  if (G.qa) G.qa.kill(e);
   run.kills++;
   run.spike = (run.spike || 0) + 0.025;
   meta.kills++;
