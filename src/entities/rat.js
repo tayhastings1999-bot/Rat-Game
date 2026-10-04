@@ -2,7 +2,7 @@
 // the pre-rendered menu/HUD portraits.
 import * as THREE from 'three';
 import { rand, TAU, PI2 } from '../core/util.js';
-import { G, P, W, run, meta } from '../core/state.js';
+import { G, P, W, meta } from '../core/state.js';
 import { scene, renderer } from '../render/renderer.js';
 import { furTex, stoneTex, flameTex } from '../render/textures.js';
 import { Sp, Bx, Cy, Co } from '../render/models.js';
@@ -231,25 +231,6 @@ export function setRat(C) {
 export const blob = new THREE.Mesh(new THREE.CircleGeometry(0.45, 12), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.4, depthWrite: false }));
 blob.rotation.x = -PI2;
 scene.add(blob);
-
-export function addRunt() {
-  const r = makeRat(CLASSES[run.cls]);
-  r.g.scale.setScalar(0.42);
-  scene.add(r.g);
-  W.familiars.push({ r, x: P.x, z: P.z, y: P.y, t: rand(0, 0.5), a: 0 });
-}
-export function clearFamiliars() {
-  for (const f of W.familiars) scene.remove(f.r.g);
-  W.familiars = [];
-}
-
-const ghostMat = new THREE.MeshBasicMaterial({ color: 0x9ad0ff, transparent: true, opacity: 0.35, depthWrite: false });
-export function makeGhostRat(cls) {
-  const r = makeRat(CLASSES[cls] || CLASSES.brawler);
-  r.g.traverse(o => { if (o.isMesh) o.material = ghostMat; if (o.isSprite) o.visible = false; });
-  scene.add(r.g);
-  return r;
-}
 
 // ---------- portraits ----------
 const pScene = new THREE.Scene();

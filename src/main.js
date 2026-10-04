@@ -1,9 +1,5 @@
 // Entry point: fonts, styles, boot, and the frame loop.
-import '@fontsource/pirata-one/latin-400.css';
-import '@fontsource/silkscreen/latin-400.css';
-import '@fontsource/silkscreen/latin-700.css';
-import '@fontsource/alegreya-sans/latin-500.css';
-import '@fontsource/alegreya-sans/latin-700.css';
+import './fonts.css';
 import './style.css';
 
 import { $ } from './core/util.js';

@@ -5,17 +5,18 @@
 import { rand, randi, clamp, angD, pick, keep, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { fx, puff, spark, blood, boom, dnum, swipeFx } from '../fx/fx.js';
+import { fx, puff, spark, blood, dnum, swipeFx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { banner } from '../ui/hud.js';
 import { M, G as GRAV, toW, tileAt, floorY, solidFor, flowDir, collideBody } from '../world/grid.js';
 import { EN, isSewer } from '../data/world.js';
 import { CORRUPT } from '../data/items.js';
 import { glob } from '../combat/arsenal.js';
-import { hit, hurtP, kill, gainXP, aoe } from '../combat/combat.js';
+import { hit, hurtP, kill, } from '../combat/combat.js';
+import { addXP } from '../game/progress.js';
 import { warn, puddle } from '../combat/hazards.js';
 import { bossAI } from './bosses.js';
-import { owlAI } from '../game/light.js';
+import { TUNE } from '../tuning.js';
 import { thiefAI } from '../game/objectives.js';
 import { ROLE_AI, tickFlee, catHunt } from './roles.js';
 import { creatureMesh } from '../render/pools.js';
@@ -76,7 +77,7 @@ function rosterIntros(dt) {
   for (const [k, at] of roster()) {
     if (t < at || run.seenMobs[k]) continue;
     run.seenMobs[k] = true;
-    if (at === 0 || G.mode === 'trial') continue;
+    if (at === 0) continue;
     run.introCd = 8; // one new threat every few seconds at most
     banner('New threat · ' + INTRO[k][0], INTRO[k][1]);
     const n = k === 'brute' || k === 'ghoul' ? 1 : 3;
@@ -97,7 +98,7 @@ export function spawnEnemy(type, x, z, o = {}) {
   const D = EN[type], gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
-  const eliteP = run.time < 90 ? 0 : Math.min(0.2, 0.02 + (run.T || 0) * 0.008 + (sewer ? 0.05 : 0));
+  const Z = TUNE.zone, eliteP = run.time - (run.dStart || 0) < 60 ? 0 : Math.min(Z.eliteMax, Z.eliteBase + (run.T || 0) * Z.elitePerThreat + (sewer ? 0.05 : 0));
   const el = !o.plain && (!!o.elite || Math.random() < eliteP);
   const mut = sewer && G.mode !== 'trial';
   const hpm = (run.hpM || 1) * (el ? 2 : 1) * (mut ? 1.5 : 1), sc = (D.sc || 1) * (el ? 1.3 : 1) * (o.sc || 1);
@@ -534,12 +535,6 @@ function bonkPair(a, b) {
   spark((a.x + b.x) / 2, a.y + 0.6, (a.z + b.z) / 2, 1.2);
   if (Math.random() < 0.5) dnum(b.x, b.y + b.h + 0.4, b.z, 'BONK', 'crit');
   G.shake = Math.max(G.shake, 0.12);
-  if (st.mut.recoil) recoilBlast(a);
-}
-function recoilBlast(e) {
-  aoe(e.x, e.y, e.z, 2.4, 22, 5, 'recoil');
-  boom(e.x, e.y + 0.5, e.z, 2.6, 0xffb070);
-  e.bonk = 0;
 }
 
 // ---------- predators (big patrol cats) ----------
@@ -579,7 +574,7 @@ export function updateEnemies(dt0, cap) {
     if (!e.fly && e.y < -3) {
       // Fell into a collapsed pit. Bosses climb back out; everything else is gone.
       if (e.boss) { e.x = P.x + rand(-6, 6); e.z = P.z + rand(-6, 6); e.y = floorY(e.x, e.z) + 6; e.vy = 0; continue; }
-      e.dead = true; run.kills++; gainXP(e.xp || 1); continue;
+      e.dead = true; run.kills++; addXP(e.xp || 1); continue;
     }
     // Poison and burn ticks.
     if (e.pT > 0 || e.bT > 0) {
@@ -602,7 +597,7 @@ export function updateEnemies(dt0, cap) {
       e.spawnT -= dt;
       if (e.spawnT <= 0 && Math.hypot(e.x - P.x, e.z - P.z) < 45) {
         e.spawnT = Math.max(1.4, 3.4 - run.time / 150) / (1 + (run.T || 0) * 0.04);
-        if (W.enemies.length < cap + 20) { const a = rand(0, TAU); spawnEnemy(pickType(), e.x + Math.sin(a) * 2, e.z + Math.cos(a) * 2); }
+        if (W.enemies.length < TUNE.enemies.cap) { const a = rand(0, TAU); spawnEnemy(pickType(), e.x + Math.sin(a) * 2, e.z + Math.cos(a) * 2); }
       }
       continue;
     }
@@ -620,8 +615,7 @@ export function updateEnemies(dt0, cap) {
       e.cd -= dt * (run.atkM || 1) * (haste ? 1.6 : 1) * rage;
       if (!mobState(e, dt, dx, dz) && !tickFlee(e, dt, dx, dz, d)) (MOBAI[e.type] || ROLE_AI[e.type])(e, dt, dx, dz, d, e.spd * (haste ? 1.4 : 1) * rage);
     }
-    if (e.type === 'owl') custom = owlAI(e, dt);
-    else if (e.pred && !custom) custom = predAI(e, dt, d);
+    if (e.pred && !custom) custom = predAI(e, dt, d);
     if (!custom) {
       // Generic chaser with a telegraphed contact bite (predators on the hunt).
       const sp = e.spd * slowMul(e) * (e.pred ? 2 : 1) * (e.wind > 0 ? 0.12 : 1), dir = flowDir(e);
@@ -637,8 +631,6 @@ export function updateEnemies(dt0, cap) {
       fallChk(e, g);
       if (e.hw && g && P.y > e.y + 0.5 && d < 7) e.vy = Math.sqrt(2 * GRAV * (Math.min(P.y - e.y, 8) + 0.8));
     }
-    // Launched mobs that slam into walls with Slingshot Recoil explode.
-    if (e.bonk > 0 && e.hw && st.mut.recoil && Math.hypot(e.kx, e.kz) > 5) recoilBlast(e);
     if (tileAt(e.x, e.z) === 4 && e.y < -0.5 && !e.fly) {
       e.acid -= dt;
       if (e.acid <= 0) { e.acid = 0.5; e.hp -= 6 + (e.bonk > 0 ? 30 : 0); blood(e.x, e.y + 0.3, e.z, 0xb8f040, null, 2); if (e.hp <= 0) { kill(e); continue; } }
@@ -706,7 +698,7 @@ function bark(e) {
 }
 function predAI(e, dt, d) {
   // Shadows all but hide you; standing in light makes you easy to spot.
-  const det = P.inDuct ? 0 : (P.squeeze ? 3.5 : P.sprinting ? 12 : 8.5) * (P.shadow ? 0.3 : 1 + (run.expo || 0) / 100);
+  const det = P.inDuct ? 0 : P.squeeze ? 3.5 : 8.5;
   e.det = e.mode === 'hunt' ? 18 : det;
   e.look = e.ang + Math.sin(G.time * 0.9 + (e.ph || 0)) * 0.45;
   if (e.mode === 'patrol') {
@@ -755,21 +747,21 @@ function tickCorrupt(e, dt) {
  * a short lull so there is room to breathe, loot and reposition.
  */
 export function spawnTick(dt) {
-  const trial = G.mode === 'trial', TL = run.T || 0, mins = run.time / 60;
+  const TL = run.T || 0, mins = (run.time - (run.dStart || 0)) / 60;
   rosterIntros(dt);
-  const cap = trial ? 45 : Math.min(220, 14 + mins * 9 + TL * 6 + run.tier * 10) * (run.moon ? 1.4 : 1);
+  const cap = Math.min(TUNE.enemies.cap, (14 + mins * 9 + TL * 6 + run.tier * 10) * (run.moon ? 1.4 : 1));
   run.lullT = (run.lullT || 0) - dt;
   run.spawnT -= dt;
   if (run.spawnT <= 0 && M.spawnTiles.length) {
-    const base = trial ? 2.2 : Math.max(0.18, 1.6 / (1 + TL * 0.12 + mins * 0.05));
+    const base = Math.max(0.18, 1.6 / (1 + TL * 0.12 + mins * 0.05));
     run.spawnT = base * (run.moon ? 0.5 : 1) * (run.lullT > 0 ? 2.5 : 1);
-    const n = trial ? 2 : 1 + Math.floor(TL * 0.25);
+    const n = 1 + Math.floor(TL * 0.25);
     for (let i = 0; i < n && W.enemies.length < cap; i++) {
       const k = M.spawnTiles[randi(0, M.spawnTiles.length - 1)];
       spawnEnemy(pickType(), toW(k % M.W) + rand(-1.4, 1.4), toW((k / M.W) | 0) + rand(-1.4, 1.4));
     }
   }
-  if (!trial) {
+  {
     run.surgeT -= dt;
     if (run.surgeT <= 0 && M.spawnTiles.length) {
       run.surgeT = Math.max(40, 70 - TL * 1.5);

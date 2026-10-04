@@ -23,8 +23,6 @@ export const G = {
   exitD: null,          // gate to the next surface district (or trial drain)
   manhole: null,        // sewer entrance on the surface
   startRoom: null,
-  ghost: null,
-  friendGhost: null,
   rat: null,
   darkness: 0,          // 0..1, how deep the player is in a zero-visibility zone
   touch: false,         // on-screen controls in use
@@ -32,10 +30,10 @@ export const G = {
 
 /** Per-map entity lists. Reset whenever a district is generated. */
 export const W = {
-  rooms: [], objs: [], plats: [], inter: [], benches: [], chests: [], caches: [], pipes: [],
-  lamps: [], valves: [], zones: [], enemies: [], gems: [], scraps: [], cores: [], keys: [],
-  pproj: [], eproj: [], parts: [], foods: [], familiars: [], scentPaths: [], baits: [], gibs: [], corpses: [], uses: [], washers: [],
-  puddles: [], hazQ: [], shrapQ: [], lines: [], lairs: [], secrets: [], swarm: [], fungi: [], bins: [], volt: [], neons: [], searches: [], shafts: [], prints: [], traps: [], falling: [], shocks: [], smokes: [], ductWires: [], ductNets: [], crates: [],
+  rooms: [], objs: [], plats: [], inter: [], chests: [], caches: [], pipes: [],
+  lamps: [], zones: [], enemies: [], scraps: [], keys: [],
+  pproj: [], eproj: [], parts: [], foods: [], scentPaths: [], baits: [], gibs: [], corpses: [], uses: [], washers: [],
+  puddles: [], hazQ: [], lines: [], lairs: [], secrets: [], fungi: [], bins: [], volt: [], neons: [], prints: [], traps: [], falling: [], shocks: [], smokes: [], ductWires: [], ductNets: [], crates: [],
   cracks: new Map(),
 };
 
@@ -43,8 +41,8 @@ export const P = {
   x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, onGround: true, coyote: 0, buffer: 0, air: 0, facing: Math.PI,
   inv: 0, slam: false, lock: 0, jumping: false, cut: false, wx: 0, wz: -1, fallV: 0, aim: 0, aimT: 0,
   roll: 0, rollCd: 0, rdx: 0, rdz: 1, safe: { x: 0, z: 0, y: 0 }, poisonT: 0, squeeze: false, carry: null,
-  chewing: false, chewT: 0, climbing: false, wallT: 0, wallType: 0, wallTop: 0, wallNX: 0, wallNZ: 0, scramble: 0, scrCd: 0, light: 0, shadow: false, sprintMem: 0, chain: 0, chainT: 0, atk: 0, acidT: 0, scent: false,
-  sprinting: false, staT: 0, gmul: 1, slowT: 0, pTick: 0, glideT: 0, bulwark: 0, lastHitT: 0, trailT: 0,
+  chewing: false, chewT: 0, climbing: false, wallT: 0, wallType: 0, wallTop: 0, wallNX: 0, wallNZ: 0, atk: 0, acidT: 0, scent: false,
+  gmul: 1, slowT: 0, pTick: 0, bulwark: 0, lastHitT: 0,
 };
 
 /** Current run (reset per run). */
@@ -53,7 +51,7 @@ export const run = {};
 export const st = {};
 
 export const settings = Object.assign(
-  { shake: 1, music: 0.55, sfx: 0.7, sens: 1, mouse: true },
+  { shake: 1, music: 0.55, sfx: 0.7 },
   loadJSON('scurry.settings', loadJSON('scurry5.settings', {})),
 );
 if (settings.vol != null && settings.sfx == null) settings.sfx = settings.vol;
@@ -61,12 +59,15 @@ export const saveSettings = () => saveJSON('scurry.settings', settings);
 
 /** Persistent meta progression (the Nest). */
 export const meta = Object.assign(
-  { kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, dominance: 0, domTotal: 0, startAt: 'row', nest: {}, bought: {}, runs: 0 },
+  { kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0 },
   loadJSON('scurry.meta', loadJSON('scurry5.meta', {})),
 );
-if (!meta.nest) meta.nest = {};
-if (!meta.bought) meta.bought = {};
+// Cut systems leave nothing behind in the save: Nest perks, shortcuts, bought classes,
+// dominance, class unlock flags, and the Daily Run / Ghost Trial boards and ghosts.
+for (const k of ['nest', 'bought', 'startAt', 'dominance', 'domTotal']) delete meta[k];
+for (const k of Object.keys(meta)) if (k.startsWith('u_')) delete meta[k];
+try { for (const k of Object.keys(localStorage)) if (/^scurry4\.|^scurry\.daily\./.test(k)) localStorage.removeItem(k); } catch (_) { /* storage blocked */ }
 export const saveMeta = () => saveJSON('scurry.meta', meta);
 
-export const best = loadJSON('scurry.best', loadJSON('scurry4.best', { time: 0, kills: 0, district: 0 }));
+export const best = loadJSON('scurry.best', { time: 0, kills: 0, district: 0 });
 export const saveBest = () => saveJSON('scurry.best', best);

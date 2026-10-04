@@ -11,14 +11,13 @@ import { dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, gi, inG, toG, toW, tAt, floorY, descend, nearOpen } from '../world/grid.js';
 import { objTargets } from './objectives.js';
-import { ROUTES } from './routes.js';
 
 export const TOX = { cone: 0xff2ad8, print: 0xc8ff20, gnaw: 0x20ffc8, alert: 0xff3a20 };
 
 // ---------- gauge ----------
 export function toggleScent() {
   if (P.scent) { P.scent = false; return; }
-  if (P.scentE < 1 && !st.rag) { dnum(P.x, P.y + 1.6, P.z, 'Nose needs a moment', 'info'); return; }
+  if (P.scentE < 1) { dnum(P.x, P.y + 1.6, P.z, 'Nose needs a moment', 'info'); return; }
   P.scent = true;
   sfx('sniff');
 }
@@ -56,8 +55,7 @@ function scan() {
     }
     if (b) W.scentPaths.push({ col, p: descend(M.flow, b[0], b[1], 120) });
   };
-  if (G.mode === 'survival' && G.exits && G.exits.length) for (const e of G.exits) tgt([e], ROUTES[e.route] ? ROUTES[e.route].col : 0x6ad06a);
-  else if (G.mode === 'survival' && G.exitD) tgt([G.exitD], 0x6ad06a);
+  if (G.exitD) tgt([G.exitD], 0x6ad06a);
   { const ts = objTargets(); if (ts.length) tgt(ts, 0xffd040); }
   if (G.mode === 'survival' && G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
   if (W.keys.length) tgt(W.keys, 0xffd040);
@@ -65,8 +63,6 @@ function scan() {
   if (G.evMarker) tgt([G.evMarker.e || G.evMarker], 0xffd040);
   tgt(W.caches.filter(c => !c.taken), 0xffe070);
   tgt(W.chests.filter(c => !c.open), 0xffa030);
-  tgt(W.benches, 0x4aa3ff);
-  if (G.mode === 'trial') { const v = W.valves.filter(v => !v.done); tgt(v.length ? v : [G.exitD], 0x6ad06a); }
   for (const e of W.enemies) if (e.pred && e.path) W.scentPaths.push({ col: TOX.alert, p: e.path.filter((_, i) => i % 2 === 0), loop: true });
   // Gnaw points: boards and hollow walls, ropes, live wires, traps, bins.
   gnaw.length = 0;
@@ -80,7 +76,7 @@ function scan() {
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < 40) gnaw.push({ x: b.x, y: 1.3, z: b.z, s: 0.8 });
 }
 
-/** Smoke clouds (Sewer Sneak): you vanish inside; the horde inside is slowed and loses its rhythm. */
+/** Smoke clouds (Sewer Sneak): the horde inside is slowed, loses its rhythm, and predators lose your trail. */
 function tickSmoke(dt) {
   P.smoke = false;
   for (const s of W.smokes) {
@@ -95,16 +91,13 @@ function tickSmoke(dt) {
     }
   }
   keep(W.smokes, s => s.t > 0);
-  // Lurk in the dark (or smoke) for a second and your next strike is an ambush.
-  if (P.shadow || P.smoke) { P.ambT = (P.ambT || 0) + dt; if (P.ambT > 1) P.ambush = 1; }
-  else if (P.ambush > 0) { P.ambT = 0; P.ambush = Math.max(0, P.ambush - dt / 3); }
 }
 
 export function tickScent(dt) {
   tickSmoke(dt);
   if (P.scentE == null) P.scentE = st.scentMax;
   if (P.scent) {
-    if (!st.rag) P.scentE -= dt * (run.rain ? 1.6 : 1); // rain washes scent away
+    P.scentE -= dt * (run.rain ? 1.6 : 1); // rain washes scent away
     if (P.scentE <= 0) { P.scentE = 0; P.scent = false; dnum(P.x, P.y + 1.6, P.z, 'Scent fades', 'info'); }
   } else P.scentE = Math.min(st.scentMax, P.scentE + dt * 0.55 * st.scentMax / 8);
   trackPrints(dt);

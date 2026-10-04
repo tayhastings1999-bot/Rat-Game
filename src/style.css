@@ -174,7 +174,7 @@ body.touch #tip{bottom:160px}
 #hint,#mapBox{transition:opacity .45s}
 body.combat #hint{opacity:0}
 body.combat #mapBox{opacity:.18}
-.tb.shriek{grid-column:span 2;width:auto;height:44px;border-radius:12px;background:rgba(224,56,44,.75);border-color:#ffd040;animation:pulse .5s steps(2) infinite}
+.tb.atk{grid-column:span 2;width:auto;height:52px;border-radius:12px;background:rgba(224,56,44,.6);border-color:#ffd040}
 /* Breakthroughs */
 #top.capped .xpbar i{background:linear-gradient(180deg,#fff0a0,#f2b233 60%,#a06a10);animation:capPulse .6s ease-in-out infinite alternate}
 #top.capped #lvlBig{color:var(--gold)}

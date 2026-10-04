@@ -56,7 +56,7 @@ export const SIGS = {
         if (e.dead || G.state !== 'play') return;
         const dm = 20 + (e.pD || 4) * e.pT * 3;
         boom(e.x, e.y + e.h * 0.5, e.z, 2.6, 0x9be06a);
-        for (const o of near(e.x, e.y, e.z, 3)) { hit(o, dm, Math.atan2(o.x - e.x, o.z - e.z), 5, 'special'); o.pT = Math.max(o.pT, 3); o.pD = Math.max(o.pD || 0, 4 * st.dmg * st.poisonMul); }
+        for (const o of near(e.x, e.y, e.z, 3)) { hit(o, dm, Math.atan2(o.x - e.x, o.z - e.z), 5, 'special'); o.pT = Math.max(o.pT, 3); o.pD = Math.max(o.pD || 0, 4 * st.dmg); }
       }, i * 60));
       return true;
     },
@@ -114,7 +114,6 @@ export const SIGS = {
       puff(P.x, P.y + 0.5, P.z, 0x1a1a22, 14, 2.5);
       P.x = spot.x; P.z = spot.z; P.y = Math.max(floorY(spot.x, spot.z), t.y); P.vx = P.vz = P.vy = 0;
       P.facing = Math.atan2(t.x - P.x, t.z - P.z);
-      P.ambush = Math.max(P.ambush || 0, 2);
       P.inv = Math.max(P.inv, 0.3);
       puff(P.x, P.y + 0.5, P.z, 0x1a1a22, 14, 2.5);
       anim('step', 0.35);

@@ -18,7 +18,7 @@
 import { G, run, st, meta, saveMeta } from '../core/state.js';
 import { sfx } from '../audio/audio.js';
 import { CLASSES } from '../data/classes.js';
-import { FACE, facePortrait, addRunt } from '../entities/rat.js';
+import { FACE, facePortrait } from '../entities/rat.js';
 import { banner } from '../ui/hud.js';
 
 // ---------- the cast ----------
@@ -78,7 +78,7 @@ const SCENES = {
     ],
     choice: [
       { id: 'spare', label: 'Let him go', desc: 'He walks. You keep your hands clean.', reply: [['scab', 'Generous. You always were, once you were safe.']] },
-      { id: 'strip', label: 'Take everything he has', desc: 'A weapon crate and his salvage, right now.', reply: [['scab', "Go on, take it. You're good at taking. And at leaving."]] },
+      { id: 'strip', label: 'Take everything he has', desc: 'His stash of gold and food, right now.', reply: [['scab', "Go on, take it. You're good at taking. And at leaving."]] },
       { id: 'sorry', label: '"I heard you. I ran. I\'m sorry."', desc: 'Say the thing you never said.', reply: [['scab', "...Sorry doesn't lift beams, Wick."], ['scab', "But I'll remember you said it."]] },
     ],
   },
@@ -180,7 +180,7 @@ export function bond(n = 1) { S().bonds += n; save(); }
 const queue = [];
 let cur = null;
 /** Harness runs (?debug) resolve scenes instantly with the first choice, unless a test asks to see them. */
-const silent = () => G.mode === 'trial' || G.qa || ((location.search || '').includes('debug') && !G.testStory);
+const silent = () => G.qa || ((location.search || '').includes('debug') && !G.testStory);
 export function play(id, done) {
   if (S().seen[id] && !SCENES[id].repeat) { done && done(null); return; }
   if (silent()) { S().seen[id] = true; const c = SCENES[id].choice; const pickC = c ? c.find(o => available(o)) : null; save(); done && done(pickC ? pickC.id : null); return; }
@@ -268,14 +268,12 @@ export const inScene = () => !!cur;
 // ---------- hooks from gameplay ----------
 /** Run start: chapter card, carry-overs (Pip, the ending's mark), the prologue. */
 export function onRunStart() {
-  if (G.mode === 'trial') return;
   const s = S();
   G.scabKing = s.ch >= 7; // chapter 7: the Rat King in the deep sewer is Scab
-  if (s.pip) addRunt();
   // The ending leaves a mark on every run after it.
-  if (s.ending === 'cut') { addRunt(); st.swarmPlus = (st.swarmPlus || 0) + 2; }
+  if (s.ending === 'cut') st.healMul *= 1.15;
   if (s.ending === 'leave') st.speed *= 1.08;
-  if (s.ending === 'crown') { st.dmg += 0.1; run.threatBase = (run.threatBase || 0) + 1; }
+  if (s.ending === 'crown') { st.dmg += 0.1; st.taken *= 1.1; }
   if (s.ch === 0) play('prologue', () => { s.ch = 1; save(); chapterCard(); });
   else if ((s.ch === 2 || s.ch === 3) && run.obj && run.obj.kind === 'rescue' && run.tier >= 1) pipDistrict(); // a shortcut start lands straight in Pip's district
   else setTimeout(chapterCard, 2600);
@@ -291,7 +289,6 @@ export function storyGoal() { const c = CHAPTERS[S().ch]; return c ? c.goal : nu
 /** A new district. Chapter 2 → 3: Pip has been taken; this district's job is a rescue. */
 export function onDistrict() {
   const s = S();
-  if (G.mode === 'trial') return;
   if ((s.ch === 2 || s.ch === 3) && run.tier >= 1 && run.obj && run.obj.kind === 'rescue') pipDistrict();
   if (s.ch === 5 && run.layer === 'sewer') play('below', () => { s.ch = 6; save(); chapterCard(); });
 }
@@ -306,7 +303,6 @@ function pipDistrict() {
 export const forcedObjective = () => ((S().ch === 2 || S().ch === 3) && (run.tier || 0) >= 1 && G.mode !== 'trial' ? 'rescue' : null);
 /** A cage gnawed open. Freeing rats is going back for them: a bond. The last cage in Pip's district holds Pip. */
 export function onCage(o) {
-  if (G.mode === 'trial') return;
   bond();
   const s = S();
   if (run.pipHere && s.ch === 3 && o.freed >= o.cages.length) {
@@ -331,7 +327,6 @@ export function onScabCaught(e, rewards) {
 /** A boss down. Pest Control → Below, the King → the crown changes hands, Scab → the end. */
 export function onBossDeath(b) {
   const s = S();
-  if (G.mode === 'trial') return;
   if (s.ch === 4 && (b.kind === 'exterm' || run.tier >= 2)) {
     play('bargain', pick => { s.ally = pick === 'ally'; s.ch = 5; save(); chapterCard(); });
   } else if (s.ch === 6 && b.kind === 'ratking') {
@@ -342,7 +337,7 @@ export function onBossDeath(b) {
       s.ending = pick || 'leave';
       s.ch = 8;
       save();
-      play(end, () => banner('The end of the story', { cut: 'You went back. Every run from now on starts with Bram and Pip beside you.', leave: 'You kept running. Every run from now on, you run a little faster.', crown: 'You took the crown. Every run from now on hits harder, and the city fears you.' }[s.ending]));
+      play(end, () => banner('The end of the story', { cut: 'You went back. From now on, food heals you 15% more.', leave: 'You kept running. Every run from now on, you run a little faster.', crown: 'You took the crown. From now on you hit 10% harder, and take 10% more.' }[s.ending]));
     });
   }
 }

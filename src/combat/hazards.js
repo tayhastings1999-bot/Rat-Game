@@ -1,7 +1,7 @@
 // Telegraphed area attacks and lingering ground puddles (fire, poison, sludge).
 import * as THREE from 'three';
 import { keep } from '../core/util.js';
-import { G, P, W, run, st } from '../core/state.js';
+import { G, P, W, run } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
 import { fx, boom } from '../fx/fx.js';
@@ -57,7 +57,7 @@ export function tickHaz(dt) {
     if (p.tick <= 0) {
       p.tick = 0.45;
       if (p.own === 'e' || p.own === 'all') {
-        if (!(st.toxImmune && p.kind === 'poison') && Math.hypot(P.x - p.x, P.z - p.z) < p.R && Math.abs(P.y - p.y) < 1.2) hurtP(D[1] * (1 + (run.T || 0) * 0.06), null, true);
+        if (Math.hypot(P.x - p.x, P.z - p.z) < p.R && Math.abs(P.y - p.y) < 1.2) hurtP(D[1] * (1 + (run.T || 0) * 0.06), null, true);
       }
       if (p.own !== 'e') {
         for (const e of W.enemies) {

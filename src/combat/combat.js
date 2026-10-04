@@ -1,6 +1,6 @@
-// Damage in both directions, deaths, drops, XP and the threat engine.
+// Damage in both directions, deaths, drops, and zone difficulty scaling.
 import * as THREE from 'three';
-import { rand, randi, TAU } from '../core/util.js';
+import { rand } from '../core/util.js';
 import { G, P, W, run, st, meta, settings } from '../core/state.js';
 import { world, bury, dropCreature } from '../render/renderer.js';
 import { Cy } from '../render/models.js';
@@ -9,35 +9,33 @@ import { blood, spark, puff, boom, decal, gore, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { floorY } from '../world/grid.js';
 import { isSewer } from '../data/world.js';
-import { chain, shoot } from './arsenal.js';
-import { puddle, warn } from './hazards.js';
+import { warn } from './hazards.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
 import { addChest } from '../world/build.js';
 import { comboGain, comboBreak } from '../game/swarm.js';
+import { TUNE } from '../tuning.js';
 import { buffOn } from '../game/forage.js';
-import { junkHit } from '../game/junk.js';
 import { rivalDeath } from '../world/ducts.js';
 import { guardMul, maybeFlee, packRage } from '../entities/roles.js';
-import { addXP, championDown, dropMusk, dropCrate } from '../game/progress.js';
+import { addXP, dropLoot } from '../game/progress.js';
 import { onBossHit } from '../entities/brain.js';
 import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
-import { contract } from '../game/contracts.js';
 import { bountyKill } from '../game/events.js';
 import { thiefDown } from '../game/objectives.js';
-import { onKill } from '../game/rules.js';
 import { scabDown } from '../game/personality.js';
 import { banner } from '../ui/hud.js';
-import { openLevelUp, die } from '../ui/screens.js';
+import { die } from '../ui/screens.js';
 import { tryParry } from '../game/signature.js';
 
 // ---------- queries ----------
-export const near = (x, y, z, R) => {
+/** Enemies within R of a point. `up`: how far above it still counts (melee swats reach flyers higher). */
+export const near = (x, y, z, R, up = 2.6) => {
   const o = [];
   for (const e of W.enemies) {
     if (e.dead) continue;
     const dx = e.x - x, dz = e.z - z, rr = R + e.r;
-    if (dx * dx + dz * dz < rr * rr && e.y < y + 2.6 && e.y + e.h > y - 2) o.push(e);
+    if (dx * dx + dz * dz < rr * rr && e.y < y + (e.fly ? up : 2.6) && e.y + e.h > y - 2) o.push(e);
   }
   return o;
 };
@@ -69,14 +67,13 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   if (e.dead) return;
   if (e.invuln > 0) { if (!quiet) spark(e.x, e.y + e.h * 0.6, e.z, 0.8, 0x9ad0ff); return; }
   const melee = isMelee(src);
-  kb = ((kb || 0) * 1.7 * st.kb * (st.mut.recoil ? 2.2 : 1)) / (e.mass || 1);
+  kb = ((kb || 0) * 1.7 * st.kb) / (e.mass || 1);
   if (kb > 6 && !e.heavy && !e.fly && !e.boss && ang != null && e.type !== 'nest') {
     e.vy = Math.max(e.vy || 0, kb * 0.45);
     e.bonk = 0.6;
     if (base >= 25) G.shake = Math.max(G.shake, 0.1 * settings.shake);
   }
-  let d = base * st.dmg * (melee ? 1 + st.melee : 1) * (src === 'primary' ? st.primMul : 1) * (st.apex && (e.elite || e.boss || e.pred || e.champion) ? st.apex : 1);
-  if (st.fury && run.hp < st.maxHp * 0.5) d *= 1.3;
+  let d = base * st.dmg * (src === 'primary' ? st.primMul : 1);
   const crit = perfectCrit() || Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   e.lastSrc = src;
   if (crit) d *= st.critMul;
@@ -97,21 +94,13 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   if (crit || d >= 40) G.hitStop = Math.max(G.hitStop, 0.035);
   run.dmgBy[src] = (run.dmgBy[src] || 0) + d;
   run.dmg += d;
-  const chem = st.mut.chemfire ? 2 : 1;
-  if (itemFx || st.poisonMul > 1) {
-    if (st.poison) { e.pT = 3; e.pD = 4 * st.dmg * st.poisonMul * chem; }
-    if (st.burn && itemFx) { e.bT = 2; e.bD = 7 * st.dmg * chem; }
-  }
   if (kb && ang != null && !e.heavy) { e.kx += Math.sin(ang) * kb; e.kz += Math.cos(ang) * kb; }
   if (!quiet || crit) {
     blood(e.x, e.y + e.h * 0.6, e.z, e.blood, ang, crit ? 6 : 3);
     spark(e.x, e.y + e.h * 0.6, e.z, crit ? 1.4 : 0.8);
   }
-  if (crit && st.mut.gutting) gore(e, 0.35);
   if (!quiet || crit || Math.random() < 0.3) dnum(e.x, e.y + e.h + 0.3, e.z, d, crit ? 'crit' : '');
   if (melee && st.meleeLeech) run.hp = Math.min(st.maxHp, run.hp + st.meleeLeech * st.healMul);
-  junkHit(e, d, src);
-  if (melee && st.mut.livewire && Math.random() < 0.35) chain(e, 2, d * 0.5, 'livewire', [e.x, e.y + e.h * 0.6, e.z], true);
   if (e.hp <= 0) kill(e);
   else maybeFlee(e);
 }
@@ -147,22 +136,11 @@ export function hurtP(d, from, raw) {
     P.vx += dx / l * 6;
     P.vz += dz / l * 6;
     if (from.corrupt === 'leech' && !from.dead) { from.hp = Math.min(from.maxHp, from.hp + from.maxHp * 0.12); puff(from.x, from.y + from.h * 0.6, from.z, 0xd02040, 6, 2); }
-    if (st.thorns && from.hp != null && !from.dead && (from.tT || 0) <= 0) { from.tT = 0.5; hit(from, st.thorns, Math.atan2(from.x - P.x, from.z - P.z), 6, 'thorns'); }
   }
   blood(P.x, P.y + 0.5, P.z, 0xa01010, null, raw ? 2 : 6);
   if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); comboBreak(); }
   if (run.hp < st.maxHp * 0.3 && !run.lowWarned) { run.lowWarned = true; banner('Rat needs cheese, badly!', 'Press F to sniff out a food cache'); }
-  if (run.hp <= 0) {
-    if (run.reactor) {
-      run.reactor = false;
-      run.hp = st.maxHp * 0.5;
-      P.inv = 2;
-      banner('Emergency Reactor', 'Back from the brink');
-      boom(P.x, P.y + 0.5, P.z, 5, 0x9ad0ff);
-      return;
-    }
-    die();
-  }
+  if (run.hp <= 0) die();
 }
 
 // ---------- deaths & drops ----------
@@ -171,7 +149,6 @@ export function kill(e) {
   e.dead = true;
   if (G.qa) G.qa.kill(e);
   run.kills++;
-  run.spike = (run.spike || 0) + 0.025;
   meta.kills++;
   if (e.mini) run.minis = (run.minis || 0) + 1;
   comboGain(e.mini ? 20 : e.elite ? 8 : e.boss ? 0 : 3);
@@ -189,25 +166,12 @@ export function kill(e) {
     const a = e.hitA ?? e.ang + Math.PI, v = e.fly ? 2 : 3.5 + Math.min(6, Math.hypot(e.kx || 0, e.kz || 0) * 0.4);
     W.corpses.push({ type: e.type, x: e.x, y: e.y, z: e.z, ang: e.ang, sc: e.sc || 1, ph: e.ph || 0, vx: Math.sin(a) * v, vy: e.fly ? 0 : rand(3, 5.5), vz: Math.cos(a) * v, rx: 0, rz: 0, sx: rand(-9, 9), sz: rand(-9, 9), t: 0, life: e.fly ? 0.9 : 0.6, fly: e.fly, blood: e.blood, col: e.col, h: e.h, gph: e.gph || 0 });
   }
-  if (st.leech) run.hp = Math.min(st.maxHp, run.hp + st.leech * st.healMul);
-  if (st.carrion && !e.boss) run.hp = Math.min(st.maxHp, run.hp + st.maxHp * st.carrion * st.healMul);
-  if (e.champion) championDown(e);
-  if (e.lastSrc === 'trap') contract('traps');
-  if (P.shadow && !e.boss) contract('shadow');
-  if (e.elite && !e.champion) contract('elites');
-  if (e.bounty) { contract('bounty'); bountyKill(e); }
+  if (e.bounty) bountyKill(e);
   if (e.thief) thiefDown(e);
   packRage(e);
-  if (e.type === 'mimic') { const gy = floorY(e.x, e.z); dropCrate(e.x, gy, e.z); for (let i = 0; i < 8; i++) scrapDrop(e.x, gy, e.z); if (e.bin) e.bin.done = true; }
-  onKill(e);
+  if (e.type === 'mimic') { dropLoot(e.x, floorY(e.x, e.z), e.z, 16); if (e.bin) e.bin.done = true; }
   if (e.scab) scabDown(e);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
-  if (st.shrap && !e.boss) W.shrapQ.push([e.x, e.y, e.z]);
-  if (st.mut.nailbomb && !e.boss && run.nailT <= 0) {
-    run.nailT = 0.08;
-    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + rand(0, 1); shoot(e.x, e.y + 0.5, e.z, Math.sin(a), 0, Math.cos(a), 20, 9, 1, 'nailbomb', { col: 0xc8a080, life: 0.5, from: e }); }
-  }
-  if (st.mut.chemfire && e.bT > 0) puddle('pfire', e.x, e.z, 2, 4, 'p');
   if (e.corrupt) corruptDeath(e);
   if (e.mini) {
     const gy = floorY(e.x, e.z);
@@ -218,11 +182,11 @@ export function kill(e) {
     G.hitStop = Math.max(G.hitStop, 0.2);
   }
 
-  if (e.rival) { rivalDeath(e, scrapDrop, dropGem); addThreat(0.3); contract('rival'); return; }
+  if (e.rival) { addXP(40); rivalDeath(e, scrapDrop); return; }
   if (e.type === 'nest') {
     bury(e.mesh);
     run.nests--;
-    addThreat(0.8);
+    addXP(e.xp || 20);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
     if (Math.random() < 0.6) dropFood(e.x, e.y, e.z);
     dnum(e.x, e.y + 2, e.z, 'Nest destroyed', 'info');
@@ -237,20 +201,15 @@ export function kill(e) {
     dnum(e.x, e.y + 2, e.z, 'Predator slain', 'info');
     return;
   }
-  if (e.xp) dropGem(e.x, e.y, e.z, e.xp * (e.mut ? 1.5 : 1));
+  if (e.xp) addXP(e.xp * (e.mut ? 1.5 : 1));
   if (Math.random() < (e.mut ? 0.55 : 0.3)) scrapDrop(e.x, e.y, e.z);
   // Food turns up more often when you're hurting.
   if (Math.random() < (run.hp < st.maxHp * 0.35 ? 0.05 : 0.012)) dropFood(e.x, e.y, e.z);
-  if (e.elite && !e.champion && Math.random() < 0.08) dropMusk(e.x, floorY(e.x, e.z), e.z);
 }
 
 function corruptDeath(e) {
   for (let i = 0; i < 5; i++) scrapDrop(e.x, e.y, e.z);
-  // Cores (a free item each) are rationed: 1 in 5 elites, a budget per district.
-  // Uncapped, elites fed items and threat fed elites, and runs snowballed (found by the bots).
-  if (run.coreD !== run.district) { run.coreD = run.district; run.coreN = 0; }
-  if (e.champion || (run.coreN < 2 + run.tier && Math.random() < 0.2)) { run.coreN++; dropCore(e.x, e.y, e.z); }
-  else for (let i = 0; i < 3; i++) scrapDrop(e.x, e.y, e.z);
+  for (let i = 0; i < 3; i++) scrapDrop(e.x, e.y, e.z);
   if (!isSewer() && !run.keys && !W.keys.length && Math.random() < 0.22) dropKey(e.x, e.y, e.z);
   if (e.corrupt === 'split') {
     for (let i = 0; i < 3; i++) spawnEnemy(e.type, e.x + rand(-1, 1), e.z + rand(-1, 1), { plain: true, sc: 0.75 });
@@ -258,15 +217,8 @@ function corruptDeath(e) {
   if (e.corrupt === 'volatile') warn(e.x, e.z, 3.4, 0.8, e.dmg * 1.4, { y: floorY(e.x, e.z), kb: 1, col: 0xff3a20 });
 }
 
-export function dropGem(x, y, z, v) {
-  if (W.gems.length >= 580) { W.gems[randi(0, W.gems.length - 1)].v += v; return; }
-  W.gems.push({ x, y, z, v, pull: false, s: 0, ph: rand(0, 6) });
-}
 export function scrapDrop(x, y, z) {
   if (W.scraps.length < 290) W.scraps.push({ x: x + rand(-0.6, 0.6), y, z: z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
-}
-export function dropCore(x, y, z) {
-  W.cores.push({ x, y: Math.max(y, floorY(x, z)), z, ph: rand(0, 6), s: 0, pull: false });
 }
 const foodMat = new THREE.MeshLambertMaterial({ color: 0xe8b84a, emissive: 0x4a3000, flatShading: true });
 export function dropFood(x, y, z) {
@@ -295,41 +247,13 @@ export function dropKey(x, y, z) {
   sfx('key');
 }
 
-/**
- * XP for the next level. Steep enough that levels stay meaningful deep into a run:
- * an average player is around level 6 at 2 minutes, 10 at 5, 16 at 10 and 25 at 20
- * (see PACE in progress.js). The first level still comes inside the opening minute.
- */
-export const need = L => Math.round(12 + 9 * (L - 1) + 2.2 * Math.pow(L - 1, 1.7));
-export function gainXP(v) {
-  addXP(v);
-  if (run.pendingLv && G.state === 'play') openLevelUp();
+// ---------- zone difficulty ----------
+/** Enemy strength comes from the zone (TUNE.zone), not from time or choices. */
+export function zoneScaling() {
+  const Z = TUNE.zone, T = (run.tier || 0) * Z.threatPerZone;
+  run.T = T;
+  run.hpM = 1 + T * Z.hpPerThreat;
+  run.dmgM = 1 + T * Z.dmgPerThreat;
+  run.spdM = 1 + Math.min(0.55, T * Z.spdPerThreat);
+  run.atkM = 1 + Math.min(1.4, T * Z.atkPerThreat);
 }
-
-// ---------- threat engine ----------
-/**
- * Threat is a volatile index: it climbs with time, depth, level, loot and every
- * risky choice, spikes on kills and decisions, and oscillates on its own. It
- * scales enemy HP, damage, speed, attack rate, spawn rate and elite odds.
- */
-export function updThreat(dt) {
-  run.spike = (run.spike || 0) * Math.exp(-dt / 20);
-  const sewer = isSewer() ? 2.2 : 0;
-  const TL = Math.max(0,
-    (run.threatBase || 0) + run.time / 60 * 0.6 + run.tier * 1.8 + sewer + run.level * 0.1 + (run.decisions || 0) * 0.1 +
-    run.items.length * 0.2 + run.cursed.length * 0.6 + run.spike + Math.sin(run.time * 0.23) * 0.3 + Math.sin(run.time * 0.061 + 1) * 0.45,
-  ) * (G.mode === 'trial' ? 0.3 : 1);
-  run.T = TL;
-  // Gentler than before the leveling overhaul: player power now grows more slowly, so the horde does too.
-  run.hpM = 1 + TL * 0.2;
-  run.dmgM = 1 + TL * 0.075;
-  run.spdM = 1 + Math.min(0.55, TL * 0.03);
-  run.atkM = 1 + Math.min(1.4, TL * 0.07);
-}
-export function addThreat(v) {
-  run.threatBase = (run.threatBase || 0) + v * 0.5;
-  run.spike = (run.spike || 0) + v * 0.8;
-  run.decisions = (run.decisions || 0) + 1;
-  if (v >= 0.3 && G.state === 'play') dnum(P.x, P.y + 2.1, P.z, '+THREAT', 'burn');
-}
-export const threatTier = T => (T < 3 ? ['CALM', '#9be06a'] : T < 6 ? ['UNEASY', '#f2b233'] : T < 10 ? ['HOSTILE', '#ff8a3a'] : T < 15 ? ['FERAL', '#e0382c'] : ['APOCALYPSE', '#ff3aa0']);

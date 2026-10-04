@@ -266,7 +266,7 @@ function placeMimic() {
 }
 /** Called once a district is built. */
 export function placeRoles() {
-  if (G.mode === 'trial' || G.testNoRoles) return; // debug: scripted tests keep ambushers out of the way
+  if (G.testNoRoles) return; // debug: scripted tests keep ambushers out of the way
   const t = run.tier || 0;
   for (let i = 0; i < 2 + Math.min(4, t); i++) placeLurker(t ? 14 : 24, 70);
   for (let i = 0; i < (isSewer() ? 1 : 2) + (t >= 2 ? 1 : 0); i++) placeMimic();
@@ -274,7 +274,7 @@ export function placeRoles() {
 }
 /** Every minute or so a lurker slips into a crack ahead of you. */
 export function tickRoles(dt) {
-  if (G.mode === 'trial' || G.testNoRoles || (run.tier || 0) + (run.time || 0) / 240 < 0.5) return;
+  if (G.testNoRoles || (run.tier || 0) + (run.time || 0) / 240 < 0.5) return;
   run.lurkT = (run.lurkT ?? 60) - dt;
   if (run.lurkT > 0) return;
   run.lurkT = rand(55, 80);

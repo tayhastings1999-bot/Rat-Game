@@ -11,7 +11,7 @@ import { metalTex, stoneTex, flameTex, waterTex } from '../render/textures.js';
 import { boom, puff, spark, bolt, fx, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, T, G as GRAV, gi, inG, toG, toW, tAt, floorY, wallAdj, OPEN, DRY, N4, indexPlats } from '../world/grid.js';
-import { hit, hurtP, addThreat } from '../combat/combat.js';
+import { hit, hurtP } from '../combat/combat.js';
 
 const lam = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, ...o });
 const wood = lam(0x8a6038, { map: stoneTex }), darkWood = lam(0x5a3e24, { map: stoneTex }), steel = lam(0x5a6068, { map: metalTex });
@@ -89,7 +89,6 @@ function electrify(x, z, R, tiles, secs = 8) {
   sfx('zap');
   boom(x, floorY(x, z) + 0.3, z, R * 1.2, 0x9ad0ff);
   G.shake = Math.max(G.shake, 0.35);
-  addThreat(0.1);
 }
 /** Water tiles (sewer channels) connected to the drop point, within reach. */
 function waterAround(gx, gz, max = 28) {

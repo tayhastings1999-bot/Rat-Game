@@ -1,8 +1,8 @@
 // Stage 5 · Hybrid soak (deterministic driver + bots, hours to days).
 // The driver keeps the game running through its real UI: pick a class card,
 // let a bot play (rotating class and skill) until it dies or a time cap, click
-// "Play again" on the death screen, visit the Nest and buy something now and
-// then, and reload the page every few cycles so the game boots again from its
+// "Play again" on the death screen, and reload the page every few cycles so
+// the game boots again from its
 // save. Between cycles it forces garbage collection and records:
 //   leaks         JS heap after GC, GPU geometries/textures, scene objects
 //   degradation   game-logic cost per 100 mobs, stuck mobs, physics anomalies
@@ -62,7 +62,7 @@ async function checkSaves(label) {
   for (const b of r.bad) saveIssues.push({ at: label, hrs: +hrs().toFixed(2), issue: b });
   const m = r.meta;
   if (m && lastMeta) {
-    for (const k of ['kills', 'bosses', 'domTotal', 'maxDistrict']) if ((m[k] ?? 0) < (lastMeta[k] ?? 0)) saveIssues.push({ at: label, hrs: +hrs().toFixed(2), issue: `meta.${k} went down ${lastMeta[k]} → ${m[k]}` });
+    for (const k of ['kills', 'bosses', 'maxDistrict']) if ((m[k] ?? 0) < (lastMeta[k] ?? 0)) saveIssues.push({ at: label, hrs: +hrs().toFixed(2), issue: `meta.${k} went down ${lastMeta[k]} → ${m[k]}` });
   }
   return m;
 }
@@ -128,7 +128,6 @@ for (let n = 1; Date.now() < until; n++) {
   const cls = CLASSES[n % CLASSES.length], prof = PROFILES[n % PROFILES.length];
   try {
     // Deterministic: start the run through the real menu card.
-    await S(() => { __scurry.meta.startAt = 'row'; __scurry.G.daily = false; });
     if ((await S(() => __scurry.G.state)) !== 'menu') await S(() => __scurry.menu());
     await page.click('#mS').catch(() => {});
     await page.click(`.card[data-k="${cls}"]`, { timeout: 5000 }).catch(() => {});
@@ -150,13 +149,6 @@ for (let n = 1; Date.now() < until; n++) {
     // Deterministic: leave through the real death-screen button, or die on purpose at the cap.
     if (outcome === 'cap') await S(() => { if (__scurry.G.state !== 'dead') __scurry.die(); });
     await page.click('#again', { timeout: 5000 }).catch(async () => { await S(() => __scurry.menu()); });
-    // Every 5th run, buy something in the Nest through its buttons.
-    if (n % 5 === 0) {
-      await S(() => __scurry.renderNest());
-      const buy = page.locator('#overlay button:not([disabled])').filter({ hasNotText: /back|menu/i }).first();
-      if (await buy.count()) await buy.click().catch(() => {});
-      await S(() => __scurry.menu());
-    }
     // Every 10th run, reload: the game must boot again from its save, unchanged.
     let reloaded = false;
     const before = await checkSaves(`run ${n}`);
@@ -164,7 +156,7 @@ for (let n = 1; Date.now() < until; n++) {
     if (n % 10 === 0) {
       await boot();
       const after = await S(() => JSON.parse(JSON.stringify(__scurry.meta)));
-      for (const k of ['salvage', 'dominance', 'kills', 'runs', 'domTotal']) if ((after[k] ?? 0) !== (before[k] ?? 0)) saveIssues.push({ at: `reload after run ${n}`, hrs: +hrs().toFixed(2), issue: `meta.${k} ${before[k]} saved, ${after[k]} loaded` });
+      for (const k of ['salvage', 'kills', 'runs']) if ((after[k] ?? 0) !== (before[k] ?? 0)) saveIssues.push({ at: `reload after run ${n}`, hrs: +hrs().toFixed(2), issue: `meta.${k} ${before[k]} saved, ${after[k]} loaded` });
       reloaded = true;
     }
     lastMeta = before || lastMeta;

@@ -1,6 +1,5 @@
-// Personality: boss intro cards, a story told one line per district, Scab
-// the rival rat who keeps turning up to steal your loot, and chatter from
-// the rats fighting beside you.
+// Personality: boss intro cards, a story told one line per district, and Scab,
+// the rival rat who keeps turning up to steal your loot.
 import { rand, pick, $ } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { puff, dnum } from '../fx/fx.js';
@@ -9,7 +8,7 @@ import { gi, inG, toG, toW, tAt, floorY, bfs, OPEN, N8 } from '../world/grid.js'
 import { scrapDrop } from '../combat/combat.js';
 import { spawnEnemy, moveBody } from '../entities/mobs.js';
 import { thiefAI } from './objectives.js';
-import { dropCrate } from './progress.js';
+import { dropLoot } from './progress.js';
 import { banner } from '../ui/hud.js';
 import { puddle } from '../combat/hazards.js';
 import { scabMode, scabBark, scabLossLine, onScabCaught, tickStory } from './story.js';
@@ -122,9 +121,9 @@ function scabAI(e, dt) {
 function scabGift() {
   let x = P.x, z = P.z;
   for (let i = 0; i < 12; i++) { const a = rand(0, 6.3), r = rand(3, 6), tx = P.x + Math.sin(a) * r, tz = P.z + Math.cos(a) * r, t = tAt(toG(tx), toG(tz)); if (t === 1 || t === 9 || t === 10) { x = tx; z = tz; break; } }
-  dropCrate(x, floorY(x, z), z);
+  dropLoot(x, floorY(x, z), z);
   puff(x, floorY(x, z) + 0.5, z, 0x6a6a6a, 14, 3);
-  banner('Scab was here', '"Don\'t make me regret this." · a weapon crate');
+  banner('Scab was here', '"Don\'t make me regret this." · supplies');
 }
 /** Called from kill(). */
 export function scabDown(e) {
@@ -133,36 +132,22 @@ export function scabDown(e) {
   run.scabLosses = (run.scabLosses || 0) + 1;
   const gy = floorY(e.x, e.z);
   for (let i = 0; i < (e.stolen ? 25 : 12); i++) scrapDrop(e.x, gy, e.z);
-  dropCrate(e.x, gy, e.z);
+  dropLoot(e.x, gy, e.z);
   // The first time you catch him, the story takes the moment (and Robbing him pays out here).
-  if (onScabCaught(e, () => { dropCrate(e.x + 1.4, gy, e.z); for (let i = 0; i < 20; i++) scrapDrop(e.x, gy, e.z); })) return;
+  if (onScabCaught(e, () => { dropLoot(e.x + 1.4, gy, e.z); for (let i = 0; i < 20; i++) scrapDrop(e.x, gy, e.z); })) return;
   if (run.scabLosses >= 3 && !run.scabDone) {
     run.scabDone = true;
-    run.btPick = (run.btPick || 0) + 1;
-    run.pendingLv++;
-    banner('Scab gives up', '"Fine! FINE! Take it, and leave me alone!" · a Breakthrough-grade pick');
+    dropLoot(e.x, gy, e.z, 30, 1);
+    banner('Scab gives up', '"Fine! FINE! Take it, and leave me alone!" · his whole stash');
   } else banner('Scab drops the loot', `"${scabLossLine()}"`);
-}
-
-// ---------- chatter from your rats ----------
-const CHATTER = { boss: ['Big one!', 'That thing ate my cousin!', 'Stay behind it!'], low: ['You\'re bleeding!', 'Eat something!', 'Fall back!'], kill: ['Got one!', 'Ha!', 'For the nest!'], idle: ['Cheese... I smell cheese.', 'Which way now?', 'Scab was here. I can smell him.'] };
-let chatT = 8;
-function chatter(dt) {
-  if (!W.familiars.length) return;
-  chatT -= dt;
-  if (chatT > 0) return;
-  chatT = rand(12, 20);
-  const f = pick(W.familiars), k = G.boss && G.boss.revealed ? 'boss' : run.hp < 0.3 * (run.maxHpCache || 100) ? 'low' : Math.random() < 0.5 ? 'kill' : 'idle';
-  dnum(f.x, f.y + 1.2, f.z, pick(CHATTER[k]), 'info');
 }
 
 export function tickPersonality(dt, maxHp) {
   run.maxHpCache = maxHp;
   tickStory();
-  chatter(dt);
   const e = run.scab;
   if (e && !e.dead) scabAI(e, dt);
-  if (G.mode === 'trial' || run.scabDone) return;
+  if (run.scabDone) return;
   // Once per district.
   if (!run.scabSeen && !e && run.time - run.dStart > 32) { run.scabSeen = true; spawnScab(); }
 }

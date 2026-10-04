@@ -3,8 +3,8 @@
 //   UI sweep   open every screen and click every button on it, one at a time,
 //              from a fresh state; nothing may throw or strand the game.
 //   Math       damage and armor, i-frames, health/XP bars matching the numbers,
-//              healing caps, kills and drops, level-ups, inventory and slots,
-//              stamina, and the save file round-tripping.
+//              healing caps, kills and XP, automatic level-ups, the kit slots,
+//              the dodge cooldown, manual attack, and the save file round-tripping.
 //   Fuzz       random keys/mouse/touch at full speed during play; the rat and
 //              mobs teleported to random spots (walls, roofs, edges) with wild
 //              velocities; random clicks on every overlay. Watches for
@@ -40,28 +40,20 @@ const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, `${msg}: ${a} vs
 await page.goto('http://localhost:5189/?debug');
 await page.waitForFunction(() => window.__scurry && window.__scurry.qa && document.querySelector('#overlay h1'), null, { timeout: 60000 });
 const fresh = async (cls = 'brawler') => {
-  await S(c => { const s = __scurry; s.qa.stop(); s.G.mode = 'survival'; s.G.daily = false; s.meta.startAt = 'row'; s.G.testNoRoles = true; s.startRun(c); s.god(false); Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, expoCd: 1e9, scabSeen: true, lurkT: 1e9 }); s.W.enemies.forEach(e => { if (e.type !== 'nest') e.dead = true; }); }, cls);
-  // Clear any opening level-up picks (Nest perks can grant some) until the game is live.
+  await S(c => { const s = __scurry; s.qa.stop(); s.G.testNoRoles = true; s.startRun(c); s.god(false); Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, scabSeen: true, lurkT: 1e9 }); s.W.enemies.forEach(e => { if (e.type !== 'nest') e.dead = true; }); }, cls);
   for (let i = 0; i < 40; i++) {
-    const st = await S(() => __scurry.G.state);
-    if (st === 'play') return;
-    if (st === 'levelup') await page.keyboard.press('Digit1');
+    if ((await S(() => __scurry.G.state)) === 'play') return;
     await sleep(80);
   }
   throw new Error('run never reached play state: ' + (await S(() => __scurry.G.state)));
 };
-const STATES = new Set(['menu', 'nest', 'play', 'paused', 'map', 'levelup', 'bench', 'dead', 'done', 'trans']);
+const STATES = new Set(['menu', 'play', 'paused', 'map', 'dead', 'trans', 'story']);
 
 // ---------------------------------------------------------------- UI sweep
 const SCREENS = {
-  'menu: survival': async () => { await S(() => __scurry.menu()); await page.click('#mS'); },
-  'menu: daily': async () => { await S(() => __scurry.menu()); await page.click('#mD'); },
-  'menu: trial': async () => { await S(() => __scurry.menu()); await page.click('#mT'); },
-  nest: async () => { await S(() => { __scurry.meta.salvage = 9999; __scurry.meta.dominance = 999; __scurry.menu(); __scurry.renderNest(); }); },
+  menu: async () => { await S(() => __scurry.menu()); },
   pause: async () => { await fresh(); await S(() => __scurry.pause(true)); },
   map: async () => { await fresh(); await page.keyboard.press('KeyM'); },
-  'level-up': async () => { await fresh(); await S(() => { __scurry.run.pendingLv = 1; __scurry.openLevelUp(); }); },
-  bench: async () => { await fresh(); await S(() => { const b = __scurry.W.benches[0], P = __scurry.P; P.x = b.x + 1.4; P.z = b.z; P.y = 0; __scurry.run.scrap = 500; }); await sleep(100); await page.keyboard.press('KeyE'); },
   death: async () => { await fresh(); await S(() => __scurry.die()); },
 };
 for (const [name, open] of Object.entries(SCREENS)) {
@@ -116,17 +108,12 @@ await check('health bar and text match HP', async () => {
     assert(Math.abs(shown - r.hp) <= 1, `hp text "${r.txt}" vs ${r.hp}`); // the HUD rounds up so a living rat never shows 0
   }
 });
-await check('XP bar and level-up', async () => {
+await check('XP bar and automatic level-up (no pause)', async () => {
   await fresh();
-  const r = await S(() => { const s = __scurry; s.run.xp = s.run.need / 2; s.hud(); const w = parseFloat(document.getElementById('xpFill').style.width); const lv = s.run.level; s.gainXP(s.run.need * 1.01); return { w, lv }; });
+  const r = await S(() => { const s = __scurry; s.run.xp = s.run.need / 2; s.hud(); const w = parseFloat(document.getElementById('xpFill').style.width); const lv = s.run.level; s.addXP(s.run.need * 0.51 + 0.01); return { w, lv, after: s.run.level, st: s.G.state }; });
   near(r.w, 50, 2, 'xp bar half full');
-  await page.waitForFunction(() => __scurry.G.state === 'levelup', null, { timeout: 4000 });
-  const before = await S(() => ({ lv: __scurry.run.level, w: __scurry.run.weapons.length, items: __scurry.run.items.length }));
-  await page.keyboard.press('Digit1');
-  await sleep(200);
-  const after = await S(() => ({ st: __scurry.G.state, lv: __scurry.run.level, pending: __scurry.run.pendingLv }));
-  assert(after.lv === r.lv + 1 || before.lv === r.lv + 1, `level ${r.lv} → ${after.lv}`);
-  assert(after.st === 'play' || after.pending > 0, 'level-up screen did not close');
+  assert(r.after === r.lv + 1, `level ${r.lv} → ${r.after}`);
+  assert(r.st === 'play', 'a level-up paused the game: ' + r.st);
 });
 await check('food heals, and healing caps at max HP', async () => {
   await fresh();
@@ -140,45 +127,54 @@ await check('food heals, and healing caps at max HP', async () => {
   assert(r.hp <= r.max, `hp ${r.hp} above max ${r.max}`);
   return `+${Math.round(low - 20)} HP from one bite`;
 });
-await check('hits, kills and drops', async () => {
+await check('hits, kills and XP', async () => {
   await fresh();
   const r = await S(() => {
     const s = __scurry, P = s.P;
     const e = s.spawnEnemy('mawling', P.x + 3, P.z, { plain: true, force: true, hpMul: 5 });
     const hp0 = e.hp; s.hit(e, 10, 0, 0, 'event', true);
-    const dealt = hp0 - e.hp, k0 = s.run.kills, g0 = s.W.gems.length;
+    const dealt = hp0 - e.hp, k0 = s.run.kills, x0 = s.run.xp + s.run.level * 1e6;
     s.kill(e);
-    return { dealt, killed: s.run.kills - k0, gems: s.W.gems.length - g0, dead: e.dead };
+    return { dealt, killed: s.run.kills - k0, xp: s.run.xp + s.run.level * 1e6 - x0, dead: e.dead };
   });
   assert(r.dealt >= 1, 'hit did no damage');
   assert(r.killed === 1 && r.dead, 'kill not counted');
-  assert(r.gems >= 1, 'no XP gem dropped');
+  assert(r.xp > 0, 'kill gave no XP');
 });
-await check('inventory and slots update', async () => {
-  await fresh();
-  const r = await S(() => {
-    const s = __scurry, i0 = s.run.items.length, d0 = document.querySelectorAll('#items > *').length;
-    s.giveItem('razor'); s.giveItem('drink');
-    const muts = s.run.muts.slice();
-    s.run.weapons.push({ id: 'claw', lvl: 1, t: 0 }); s.renderSlots();
-    return { items: s.run.items.length - i0, dom: document.querySelectorAll('#items > *').length - d0, muts, slots: document.querySelectorAll('#slots .slot:not(.empty)').length };
-  });
-  assert(r.items >= 1 || r.muts.length, 'items did not register');
-  assert(r.dom >= 1, 'item icons did not appear');
-  assert(r.muts.includes('livewire'), 'razor + drink did not fuse into Livewire Claws');
-  assert(r.slots >= 3, 'weapon slot did not show');
+await check('the plate shows the class kit: primary, special, signature', async () => {
+  await fresh('warlock');
+  const n = await S(() => { __scurry.renderSlots(); return document.querySelectorAll('#slots .slot').length; });
+  assert(n === 3, `${n} kit slots`);
 });
-await check('stamina drains while sprinting and refills', async () => {
+await check('dodge has a cooldown', async () => {
   await fresh();
-  const s0 = await S(() => { __scurry.run.sta = __scurry.st.staMax; return __scurry.run.sta; });
-  // Wait on game time, not wall time, so a slow machine can't flake this.
   const gameWait = secs => S(t => new Promise(r => { const end = __scurry.run.time + t; const w = () => (__scurry.run.time >= end || __scurry.G.state !== 'play') ? r() : setTimeout(w, 50); w(); }), secs);
-  await page.keyboard.down('KeyW'); await page.keyboard.down('ShiftLeft'); await gameWait(1.5);
-  const s1 = await S(() => __scurry.run.sta);
-  await page.keyboard.up('ShiftLeft'); await page.keyboard.up('KeyW'); await gameWait(2.5);
-  const s2 = await S(() => __scurry.run.sta);
-  assert(s1 < s0, `stamina did not drain (${s0} → ${s1})`);
-  assert(s2 > s1, `stamina did not refill (${s1} → ${s2})`);
+  const cd = await S(() => __scurry.TUNE.player.rollCd);
+  await page.keyboard.press('ShiftLeft');
+  const r1 = await S(() => __scurry.P.roll > 0 || __scurry.P.rollCd > 0);
+  await gameWait(0.4);
+  await page.keyboard.press('ShiftLeft');
+  const blocked = await S(() => __scurry.P.roll <= 0);
+  await gameWait(cd);
+  await page.keyboard.press('ShiftLeft');
+  const r3 = await S(() => __scurry.P.roll > 0);
+  assert(r1, 'first dodge did not start');
+  assert(blocked, 'dodged again inside the cooldown');
+  assert(r3, 'could not dodge after the cooldown');
+});
+await check('attacks fire only while held, toward the aim point', async () => {
+  await fresh('slinger');
+  const gameWait = secs => S(t => new Promise(r => { const end = __scurry.run.time + t; const w = () => (__scurry.run.time >= end || __scurry.G.state !== 'play') ? r() : setTimeout(w, 50); w(); }), secs);
+  await S(() => { __scurry.W.pproj.length = 0; });
+  await gameWait(0.6);
+  const idle = await S(() => __scurry.W.pproj.length);
+  await S(() => { const P = __scurry.P; __scurry.G.aimAt = { x: P.x + 8, z: P.z }; __scurry.G.attack = true; });
+  await gameWait(0.4);
+  const r = await S(() => { const p = __scurry.W.pproj[0]; return { n: __scurry.W.pproj.length, vx: p ? p.vx : 0, vz: p ? p.vz : 0 }; });
+  await S(() => { __scurry.G.attack = false; __scurry.G.aimAt = null; });
+  assert(idle === 0, `fired ${idle} shots without attacking`);
+  assert(r.n > 0, 'held attack did not fire');
+  assert(r.vx > Math.abs(r.vz), 'shot did not go toward the aim point ' + JSON.stringify(r));
 });
 await check('save file round-trips', async () => {
   const r = await S(() => {

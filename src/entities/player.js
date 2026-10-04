@@ -1,26 +1,24 @@
-// Player movement (run, roll, climb, squeeze, glide), aiming the class
-// primary, specials, lock-on and every E-key interaction.
-import { angD, fmtT, $ } from '../core/util.js';
+// Player movement (run, dodge, climb, squeeze), manual aim and attack with the
+// class primary, specials, lock-on and every E-key interaction.
+import * as THREE from 'three';
+import { angD, $ } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { puff, spark, boom, fx, bolt, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { bury } from '../render/renderer.js';
+import { bury, camera } from '../render/renderer.js';
 import { M, G as GRAV, DUCT_TOP, gi, toG, toW, tAt, tileAt, topAt, floorY, solidFor, collideBody } from '../world/grid.js';
 import { tileMesh, syncObj, addObj } from '../world/build.js';
 import { curD, isSewer } from '../data/world.js';
 import { CLASSES } from '../data/classes.js';
-import { PRIM, SPECIALS, useSpecialFx } from '../combat/arsenal.js';
+import { PRIM, SPECIALS } from '../combat/arsenal.js';
 import { nearest, near, aoe, hit, hurtP, scrapDrop } from '../combat/combat.js';
-import { puddle } from '../combat/hazards.js';
-import { giveChest, chestCost } from '../game/loot.js';
+import { giveChest, rummage } from '../game/loot.js';
 import { enterSewer } from '../game/flow.js';
 import { buffOn } from '../game/forage.js';
-import { rummage, sinkerSlam, sinkerLand } from '../game/junk.js';
 import { springTrap, trapTarget, wireIntoWater } from '../game/traps.js';
 import { cageTarget, openCage, carryingWheel } from '../game/objectives.js';
-import { onRoll, shadowPaw, attackRate, echo } from '../game/rules.js';
 import { banner } from '../ui/hud.js';
-import { openBench } from '../ui/screens.js';
+import { TUNE } from '../tuning.js';
 import { diveLand } from '../game/signature.js';
 import { boltTarget } from '../world/setpieces.js';
 
@@ -46,16 +44,11 @@ export function stepPlayer(dt) {
   if (t === 11 && P.y < DUCT_TOP) P.squeeze = true;
   // Walking into a crevice squeezes you in automatically (no extra button needed).
   if (L && P.onGround && !P.carry) { const ax = P.x + wx * 0.7, az = P.z + wz * 0.7, ta = tileAt(ax, az); if ((ta === 5 && P.y < topAt(toG(ax), toG(az)) - 0.1) || (ta === 11 && P.y < DUCT_TOP)) P.squeeze = true; }
-  P.sprinting = (keys.ShiftLeft || keys.ShiftRight) && L > 0 && run.sta > 1 && !P.squeeze && !P.carry && P.roll <= 0;
-  // Momentum: sprinting is remembered briefly, and chained wall-bounces stack speed until you settle.
-  P.sprintMem = P.sprinting ? 0.35 : (P.sprintMem || 0) - dt;
-  if (P.onGround && P.chain) { P.chainT -= dt; if (P.chainT <= 0) P.chain = 0; }
-  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (1 + 0.1 * (P.chain || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (P.sprinting ? st.sprintMul : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1) * (carryingWheel() ? 0.78 : 1);
-  if (P.sprinting) { run.sta -= st.sprintDrain * dt * (buffOn('slime') ? 0 : 1); P.staT = 0.6; }
+  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1) * (carryingWheel() ? 0.78 : 1);
   P.rollCd -= dt;
   if (P.roll > 0) {
     P.roll -= dt;
-    const rs = st.speed * 2.3;
+    const rs = st.speed * TUNE.player.rollSpeed;
     P.vx = P.rdx * rs;
     P.vz = P.rdz * rs;
   } else if (P.lock > 0) P.lock -= dt;
@@ -70,51 +63,21 @@ export function stepPlayer(dt) {
   P.buffer -= dt;
   P.coyote -= dt;
   P.wallT -= dt;
-  const canClimb = P.wallT > 0 && (P.wallType !== 6 || st.metalClimb) && !P.carry && P.y < P.wallTop + 0.3;
+  const canClimb = P.wallT > 0 && P.wallType !== 6 && !P.carry && P.y < P.wallTop + 0.3;
   P.climbing = false;
-  P.scrCd -= dt;
-  // Scramble: hit a climbable wall at a sprint and you run straight up it, free.
-  if (canClimb && P.sprintMem > 0 && P.scramble <= 0 && P.scrCd <= 0 && !st.noScramble && P.wallTop > P.y + 0.5) {
-    P.scramble = 0.75 + 0.1 * (P.chain || 0);
-    P.scrCd = 0.5;
-    puff(P.x, P.y + 0.3, P.z, 0x9a8a7a, 5, 1.5);
-    sfx('jump');
-  }
-  if (P.scramble > 0) {
-    P.scramble -= dt;
-    if (canClimb) { P.vy = Math.max(P.vy, 9.5 + (P.chain || 0)); P.climbing = true; P.jumping = false; P.staT = 0.3; }
-  }
   // Hold Space against a climbable wall to scale it — from the air, the ground, or a ledge.
-  if (!P.climbing && keys.Space && canClimb && run.sta > 1 && (!P.onGround || P.wallTop > P.y + 0.5)) {
+  if (keys.Space && canClimb && (!P.onGround || P.wallTop > P.y + 0.5)) {
     P.vy = Math.max(P.vy, 6.5);
-    run.sta -= st.climbCost * dt * (buffOn('slime') ? 0 : 1);
-    P.staT = 0.6;
     P.climbing = true;
     P.jumping = false;
   }
   if (P.buffer > 0 && !P.squeeze) {
     const j = v => { P.vy = v; P.onGround = false; P.coyote = 0; P.buffer = 0; P.cut = false; P.jumping = true; };
     if (P.onGround || P.coyote > 0) { j(12.5 * (P.gmul < 0.6 ? 1.05 : 1)); puff(P.x, P.y, P.z, 0x9a8a7a, 4, 1.5); }
-    else if (P.wallT > 0 && !P.onGround && (P.scramble > 0 || P.sprintMem > 0 || P.chain) && !st.noScramble) {
-      // Wall-bounce: kick off the wall, keep your speed and chain the next one faster.
-      P.chain = Math.min(4, (P.chain || 0) + 1);
-      P.chainT = 0.6;
-      P.scramble = 0;
-      const k = 8 + 1.6 * P.chain;
-      P.vx = P.wallNX * k + P.vx * 0.4;
-      P.vz = P.wallNZ * k + P.vz * 0.4;
-      j(11.5 + P.chain * 0.5);
-      P.lock = 0.2;
-      P.sprintMem = 0.5;
-      P.wallT = 0;
-      spark(P.x, P.y + 0.4, P.z, 1.4, 0xffd070);
-      if (P.chain > 1) dnum(P.x, P.y + 1.6, P.z, 'Bounce ×' + P.chain, 'info');
-    } else if (P.air > 0 && !canClimb) { P.air--; j(11.5); spark(P.x, P.y + 0.2, P.z, 1.2, 0xc080ff); }
+    else if (P.air > 0 && !canClimb) { P.air--; j(11.5); spark(P.x, P.y + 0.2, P.z, 1.2, 0xc080ff); }
   }
   if (!keys.Space && P.vy > 0 && !P.cut && P.jumping) { P.vy *= 0.5; P.cut = true; }
   if (!P.climbing) P.vy -= GRAV * P.gmul * dt;
-  const gliding = !P.onGround && !P.climbing && P.vy < -2.2 && ((st.glide && keys.Space) || P.glideT > 0);
-  if (gliding) P.vy = -2.2;
   P.vy = Math.max(P.vy, -30);
   const py = P.y;
   P.fallV = -P.vy;
@@ -126,13 +89,11 @@ export function stepPlayer(dt) {
   if (P.hw && L) { P.wallT = 0.12; P.wallType = P.wt; P.wallTop = P.wtop; P.wallNX = P.wnx; P.wallNZ = P.wnz; }
   if (g) {
     P.coyote = 0.1;
-    P.scramble = 0;
     P.air = st.jumps;
     P.jumping = false;
-    P.glideT = 0;
     if (!was) {
       puff(P.x, P.y, P.z, 0x9a8a7a, P.fallV > 12 ? 10 : 4, 1.6);
-      if (P.slam === 'dive') { P.slam = false; P.lock = 0; diveLand(); } else if (P.slam === 'sinker') { P.slam = false; P.lock = 0; sinkerLand(); } else if (P.slam) {
+      if (P.slam === 'dive') { P.slam = false; P.lock = 0; diveLand(); } else if (P.slam) {
         P.slam = false;
         P.lock = 0;
         const R = 4.2 * st.area;
@@ -144,59 +105,73 @@ export function stepPlayer(dt) {
       }
     }
   }
-  if (!P.sprinting && !P.climbing) { P.staT -= dt; if (P.staT <= 0) run.sta = Math.min(st.staMax, run.sta + st.staRegen * (P.shadow ? 1.5 : 1) * dt); }
-  run.sta = Math.max(0, run.sta);
-  // Mutation trails.
-  P.trailT -= dt;
-  if (P.trailT <= 0 && P.onGround) {
-    if (st.mut.napalm && (P.sprinting || P.roll > 0)) { P.trailT = 0.16; puddle('pfire', P.x, P.z, 1.3, 3, 'p'); }
-    else if (st.mut.sludge && L) { P.trailT = 0.35; puddle('sludge', P.x, P.z, 1.4, 4, 'p'); }
-  }
   // Sewer water is toxic.
-  if (isSewer() && wet && t === 2 && !st.toxImmune) P.poisonT = Math.max(P.poisonT, 1.2);
+  if (isSewer() && wet && t === 2) P.poisonT = Math.max(P.poisonT, 1.2);
 }
 
+// ---------- aim and attack ----------
+const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2(), _plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _hitP = new THREE.Vector3();
+/** Where the mouse points on the ground plane at the rat's height (null on touch or before the mouse moves). */
+export function mouseAim() {
+  if (G.touch || G.mY == null) return null;
+  _ndc.set(G.mX / innerWidth * 2 - 1, -(G.mY / innerHeight) * 2 + 1);
+  _ray.setFromCamera(_ndc, camera);
+  _plane.constant = -(P.y + 0.4);
+  return _ray.ray.intersectPlane(_plane, _hitP) ? _hitP : null;
+}
+/** Touch: the nearest enemy inside a forward cone (TUNE.aim). */
+function coneTarget() {
+  const A = TUNE.aim;
+  let b = null, bd = A.touchRange * A.touchRange;
+  for (const e of W.enemies) {
+    if (e.dead || e.hidden || e.disguise) continue;
+    const dx = e.x - P.x, dz = e.z - P.z, d = dx * dx + dz * dz;
+    if (d < bd && Math.abs(angD(Math.atan2(dx, dz), P.facing)) < A.touchCone) { bd = d; b = e; }
+  }
+  return b;
+}
+/** Attack held (mouse button, J, or the touch button), or the arrow keys: fire the primary where you aim. */
 export function primary(dt) {
   run.primT -= dt;
   if (run.primT > 0 || (P.squeeze && !P.inDuct) || P.chewing) return;
   const PR = PRIM[CLASSES[run.cls].prim];
   const ax = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0), az = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0);
   let dx, dz, t = null;
+  const lk = G.lockOn && !G.lockOn.dead ? G.lockOn : null;
   if (ax || az) {
     const { fx: a, fz: b, rx, rz } = camBasis();
     dx = a * az + rx * ax;
     dz = b * az + rz * ax;
-    const L = Math.hypot(dx, dz);
-    dx /= L; dz /= L;
-  } else {
-    const rg = PR.range * (PR.range > 6 ? st.range : 1), lk = G.lockOn;
-    t = lk && !lk.dead && Math.hypot(lk.x - P.x, lk.z - P.z) < rg + lk.r ? lk : nearest(rg);
-    if (!t) return;
-    dx = t.x - P.x;
-    dz = t.z - P.z;
-    const L = Math.hypot(dx, dz) || 1;
-    dx /= L; dz /= L;
-  }
+  } else if (G.attack) {
+    const m = G.aimAt || mouseAim(); // G.aimAt: the QA bot's aim point
+    if (lk) { dx = lk.x - P.x; dz = lk.z - P.z; t = lk; }
+    else if (m) {
+      dx = m.x - P.x; dz = m.z - P.z;
+      // Light assist: the enemy nearest the aim point, if one is close to it.
+      let bd = 2.2 * 2.2;
+      for (const e of W.enemies) { if (e.dead || e.hidden) continue; const d = (e.x - m.x) ** 2 + (e.z - m.z) ** 2; if (d < bd) { bd = d; t = e; } }
+      if (t) t.aimD = Math.hypot(m.x - P.x, m.z - P.z);
+    } else { t = coneTarget(); if (t) { dx = t.x - P.x; dz = t.z - P.z; } else { dx = Math.sin(P.facing); dz = Math.cos(P.facing); } }
+  } else return;
+  const L = Math.hypot(dx, dz) || 1;
+  dx /= L; dz /= L;
+  P.aimDist = Math.min(TUNE.aim.maxRange, L);
   PR.fire(dx, dz, t);
-  shadowPaw(PR, t);
-  const fury = st.fury && run.hp < st.maxHp * 0.5 ? 0.66 : 1;
-  run.primT = PR.cd * st.cd * st.tear * fury * (1 - 0.06 * (run.blood || 0)) * attackRate();
+  run.primT = PR.cd * st.cd * st.tear;
   P.aim = Math.atan2(dx, dz);
   P.aimT = 0.35;
 }
 
 export function startRoll() {
-  if (P.roll > 0 || P.rollCd > 0 || run.sta < 15 || P.squeeze || P.chewing) return;
+  if (P.roll > 0 || P.rollCd > 0 || P.squeeze || P.chewing) return;
   if (P.carry) dropCarry();
   const { fx: fx0, fz, rx, rz } = camBasis(), [ix, iz] = moveInput();
   let dx, dz;
   if (ix || iz) { dx = fx0 * iz + rx * ix; dz = fz * iz + rz * ix; const l = Math.hypot(dx, dz); dx /= l; dz /= l; }
   else { dx = Math.sin(P.facing); dz = Math.cos(P.facing); }
-  P.rdx = dx; P.rdz = dz; P.roll = 0.3; P.rollCd = 0.5;
-  onRoll();
-  run.sta -= 15;
-  P.staT = 0.6;
-  P.inv = Math.max(P.inv, 0.34);
+  const T = TUNE.player;
+  P.rdx = dx; P.rdz = dz; P.roll = T.rollTime; P.rollCd = T.rollCd;
+  P.inv = Math.max(P.inv, T.rollIframes);
   P.facing = Math.atan2(dx, dz);
   puff(P.x, P.y + 0.1, P.z, 0x9a8a7a, 6, 2);
   sfx('roll');
@@ -220,8 +195,7 @@ export function toggleLock() {
 export function useSpecial() {
   if (run.specT > 0 || P.squeeze) return;
   const S = SPECIALS[CLASSES[run.cls].special];
-  if (!sinkerSlam()) { S.use(); if (echo()) setTimeout(() => { if (G.state === 'play') { S.use(); useSpecialFx(); } }, 450); }
-  useSpecialFx();
+  S.use();
   run.specT = S.cd * st.specCd * st.cd;
 }
 
@@ -229,12 +203,9 @@ export function useSpecial() {
 export function useTarget() {
   for (const c of W.chests) {
     if (c.open || Math.hypot(c.x - P.x, c.z - P.z) >= 1.9 || Math.abs(c.y - P.y) >= 1.3) continue;
-    const cost = chestCost(c);
-    return { kind: 'chest', o: c, label: c.cursed ? 'Open the cursed chest' : run.scrap >= cost ? `Open chest · ${cost} salvage` : `Chest · needs ${cost} salvage` };
+    return { kind: 'chest', o: c, label: 'Open chest' };
   }
-  for (const b of W.benches) if (Math.hypot(b.x - P.x, b.z - P.z) < 2.4 && P.y < 2) return { kind: 'bench', o: b, label: 'Use workbench' };
   for (const p of W.pipes) if (Math.hypot(p.x - P.x, p.z - P.z) < 1.8 && P.y < 1.2) return { kind: 'pipe', o: p, label: 'Squeeze into pipe' };
-  for (const v of W.valves) if (!v.done && Math.hypot(v.x - P.x, v.z - P.z) < 1.9) return { kind: 'valve', o: v, label: 'Turn valve' };
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < b.r + 1 && P.y < 2) return { kind: 'bin', o: b, label: b.kind === 'dumpster' ? 'Rummage the dumpster' : b.kind === 'bin' ? 'Rummage the trash can' : 'Dig through the junk heap' };
   for (const s of W.uses) if (!s.done && Math.hypot(s.x - P.x, s.z - P.z) < s.r && Math.abs((s.y || 0) - P.y) < 1.6) return { kind: 'set', o: s, label: s.label };
   const bt = boltTarget();
@@ -277,8 +248,8 @@ export function pressE() {
   if (P.carry) { dropCarry(); return; }
   const u = useTarget();
   // When something to use and something to gnaw are both in reach, E goes to whichever is closer
-  // (the wall you're facing counts as very close). Benches and the manhole always win.
-  const c0 = u && u.kind !== 'bench' && u.kind !== 'manhole' && chewTarget();
+  // (the wall you're facing counts as very close). The manhole always wins.
+  const c0 = u && u.kind !== 'manhole' && chewTarget();
   const cd = c0 ? (c0.kind === 'tile' ? 0.8 : Math.hypot((c0.t ? c0.t.gx : c0.cg ? c0.cg.x : c0.it.x) - P.x, (c0.t ? c0.t.gz : c0.cg ? c0.cg.z : c0.it.z) - P.z)) : 1e9;
   const gnawFirst = c0 && cd < Math.hypot(u.o.x - P.x, u.o.z - P.z) - (u.o.cr ?? u.o.r ?? 0.6);
   if (u && !gnawFirst) { doUse(u); return; }
@@ -317,18 +288,13 @@ export function doUse(u) {
   if (u.kind === 'set') { u.o.act(); return; }
   if (u.kind === 'bolt') { openTile(u.o.gx, u.o.gz); sfx('door'); return; }
   if (u.kind === 'chest') {
-    const c = u.o, cost = chestCost(c);
-    if (run.scrap < cost) { dnum(c.x, c.y + 1.6, c.z, `Need ${cost} salvage`, 'info'); sfx('pickup'); return; }
-    run.scrap -= cost;
-    run.scrapSpent += cost;
-    if (!c.cursed) run.chestsOpened = (run.chestsOpened || 0) + 1;
+    const c = u.o;
     c.open = true;
     c.lid.rotation.x = -1.9;
     boom(c.x, c.y + 0.8, c.z, 2.4, c.cursed ? 0xff3a3a : 0xffd070);
     giveChest(c);
     for (let i = 0; i < 4; i++) scrapDrop(c.x, c.y, c.z);
   }
-  if (u.kind === 'bench') openBench();
   if (u.kind === 'bin') rummage(u.o);
   if (u.kind === 'pipe') {
     const p = u.o.link;
@@ -347,19 +313,8 @@ export function doUse(u) {
       for (const e of W.enemies) if (e.pred && e.mode === 'hunt') { e.mode = 'patrol'; e.hurt = false; }
     }, 240);
   }
-  if (u.kind === 'valve') {
-    const v = u.o;
-    v.done = true;
-    v.wh.material.color.set(0x6ad06a);
-    v.gl.material.color.set(0x6ad06a);
-    const t = run.time;
-    run.splits.push(t);
-    const gs = G.ghost && G.ghost.data.sp ? G.ghost.data.sp[run.splits.length - 1] : null;
-    banner(`Valve ${run.splits.length} / 3`, fmtT(t) + (gs != null ? ` (${t - gs < 0 ? '−' : '+'}${Math.abs(t - gs).toFixed(1)}s)` : ''));
-    if (W.valves.every(v => v.done)) { G.exitD.beam.material.color.set(0x6ad06a); dnum(P.x, P.y + 1.6, P.z, 'The drain is open', 'info'); }
-  }
   if (u.kind === 'manhole') {
-    if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked. Corrupted elites and bosses drop keys', 'info'); return; }
+    if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked. Elites and bosses drop sewer keys', 'info'); return; }
     run.keys--;
     enterSewer();
   }

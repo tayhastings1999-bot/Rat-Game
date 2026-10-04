@@ -6,7 +6,6 @@ import { sfx } from '../audio/audio.js';
 import { aoe } from '../combat/combat.js';
 import { FUNGI, FUNGUS_T } from '../data/fungi.js';
 import { banner } from '../ui/hud.js';
-import { contract } from './contracts.js';
 
 export const buffOn = k => !!(run.buffs && run.buffs[k] > 0);
 
@@ -32,7 +31,6 @@ function eat(f) {
   f.taken = true;
   bury(f.g);
   run.buffs[f.kind] = FUNGUS_T;
-  contract('forage');
   run.forage = (run.forage || 0) + 1;
   sfx('pickup');
   puff(f.x, f.y + 0.3, f.z, F.col, 10, 2.2);

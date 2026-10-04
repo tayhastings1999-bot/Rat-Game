@@ -1,0 +1,7 @@
+/* Fonts, .woff2 only (every browser the game supports reads woff2; the .woff
+   fallbacks from @fontsource only added weight to the published page). */
+@font-face { font-family: 'Pirata One'; font-style: normal; font-display: swap; font-weight: 400; src: url(@fontsource/pirata-one/files/pirata-one-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Silkscreen'; font-style: normal; font-display: swap; font-weight: 400; src: url(@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Silkscreen'; font-style: normal; font-display: swap; font-weight: 700; src: url(@fontsource/silkscreen/files/silkscreen-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Alegreya Sans'; font-style: normal; font-display: swap; font-weight: 500; src: url(@fontsource/alegreya-sans/files/alegreya-sans-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Alegreya Sans'; font-style: normal; font-display: swap; font-weight: 700; src: url(@fontsource/alegreya-sans/files/alegreya-sans-latin-700-normal.woff2) format('woff2'); }

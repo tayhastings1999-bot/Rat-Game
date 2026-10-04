@@ -26,10 +26,10 @@ import { curD } from '../data/world.js';
 import { fx, puff, spark, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { banner } from '../ui/hud.js';
-import { mkMesh, glowSprite, staticBox, addChest, addCache, addBench } from './build.js';
-import { hit, hurtP, dropFood, scrapDrop, dropGem, addThreat } from '../combat/combat.js';
+import { mkMesh, glowSprite, staticBox, addChest, addCache } from './build.js';
+import { hit, hurtP, dropFood, scrapDrop } from '../combat/combat.js';
 import { spawnEnemy, addPred } from '../entities/mobs.js';
-import { dropCrate } from '../game/progress.js';
+import { dropLoot } from '../game/progress.js';
 import { puddle, warn } from '../combat/hazards.js';
 import { clearMouths, nearMouth } from './ducts.js';
 
@@ -58,7 +58,7 @@ function sign(text, col, x, y, z, dx, dz, w = 3.2) {
 function blocked(x, z, r = 2.2) {
   if (nearMouth(x, z)) return true;
   const hit = o => Math.hypot(o.x - x, o.z - z) < r;
-  return W.chests.some(hit) || (W.caches || []).some(hit) || W.benches.some(hit) || W.bins.some(hit) || W.enemies.some(e => e.type === 'nest' && hit(e));
+  return W.chests.some(hit) || (W.caches || []).some(hit) || W.bins.some(hit) || W.enemies.some(e => e.type === 'nest' && hit(e));
 }
 const usePoint = (x, z, r, label, act, y = 0) => { const u = { x, z, y, r, cr: 0.3, label, act, done: false }; W.uses.push(u); return u; };
 
@@ -108,7 +108,7 @@ function buildInterior(I) {
     for (let i = 0; i < 2; i++) { const [fx, fz] = at(2 + i); dropFood(fx, 0, fz); }
     const [qx, qz] = at(4); addCache(qx, 0, qz);
   } else if (I.kind === 'workshop') {
-    const [ax, az] = at(0); addBench(ax, az, rand(0, TAU));
+    const [ax, az] = at(0); staticBox(ax, az, 2.2, 1.1, 1.07, wood); // a dead workbench, just furniture now
     for (let i = 1; i < 3; i++) { const [bx, bz] = at(i); staticBox(bx, bz, 1.4, 1.4, rr(0.8, 1.6), wood); }
     for (let i = 0; i < 8; i++) { const [sx, sz] = at(3); scrapDrop(sx + rr(-1, 1), 0, sz + rr(-1, 1)); }
     const [cx2, cz2] = at(4); addChest(cx2, 0, cz2, rng.next() < 0.35);
@@ -278,11 +278,9 @@ function robStall(u, lamp) {
   lamp.visible = false;
   for (let i = 0; i < 7; i++) scrapDrop(u.x + rr(-1, 1), 0, u.z + rr(-1, 1));
   dropFood(u.x, 0, u.z);
-  dropGem(u.x, 0.3, u.z, 6 + (run.tier || 0) * 3);
-  if (Math.random() < 0.3) dropCrate(u.x + 1, 0, u.z);
+  if (Math.random() < 0.3) dropLoot(u.x + 1, 0, u.z);
   sfx('screech');
   banner('Stop, thief!', 'The whole market heard that');
-  addThreat(0.3);
   run.robbed = (run.robbed || 0) + 1;
   const n = 5 + (run.tier || 0) * 2;
   for (let i = 0; i < n; i++) { const a = rand(0, TAU), r = rand(8, 13); spawnEnemy(i === 0 && run.time > 120 ? 'shieldrat' : 'mawling', u.x + Math.sin(a) * r, u.z + Math.cos(a) * r, { plain: true }); }
@@ -489,7 +487,7 @@ const ARENA = {
 };
 function buildArena(info) {
   const r = info.byDist && info.byDist[0];
-  if (!r || G.mode === 'trial') return;
+  if (!r) return;
   // Centre the lair on dry ground the rat can walk to, in the farthest room that has some
   // (a room's centre can be a pit or deep water; found by the playtest bots).
   let cx = r.cx, cz = r.cy;
@@ -555,9 +553,9 @@ export function buildSetPieces(info) {
   W.washers = W.washers || [];
   W.tram = null; W.crane = null; W.arenaVents = null; W.arenaSacs = null;
   G.arena = null;
-  const city = M.kind === 'city', D = curD(), trial = G.mode === 'trial';
+  const city = M.kind === 'city', D = curD();
   buildArena(info);
-  if (!city || trial) { run.rain = false; rainOn(false); return; }
+  if (!city) { run.rain = false; rainOn(false); return; }
   for (const I of info.interiors || []) buildInterior(I);
   const lots = info.lots || [];
   const used = new Set();

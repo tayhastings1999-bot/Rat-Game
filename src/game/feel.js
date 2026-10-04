@@ -1,12 +1,11 @@
 // Moment-to-moment feel: perfect dodges and the cold open.
 import { rand } from '../core/util.js';
-import { G, P, run, st } from '../core/state.js';
+import { G, P, run } from '../core/state.js';
 import { fx, dnum, spark } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { tileAt } from '../world/grid.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { comboGain } from './swarm.js';
-import { contract } from './contracts.js';
 import { banner } from '../ui/hud.js';
 
 /** Window at the start of a roll (seconds) in which a hit you slip through counts as perfect. */
@@ -22,10 +21,8 @@ export function tryPerfectDodge() {
   P.pdCd = G.time + 0.5;
   P.perfectT = 2;
   G.slowMo = 0.45;
-  run.sta = Math.min(st.staMax, run.sta + 18);
   comboGain(12);
   run.perfects = (run.perfects || 0) + 1;
-  contract('perfect');
   dnum(P.x, P.y + 1.8, P.z, 'PERFECT', 'crit');
   fx('ring', P.x, P.y, P.z, 3.5, 0x9af0ff, 0.45);
   spark(P.x, P.y + 0.6, P.z, 2, 0x9af0ff);

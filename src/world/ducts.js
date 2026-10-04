@@ -16,7 +16,6 @@ import { sfx } from '../audio/audio.js';
 import { M, T, DUCT_TOP, gi, inG, toG, toW, tAt, tileAt, bfs, OPEN, DRY, N4 } from './grid.js';
 import { glob } from '../combat/arsenal.js';
 import { hurtP } from '../combat/combat.js';
-import { contract } from '../game/contracts.js';
 
 export const DUCT = 11;
 /** Where the cutaway slices the buildings while you're inside. */
@@ -31,7 +30,6 @@ const R = () => rng.next();
  * is a genuine shortcut. Runs before the world mesh is built.
  */
 export function carveDucts() {
-  if (G.mode === 'trial') return [];
   const city = M.kind === 'city', want = city ? 7 : 5, nets = [], used = [];
   const openNbr = k => { const x = k % M.W, z = (k / M.W) | 0; for (const [dx, dz] of N4) if (DRY(tAt(x + dx, z + dz))) return gi(x + dx, z + dz); return -1; };
   const edge = [];
@@ -194,9 +192,7 @@ export function applyCutaway() {
 // ---------- runtime ----------
 let cutK = 0, cutMode = 1;
 export function tickDucts(dt) {
-  const was = P.inDuct;
   P.inDuct = tileAt(P.x, P.z) === DUCT && P.y < DUCT_TOP;
-  if (P.inDuct && !was) contract('duct');
   const gx = toG(P.x), gz = toG(P.z);
   P.inBldg = !P.inDuct && inG(gx, gz) && M.inside[gi(gx, gz)] > 0 && P.y < 2;
   if (P.inDuct) cutMode = 1; else if (P.inBldg) cutMode = 2;
@@ -234,10 +230,9 @@ export function tickDucts(dt) {
   }
 }
 /** Loot when a rival nest is gnawed or clawed apart. */
-export function rivalDeath(e, scrapDrop, dropGem) {
+export function rivalDeath(e, scrapDrop) {
   bury(e.mesh);
   for (let i = 0; i < 10; i++) scrapDrop(e.x, 0, e.z);
-  dropGem(e.x, 0.3, e.z, 12);
   dnum(e.x, 1.6, e.z, 'Rival nest cleared', 'info');
 }
 export const ductInfo = () => ({ nets: (W.ductNets || []).length, tiles: (W.ductNets || []).reduce((a, n) => a + n.tiles.length, 0), wires: W.ductWires.length, rivals: W.enemies.filter(e => e.rival && !e.dead).length, first: W.ductNets && W.ductNets[0] ? { a: W.ductNets[0].a, b: W.ductNets[0].b, tiles: W.ductNets[0].tiles } : null });

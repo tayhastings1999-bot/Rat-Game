@@ -1,5 +1,5 @@
 // Automated playtester. An agent that plays Scurry through the same inputs a
-// player uses (the touch stick, roll, special, signature, shriek, E), at one
+// player uses (the touch stick, aim and attack, dodge, special, signature, E), at one
 // of three skill levels, toward a plain-language goal. It records telemetry
 // as it goes: frame cost, memory, entity counts, combat and economy metrics,
 // and anomalies (stuck, fell out of the world, inside a wall, spikes, errors)
@@ -16,24 +16,19 @@ import { update } from '../game/update.js';
 import { sync, animate } from '../game/sync.js';
 import { stick, keys, startRoll, useSpecial, pressE, chewTarget } from '../entities/player.js';
 import { useSig, SIGS } from '../game/signature.js';
-import { shriek } from '../game/swarm.js';
-import { currentOffers, choose } from '../ui/screens.js';
 import { objTargets } from '../game/objectives.js';
-import { WEAP } from '../combat/arsenal.js';
-import { EVO, KEYSTONES, evolve, applyKeystone } from '../game/progress.js';
-import { RULES, applyRule } from '../game/rules.js';
-import { MUTATIONS } from '../data/items.js';
-import { giveItem } from '../game/loot.js';
+import { PRIM } from '../combat/arsenal.js';
+import { CLASSES } from '../data/classes.js';
 import { grabTarget, dropCarry } from '../entities/player.js';
 
 // ---------- skill profiles ----------
 export const PROFILES = {
-  // Reacts late, rarely dodges, wanders into crowds, picks upgrades at random.
-  novice: { react: 0.65, dodge: 0.15, kite: 0.15, special: 0.25, sig: 0.1, heal: 0.25, loot: 0.3, pick: 'random', jitter: 0.45 },
+  // Reacts late, rarely dodges, wanders into crowds, aims loosely.
+  novice: { react: 0.65, dodge: 0.15, kite: 0.15, special: 0.25, sig: 0.1, heal: 0.25, loot: 0.3, aimErr: 1.6, jitter: 0.45 },
   // Reacts in a third of a second, dodges half the time, kites a little.
-  average: { react: 0.32, dodge: 0.5, kite: 0.55, special: 0.6, sig: 0.5, heal: 0.55, loot: 0.6, pick: 'greedy', jitter: 0.2 },
-  // Near-perfect reads, rolls through wind-ups, keeps its range, builds evolutions.
-  expert: { react: 0.12, dodge: 0.9, kite: 0.9, special: 0.9, sig: 0.9, heal: 0.85, loot: 0.9, pick: 'build', jitter: 0.05 },
+  average: { react: 0.32, dodge: 0.5, kite: 0.55, special: 0.6, sig: 0.5, heal: 0.55, loot: 0.6, aimErr: 0.7, jitter: 0.2 },
+  // Near-perfect reads, dodges through wind-ups, keeps its range, aims true.
+  expert: { react: 0.12, dodge: 0.9, kite: 0.9, special: 0.9, sig: 0.9, heal: 0.85, loot: 0.9, aimErr: 0.15, jitter: 0.05 },
 };
 const RANGED = { slinger: 1, warlock: 1, plague: 1, roof: 1 };
 
@@ -180,9 +175,6 @@ function chooseTarget() {
   }
   if (run.hp < st.maxHp * 0.4 && Math.random() < pr.heal && foods.length) { const f = nearestOf(foods); if (f) return { x: f.x, z: f.z, kind: 'food' }; }
   if (B.goal === 'break') return breakTarget();
-  // A Breakthrough trial: the Champion has to die in time or the level cap holds.
-  const champ = W.enemies.find(e => e.champion && !e.dead);
-  if (champ && B.goal !== 'die') return { x: champ.x, z: champ.z, kind: 'mob', e: champ };
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };
   if (B.goal === 'interior') {
@@ -194,10 +186,11 @@ function chooseTarget() {
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
   if (b && !b.dead && B.goal !== 'survive') return { x: b.x, z: b.z, kind: 'boss', e: b };
-  const ot = objTargets().filter(reachable);
-  if (ot.length) { const o = nearestOf(ot); if (o) return { x: o.x, z: o.z, kind: 'objective', o }; }
+  // Smashing the nests is the main objective (it wakes the boss); side objectives come after.
   const nests = W.enemies.filter(e => e.type === 'nest' && !e.dead);
   if (nests.length && B.goal !== 'survive') { const n = nearestOf(nests); if (n) return { x: n.x, z: n.z, kind: 'nest', e: n }; }
+  const ot = objTargets().filter(reachable);
+  if (ot.length) { const o = nearestOf(ot); if (o) return { x: o.x, z: o.z, kind: 'objective', o }; }
   // Nothing to do: hunt the nearest crowd, or explore.
   const mob = nearestOf(W.enemies.filter(e => !e.dead && !e.hidden && !e.disguise && !e.mesh));
   if (mob && Math.random() < 0.6) return { x: mob.x, z: mob.z, kind: 'mob', e: mob };
@@ -269,7 +262,7 @@ function think(dt) {
   B.thinkT -= dt;
   const th = threatDir();
   // Dodge: roll at right angles to the threat.
-  if (th.danger && P.roll <= 0 && P.rollCd <= 0 && run.sta > 20 && B.goal !== 'die') {
+  if (th.danger && P.roll <= 0 && P.rollCd <= 0 && B.goal !== 'die') {
     const ax = P.x - th.danger.x, az = P.z - th.danger.z, l = Math.hypot(ax, az) || 1, s = Math.random() < 0.5 ? 1 : -1;
     setDir(-az / l * s * 0.7 + ax / l * 0.7, ax / l * s * 0.7 + az / l * 0.7);
     T.rollsTried++;
@@ -302,43 +295,42 @@ function think(dt) {
   // Novices wobble.
   d = [d[0] + rand(-pr.jitter, pr.jitter), d[1] + rand(-pr.jitter, pr.jitter)];
   setDir(d[0], d[1]);
-  B.sprint = (tg && (tg.kind === 'exit' || tg.kind === 'explore')) || th.crowd >= 4;
   // Abilities.
   if (th.crowd >= 4 && Math.random() < pr.special) useSpecial();
   if (SIGS[run.cls] && th.crowd >= 2 && Math.random() < pr.sig * 0.5) useSig();
-  if (run.shriekReady && Math.random() < pr.special) shriek();
 }
 function setDir(x, z) {
   const l = Math.hypot(x, z);
   B.dir = l > 0.05 ? [x / l, z / l] : [0, 0];
 }
+/** Aim and attack like a player: point at the nearest threat in reach (with skill-based error) and hold attack. */
+function aimAttack() {
+  const PR = PRIM[CLASSES[run.cls].prim], reach = PR.range * (PR.range > 6 ? st.range : 1) + 1;
+  const tg = B.target && B.target.e && !B.target.e.dead ? B.target.e : null;
+  let t = tg && Math.hypot(tg.x - P.x, tg.z - P.z) < reach ? tg : null;
+  if (!t) {
+    let bd = reach * reach;
+    for (const e of W.enemies) {
+      if (e.dead || e.hidden || e.disguise || (e.pred && e.mode === 'patrol')) continue;
+      const d = (e.x - P.x) ** 2 + (e.z - P.z) ** 2;
+      if (d < bd) { bd = d; t = e; }
+    }
+  }
+  if (!t) { G.attack = false; G.aimAt = null; return; }
+  const err = B.profile.aimErr || 0;
+  if (!B.aimOff || Math.random() < 0.1) B.aimOff = [rand(-err, err), rand(-err, err)];
+  G.aimAt = { x: t.x + B.aimOff[0], z: t.z + B.aimOff[1] };
+  G.attack = true;
+}
 function applyInput() {
+  aimAttack();
   // Camera-relative stick, the same path a touch player uses.
   const fx = Math.sin(G.camYaw), fz = Math.cos(G.camYaw), rx = -Math.cos(G.camYaw), rz = Math.sin(G.camYaw);
   const [x, z] = B.dir;
   stick.active = x !== 0 || z !== 0;
   stick.y = x * fx + z * fz;
   stick.x = x * rx + z * rz;
-  keys.ShiftLeft = B.sprint && run.sta > 30;
   if (!(B.target && B.target.kind === 'objective')) keys.KeyE = false;
-}
-
-function pickUpgrade() {
-  const offers = currentOffers();
-  if (!offers || !offers.length) {
-    // A level-up screen with nothing to pick is a soft-lock for a real player.
-    anomaly('empty-levelup', { pending: run.pendingLv, bt: run.btPick, weapons: run.weapons.map(w => w.id + w.lvl) });
-    run.pendingLv = 0; run.btPick = 0; G.state = 'play';
-    return;
-  }
-  const pol = B.profile.pick;
-  let o;
-  if (pol === 'random') o = pick(offers);
-  else {
-    const score = x => (x.kind === 'evo' ? 100 : 0) + (x.kind === 'key' ? 60 : 0) + (x.kind === 'rule' ? 50 : 0) + (x.kind === 'up' ? 30 + (pol === 'build' ? (run.weapons.find(w => w.id === x.id) || { lvl: 0 }).lvl * 5 : 0) : 0) + (x.kind === 'new' ? (run.weapons.length < 4 ? 40 : 5) : 0) + (x.kind === 'tome' ? 20 : 0) + (x.kind === 'cursed' ? (pol === 'build' ? -10 : 10) : 0) + Math.random() * 5;
-    o = offers.slice().sort((a, b) => score(b) - score(a))[0];
-  }
-  choose(o);
 }
 
 function watchdogs(dt) {
@@ -392,8 +384,6 @@ function sample() {
 
 /** One simulation step: the bot thinks, inputs land, the game updates. */
 function step(dt) {
-  if (G.state === 'levelup') { B.lvlPicks = (B.lvlPicks || 0) + 1; pickUpgrade(); if (B.lvlPicks > 400) { anomaly('levelup-loop', { pending: run.pendingLv }); G.state = 'play'; run.pendingLv = 0; } return; }
-  B.lvlPicks = 0;
   if (G.state !== 'play') return;
   G.time += dt;
   let sdt = dt;
@@ -433,7 +423,7 @@ export const qa = {
     if (assist) { st.taken = 0; st.dmg *= 4; }
     T.start = { district: run.tier, time: run.time, perfects: run.perfects || 0 };
   },
-  stop() { B.on = false; G.qa = null; G.qaHold = false; stick.active = false; for (const k of ['ShiftLeft', 'KeyE', 'Space']) keys[k] = false; },
+  stop() { B.on = false; G.qa = null; G.qaHold = false; G.attack = false; G.aimAt = null; stick.active = false; for (const k of ['KeyE', 'Space']) keys[k] = false; },
   /** Fast-forward `secs` of game time (stops early on death, district change or goal met). Returns status. */
   sim(secs, dt = 1 / 30) {
     const end = T.simTime + secs, dist0 = run.tier;
@@ -442,7 +432,7 @@ export const qa = {
     while (T.simTime < end && B.on && guard++ < secs / dt * 4 + 50) {
       if (G.state === 'dead') { if (!T.deaths.length || T.deaths[T.deaths.length - 1].t !== run.time) T.deaths.push({ t: +run.time.toFixed(1), district: run.tier, lvl: run.level, by: lastHurt() }); return 'dead'; }
       if (G.state === 'trans') return 'trans';
-      if (G.state !== 'play' && G.state !== 'levelup') return G.state;
+      if (G.state !== 'play') return G.state;
       step(dt);
       if (++n % 6 === 0) { sync(dt * 6); animate(dt * 6); }
       if (goalMet()) return 'goal';
@@ -461,15 +451,6 @@ export const qa = {
     sync(secs); animate(secs);
     B.on = was;
     return T.anomalies.length;
-  },
-  /** Everything a build can be made of (for the synergy sweep). */
-  catalog: () => ({ weapons: Object.keys(WEAP), evolutions: Object.keys(EVO), rules: Object.keys(RULES), keystones: Object.keys(KEYSTONES), mutations: MUTATIONS.map(m => ({ id: m.id, a: m.a, b: m.b })) }),
-  /** Give the current run a build: { weapons: [[id, lvl, evo]], rules: [], keystones: [], items: [] }. */
-  applyBuild(b) {
-    for (const [id, lvl, evo] of b.weapons || []) { let w = run.weapons.find(w => w.id === id); if (!w) { w = { id, lvl: 1, t: 0 }; run.weapons.push(w); } w.lvl = lvl || 5; if (evo) evolve(id); }
-    for (const r of b.rules || []) applyRule(r);
-    for (const k of b.keystones || []) applyKeystone(k);
-    for (const it of b.items || []) giveItem(it, true);
   },
   /** Rendered-frame cost probe (real rAF frames, with rendering). */
   async frameProbe(n = 30) {

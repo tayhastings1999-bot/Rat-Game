@@ -6,23 +6,21 @@ import { angD } from './core/util.js';
 import { scentInfo } from './game/scent.js';
 import { trapCount, springTrap } from './game/traps.js';
 import { ductInfo } from './world/ducts.js';
-import { need } from './combat/combat.js';
-import { giveItem, giveCursed, collectCore } from './game/loot.js';
-import { openLevelUp, renderNest, die, pause } from './ui/screens.js';
-import { dropKey, gainXP, kill, hit, hurtP } from './combat/combat.js';
-import { contract } from './game/contracts.js';
+import { need, addXP } from './game/progress.js';
+import { rummage } from './game/loot.js';
+import { die, pause } from './ui/screens.js';
+import { dropKey, kill, hit, hurtP } from './combat/combat.js';
 import { setupObjective, objDone, openCage } from './game/objectives.js';
-import { applyRule } from './game/rules.js';
 import { M, T, tAt, topAt, toW, DRY, N4 } from './world/grid.js';
 import { audioReady, music, musicLevel } from './audio/audio.js';
 import { renderer, scene, cutPlane, world } from './render/renderer.js';
 import { update } from './game/update.js';
 import { sync, animate } from './game/sync.js';
 import { chewTarget, useTarget, grabTarget, dropCarry } from './entities/player.js';
-import { comboGain, shriek } from './game/swarm.js';
+import { comboGain } from './game/swarm.js';
 import { storyApi } from './game/story.js';
-import { giveJunk, rummage } from './game/junk.js';
-import { lightAt, spawnOwl } from './game/light.js';
+import { TUNE, tuneEntries, setTune } from './tuning.js';
+import { initDebugPanel } from './ui/debugPanel.js';
 
 /** Animation gallery: each demo creature walks a small loop and attacks every couple of seconds. */
 function demoAI(e, dt) {
@@ -42,10 +40,11 @@ import { dropFood } from './combat/combat.js';
 import { staticChecks } from './qa/checks.js';
 
 export function debugApi(state) {
+  initDebugPanel();
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
-    startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, giveItem, giveCursed, collectCore,
-    hit, openLevelUp, renderNest, die, pause, dropKey, gainXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, shriek, dropCarry, kill, giveJunk, rummage, lightAt, spawnOwl, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
+    hit, die, pause, dropKey, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {
@@ -65,14 +64,11 @@ export function debugApi(state) {
       return null;
     },
     cutY: () => cutPlane.constant,
-    hurtP, contract, objDone, openCage,
+    hurtP, objDone, openCage,
     forceObjective(k) { setupObjective(state.G.objInfo, k); },
-    applyRule,
     /** Fire a district event on the next tick. */
     forceEvent(k) { state.run.forceEv = k; state.run.evT = 0; state.run.events.length = 0; },
     need,
-    /** Queue one ordinary level-up screen (tests that need a pick without touching XP). */
-    pendLevel() { state.run.level++; state.run.pendingLv++; openLevelUp(); },
     god(on = true) { state.st.taken = on ? 0 : 1; },
     hurtBoss(f = 0.35) { const b = state.G.boss; if (b) b.hp -= b.maxHp * f; },
     /** Real hits (through poise and exposure), totalling a share of the boss's max HP. */

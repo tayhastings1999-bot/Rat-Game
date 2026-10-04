@@ -69,9 +69,8 @@ await step('start brawler run (city)', async () => {
   await wait(1500);
   const s = await S(() => ({ state: __scurry.G.state, kind: __scurry.M.kind, enemies: __scurry.W.enemies.length }));
   if (s.state !== 'play' || s.kind !== 'city') throw new Error(JSON.stringify(s));
-  const co = await S(() => ({ c: __scurry.run.contracts.length, open: __scurry.run.coldOpen }));
-  if (co.c !== 3 || !co.open) throw new Error('no contracts or cold open ' + JSON.stringify(co));
-  await S(() => { __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; }); // no owls, district events or Scab mid-script
+  if (!(await S(() => __scurry.run.coldOpen))) throw new Error('no cold open');
+  await S(() => { __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; }); // no district events or Scab mid-script
 });
 await step('move, jump, roll, attack', async () => {
   await S(() => __scurry.god(true));
@@ -85,39 +84,27 @@ await step('move, jump, roll, attack', async () => {
   await wait(2500);
   await shot('02-city-play');
 });
-await step('level up + choose', async () => {
-  await S(() => { const s = __scurry, r = s.run; if ((r.level + 1) % 5 === 0) { r.level++; r.need = s.need(r.level); r.xp = 0; } s.gainXP(s.need(r.level) * 3); }); // skip a capped Breakthrough level; enough XP even with the pace rubber band
-  await rawWait(400);
-  if ((await S(() => __scurry.G.state)) !== 'levelup') throw new Error('no level-up screen');
+await step('XP from kills: auto level-up, no pause', async () => {
+  const L0 = await S(() => __scurry.run.level);
+  await S(() => { const s = __scurry; s.addXP(s.need(s.run.level) * 2.5); });
+  const r = await S(() => ({ L: __scurry.run.level, st: __scurry.G.state }));
+  if (r.L <= L0 || r.st !== 'play') throw new Error('level-up ' + JSON.stringify(r));
   await shot('03-levelup');
-  for (let i = 0; i < 12 && (await S(() => __scurry.G.state)) === 'levelup'; i++) { await page.keyboard.press('Digit1'); await wait(150); }
-  if ((await S(() => __scurry.G.state)) !== 'play') throw new Error('stuck after level-up');
+  const x0 = await S(() => __scurry.run.xp + __scurry.run.level * 1e6);
+  await S(() => { const { P } = __scurry, e = __scurry.spawnEnemy('mawling', P.x + 2, P.z, { plain: true, force: true }); if (e) __scurry.kill(e); });
+  if (!(await S(x0 => __scurry.run.xp + __scurry.run.level * 1e6 > x0, x0))) throw new Error('kill gave no XP');
 });
-await step('mutation + cursed loot', async () => {
-  await S(() => { __scurry.giveItem('razor'); __scurry.giveItem('drink'); __scurry.giveCursed('rabid'); });
-  const r = await S(() => ({ muts: __scurry.run.muts, cursed: __scurry.run.cursed, live: __scurry.st.mut.livewire }));
-  if (!r.muts.includes('livewire') || !r.live || !r.cursed.includes('rabid')) throw new Error(JSON.stringify(r));
-  await wait(1500);
-});
-await step('city interactions: chest, bench, boards, climb, power line, key, manhole', async () => {
+await step('city interactions: chest, boards, climb, power line, key, manhole', async () => {
   const tp = (x, z, y) => S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y ?? 0; P.vx = P.vz = P.vy = 0; }, [x, z, y]);
   // Chest
   const chest = await S(() => { const c = __scurry.W.chests.find(c => !c.open && c.y < 1); return c && { x: c.x, z: c.z, y: c.y }; });
   if (chest) {
-    const n0 = await S(() => __scurry.run.items.length);
+    const n0 = await S(() => __scurry.run.scrap + __scurry.W.scraps.length);
     await tp(chest.x + 1, chest.z, chest.y); await wait(200);
     await page.keyboard.press('KeyE'); await wait(300);
-    const n1 = await S(() => __scurry.run.items.length + __scurry.run.cursed.length);
-    if (n1 <= n0) throw new Error('chest gave nothing');
+    const n1 = await S(() => __scurry.run.scrap + __scurry.W.scraps.length);
+    if (n1 <= n0) throw new Error('chest gave no gold');
   }
-  // Workbench
-  const b = await S(() => { const b = __scurry.W.benches[0]; return b && { x: b.x, z: b.z }; });
-  if (!b) throw new Error('no workbench in the city');
-  await tp(b.x + 1.2, b.z); await wait(200);
-  await page.keyboard.press('KeyE'); await wait(300);
-  if ((await S(() => __scurry.G.state)) !== 'bench') throw new Error('bench did not open');
-  await S(() => { __scurry.run.scrap = 100; });
-  await page.keyboard.press('Escape'); await wait(200);
   // Gnaw through boards
   const board = await S(() => {
     const { M } = __scurry;
@@ -139,12 +126,12 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   const wall = await S(() => { const w = __scurry.wallSpot(4.5, 6); return w && { ...w, h: w.top }; });
   if (!wall) throw new Error('no climbable wall found');
   await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); });
-  await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 1.6; P.z = w.z + w.nz * 1.6; P.y = 0; P.vx = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); __scurry.run.sta = 100; }, wall);
+  await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 1.6; P.z = w.z + w.nz * 1.6; P.y = 0; P.vx = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, wall);
   await page.keyboard.down('KeyW'); await wait(120); await page.keyboard.press('Space'); await page.keyboard.down('Space');
   await until(h => __scurry.P.y >= h - 0.2, 7000, wall.h);
   const py = await S(() => __scurry.P.y);
   await page.keyboard.up('Space'); await page.keyboard.up('KeyW');
-  if (py < wall.h - 0.2) throw new Error(`climb reached y=${py.toFixed(2)} of roof ${wall.h} ` + (await S(() => { const P = __scurry.P; return JSON.stringify({ st: __scurry.G.state, x: P.x, z: P.z, wt: P.wallType, sta: __scurry.run.sta, carry: !!P.carry, sq: P.squeeze }); })) + ' ' + JSON.stringify(wall));
+  if (py < wall.h - 0.2) throw new Error(`climb reached y=${py.toFixed(2)} of roof ${wall.h} ` + (await S(() => { const P = __scurry.P; return JSON.stringify({ st: __scurry.G.state, x: P.x, z: P.z, wt: P.wallType, carry: !!P.carry, sq: P.squeeze }); })) + ' ' + JSON.stringify(wall));
   await shot('02b-rooftop');
   // Stand on a power line
   const line = await S(() => { const p = __scurry.W.plats.find(p => p.line); return p && { x: p.x, z: p.z, y: p.y }; });
@@ -170,7 +157,7 @@ await step('city interactions: chest, bench, boards, climb, power line, key, man
   await S(() => { __scurry.run.district = 0; });
 });
 await step('staggered roster, secrets, lairs, melee kit', async () => {
-  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.expoCd = 1e9; __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
+  await S(() => { __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
   await wait(600);
   // Early on only mawlings spawn; later types unlock on schedule with a banner.
   const early = await S(() => { const s = new Set(); for (let i = 0; i < 200; i++) s.add(__scurry.pickType()); return [...s]; });
@@ -207,29 +194,8 @@ await step('staggered roster, secrets, lairs, melee kit', async () => {
   await shot('03c-swipe');
   if (!((await S(() => __scurry.run.blood || 0)) > 0)) throw new Error('bloodlust did not stack');
 });
-await step('scramble, wall-bounce, foraging', async () => {
+await step('foraging', async () => {
   await S(() => { __scurry.G.testFreeze = true; __scurry.W.zones.length = 0; }); // hold any boss still, and no vents shoving the rat, through the scripted steps
-  // Hold off level-up screens through the scripted movement/junk/light steps.
-  await wait(100);
-  await S(() => { const r = __scurry.run; r.needHold = r.need; r.need = 1e12; });
-  const w = await S(() => __scurry.wallSpot());
-  if (!w) throw new Error('no tall wall');
-  await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); });
-  await S(w => { const { P, G, W } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); P.x = w.x + w.nx * 2.5; P.z = w.z + w.nz * 2.5; P.y = 0; P.vx = P.vy = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); G.lockOn = null; }, w);
-  await rawWait(200);
-  await S(() => { __scurry.run.sta = __scurry.st.staMax; });
-  await page.keyboard.down('KeyW'); await rawWait(150); await page.keyboard.down('ShiftLeft');
-  let peak = 0, scr = false;
-  for (let i = 0; i < 70 && peak < 2; i++) { await rawWait(60); const r = await S(() => ({ y: __scurry.P.y, s: __scurry.P.scramble })); peak = Math.max(peak, r.y); if (r.s > 0) scr = true; }
-  await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft');
-  if (!scr || peak < 2) throw new Error(`scramble: triggered=${scr} peak=${peak.toFixed(2)} ` + (await S(() => { const P = __scurry.P; return JSON.stringify({ s: __scurry.G.state, carry: !!P.carry, lock: P.lock, sq: P.squeeze, sta: __scurry.run.sta, y: P.y, x: P.x, z: P.z, yaw: __scurry.G.camYaw, lockOn: !!__scurry.G.lockOn, wt: P.wallType, wtop: P.wallTop }); })) + ' wall ' + JSON.stringify(w));
-  // Bounce off the wall mid-scramble.
-  await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 2.5; P.z = w.z + w.nz * 2.5; P.y = 0; P.vx = P.vy = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, w);
-  await page.keyboard.down('KeyW'); await rawWait(150); await page.keyboard.down('ShiftLeft');
-  let chain = 0;
-  for (let i = 0; i < 80 && !chain; i++) { await rawWait(50); if (await S(() => __scurry.P.scramble > 0)) { await page.keyboard.press('Space'); await rawWait(80); chain = await S(() => __scurry.P.chain); } }
-  await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft');
-  if (!chain) throw new Error('wall-bounce did not chain');
   const f = await S(() => { const f = __scurry.W.fungi.find(f => !f.taken); return f && { x: f.x, y: f.y, z: f.z, k: f.kind }; });
   if (!f) throw new Error('no fungi in district');
   await S(f => { const P = __scurry.P; P.x = f.x; P.z = f.z; P.y = f.y; P.vx = P.vz = 0; }, f);
@@ -237,90 +203,33 @@ await step('scramble, wall-bounce, foraging', async () => {
   if (!(t > 8)) throw new Error('fungus buff ' + f.k + ' = ' + t);
   await shot('03b-forage');
 });
-await step('volatile junk + rummaging', async () => {
+await step('rummaging bins', async () => {
   const bin = await S(() => { const b = __scurry.W.bins.find(b => !b.done); return b && { x: b.x, z: b.z, r: b.r }; });
   if (!bin) throw new Error('no bins to rummage');
   await S(b => { const P = __scurry.P; P.x = b.x + b.r + 0.6; P.z = b.z; P.y = 0; P.vx = P.vz = 0; }, bin);
   await until(() => { const u = __scurry.useTarget(); return u && u.kind === 'bin'; }, 3000);
   for (let i = 0; i < 5 && !(await S(b => __scurry.W.bins.find(o => o.x === b.x && o.z === b.z).done, bin)); i++) { await page.keyboard.press('KeyE'); await wait(200); }
   if (!(await S(b => __scurry.W.bins.find(o => o.x === b.x && o.z === b.z).done, bin))) throw new Error('rummage did nothing');
-  await S(() => { for (const k of ['volt', 'blade', 'rag', 'sinker']) if (!__scurry.run.junk.includes(k)) __scurry.giveJunk(k); });
-  const s0 = await S(() => ({ n: __scurry.run.junk.length, tox: __scurry.st.toxImmune, heal: __scurry.st.healMul, noScr: __scurry.st.noScramble, sta: __scurry.st.staMax }));
-  if (s0.n !== 4 || !s0.tox || s0.heal > 0.3 || !s0.noScr) throw new Error('junk stats ' + JSON.stringify(s0));
-  // Roll with the battery: electric trail.
-  let trail = 0;
-  await page.keyboard.down('KeyW');
-  for (let i = 0; i < 4 && !trail; i++) {
-    await S(() => { const { P, run, st } = __scurry; run.sta = st.staMax; P.rollCd = 0; P.chewing = false; P.squeeze = false; });
-    await page.keyboard.press('ShiftLeft');
-    trail = await rawUntil(() => __scurry.W.volt.length, 1500);
-  }
-  await page.keyboard.up('KeyW');
-  if (!trail) throw new Error('no electric trail');
-  // Razor blade bleeds; the sinker slams.
-  await S(() => { const { P, G, M } = __scurry, r = G.startRoom; P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; for (let i = 0; i < 6; i++) __scurry.spawnEnemy('mawling', P.x + 1.5 + i * 0.3, P.z + 0.8, { hpMul: 30 }); });
-  if (!(await until(() => __scurry.W.enemies.some(e => e.bleed > 0) || __scurry.run.dmgBy.dot > 0, 5000))) throw new Error('no bleed stacks');
-  await wait(100);
-  await S(() => { __scurry.run.specT = 0; });
-  await page.keyboard.press('KeyQ');
-  const slam = (await rawUntil(() => __scurry.P.slam === 'sinker' && 'sinker', 1000)) || await S(() => __scurry.P.slam);
-  if (slam !== 'sinker') throw new Error('sinker slam not armed: ' + slam);
-  await wait(1500);
-  await shot('03c-junk');
-  // The volt's still-curse gets the rat out of its way.
-  await S(() => { __scurry.run.stillT = 0; });
-});
-await step('light, shadow, exposure, owl', async () => {
-  const L = await S(() => ({ lamps: __scurry.W.lamps.length, search: __scurry.W.searches.length }));
-  if (!L.lamps || !L.search) throw new Error('no light sources ' + JSON.stringify(L));
-  // Stand in a searchlight spot: exposure climbs fast.
-  await S(() => { const { W, run } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') e.hp = 0; run.expo = 0; run.expoCd = 0; });
-  // Pin searchlight 0 over dry ground in the start room so the rat can stand in it.
-  await S(() => { const { P, W, G, M } = __scurry, r = G.startRoom, s = W.searches[0]; P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; s.cx = P.x; s.cz = P.z; s.rx = s.rz = 0; });
-  const got = await until(() => { const { P, W, run } = __scurry, sl = W.searches[0]; P.x = sl.sx; P.z = sl.sz; P.vx = P.vz = 0; return run.expo > 15 && run.expo; }, 6000) || await S(() => __scurry.run.expo);
-  if (!(got > 15)) throw new Error('searchlight exposure ' + got + ' ' + (await S(() => { const { P, W, G, run } = __scurry, s = W.searches[0]; return JSON.stringify({ st: G.state, L: P.light, sh: P.shadow, d: Math.hypot(P.x - s.sx, P.z - s.sz), y: P.y, cd: run.expoCd, n: W.searches.length }); })));
-  await shot('03d-searchlight');
-  // Max it out: spotted → an owl takes wing.
-  await S(() => { const { P, W, run } = __scurry, sl = W.searches[0]; P.x = sl.sx; P.z = sl.sz; P.vx = P.vz = 0; run.expoCd = 0; run.expo = 100; });
-  await wait(300);
-  const owl = await S(() => __scurry.W.enemies.some(e => e.type === 'owl'));
-  if (!owl) throw new Error('no owl after being spotted');
-  const seen = new Set();
-  // Stay in the searchlight so the owl can see its prey.
-  for (let i = 0; i < 100 && !seen.has('dive'); i++) { await rawWait(250); const s = await S(() => { const { W, P } = __scurry, sl = W.searches[0]; P.x = sl.sx; P.z = sl.sz; const o = W.enemies.find(e => e.type === 'owl'); return o && o.st; }); if (s) seen.add(s); }
-  await shot('03e-owl');
-  if (!seen.has('wind') && !seen.has('dive')) throw new Error('owl never dove: ' + [...seen]);
-  // Find a dark spot: shadows mean faster stamina and a hidden rat.
-  const dark = await S(() => { const { W, M } = __scurry; for (const r of W.rooms) { const x = (r.cx - M.W / 2 + 0.5) * 4, z = (r.cy - M.H / 2 + 0.5) * 4; if (__scurry.lightAt(x, 0, z) < 0.1) return { x, z }; } return null; });
-  if (!dark) throw new Error('no dark spot in the district');
-  await S(d => { const P = __scurry.P; P.x = d.x; P.z = d.z; P.y = 0; P.vx = P.vz = 0; }, dark);
-  await wait(400);
-  if (!(await S(() => __scurry.P.shadow))) throw new Error('not in shadow at a dark spot');
-  await S(() => { for (const e of __scurry.W.enemies) if (e.type === 'owl') __scurry.kill(e); const r = __scurry.run; r.expoCd = 1e9; r.need = r.needHold; });
-  await wait(300);
-  if (await S(() => __scurry.W.enemies.some(e => e.type === 'owl' && !e.dead))) throw new Error('owl did not die');
 });
 await step('advanced scent: gauge, prints, gnaw points, view cones', async () => {
-  await S(() => { const r = __scurry.run; if (r.needHold) { r.need = r.needHold; r.needHold = 0; } });
-  await S(() => { const { P, G, M, W, st, run } = __scurry, r = G.startRoom; P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; P.scent = false; P.scentE = st.scentMax; run.expo = 0; run.expoCd = 1e9; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); });
+  await S(() => { const { P, G, M, W, st } = __scurry, r = G.startRoom; P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; P.scent = false; P.scentE = st.scentMax; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); });
   await page.keyboard.press('KeyF');
-  await until(() => __scurry.P.scent && __scurry.scentInfo().paths > 0 && (__scurry.P.scentE < __scurry.st.scentMax - 0.3 || __scurry.st.rag), 5000);
-  const a = await S(() => ({ on: __scurry.P.scent, e: __scurry.P.scentE, max: __scurry.st.scentMax, rag: __scurry.st.rag, ...__scurry.scentInfo() }));
-  if (!a.on || !(a.e < a.max - 0.3 || a.rag) || !a.paths || !a.gnaw) throw new Error('scent ' + JSON.stringify(a));
+  await until(() => __scurry.P.scent && __scurry.scentInfo().paths > 0 && __scurry.P.scentE < __scurry.st.scentMax - 0.3, 5000);
+  const a = await S(() => ({ on: __scurry.P.scent, e: __scurry.P.scentE, max: __scurry.st.scentMax, ...__scurry.scentInfo() }));
+  if (!a.on || !(a.e < a.max - 0.3) || !a.paths || !a.gnaw) throw new Error('scent ' + JSON.stringify(a));
   // An elite on the move leaves fresh prints.
   await S(() => { const { P } = __scurry, e = __scurry.spawnEnemy('mawling', P.x + 3, P.z, { elite: true }); if (e) { e.spd = 0; e.tag = 'walker'; } });
   for (let i = 0; i < 6; i++) { await S(() => { const e = __scurry.W.enemies.find(e => e.tag === 'walker'); if (e) e.x += 1.3; }); await rawWait(80); }
-  // A cat facing +z: stand behind it (unseen), then in front of it (seen). A pinned searchlight keeps the rat lit;
-  // the rat's weapons are holstered so nothing wakes the cat but its eyes.
+  // A cat facing +z: stand behind it (unseen), then in front of it (seen). The rat holds its attack so
+  // nothing wakes the cat but its eyes.
   const cat = await S(() => {
-    const { P, M, W, run, st } = __scurry;
+    const { P, M, W, run } = __scurry;
     for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e);
-    run.wHold = run.weapons.slice(); run.weapons.length = 0; st.volt = false; st.mut = {}; run.primT = 1e9; run.needHold2 = run.need; run.need = 1e12;
+    run.primT = 1e9;
     const gx = Math.round(P.x / 4 + M.W / 2 - 0.5), gz = Math.round(P.z / 4 + M.H / 2 - 0.5), k = (gz + 4) * M.W + gx;
     __scurry.addPred([k, k]);
     const e = W.enemies[W.enemies.length - 1];
     e.spd = 0; e.x = (gx - M.W / 2 + 0.5) * 4; e.z = P.z + 1; e.ang = 0; P.x = e.x;
-    const s = W.searches[0]; if (s) { s.cx = P.x; s.cz = P.z; s.rx = s.rz = 0; s.R = 8; }
     P.z = e.z - 4.5; P.x = e.x; P.vx = P.vz = 0;
     return { z: e.z };
   });
@@ -332,9 +241,9 @@ await step('advanced scent: gauge, prints, gnaw points, view cones', async () =>
   const front = await S(() => __scurry.W.enemies.find(e => e.pred && e.type !== 'owl').mode);
   const info = await S(() => __scurry.scentInfo());
   await shot('03f-scent');
-  if (behind !== 'patrol' || front !== 'hunt') throw new Error(`cat vision: behind=${behind} front=${front} ` + (await S(() => { const { P } = __scurry, e = __scurry.W.enemies.find(e => e.pred && e.type !== 'owl'); return JSON.stringify({ det: e.det, look: e.look, ang: e.ang, d: Math.hypot(P.x - e.x, P.z - e.z), dy: P.y - e.y, sh: P.shadow, L: P.light, hurt: e.hurt, ex: e.x, ez: e.z, px: P.x, pz: P.z }); })));
+  if (behind !== 'patrol' || front !== 'hunt') throw new Error(`cat vision: behind=${behind} front=${front} ` + (await S(() => { const { P } = __scurry, e = __scurry.W.enemies.find(e => e.pred && e.type !== 'owl'); return JSON.stringify({ det: e.det, look: e.look, ang: e.ang, d: Math.hypot(P.x - e.x, P.z - e.z), dy: P.y - e.y, hurt: e.hurt, ex: e.x, ez: e.z, px: P.x, pz: P.z }); })));
   if (!info.prints || !info.cones) throw new Error('scent overlay ' + JSON.stringify(info));
-  await S(() => { const { W, run, P } = __scurry; for (const e of W.enemies) if (e.pred) __scurry.kill(e); P.scent = false; run.weapons.push(...run.wHold); run.primT = 0; run.need = run.needHold2; });
+  await S(() => { const { W, run, P } = __scurry; for (const e of W.enemies) if (e.pred) __scurry.kill(e); P.scent = false; run.primT = 0; });
 });
 await step('physics traps: cable into puddle, scaffold, brick pallet', async () => {
   const tc = await S(() => __scurry.trapCount());
@@ -400,44 +309,12 @@ await step('squeeze network: crawl in, cutaway, mobs locked out, rival nests', a
   if (!(await until(() => __scurry.cutY() > 100 || (__scurry.P.inBldg && __scurry.cutY() > 2), 3000))) throw new Error('cutaway stuck on'); // a crawlspace can open into a building
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
 });
-await step('leveling: breakthrough trial, champion, rewards, crate, evolution', async () => {
-  // Park any boss out of the way (trials wait while a boss is on top of you).
-  await S(() => { const { W, G } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; });
-  await wait(200);
-  // Top out level 4: the bar caps at the breakthrough and the overflow is banked.
-  await S(() => { const r = __scurry.run; r.level = 4; r.need = __scurry.need(4); r.xp = 0; r.trial = null; r.trialCd = 0.5; r.btPick = 0; __scurry.gainXP(500); });
-  const cap = await S(() => ({ lv: __scurry.run.level, xp: __scurry.run.xp, need: __scurry.run.need, bank: __scurry.run.xpBank }));
-  if (cap.lv !== 4 || cap.xp !== cap.need || !(cap.bank > 0)) throw new Error('bar did not cap at the breakthrough ' + JSON.stringify(cap));
-  const trial = await until(() => !!__scurry.run.trial && __scurry.run.trial.e.champion, 8000);
-  if (!trial) throw new Error('no champion came ' + (await S(() => { const { run, G, P, M, W } = __scurry, b = G.boss; return JSON.stringify({ st: G.state, cd: run.trialCd, cue: run.trialCue, lv: run.level, xp: run.xp, need: run.need, tiles: M.spawnTiles.length, n: W.enemies.length, boss: b && { rev: b.revealed, d: Math.hypot(b.x - P.x, b.z - P.z) }, seen: Object.keys(run.seenMobs || {}) }); })));
-  await shot('03j-champion');
-  await S(() => __scurry.kill(__scurry.run.trial.e));
-  const bt = await rawUntil(() => __scurry.G.state === 'levelup' && __scurry.run.btPick > 0 && [...document.querySelectorAll('.card .role')].map(r => r.textContent), 4000);
-  if (!bt || !bt.includes('Keystone')) throw new Error('breakthrough offers ' + JSON.stringify(bt));
-  await shot('03k-breakthrough');
-  await page.keyboard.press('Digit1');
-  await wait(300);
-  const after = await S(() => ({ lv: __scurry.run.level, bt: __scurry.run.btPick, crates: __scurry.W.crates.length }));
-  if (after.lv < 5 || after.bt !== 0 || !after.crates) throw new Error('after breakthrough ' + JSON.stringify(after));
-  // Weapon crate: a free weapon level (or a new weapon).
-  const w0 = await S(() => __scurry.run.weapons.reduce((a, w) => a + w.lvl, 0));
-  await S(() => { const { P, W } = __scurry, c = W.crates.find(c => c.kind === 'crate'); P.x = c.x; P.z = c.z; P.y = c.y; P.vx = P.vz = 0; });
-  if (!(await until(w0 => __scurry.run.weapons.reduce((a, w) => a + w.lvl, 0) > w0 || __scurry.st.dmg > 1.5, 3000, w0))) throw new Error('crate gave nothing');
-  // Evolution: a level-5 weapon plus its tome evolves at the next breakthrough pick.
-  await S(() => { const r = __scurry.run; let w = r.weapons.find(w => w.id === 'claw'); if (!w) { if (r.weapons.length >= 4) r.weapons.pop(); w = { id: 'claw', lvl: 5, t: 0 }; r.weapons.push(w); } w.lvl = 5; r.tomes.might = Math.max(1, r.tomes.might || 0); r.btPick = 1; r.pendingLv = 1; __scurry.openLevelUp(); });
-  const evo = await S(() => [...document.querySelectorAll('.card .role')].findIndex(r => r.textContent === 'Evolution'));
-  if (evo < 0) throw new Error('no evolution offered');
-  await page.keyboard.press('Digit' + (evo + 1));
-  await wait(200);
-  if (!(await S(() => __scurry.run.weapons.find(w => w.id === 'claw').evo))) throw new Error('claws did not evolve');
-  await S(() => { __scurry.G.testNoBusy = false; });
-});
-await step('perfect dodge, district events, contracts', async () => {
-  await S(() => { const { W, G } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; __scurry.run.sta = __scurry.st.staMax; __scurry.P.rollCd = 0; });
+await step('perfect dodge, district events', async () => {
+  await S(() => { const { W, G } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; __scurry.P.rollCd = 0; });
   // Roll, and get "hit" in the opening of the roll.
   await page.keyboard.press('ShiftLeft');
   const pd = await rawUntil(() => { const { P } = __scurry; if (P.roll > 0.1) { __scurry.hurtP(10, null); return { t: P.perfectT, slow: __scurry.G.slowMo }; } return null; }, 3000);
-  if (!pd || !(pd.t > 0) || !(pd.slow > 0)) throw new Error('perfect dodge did not trigger ' + JSON.stringify(pd) + (await S(() => { const { P, run, G } = __scurry; return JSON.stringify({ st: G.state, roll: P.roll, cd: P.rollCd, sta: run.sta, sq: P.squeeze, chew: P.chewing }); })));
+  if (!pd || !(pd.t > 0) || !(pd.slow > 0)) throw new Error('perfect dodge did not trigger ' + JSON.stringify(pd) + (await S(() => { const { P, G } = __scurry; return JSON.stringify({ st: G.state, roll: P.roll, cd: P.rollCd, sq: P.squeeze, chew: P.chewing }); })));
   for (const k of ['feast', 'stampede', 'fumigate', 'tide', 'bounty']) {
     await S(k => __scurry.forceEvent(k), k);
     const on = await until(k => __scurry.run.events.some(v => v.kind === k), 4000, k);
@@ -446,16 +323,12 @@ await step('perfect dodge, district events, contracts', async () => {
     if (k === 'tide' && !(await until(() => (__scurry.run.events.find(v => v.kind === 'tide') || {}).got > 10, 6000))) throw new Error('no roach tide');
     if (k === 'feast') { await wait(600); await shot('03l-event-feast'); }
     if (k === 'bounty') {
-      const c0 = await S(() => __scurry.W.crates.length);
+      const c0 = await S(() => __scurry.W.scraps.length);
       await S(() => __scurry.kill(__scurry.W.enemies.find(e => e.bounty)));
-      if (!(await until(c0 => __scurry.W.crates.length > c0, 2000, c0))) throw new Error('bounty paid nothing');
+      if (!(await until(c0 => __scurry.W.scraps.length > c0, 2000, c0))) throw new Error('bounty paid nothing');
     }
     await S(() => { __scurry.run.events.length = 0; __scurry.run.evT = 999; });
   }
-  // Contracts complete and pay Dominance.
-  await S(() => { const r = __scurry.run; r.contracts = [{ id: 'bins', p: 4, done: false }]; r.contractDom = 0; __scurry.contract('bins'); });
-  const cd = await S(() => ({ d: __scurry.run.contractDom, done: __scurry.run.contracts[0].done }));
-  if (!cd.done || !(cd.d > 0)) throw new Error('contract did not pay ' + JSON.stringify(cd));
   await S(() => { __scurry.G.testNoBusy = false; for (const e of __scurry.W.enemies) if (e.type === 'roach' || e.stampede) __scurry.kill(e); });
 });
 await step('district objectives: heist, rescue, beacon, thief', async () => {
@@ -477,7 +350,7 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   const opened = await gnawUntil(() => __scurry.run.obj.cages[0].open);
   if (!opened) throw new Error('cage did not open ' + JSON.stringify(await S(() => { const s = __scurry, P = s.P, c = s.run.obj.cages[0], ct = s.chewTarget(), u = s.useTarget(); return { d: Math.hypot(P.x - c.x, P.z - c.z).toFixed(2), dy: (P.y - c.y).toFixed(2), ch: P.chewing, t: P.chewT, ct: ct && ct.kind, u: u && u.kind + ':' + u.label, st: s.G.state, carry: !!P.carry, inv: P.inv }; })));
   await S(() => { for (const c of __scurry.run.obj.cages) if (!c.open) __scurry.openCage(c); });
-  if (!(await S(() => __scurry.run.obj.done && __scurry.W.familiars.length >= 3))) throw new Error('rescue did not complete');
+  if (!(await S(() => __scurry.run.obj.done))) throw new Error('rescue did not complete');
   // Beacon: stand in the ring; it lights.
   await S(() => __scurry.forceObjective('hold'));
   const b = await S(() => { const o = __scurry.run.obj; return { x: o.x, z: o.z, y: o.y }; });
@@ -495,26 +368,14 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   if (!(await S(() => __scurry.run.obj.done))) throw new Error('thief hunt did not complete');
   await S(() => { __scurry.G.testNoBusy = false; });
 });
-await step('rule breakers and Scab the rival', async () => {
-  await S(() => { const { P, G, M, W } = __scurry, r = G.startRoom; G.testNoBusy = true; Object.assign(__scurry.run, { spawnT: 1e9, surgeT: 1e9 }); for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); __scurry.applyRule('chain'); P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; });
-  const nChain = await S(() => {
-    const { P } = __scurry;
-    // A line of four mawlings on open ground, in whichever direction has room.
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const got = [];
-      for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + dx * (6 + i * 0.5), P.z + dz * (6 + i * 0.5), { hpMul: 30, plain: true, force: true }); if (e) { e.spd = 0; e.cd = 99; e.fled = true; e.tag = 'chain'; got.push(e); } }
-      if (got.length >= 2) { __scurry.kill(got[0]); return got.length; }
-      got.forEach(e => { e.dead = true; });
-    }
-    return 0;
-  });
-  if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'chain' && !e.dead && e.hp < e.maxHp), 3000))) throw new Error('chain reaction did not burst (spawned ' + nChain + ')');
+await step('Scab the rival', async () => {
+  await S(() => { const { P, G, M, W } = __scurry, r = G.startRoom; G.testNoBusy = true; Object.assign(__scurry.run, { spawnT: 1e9, surgeT: 1e9 }); for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); P.x = (r.cx - M.W / 2 + 0.5) * 4; P.z = (r.cy - M.H / 2 + 0.5) * 4; P.y = 0; P.vx = P.vz = 0; });
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); const r = __scurry.run; r.scabSeen = false; r.scab = null; r.dStart = r.time - 40; });
   const scab = await until(() => __scurry.run.scab && !__scurry.run.scab.dead, 6000);
   if (!scab) throw new Error('Scab never showed (needs an unopened chest)');
-  const c0 = await S(() => __scurry.W.crates.length);
+  const c0 = await S(() => __scurry.W.scraps.length);
   await S(() => { if (__scurry.run.scab) __scurry.kill(__scurry.run.scab); });
-  if (!(await S(c0 => __scurry.run.scabLosses === 1 && __scurry.W.crates.length > c0, c0))) throw new Error('Scab dropped nothing');
+  if (!(await S(c0 => __scurry.run.scabLosses === 1 && __scurry.W.scraps.length > c0, c0))) throw new Error('Scab dropped nothing');
   await S(() => { __scurry.G.testNoBusy = false; __scurry.run.scabSeen = true; });
 });
 await step('corrupted elites spawn and die', async () => {
@@ -529,14 +390,7 @@ await step('surface boss: three phases, death, exits', async () => {
   await wait(300);
   const hidden = await rawUntil(() => { const b = __scurry.G.boss; return document.getElementById('bossWrap').style.display === 'none' || b.revealed; }, 1500);
   if (!hidden) throw new Error('boss UI shown before reveal');
-  await S(() => { const { G, P } = __scurry; const b = G.boss; b.x = P.x + 8; b.z = P.z; __scurry.comboGain(100); });
-  const ready = await S(() => __scurry.run.shriekReady);
-  if (!ready) throw new Error('combo did not charge shriek');
-  await page.keyboard.press('KeyX');
-  await rawWait(150);
-  const sw = await S(() => ({ n: __scurry.W.swarm.length, stun: __scurry.G.boss.stun || 0, ui: document.getElementById('bossWrap').style.display }));
-  const want = await S(() => 8 + (__scurry.st.swarmPlus || 0));
-  if (sw.n !== want || !(sw.stun > 0)) throw new Error('shriek ' + JSON.stringify(sw));
+  await S(() => { const { G, P } = __scurry; const b = G.boss; b.x = P.x + 8; b.z = P.z; });
   await wait(2500);
   if (!(await S(() => __scurry.G.boss.revealed))) throw new Error('boss not revealed in arena');
   if (!(await S(() => document.getElementById('introCard').textContent.length > 5))) throw new Error('no boss intro card');
@@ -557,9 +411,8 @@ await step('surface boss: three phases, death, exits', async () => {
   if (ph !== 3) throw new Error('boss phase ' + ph);
   await S(() => __scurry.killBoss());
   await wait(1000);
-  const s = await S(() => ({ exit: !!__scurry.G.exitD, boss: !!__scurry.G.boss, keys: __scurry.W.keys.length, routes: (__scurry.G.exits || []).map(e => e.route) }));
+  const s = await S(() => ({ exit: !!__scurry.G.exitD, boss: !!__scurry.G.boss, keys: __scurry.W.keys.length }));
   if (!s.exit || s.boss) throw new Error(JSON.stringify(s));
-  if (s.routes.length < 2 || s.routes.some(r => !r)) throw new Error('no route choice after the boss ' + JSON.stringify(s));
   const rk = await S(() => ({ n: (__scurry.run.ranks || []).length, stamp: document.getElementById('rankStamp').textContent }));
   if (!rk.n || !rk.stamp) throw new Error('no district rank ' + JSON.stringify(rk));
 });
@@ -630,14 +483,6 @@ await step('music engine running', async () => {
   if (!m.ready || m.bar < 1) throw new Error(JSON.stringify(m));
   console.log('     music:', JSON.stringify(m));
 });
-await step('level-up reroll', async () => {
-  await S(() => { __scurry.run.rerolls = 1; __scurry.pendLevel(); });
-  await rawWait(300);
-  await page.keyboard.press('KeyR');
-  await rawWait(200);
-  if ((await S(() => __scurry.run.rerolls)) !== 0) throw new Error('reroll not used');
-  await wait(300);
-});
 await step('pause + map', async () => {
   await page.keyboard.press('Escape');
   await wait(300);
@@ -651,39 +496,18 @@ await step('pause + map', async () => {
   await page.keyboard.press('KeyM');
   await wait(200);
 });
-await step('death banks salvage', async () => {
+await step('death banks gold', async () => {
   const before = await S(() => __scurry.meta.salvage);
   await S(() => { __scurry.run.scrap = 120; __scurry.die(); });
   await wait(400);
   const after = await S(() => __scurry.meta.salvage);
   if (after < before + 120) throw new Error(`salvage ${before} -> ${after}`);
   if (!(await S(() => !!document.getElementById('share') && /Score/.test(document.getElementById('overlay').textContent)))) throw new Error('death screen has no score or share card');
-  if (!(await S(() => __scurry.meta.domTotal > 0))) throw new Error('no dominance banked');
   await shot('09-dead');
-});
-await step('nest purchase', async () => {
-  await page.keyboard.press('KeyR');
-  await wait(1200);
-  await page.keyboard.press('KeyN');
-  await wait(300);
-  await shot('10-nest');
-  await page.click('[data-n="hide"]');
-  const r = await S(() => __scurry.meta.nest.hide || 0);
-  if (r < 1) throw new Error('nest upgrade not bought');
-  // Dominance shelf: a stat upgrade and a shortcut.
-  await S(() => { __scurry.meta.dominance = 120; __scurry.meta.domTotal = Math.max(__scurry.meta.domTotal, 120); __scurry.renderNest(); });
-  await wait(200);
-  await page.click('[data-n="fang"]');
-  await page.click('[data-n="drain"]');
-  const n = await S(() => ({ fang: __scurry.meta.nest.fang, drain: __scurry.meta.nest.drain, at: __scurry.meta.startAt, dom: __scurry.meta.dominance }));
-  if (n.fang !== 1 || n.drain !== 1 || n.at !== 'drain') throw new Error('dominance shop ' + JSON.stringify(n));
-  await shot('10b-nest-dominance');
-  await page.keyboard.press('Escape');
-  await wait(300);
 });
 await step('new classes play', async () => {
   for (const k of ['tank', 'roof']) {
-    await S(k => { __scurry.meta.bought[k] = 1; __scurry.G.mode = 'survival'; __scurry.startRun(k); __scurry.god(true); }, k);
+    await S(k => { __scurry.startRun(k); __scurry.god(true); }, k);
     await wait(600);
     await page.keyboard.press('KeyQ');
     await hold('KeyW', 800);
@@ -692,62 +516,27 @@ await step('new classes play', async () => {
     await wait(800);
   }
 });
-await step('daily run: seeded twist and board', async () => {
+await step('sewer sneak: open from the start, smoke bomb, backstab shiv', async () => {
   await S(() => __scurry.menu());
   await wait(400);
-  await page.click('#mD');
-  await wait(200);
-  await page.click('.card[data-k="brawler"]');
-  await wait(800);
-  const d = await S(() => ({ daily: __scurry.run.daily, twist: __scurry.run.twist, st: __scurry.G.state }));
-  if (!d.daily || !d.twist) throw new Error('daily run did not start ' + JSON.stringify(d));
-  await S(() => { __scurry.god(true); __scurry.run.scrap = 10; __scurry.die(); });
-  await wait(300);
-  if (!(await S(() => /today/.test(document.getElementById('overlay').textContent)))) throw new Error('daily score not recorded');
-  await S(() => { __scurry.G.daily = false; __scurry.menu(); });
-  await wait(400);
-});
-await step('sewer sneak: shortcut start, smoke bomb, ambush shiv', async () => {
-  await S(() => { __scurry.G.mode = 'survival'; __scurry.meta.startAt = 'drain'; __scurry.startRun('sneak'); __scurry.god(true); });
-  await rawWait(300);
-  const s0 = await S(() => ({ st: __scurry.G.state, d: __scurry.run.district, lv: __scurry.run.level, pend: __scurry.run.pendingLv, scent: __scurry.st.scentMax, sq: __scurry.st.squeezeMul, prim: __scurry.st.primMul }));
-  if (s0.st !== 'levelup' || s0.d !== 1 || s0.pend !== 3 || s0.scent !== 16 || !(s0.sq > 1) || !(s0.prim > 1)) throw new Error('sneak start ' + JSON.stringify(s0));
-  await wait(400);
-  await S(() => { const { W } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); __scurry.run.specT = 0; });
+  await page.click('.card[data-k="sneak"]');
+  await rawWait(600);
+  const s0 = await S(() => ({ st: __scurry.G.state, scent: __scurry.st.scentMax, sq: __scurry.st.squeezeMul }));
+  if (s0.st !== 'play' || s0.scent !== 16 || !(s0.sq > 1)) throw new Error('sneak start ' + JSON.stringify(s0));
+  await S(() => { const { W } = __scurry; __scurry.god(true); for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); __scurry.run.specT = 0; });
   await page.keyboard.press('KeyQ');
-  const sm = await until(() => __scurry.W.smokes.length && __scurry.P.ambush > 0, 3000);
-  if (!sm) throw new Error('smoke bomb did nothing');
-  await S(() => { const { P } = __scurry; const e = __scurry.spawnEnemy('mawling', P.x + 1.5, P.z, { hpMul: 20, plain: true }); if (e) { e.spd = 0; e.tag = 'mark'; } });
-  const amb = await until(() => __scurry.P.ambush === 0 && __scurry.W.enemies.some(e => e.tag === 'mark' && e.hp < e.maxHp), 4000);
+  if (!(await until(() => __scurry.W.smokes.length, 3000))) throw new Error('smoke bomb did nothing');
+  // Stand behind a mob facing away and stab: a backstab.
+  await S(() => { const { P } = __scurry; const e = __scurry.spawnEnemy('mawling', P.x, P.z + 1.4, { hpMul: 20, plain: true, force: true }); if (e) { e.spd = 0; e.cd = 99; e.ang = 0; e.tag = 'mark'; } __scurry.G.aimAt = { x: P.x, z: P.z + 1.4 }; __scurry.G.attack = true; });
+  const hit = await until(() => __scurry.W.enemies.some(e => e.tag === 'mark' && e.hp < e.maxHp), 4000);
+  await S(() => { __scurry.G.attack = false; __scurry.G.aimAt = null; });
   await shot('11b-sneak');
-  if (!amb) throw new Error('ambush shiv never landed');
-  await S(() => { __scurry.meta.startAt = 'row'; __scurry.menu(); });
-  await wait(600);
-});
-await step('ghost trial', async () => {
-  await page.click('#mT');
-  await wait(300);
-  await page.keyboard.press('Digit1');
-  await wait(1500);
-  const s = await S(() => ({ mode: __scurry.G.mode, valves: __scurry.W.valves.length, kind: __scurry.M.kind }));
-  if (s.mode !== 'trial' || s.valves !== 3 || s.kind !== 'sewer') throw new Error(JSON.stringify(s));
-  await hold('KeyW', 1000);
-  // Turn every valve with E, then walk into the drain.
-  for (let i = 0; i < 3; i++) {
-    await S(i => { const v = __scurry.W.valves[i], P = __scurry.P; P.x = v.x + 1; P.z = v.z; P.y = 0; P.vx = P.vz = 0; }, i);
-    await wait(150);
-    await page.keyboard.press('KeyE');
-    await wait(150);
-  }
-  await S(() => { const e = __scurry.G.exitD, P = __scurry.P; P.x = e.x; P.z = e.z; P.y = 0; });
-  await wait(600);
-  if ((await S(() => __scurry.G.state)) !== 'done') throw new Error('trial did not finish: ' + (await S(() => __scurry.W.valves.map(v => v.done))));
-  await shot('10b-trial-done');
+  if (!hit) throw new Error('shiv never landed');
   await S(() => __scurry.menu());
-  await wait(500);
+  await wait(600);
 });
 await step('mob roles: guard, priest, mimic, lurker, flee, rivalry, pack rage', async () => {
-  await S(() => { const s = __scurry; s.G.testNoRoles = false; s.G.mode = 'survival'; s.startRun('brawler'); s.G.testNoRoles = true; s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); });
+  await S(() => { const s = __scurry; s.G.testNoRoles = false; s.startRun('brawler'); s.G.testNoRoles = true; s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); });
   await wait(600);
   const placed = await S(() => ({ lurk: __scurry.W.enemies.filter(e => e.type === 'lurker' && e.hidden).length, mimic: __scurry.W.enemies.filter(e => e.type === 'mimic' && e.disguise).length }));
   if (!placed.lurk || !placed.mimic) throw new Error('roles not placed ' + JSON.stringify(placed));
@@ -821,7 +610,7 @@ await step('mob roles: guard, priest, mimic, lurker, flee, rivalry, pack rage', 
 await step('class signature moves', async () => {
   const res = {};
   for (const k of ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof']) {
-    await S(k => { const s = __scurry; s.G.mode = 'survival'; s.startRun(k); s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); }, k);
+    await S(k => { const s = __scurry; s.startRun(k); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); }, k);
     await wait(500);
     await S(k => {
       const s = __scurry, P = s.P;
@@ -839,7 +628,7 @@ await step('class signature moves', async () => {
       const s = __scurry, e = s.W.enemies.find(e => e.tag === 'sig'), P = s.P;
       if (k === 'slinger') return s.W.pproj.some(p => p.bounce > 0) || (e && e.hp < e.maxHp);
       if (k === 'tank') return window.__parried && (s.run.parries || 0) > 0;
-      if (k === 'sneak') return e && Math.hypot(e.x - P.x, e.z - P.z) < 2.6 && P.ambush > 0;
+      if (k === 'sneak') return e && Math.hypot(e.x - P.x, e.z - P.z) < 2.6;
       if (k === 'warlock') return e && (e.hexT > 0 || e.hp < e.maxHp);
       return !e || e.dead || e.hp < e.maxHp;
     }, 5000, k);
@@ -850,7 +639,7 @@ await step('class signature moves', async () => {
   await wait(400);
 });
 await step('set pieces: interior cutaway, back door, tram, crane, stall, washer', async () => {
-  await S(() => { const s = __scurry; s.G.mode = 'survival'; s.startRun('brawler'); s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
+  await S(() => { const s = __scurry; s.startRun('brawler'); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
   await wait(600);
   const tp = (x, z) => S(([x, z]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = 0; P.vx = P.vz = P.vy = 0; }, [x, z]);
   // Interiors: step in and the walls are cut away.
@@ -896,7 +685,7 @@ await step('set pieces: interior cutaway, back door, tram, crane, stall, washer'
 await step('story: prologue, Scab\'s choice, chapters, locked ending, journal', async () => {
   const st = () => S(() => __scurry.G.state);
   const through = async () => { for (let i = 0; i < 40 && (await st()) === 'story'; i++) { await page.keyboard.press('Space'); await rawWait(60); } };
-  await S(() => { const s = __scurry; s.G.testStory = true; s.story.resetStory(); s.G.mode = 'survival'; s.meta.startAt = 'row'; s.startRun('brawler'); s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
+  await S(() => { const s = __scurry; s.G.testStory = true; s.story.resetStory(); s.startRun('brawler'); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
   if (!(await rawUntil(() => __scurry.G.state === 'story', 6000))) throw new Error('no prologue');
   await shot('12a-prologue');
   await through();
@@ -934,7 +723,7 @@ await step('story: prologue, Scab\'s choice, chapters, locked ending, journal', 
   await S(() => { __scurry.G.testStory = false; __scurry.story.resetStory(); __scurry.pause(false); });
 });
 await step('soak: 20s of live horde', async () => {
-  await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('slinger'); __scurry.god(true); __scurry.run.threatBase = 8; });
+  await S(() => { __scurry.startRun('slinger'); __scurry.god(true); });
   for (let i = 0; i < 10; i++) { await hold(['KeyW', 'KeyA', 'KeyS', 'KeyD'][i % 4], 1000); await page.keyboard.press('Space'); await wait(1000); }
   const s = await S(() => ({ n: __scurry.W.enemies.length, T: __scurry.run.T, kills: __scurry.run.kills, state: __scurry.G.state }));
   console.log('     soak:', JSON.stringify(s));

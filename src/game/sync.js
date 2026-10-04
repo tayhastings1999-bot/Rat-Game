@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
 import { camera, sun, lantern, lampL, post } from '../render/renderer.js';
-import { IMB, IMG, MOB_CAP, shadowIM, gemIM, scrapIM, coreIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
+import { IMB, IMG, MOB_CAP, shadowIM, scrapIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
 import { animTick, writePose, rigTime } from '../render/rig.js';
 import { tickAmbient } from '../fx/ambient.js';
@@ -143,18 +143,6 @@ export function sync(dt) {
   ringIM.count = rings;
   ringIM.instanceMatrix.needsUpdate = true;
   if (ringIM.instanceColor) ringIM.instanceColor.needsUpdate = true;
-  // Summoned nest-mates.
-  for (const s of W.swarm) {
-    const i = cnt.ratling++;
-    if (i >= MOB_CAP) break;
-    animTick(s, dt, 'ratling', P.x, P.z);
-    writePose(s, IMB.ratling.userData.rA, IMB.ratling.userData.rB, i);
-    s.sc = s.life < 0.5 ? s.life * 2 : 1;
-    poseMatrix(s);
-    IMB.ratling.setMatrixAt(i, dummy.matrix);
-    IMG.ratling.setMatrixAt(i, dummy.matrix);
-    IMB.ratling.setColorAt(i, tmpC.setScalar(1));
-  }
   // Ragdoll corpses: a short tumble along the killing blow, then they pop.
   keep(W.corpses, c => {
     c.t += dt;
@@ -190,21 +178,6 @@ export function sync(dt) {
     if (IMB[k].instanceColor) IMB[k].instanceColor.needsUpdate = true;
   }
   let n = 0;
-  for (const g of W.gems) {
-    if (n >= 600) break;
-    dummy.position.set(g.x, g.y + 0.35 + Math.sin(G.time * 3 + g.ph) * 0.08, g.z);
-    dummy.rotation.set(0, G.time * 2 + g.ph, 0);
-    // Tiers: blue < 3, green < 10, red < 30, violet beyond.
-    const s = g.v >= 30 ? 2.4 : g.v >= 10 ? 1.9 : g.v >= 3 ? 1.35 : 1;
-    dummy.scale.set(s, s * 1.7, s);
-    dummy.updateMatrix();
-    gemIM.setMatrixAt(n, dummy.matrix);
-    gemIM.setColorAt(n++, tmpC.setHex(g.v >= 30 ? 0xc080ff : g.v >= 10 ? 0xff4a6a : g.v >= 3 ? 0x6aff6a : 0x4ad0ff));
-  }
-  gemIM.count = n;
-  gemIM.instanceMatrix.needsUpdate = true;
-  if (gemIM.instanceColor) gemIM.instanceColor.needsUpdate = true;
-  n = 0;
   for (const g of W.scraps) {
     if (n >= 300) break;
     dummy.position.set(g.x, g.y + 0.3 + Math.sin(G.time * 3 + g.ph) * 0.06, g.z);
@@ -215,20 +188,6 @@ export function sync(dt) {
   }
   scrapIM.count = n;
   scrapIM.instanceMatrix.needsUpdate = true;
-  n = 0;
-  for (const c of W.cores) {
-    if (n >= 40) break;
-    dummy.position.set(c.x, c.y + 0.7 + Math.sin(G.time * 4 + c.ph) * 0.15, c.z);
-    dummy.rotation.set(G.time * 1.5, G.time * 2.3, 0);
-    dummy.scale.setScalar(1 + 0.15 * Math.sin(G.time * 8 + c.ph));
-    dummy.updateMatrix();
-    coreIM.setMatrixAt(n, dummy.matrix);
-    coreIM.setColorAt(n, tmpC.setHSL((G.time * 0.3 + c.ph) % 1, 0.9, 0.6));
-    n++;
-  }
-  coreIM.count = n;
-  coreIM.instanceMatrix.needsUpdate = true;
-  if (coreIM.instanceColor) coreIM.instanceColor.needsUpdate = true;
   // Projectiles: player shots are stretched along their flight path; enemy globs tumble.
   const putP = (im, arr, streak) => {
     let n = 0;
@@ -376,7 +335,7 @@ export function animate(dt) {
   const lk = G.lockOn && !G.lockOn.dead ? G.lockOn : nearest(8);
   const hpF = clamp(run.hp / (st.maxHp || 1), 0, 1);
   animateRat(rat, A, {
-    x: P.x, y: P.y, z: P.z, onGround: P.onGround, vy: P.vy, sprint: P.sprinting, climbing: P.climbing, t,
+    x: P.x, y: P.y, z: P.z, onGround: P.onGround, vy: P.vy, sprint: false, climbing: P.climbing, t,
     attacking: P.swing > 0 || P.throwT > 0 || P.atk > 0, hurt01: 1 - hpF,
     lookYaw: lk ? angD(Math.atan2(lk.x - P.x, lk.z - P.z), rat.g.rotation.y) : null,
   }, dt);
@@ -434,7 +393,7 @@ export function animate(dt) {
   const play = G.state === 'play';
   lead.x += ((play ? P.vx * 0.16 : 0) - lead.x) * Math.min(1, dt * 3);
   lead.z += ((play ? P.vz * 0.16 : 0) - lead.z) * Math.min(1, dt * 3);
-  const fov = 55 + (play && P.sprinting ? 5 : 0) + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
+  const fov = 55 + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
   tgt.set(P.x + G.camOff.x + (P.inDuct || P.inBldg ? 0 : lead.x), P.y + 1, P.z + G.camOff.z + (P.inDuct || P.inBldg ? 0 : lead.z));
   const place = (pitch, dist) => want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));

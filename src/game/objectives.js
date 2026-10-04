@@ -1,11 +1,10 @@
-// District objectives. The first district teaches the basics (smash the
-// nests); after that each district rolls a different job, and finishing it
-// wakes the boss early and pays out. The timer still wakes the boss if you
-// dawdle.
+// Side objectives. Nests are always the main job (clearing them wakes the
+// boss). The first district has nothing else; after that each district rolls
+// an optional side job that pays a premium chest and gold.
 //  - heist:  steal the giant Cheese Wheel and carry it home; the horde surges at you.
-//  - rescue: gnaw open three cages; the freed rats fight beside you.
+//  - rescue: gnaw open three cages; the freed rats run home (they don't fight).
 //  - hold:   stand in the beacon's ring until it's lit, under waves of flyers.
-//  - hunt:   a gold thief rat runs off with your XP gems. Catch it three times.
+//  - hunt:   a gold thief rat runs off with your gold. Catch it three times.
 import * as THREE from 'three';
 import { rand, pick, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
@@ -16,9 +15,8 @@ import { boom, puff, fx, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, gi, inG, toG, toW, tAt, floorY, roomTiles, OPEN, N8 } from '../world/grid.js';
 import { isSewer } from '../data/world.js';
-import { scrapDrop, dropGem } from '../combat/combat.js';
+import { scrapDrop } from '../combat/combat.js';
 import { spawnEnemy, moveBody } from '../entities/mobs.js';
-import { addRunt } from '../entities/rat.js';
 import { onCage } from './story.js';
 import { addChest } from '../world/build.js';
 import { banner } from '../ui/hud.js';
@@ -44,7 +42,6 @@ const spot = r => { const tl = roomTiles(r); const [x, z] = tl.length ? tl[(Math
 /** Roll this district's job (called at the end of world setup). */
 export function setupObjective(info, force) {
   G.objInfo = info;
-  if (G.mode === 'trial') { run.obj = { kind: 'none' }; return; }
   const kind = force || ((run.tier || 0) === 0 ? 'nests' : pick(KINDS.filter(k => k !== run.lastObj)));
   run.lastObj = kind;
   const far = info.byDist || [], start = G.startRoom;
@@ -103,12 +100,11 @@ export function setupObjective(info, force) {
   } else if (kind === 'hunt') {
     Object.assign(o, { caught: 0, thiefT: 2.5, thief: null });
   }
-  if (kind !== 'nests') run.bossAt = 220;
   run.obj = o;
   if (kind !== 'nests') banner(objTitle(kind), objHow(kind));
 }
 const objTitle = k => ({ heist: 'The Cheese Heist', rescue: 'Rescue the Caged Rats', hold: 'Light the Beacon', hunt: 'Catch the Thief', nests: 'Smash the Nests' }[k]);
-const objHow = k => ({ heist: 'Grab the giant wheel and carry it home · the whole district will want it', rescue: 'Gnaw the cages open · freed rats fight beside you', hold: 'Stand in the ring until the beacon is lit', hunt: 'A gold thief is stealing your XP · catch it three times', nests: '' }[k]);
+const objHow = k => ({ heist: 'Grab the giant wheel and carry it home · the whole district will want it', rescue: 'Gnaw the cages open · freed rats run home to the Nest', hold: 'Stand in the ring until the beacon is lit', hunt: 'A gold thief is stealing your gold · catch it three times', nests: '' }[k]);
 
 export const objDone = () => { const o = run.obj; return !o || o.kind === 'none' ? false : o.kind === 'nests' ? run.nests <= 0 : o.done; };
 export const carryingWheel = () => !!(run.obj && run.obj.kind === 'heist' && run.obj.carried && !run.obj.done);
@@ -121,7 +117,7 @@ function finish(o, x, z) {
   boom(x, gy + 1, z, 6, 0xffd040);
   fx('ring', x, gy, z, 6, 0xffd040, 0.7);
   sfx('level');
-  banner(objTitle(o.kind) + ' · done', 'A premium chest · and the boss is waking');
+  banner(objTitle(o.kind) + ' · done', 'A premium chest and gold');
   run.objDone = (run.objDone || 0) + 1;
 }
 
@@ -138,7 +134,6 @@ export function openCage(c) {
   c.inmate.visible = false;
   c.g.children.forEach(m => { if (m.geometry && m.geometry.type === 'CylinderGeometry' && m.position.y > 0.5 && m.position.y < 1) m.rotation.z = rand(-1, 1); });
   puff(c.x, c.y + 0.6, c.z, 0x9ad0ff, 12, 3);
-  addRunt();
   o.freed++;
   onCage(o);
   dnum(c.x, c.y + 1.8, c.z, `Freed ${o.freed}/${o.cages.length}`, 'info');
@@ -161,9 +156,10 @@ export function thiefAI(e, dt) {
   const l = Math.hypot(vx, vz) || 1, sp = e.spd * (e.slow > 0 ? 0.5 : 1);
   moveBody(e, dt, vx / l * sp, vz / l * sp);
   e.ang = Math.atan2(vx, vz);
-  for (let i = W.gems.length - 1; i >= 0; i--) {
-    const g = W.gems[i];
-    if (Math.abs(g.x - e.x) < 1.2 && Math.abs(g.z - e.z) < 1.2) { e.stash = (e.stash || 0) + g.v; W.gems.splice(i, 1); }
+  // It scoops up any gold it runs over.
+  for (let i = W.scraps.length - 1; i >= 0; i--) {
+    const g = W.scraps[i];
+    if (Math.abs(g.x - e.x) < 1.2 && Math.abs(g.z - e.z) < 1.2) { e.stash = (e.stash || 0) + 1; W.scraps.splice(i, 1); }
   }
 }
 /** Called from kill(). */
@@ -173,9 +169,8 @@ export function thiefDown(e) {
   o.caught++;
   o.thief = null;
   o.thiefT = 2;
-  const gy = floorY(e.x, e.z), v = Math.max(6, (e.stash || 0) * 1.5);
-  for (let i = 0; i < 6; i++) dropGem(e.x + rand(-1, 1), gy, e.z + rand(-1, 1), v / 6);
-  for (let i = 0; i < 8; i++) scrapDrop(e.x, gy, e.z);
+  const gy = floorY(e.x, e.z), n = 8 + Math.round((e.stash || 0) * 1.5);
+  for (let i = 0; i < n; i++) scrapDrop(e.x + rand(-1, 1), gy, e.z + rand(-1, 1));
   dnum(e.x, gy + 2, e.z, `Caught ${o.caught}/3`, 'info');
   if (o.caught >= 3) finish(o, e.x, e.z);
 }
@@ -244,7 +239,7 @@ export function objText() {
   if (o.kind === 'heist') return o.carried ? 'Get the Cheese Wheel home (gold ring) · the horde wants it' : 'Steal the giant Cheese Wheel · F to sniff it out';
   if (o.kind === 'rescue') return `Free the caged rats ${o.freed}/${o.cages.length} · hold E to gnaw a cage · F to sniff them out`;
   if (o.kind === 'hold') return `Light the beacon ${Math.round(o.p / HOLD_T * 100)}% · stay inside the ring`;
-  if (o.kind === 'hunt') return `Catch the thief ${o.caught}/3 · it's stealing your XP`;
+  if (o.kind === 'hunt') return `Catch the thief ${o.caught}/3 · it's stealing your gold`;
   return null;
 }
 /** Where the scent and the minimap should point. */

@@ -1,12 +1,12 @@
 // On-screen controls for phones and tablets: a movement stick on the left,
-// action buttons on the right, pause/map at the top. Attacks aim themselves,
-// so this is all the game needs. Shown once a touch is detected.
+// action buttons on the right, pause/map at the top. Attack aims at the nearest
+// enemy in a cone in front of you. Shown once a touch is detected.
 import { $ } from '../core/util.js';
 import { G, P } from '../core/state.js';
 import { audioInit } from '../audio/audio.js';
 import { keys, stick, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { pause, openMap } from './screens.js';
-import { shriek } from '../game/swarm.js';
+import { setTouchAttack } from '../game/input.js';
 import { toggleScent } from '../game/scent.js';
 import { useSig } from '../game/signature.js';
 
@@ -18,13 +18,13 @@ export function initTouch() {
   root.innerHTML = `
     <div id="tStick" aria-label="Move"><i></i></div>
     <div id="tBtns">
-      <button class="tb shriek" data-b="shriek" aria-label="Shriek" hidden>Shriek</button>
+      <button class="tb atk" data-b="atk" aria-label="Attack, hold to repeat">Attack</button>
       <button class="tb sm" data-b="lock" aria-label="Lock on">Lock</button>
       <button class="tb sm" data-b="scent" aria-label="Scent trails">Sniff</button>
       <button class="tb" data-b="spec" aria-label="Special">Special</button>
       <button class="tb sig" data-b="sig" aria-label="Signature move">Sig</button>
       <button class="tb" data-b="use" aria-label="Use, grab, hold to gnaw">Use</button>
-      <button class="tb" data-b="roll" aria-label="Roll, hold to sprint">Roll</button>
+      <button class="tb" data-b="roll" aria-label="Dodge">Dodge</button>
       <button class="tb jump" data-b="jump" aria-label="Jump, hold to climb">Jump</button>
     </div>
     <div id="tTop">
@@ -101,11 +101,12 @@ function press(k) {
     case 'scent': toggleScent(); break;
     case 'map': openMap(); break;
     case 'pause': pause(true); break;
-    case 'shriek': shriek(); break;
+    case 'atk': setTouchAttack(true); break;
     case 'sig': useSig(); break;
   }
 }
 function release(k) {
+  if (k === 'atk') setTouchAttack(false);
   if (k === 'jump') keys.Space = false;
   if (k === 'roll') keys.ShiftLeft = false;
   if (k === 'use') { keys.KeyE = false; P.chewing = false; P.chewT = 0; }

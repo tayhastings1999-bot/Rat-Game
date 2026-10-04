@@ -50,7 +50,6 @@ export function staticChecks() {
   const must = [
     ['chest', W.chests.filter(c => !c.open && onGround(c))],
     ['cache', (W.caches || []).filter(c => !c.taken && onGround(c))],
-    ['bench', W.benches],
     ['use-point', W.uses.filter(u => !u.done)],
     ['bin', W.bins.filter(b => !b.done)],
     ['nest', W.enemies.filter(e => e.type === 'nest' && !e.dead)],

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SCURRY</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b090c'/%3E%3Cpath d='M3 11h7l3-3-2-3-3 1-5 2z' fill='%23e0382c'/%3E%3Ccircle cx='10' cy='7' r='1' fill='%23f2b233'/%3E%3C/svg%3E">
-<meta name="description" content="Scurry: a rat roguelike. Open-world city streets above, a high-risk sewer below.">
+<meta name="description" content="Scurry: a rat brawler. Smash the nests, eat to stay alive, and kill what rules each zone.">
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -16,26 +16,22 @@
   <div id="res" class="px"></div>
   <div id="stats" class="px"><div><b id="dmgTotal">0</b><span>Damage</span></div><div><b id="kills">0</b><span>Kills</span></div><div id="combo"><i id="comboFill"></i><span id="comboTxt">COMBO</span></div></div>
   <div id="obj" class="px"></div>
-  <div id="contracts" class="px"></div>
   <div id="introCard"></div>
   <div id="rankStamp"></div>
   <div id="bossWrap"><div id="bossLabel" class="px">BOSS</div><div class="bossbar"><i id="bossFill"></i></div></div>
   <div id="mapBox" class="frame"><canvas id="minimap" width="184" height="184"></canvas><div id="zoneName" class="goth">Cinder Row</div></div>
-  <div id="splits" class="px"></div>
   <div id="items"></div>
   <div id="plate" class="frame">
     <img id="portrait" alt="">
     <div class="pinfo">
       <div id="clsName" class="goth">Gutter Brawler</div>
       <div class="brow"><span id="icHeart"></span><div class="bar hp"><i id="hpFill"></i><span id="hpTxt" class="px">100 / 100</span></div></div>
-      <div class="brow"><span id="icBolt"></span><div class="bar en"><i id="enFill"></i><span id="enTxt" class="px">STAMINA</span></div></div>
-      <div class="brow"><span id="icEye"></span><div class="bar ex"><i id="exFill"></i><span id="exTxt" class="px">SHADOW</span></div></div>
       <div id="slots"></div>
     </div>
   </div>
   <div id="timer" class="px"><b id="clock">00:00</b><span id="timerLbl">Timer</span></div>
   <div id="tip" class="frame"></div>
-  <div id="hint" class="px">WASD move · SPACE jump / climb · SHIFT roll (hold to sprint)<br>C squeeze · Q special · G signature · X shriek · E use / grab / hold to gnaw · R lock-on<br>F scent · M map · MOUSE look · V mouse-look on/off · WHEEL zoom</div>
+  <div id="hint" class="px">WASD move · MOUSE aim · CLICK / J attack (hold) · SHIFT dodge · SPACE jump / climb<br>Q special · G signature · R lock-on · E use / hold to gnaw · C squeeze<br>F sniff · M map · WHEEL zoom · ESC pause</div>
 </div>
 <div id="lockRet"></div>
 <div id="banner"></div>

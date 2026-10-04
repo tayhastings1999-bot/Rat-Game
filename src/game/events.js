@@ -11,10 +11,10 @@ import { G, P, W, run } from '../core/state.js';
 import { boom, puff, fx, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, toW, floorY, tileAt } from '../world/grid.js';
-import { hit, hurtP, dropFood, dropGem, scrapDrop } from '../combat/combat.js';
+import { hit, hurtP, dropFood, scrapDrop } from '../combat/combat.js';
 import { spawnEnemy, chargeStart } from '../entities/mobs.js';
 import { addChest } from '../world/build.js';
-import { dropCrate } from './progress.js';
+import { dropLoot } from './progress.js';
 import { banner } from '../ui/hud.js';
 
 const EVENTS = ['feast', 'stampede', 'fumigate', 'tide', 'bounty'];
@@ -44,7 +44,7 @@ const START = {
     addChest(s.x, gy, s.z);
     for (let i = 0; i < 3; i++) dropFood(s.x + rand(-2, 2), gy, s.z + rand(-2, 2));
     for (let i = 0; i < 16; i++) scrapDrop(s.x + rand(-2, 2), gy, s.z + rand(-2, 2));
-    for (let i = 0; i < 18; i++) dropGem(s.x + rand(-3, 3), gy, s.z + rand(-3, 3), 3);
+    for (let i = 0; i < 18; i++) scrapDrop(s.x + rand(-3, 3), gy, s.z + rand(-3, 3));
     G.evMarker = { x: s.x, z: s.z, col: '#ffb040' };
     banner('A food truck just crashed', 'Free loot · and every rat in the district smelled it');
     return { kind: 'feast', x: s.x, z: s.z, t: 30, spawned: 0, st: 0 };
@@ -149,13 +149,12 @@ const TICK = {
 export function bountyKill(e) {
   const gy = floorY(e.x, e.z);
   for (let i = 0; i < 20; i++) scrapDrop(e.x, gy, e.z);
-  dropCrate(e.x, gy, e.z);
-  banner('Bounty collected', 'Salvage and a weapon crate');
+  dropLoot(e.x, gy, e.z);
+  banner('Bounty collected', 'Gold and supplies');
   if (G.evMarker && G.evMarker.e === e) G.evMarker = null;
 }
 
 export function tickEvents(dt) {
-  if (G.mode === 'trial') return;
   keep(run.events || (run.events = []), v => {
     v.t -= dt;
     if (TICK[v.kind]) TICK[v.kind](v, dt);
@@ -164,7 +163,7 @@ export function tickEvents(dt) {
   });
   const bossOn = !G.testNoBusy && G.boss && G.boss.revealed;
   run.evT = (run.evT ?? 50) - dt;
-  if (run.evT > 0 || bossOn || run.trial || run.events.length) return;
+  if (run.evT > 0 || bossOn || run.events.length) return;
   const choices = EVENTS.filter(k => k !== run.lastEv);
   const k = run.forceEv || pick(choices);
   run.forceEv = null;

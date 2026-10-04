@@ -44,9 +44,7 @@ export function creatureMesh(k) {
   return mesh;
 }
 
-export const gemIM = mkIM(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), 600);
 export const scrapIM = mkIM(new THREE.TorusGeometry(0.14, 0.06, 4, 6), new THREE.MeshLambertMaterial({ color: 0xa8b0b8, emissive: 0x202830, flatShading: true }), 300, false);
-export const coreIM = mkIM(new THREE.OctahedronGeometry(0.34, 0), new THREE.MeshBasicMaterial(), 40);
 export const pprojIM = mkIM(new THREE.IcosahedronGeometry(0.13, 0), new THREE.MeshBasicMaterial(), 320);
 export const eprojIM = mkIM(new THREE.IcosahedronGeometry(0.19, 0), new THREE.MeshBasicMaterial(), 320);
 export const partIM = mkIM(Bx(0.12, 0.12, 0.12), new THREE.MeshBasicMaterial(), 700);

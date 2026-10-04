@@ -53,7 +53,7 @@ async function settle() {
 }
 /** Start a run and a bot session. */
 async function begin(cls, opts) {
-  await S(([cls, opts]) => { const s = __scurry; s.G.mode = 'survival'; s.G.daily = false; s.meta.startAt = 'row'; s.qa.stop(); s.startRun(cls); s.qa.start(opts); }, [cls, opts]);
+  await S(([cls, opts]) => { const s = __scurry; s.qa.stop(); s.startRun(cls); s.qa.start(opts); }, [cls, opts]);
 }
 /** Fast-forward up to `secs` of game time in chunks; waits out district transitions. */
 async function play(secs, chunk = 4, stopOnDistrict = false) {
@@ -90,7 +90,7 @@ if (want('static')) {
   log('static level checks');
   const runs = QUICK ? 3 : 10, out = [];
   for (let r = 0; r < runs; r++) {
-    await S(() => { const s = __scurry; s.qa.stop(); s.G.mode = 'survival'; s.meta.startAt = 'row'; s.startRun('brawler'); });
+    await S(() => { const s = __scurry; s.qa.stop(); s.startRun('brawler'); });
     for (let d = 0; d < 4; d++) {
       await sleep(200);
       const res = await S(() => { const s = __scurry; return { name: s.M.kind + ' ' + document.getElementById('zoneName').textContent, seed: s.run.seed, district: s.run.district, ...s.qa.staticChecks() }; });
@@ -198,26 +198,17 @@ if (want('adversarial')) {
   log(`  ${out.sessions} sessions, ${out.simHours} simulated hours, ${out.tactics} break attempts, anomalies: ${JSON.stringify(out.anomalies)}`);
 }
 
-// ---------------------------------------------------------------- synergy sweep (stage 4)
-// Every weapon maxed, every evolution, rule breaker, keystone and mutation, and
-// random combinations, each played at a fixed threat by the same bot. Builds far
-// above the median trivialize the game; far below are dead picks.
+// ---------------------------------------------------------------- class kit sweep (stage 4)
+// Every class's kit (primary, special, signature) played by the same bot in the
+// same zone. A class far above the median trivializes the game; far below is a
+// dead pick. (Phase 2 adds each class's turbo moves to the sweep.)
 if (want('synergy')) {
-  log('synergy sweep');
-  const cat = await S(() => __scurry.qa.catalog());
-  const builds = [{ name: 'baseline' }];
-  for (const w of cat.weapons) builds.push({ name: 'max ' + w, weapons: [[w, 5]] });
-  for (const w of cat.evolutions) builds.push({ name: 'evo ' + w, weapons: [[w, 5, true]] });
-  for (const r of cat.rules) builds.push({ name: 'rule ' + r, rules: [r] });
-  for (const k of cat.keystones) builds.push({ name: 'key ' + k, keystones: [k] });
-  for (const m of cat.mutations) builds.push({ name: 'mut ' + m.id, items: [m.a, m.b] });
-  const rnd = a => a[Math.floor(Math.random() * a.length)];
-  for (let i = 0; i < (QUICK ? 4 : 24); i++) builds.push({ name: 'combo ' + i, weapons: [[rnd(cat.weapons), 5, Math.random() < 0.5], [rnd(cat.weapons), 4]], rules: [rnd(cat.rules)], items: (m => [m.a, m.b])(rnd(cat.mutations)) });
-  const list = QUICK ? builds.filter((b, i) => i === 0 || i % 4 === 1).slice(0, 12) : builds;
+  log('class kit sweep');
+  const builds = ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof'].map(c => ({ name: c, cls: c }));
+  const list = builds;
   const secs = QUICK ? 75 : 150, reps = QUICK ? 1 : 2, rows = [];
   for (const b of list) for (let r = 0; r < reps; r++) {
-    await begin('brawler', { profile: 'average', goal: 'survive' });
-    await S(b => { const s = __scurry; s.run.threatBase = 6; s.qa.applyBuild(b); }, b);
+    await begin(b.cls, { profile: 'average', goal: 'survive' });
     const d0 = await S(() => __scurry.run.dmg);
     const st = await play(secs, 5);
     const x = await S(() => ({ t: __scurry.qa.telemetry().simTime, kills: __scurry.run.kills, dmg: __scurry.run.dmg, taken: __scurry.qa.telemetry().dmgTaken, dead: __scurry.G.state === 'dead' }));
@@ -240,8 +231,8 @@ if (want('stress')) {
   await begin('brawler', { profile: 'average', goal: 'survive', assist: true });
   await play(5);
   const rows = [];
-  for (const n of QUICK ? [50, 150, 220] : [25, 50, 100, 150, 220]) {
-    await S(n => { __scurry.st.dmg = 0; __scurry.run.weapons.length = 0; __scurry.qa.stressSetup(n, __scurry.spawnEnemy); }, n); // the rat holds fire so the horde stays at full size
+  for (const n of QUICK ? [50, 150, 200] : [25, 50, 100, 150, 200]) {
+    await S(n => { __scurry.st.dmg = 0; __scurry.qa.stressSetup(n, __scurry.spawnEnemy); }, n); // the rat holds fire so the horde stays at full size
     const u0 = await S(() => __scurry.qa.telemetry().updMs.length);
     await play(3, 3);
     const T = await tele();
@@ -359,7 +350,7 @@ for (const p of report.balance.byProfile || []) {
   for (const b of p.bossFights) if (b > 240) warns.push(`${p.profile}: a boss fight lasted ${b}s`);
   if (p.bossFights.length && med(p.bossFights) < 25) warns.push(`${p.profile}: bosses die in ${r1(med(p.bossFights))}s (median): boss fights may be too short`);
 }
-for (const b of (report.balance.synergy || {}).builds || []) if (b.flag) warns.push(`build "${b.build}": ${b.flag} (${b.power}x median damage, ${b.survival}% survival)`);
+for (const b of (report.balance.synergy || {}).builds || []) if (b.flag) warns.push(`class "${b.build}": ${b.flag} (${b.power}x median damage, ${b.survival}% survival)`);
 const fatalSpikes = (report.balance.spikes || []).filter(s => s.fatal && s.prof === 'expert');
 if (fatalSpikes.length) warns.push(`${fatalSpikes.length} difficulty spike(s) killed an expert bot (e.g. district ${fatalSpikes[0].district}, ${fatalSpikes[0].pctHp}% HP in 5s from ${fatalSpikes[0].near})`);
 for (const k of ['out-of-bounds', 'levelup-loop', 'empty-levelup']) { const n = report.anomalies.filter(a => a.kind === k).length; if (n) fails.push(`${n} ${k} anomaly(ies)`); }
@@ -411,7 +402,7 @@ function markdown(R) {
     tbl(['Profile', 'Time to kill (median s)', 'Top damage sources', 'Boss fights'], R.balance.byProfile.map(p => [p.profile, Object.entries(p.ttk).sort().map(([k, v]) => `${k} ${v}`).join(', '), p.topDamage.map(([k, v]) => `${k} ${v}%`).join(', '), p.bossFights.length ? p.bossFights.map(s => s + 's').join(', ') : '-']));
     tbl(['Class', 'Death rate', 'Median survival', 'Median level', 'Median kills'], R.balance.byClass.map(c => [c.cls, c.deathRate + '%', c.medianSurvival + 's', c.medianLevel, c.medianKills]));
   }
-  if (R.balance.synergy) { L.push(`### Synergy sweep (fixed threat 6, ${R.balance.synergy.secs}s each, power = damage/min vs median)`, ''); tbl(['Build', 'Power', 'Kills/min', 'Damage/min', 'Taken/min', 'Survival', 'Flag'], R.balance.synergy.builds.map(b => [b.build, b.power + 'x', b.killsPerMin, b.dmgPerMin, b.takenPerMin, b.survival + '%', b.flag || '-'])); }
+  if (R.balance.synergy) { L.push(`### Class kit sweep (zone 1, ${R.balance.synergy.secs}s each, power = damage/min vs median)`, ''); tbl(['Class', 'Power', 'Kills/min', 'Damage/min', 'Taken/min', 'Survival', 'Flag'], R.balance.synergy.builds.map(b => [b.build, b.power + 'x', b.killsPerMin, b.dmgPerMin, b.takenPerMin, b.survival + '%', b.flag || '-'])); }
   if (R.balance.spikes && R.balance.spikes.length) { L.push('### Difficulty spikes (damage in a 5s window, 3x the run median and at least 35% HP)', ''); tbl(['Profile', 'Class', 'District', 'Threat', 'HP lost', 'Fatal', 'Around the rat'], R.balance.spikes.slice(0, 15).map(s => [s.prof, s.cls, s.district, s.threat, s.pctHp + '%', s.fatal ? '**yes**' : 'no', s.near])); }
   if (R.errors.length) { L.push('## Runtime errors', ''); R.errors.slice(0, 20).forEach(e => L.push('- `' + e.msg + '` ' + (e.stack || ''))); L.push(''); }
   L.push('## Not covered', '', 'The bots measure stability, pacing and numbers. They cannot judge feel: whether movement is satisfying, the UI is clear, or the story lands. That still needs people playing.', '');

@@ -1,37 +1,31 @@
 // One simulation step of a running district.
-import { rand, randi, clamp, angD, keep, TAU } from '../core/util.js';
-import { G, P, W, run, st, settings } from '../core/state.js';
+import { rand, randi, clamp, keep, TAU } from '../core/util.js';
+import { G, P, W, run, st } from '../core/state.js';
 import { scene, bury } from '../render/renderer.js';
-import { puff, spark, boom, bolt, dnum, auraG, orbs, orbState, shieldM } from '../fx/fx.js';
+import { puff, spark, boom, dnum, shieldM } from '../fx/fx.js';
 import { sfx, setMusic } from '../audio/audio.js';
 import { M, G as GRAV, DUCT_TOP, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
 import { syncObj, pitMat } from '../world/build.js';
 import { isSewer } from '../data/world.js';
 import { OBJ } from '../data/props.js';
-import { WEAP, auraR, shoot, flasks } from '../combat/arsenal.js';
-import { near, nearest, hit, kill, aoe, hurtP, gainXP, updThreat } from '../combat/combat.js';
+import { shoot, flasks } from '../combat/arsenal.js';
+import { near, hit, kill, aoe, hurtP } from '../combat/combat.js';
 import { puddle, tickHaz } from '../combat/hazards.js';
 import { stepPlayer, primary, keys, chewTarget, doChew, tickInteractives } from '../entities/player.js';
 import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
 import { spawnBoss } from '../entities/bosses.js';
 import { exitRoad, exitLadder } from './flow.js';
-import { tickSwarm, comboTick } from './swarm.js';
+import { comboTick } from './swarm.js';
 import { tickForage } from './forage.js';
-import { tickJunk } from './junk.js';
-import { tickLight } from './light.js';
 import { tickScent } from './scent.js';
 import { tickTraps } from './traps.js';
 import { tickDucts } from '../world/ducts.js';
 import { tickProgress } from './progress.js';
 import { tickEvents } from './events.js';
 import { tickFeel } from './feel.js';
-import { tickObjective, objDone, carryingWheel } from './objectives.js';
-import { tickRules, attackRate, onFeast } from './rules.js';
+import { tickObjective, carryingWheel } from './objectives.js';
 import { tickPersonality } from './personality.js';
-import { collectCore } from './loot.js';
 import { banner } from '../ui/hud.js';
-import { finishTrial } from '../ui/screens.js';
-import { newAnim, animateRat } from '../entities/ratAnim.js';
 import { tickRoles } from '../entities/roles.js';
 import { tickSig } from './signature.js';
 import { tickSetPieces } from '../world/setpieces.js';
@@ -149,7 +143,6 @@ function updateMods(dt) {
 }
 
 function updatePlayerStatus(dt) {
-  if (st.toxImmune) P.poisonT = 0;
   if (P.poisonT > 0) { P.poisonT -= dt; P.pTick -= dt; if (P.pTick <= 0) { P.pTick = 0.5; hurtP(3, null, true); } }
   const tp = tileAt(P.x, P.z);
   if (tp === 4 && P.y < -0.5) { P.acidT -= dt; if (P.acidT <= 0) { P.acidT = 0.5; hurtP(5, null, true); puff(P.x, P.y + 0.5, P.z, 0xb8f040, 4, 1.5); } }
@@ -160,21 +153,6 @@ function updatePlayerStatus(dt) {
     P.inv = 1;
     dnum(P.x, P.y + 1.6, P.z, 'Fell', 'info');
   }
-  // Cursed and mutation upkeep.
-  if (st.rabid && G.time - P.lastHitT > 1.2) {
-    run.hp -= st.maxHp * 0.035 * dt;
-    if (Math.random() < dt * 4) puff(P.x, P.y + 0.6, P.z, 0xa01010, 1, 1);
-    if (run.hp <= 0) hurtP(1, null, true);
-  }
-  if (st.selfPoison) { run.selfPoisonT -= dt; if (run.selfPoisonT <= 0) { run.selfPoisonT = 12; P.poisonT = Math.max(P.poisonT, 2); dnum(P.x, P.y + 1.6, P.z, 'Plague flares', 'poison'); } }
-  if (st.mut.tesla) {
-    run.teslaT -= dt;
-    if (run.teslaT <= 0) {
-      run.teslaT = 1.1;
-      const ts = near(P.x, P.y, P.z, 9 * st.area).sort((a, b) => Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z)).slice(0, 3);
-      for (const e of ts) { bolt([[P.x, P.y + 1.2, P.z], [e.x, e.y + e.h * 0.6, e.z]]); hit(e, 22, null, 0, 'tesla'); }
-    }
-  }
   if (P.bulwark > 0) {
     P.bulwark -= dt;
     shieldM.visible = true;
@@ -182,45 +160,12 @@ function updatePlayerStatus(dt) {
     shieldM.rotation.y += dt * 2;
     for (const e of near(P.x, P.y, P.z, 1.6)) if (!e.heavy && (e.tT || 0) <= 0) { e.tT = 0.4; hit(e, 12, Math.atan2(e.x - P.x, e.z - P.z), 10, 'special', true); }
   } else shieldM.visible = false;
-  if (P.glideT > 0) P.glideT -= dt;
   // Bloodlust (melee): stacks from kills, bleeds off a stack at a time when you stop killing.
   if (run.blood > 0) { run.bloodT -= dt; if (run.bloodT <= 0) { run.blood--; run.bloodT = 1; } }
 }
 
-function updateWeapons(dt) {
-  auraG.visible = false;
-  orbState.n = 0;
-  for (const w of run.weapons) {
-    const Wp = WEAP[w.id];
-    if (Wp.tick) Wp.tick(w, dt);
-    if (w.id === 'aura') {
-      const R = auraR(w);
-      auraG.visible = true;
-      auraG.position.set(P.x, P.y + 0.05, P.z);
-      auraG.scale.setScalar(R * (1 + Math.sin(G.time * 4) * 0.03));
-    }
-    if (Wp.fire && (!P.squeeze || P.inDuct)) {
-      const fury = st.fury && run.hp < st.maxHp * 0.5 ? 0.66 : 1;
-      w.t -= dt;
-      if (w.t <= 0) w.t = Wp.fire(w) === false ? 0.15 : Wp.cd(w) * st.cd * fury * attackRate();
-    }
-  }
-  for (let i = orbState.n; i < orbs.length; i++) orbs[i].visible = false;
-  W.familiars.forEach((f, i) => {
-    const a = P.facing + (i % 2 ? 0.8 : -0.8), bx = P.x - Math.sin(a) * 1.3, bz = P.z - Math.cos(a) * 1.3;
-    f.x += (bx - f.x) * Math.min(1, 5 * dt);
-    f.z += (bz - f.z) * Math.min(1, 5 * dt);
-    f.y += (P.y - f.y) * Math.min(1, 6 * dt);
-    f.t -= dt;
-    const t = nearest(10);
-    if (t) {
-      f.a = Math.atan2(t.x - f.x, t.z - f.z);
-      if (f.t <= 0) { f.t = 0.75 * st.tear; shoot(f.x, f.y + 0.4, f.z, t.x - f.x, t.y + t.h / 2 - (f.y + 0.4), t.z - f.z, 18, 5, 0, 'runt', { col: 0xffd070 }); }
-    }
-    f.r.g.position.set(f.x, f.y, f.z);
-    f.r.g.rotation.y += angD(t ? f.a : P.facing, f.r.g.rotation.y) * Math.min(1, dt * 10);
-    animateRat(f.r, f.anim || (f.anim = newAnim()), { x: f.x, y: f.y, z: f.z, onGround: true, vy: 0, sprint: P.sprinting, climbing: false, t: G.time + i, attacking: !!t, hurt01: 0, lookYaw: null, scale: 0.42 }, dt);
-  });
+/** Carried objects and gnawing. */
+function updateCarry(dt) {
   if (P.carry) {
     const o = P.carry, f = P.facing, half = o.kind === 'swab' ? 2.4 : Math.max(OBJ[o.kind].w, OBJ[o.kind].d) / 2;
     o.x = P.x + Math.sin(f) * (0.45 + half);
@@ -251,15 +196,6 @@ const solidAt = (x, y, z) => {
 };
 
 function updateProjectiles(dt) {
-  if (W.shrapQ.length) {
-    const q = W.shrapQ;
-    W.shrapQ = [];
-    for (const [x, y, z] of q.slice(0, 12)) {
-      for (const e of near(x, y, z, 2)) hit(e, 10, Math.atan2(e.x - x, e.z - z), 4, 'shrapnel', true);
-      spark(x, y + 0.5, z, 1.4, 0xffb070);
-    }
-  }
-  run.nailT -= dt;
   for (const p of W.pproj) {
     p.life -= dt;
     if (p.homing) {
@@ -356,13 +292,7 @@ function updatePickups(dt) {
     if (g.pull) { g.s = Math.min(30, (g.s || 6) + 40 * dt); const d = Math.sqrt(d2) || 1, s = Math.min(d, g.s * dt); g.x += dx / d * s; g.y += dy / d * s; g.z += dz / d * s; }
     return d2 < 0.36;
   };
-  keep(W.gems, g => { if (pull(g)) { gainXP(g.v); sfx('pickup'); return false; } return true; });
   keep(W.scraps, g => { if (pull(g)) { run.scrap += st.salvage; return false; } return true; });
-  keep(W.cores, c => {
-    const d = Math.hypot(P.x - c.x, P.z - c.z);
-    if (d < 1.4 && Math.abs(P.y - c.y) < 1.6) { collectCore(); sfx('key'); return false; }
-    return true;
-  });
   keep(W.keys, k => {
     k.g.rotation.y += dt * 2;
     k.g.position.y = k.y + 0.8 + Math.sin(G.time * 3) * 0.15;
@@ -383,7 +313,6 @@ function updatePickups(dt) {
       const h = Math.round(st.maxHp * 0.3 * st.foodMul * st.healMul);
       run.hp = Math.min(st.maxHp, run.hp + h);
       dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
-      onFeast();
       return false;
     }
     return true;
@@ -398,7 +327,6 @@ function updatePickups(dt) {
       run.hp = Math.min(st.maxHp, run.hp + h);
       for (let i = 0; i < 8; i++) W.scraps.push({ x: c.x + rand(-0.6, 0.6), y: c.y, z: c.z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
       dnum(P.x, P.y + 1.6, P.z, 'Cheese cache +' + h, 'heal');
-      onFeast();
     }
   }
 }
@@ -411,21 +339,20 @@ export function update(dt) {
   P.swing = Math.max(0, (P.swing || 0) - dt);
   P.throwT = Math.max(0, (P.throwT || 0) - dt);
   run.specT = Math.max(0, run.specT - dt);
-  if (!st.noRegen) run.hp = Math.min(st.maxHp, run.hp + st.regen * st.healMul * dt);
+  run.hp = Math.min(st.maxHp, run.hp + st.regen * st.healMul * dt);
   if (run.hp > st.maxHp * 0.5) run.lowWarned = false;
   tickDucts(dt);
   updateZones(dt);
   stepPlayer(dt / 2);
   stepPlayer(dt / 2);
   primary(dt);
-  updThreat(dt);
   tickHaz(dt);
   if (P.onGround && Math.abs(P.y - floorY(P.x, P.z, true)) < 0.1 && DRY(tileAt(P.x, P.z)) && !W.cracks.has(gi(toG(P.x), toG(P.z)))) { P.safe.x = P.x; P.safe.z = P.z; }
   updateMods(dt);
   updateHidden();
   updatePlayerStatus(dt);
   if (G.state !== 'play') return;
-  updateWeapons(dt);
+  updateCarry(dt);
   G.flowT -= dt;
   if (G.flowT <= 0) {
     G.flowT = 0.25;
@@ -437,12 +364,10 @@ export function update(dt) {
   }
   // Carrying the cheese wheel draws the horde twice as fast.
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
-  if (G.mode !== 'trial' && !run.bossDone && !G.boss && (run.time - run.dStart >= run.bossAt || objDone()) && M.spawnTiles.length) spawnBoss();
+  // Smashing every nest wakes the boss.
+  if (!run.bossDone && !G.boss && run.nests <= 0 && M.spawnTiles.length) spawnBoss();
   updateEnemies(dt, cap);
-  tickSwarm(dt);
   tickForage(dt);
-  tickJunk(dt);
-  tickLight(dt);
   comboTick(dt);
   if (G.state !== 'play') return;
   updateProjectiles(dt);
@@ -453,7 +378,6 @@ export function update(dt) {
   tickEvents(dt);
   tickFeel(dt);
   tickObjective(dt);
-  tickRules(dt);
   tickPersonality(dt, st.maxHp);
   tickRoles(dt);
   tickSig(dt);
@@ -462,9 +386,7 @@ export function update(dt) {
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);
   if (ex) {
-    run.route = ex.route || null;
-    if (G.mode === 'trial') { if (W.valves.every(v => v.done)) finishTrial(); }
-    else if (ex.kind === 'road') exitRoad();
+    if (ex.kind === 'road') exitRoad();
     else if (ex.kind === 'ladder') exitLadder();
   }
   seenT -= dt;
@@ -473,28 +395,9 @@ export function update(dt) {
     const gx = toG(P.x), gz = toG(P.z), r = M.kind === 'city' ? 8 : 6;
     for (let y = gz - r; y <= gz + r; y++) for (let x = gx - r; x <= gx + r; x++) if (inG(x, y) && (x - gx) ** 2 + (y - gz) ** 2 <= r * r + 4) M.seen[gi(x, y)] = 1;
   }
-  if (G.mode === 'trial') {
-    run.recT -= dt;
-    if (run.recT <= 0) { run.recT = 0.1; run.rec.push([+run.time.toFixed(2), +P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2), +P.facing.toFixed(2)]); }
-  }
-  const gh = G.ghost;
-  if (gh) {
-    const D = gh.data.d;
-    while (gh.i < D.length - 2 && D[gh.i + 1][0] <= run.time) gh.i++;
-    const a = D[gh.i], b = D[Math.min(gh.i + 1, D.length - 1)], u = b[0] > a[0] ? clamp((run.time - a[0]) / (b[0] - a[0]), 0, 1) : 0;
-    gh.r.g.visible = run.time <= D[D.length - 1][0];
-    gh.r.g.position.set(a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, a[3] + (b[3] - a[3]) * u);
-    gh.r.g.rotation.y = a[4] + angD(b[4], a[4]) * u;
-  }
   tickScent(dt);
   if (G.lockOn && (G.lockOn.dead || Math.hypot(G.lockOn.x - P.x, G.lockOn.z - P.z) > 34)) G.lockOn = null;
-  if (G.lockOn && !G.drag) G.camYaw += angD(Math.atan2(G.lockOn.x - P.x, G.lockOn.z - P.z), G.camYaw) * Math.min(1, 4 * dt);
-  else if (settings.mouse && !G.drag && !G.touch) {
-    const ex2 = G.mX / innerWidth;
-    if (ex2 < 0.04) G.camYaw += 1.8 * dt * settings.sens;
-    else if (ex2 > 0.96) G.camYaw -= 1.8 * dt * settings.sens;
-  }
-  if (!G.drag) { const k = Math.min(1, 1.5 * dt); G.camOff.x -= G.camOff.x * k; G.camOff.z -= G.camOff.z * k; }
+  { const k = Math.min(1, 1.5 * dt); G.camOff.x -= G.camOff.x * k; G.camOff.z -= G.camOff.z * k; }
   // Music: boss > crowded fight > exploring.
   let close = 0, near9 = 0;
   for (const e of W.enemies) {

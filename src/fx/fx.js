@@ -5,7 +5,6 @@ import { rand, randi, TAU, PI2 } from '../core/util.js';
 import { G, P, W } from '../core/state.js';
 import { scene, camera } from '../render/renderer.js';
 import { atlasTex } from '../render/textures.js';
-import { Co } from '../render/models.js';
 import { decals, dummy, tmpC, _v, DECAL_CAP } from '../render/pools.js';
 import { floorY } from '../world/grid.js';
 import { sfx } from '../audio/audio.js';
@@ -219,33 +218,10 @@ export function gore(e, mul = 1) {
 }
 
 // ---------- weapon visuals that live with FX ----------
-export const auraG = new THREE.Group();
-{
-  const d = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color: 0x6a9a3a, transparent: true, opacity: 0.22, depthWrite: false }));
-  d.rotation.x = -PI2;
-  const r = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xa9e06a, transparent: true, opacity: 0.5, depthWrite: false }));
-  r.rotation.x = -PI2;
-  auraG.add(d, r);
-  scene.add(auraG);
-  auraG.visible = false;
-}
 /** Bulwark (Sewer Rat special) shield bubble. */
 export const shieldM = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3, 1), new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0.22, depthWrite: false, wireframe: true }));
 shieldM.visible = false;
 scene.add(shieldM);
-
-export const orbs = [];
-export const orbState = { n: 0 };
-const orbMat = new THREE.MeshLambertMaterial({ color: 0xe8dcc0, emissive: 0x3a3020, flatShading: true });
-export function orb(i) {
-  while (orbs.length <= i) {
-    const m = new THREE.Mesh(Co(0.14, 0.42, 5), orbMat);
-    m.castShadow = true;
-    scene.add(m);
-    orbs.push(m);
-  }
-  return orbs[i];
-}
 
 // ---------- damage numbers ----------
 const nums = [];

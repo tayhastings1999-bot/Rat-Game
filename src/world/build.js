@@ -257,20 +257,6 @@ export function addCache(x, y, z) {
   world.add(g);
   W.caches.push({ x, y, z, g, taken: false });
 }
-export function addBench(x, z, rot) {
-  const g = new THREE.Group(), wd = lam(0x5a3e26, { map: stoneTex }), mt = lam(0x8a929a, { map: metalTex });
-  mkMesh(Bx(2.2, 0.15, 1.1), wd, 0, 1, 0, g);
-  for (const s of [-1, 1]) for (const t of [-1, 1]) mkMesh(Bx(0.12, 1, 0.12), wd, s * 0.95, 0.5, t * 0.45, g);
-  mkMesh(Bx(0.4, 0.35, 0.3), mt, -0.6, 1.25, 0, g);
-  mkMesh(Cy(0.18, 0.18, 0.2, 8), mt, 0.5, 1.2, 0.1, g);
-  mkMesh(Bx(0.6, 0.4, 0.05), new THREE.MeshBasicMaterial({ color: 0x4aa3ff }), 0, 1.5, -0.4, g);
-  glowSprite(0x4aa3ff, 2, g, 0, 1.6, 0, 0.5);
-  g.position.set(x, 0, z);
-  g.rotation.y = rot;
-  world.add(g);
-  W.benches.push({ x, z, g });
-  W.plats.push({ x, z, w: 2, d: 1.1, y: 1.07, th: 1.07 });
-}
 const wallPos = (w, inset = 0.15) => [toW(w.x) + w.dx * (T / 2 - inset), toW(w.y) + w.dy * (T / 2 - inset)];
 function addPipe(w) {
   const [x, z] = wallPos(w, 0.3), g = new THREE.Group();
@@ -363,16 +349,7 @@ function addZone(type, x, z) {
   W.zones.push(zn);
   return zn;
 }
-function addValve(x, z, i) {
-  const g = new THREE.Group();
-  mkMesh(Cy(0.18, 0.18, 1.4, 6), lam(0x5a6068, { map: metalTex }), 0, 0.7, 0, g);
-  const wh = mkMesh(new THREE.TorusGeometry(0.55, 0.1, 5, 12), lam(0xd8342c), 0, 1.45, 0, g);
-  const gl = glowSprite(0xff4a2a, 2.2, g, 0, 1.45, 0, 0.6);
-  g.position.set(x, floorY(x, z), z);
-  world.add(g);
-  W.valves.push({ x, z, g, wh, gl, done: false, i });
-}
-/** Exit portal: 'road' (next neighbourhood), 'ladder' (sewer → streets), 'drain' (trial finish). */
+/** Exit portal: 'road' (next neighbourhood) or 'ladder' (sewer → streets). */
 export function addExit(x, z, kind = 'drain') {
   const g = new THREE.Group();
   const col = kind === 'drain' ? 0xff4a2a : 0x6ad06a;
@@ -507,15 +484,6 @@ function powerLines(spots) {
   }
 }
 /** Closest dry tile (spiralling out from cx, cy) that has a wall beside it. */
-function nearestWallSpot(cx, cy, maxR = 10) {
-  for (let r = 0; r <= maxR; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-    const x = cx + dx, y = cy + dy;
-    if (!DRY(tAt(x, y))) continue;
-    for (const [ex, ey] of N4) { const t = tAt(x + ex, y + ey); if (t === 0 || t === 6) return { x, y, dx: ex, dy: ey, t, h: topAt(x + ex, y + ey) }; }
-  }
-  return null;
-}
 /** Random interior roof tiles (not on the map edge), for rooftop loot and clutter. */
 function roofTiles() {
   const out = [];
@@ -642,44 +610,6 @@ function clutter(city) {
     }
   }
 }
-/** Rooftop searchlights sweeping the streets (city) and light shafts through grates (sewer). */
-const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff4d0, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-const spotMat = new THREE.MeshBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
-function searchlights(city) {
-  if (city) {
-    const roofs = [];
-    for (let k = 0; k < M.W * M.H; k++) if (M.grid[k] === 0 && M.hgt[k] >= 8 && M.hgt[k] < 20) roofs.push(k);
-    shuffleR(roofs);
-    const picked = [];
-    for (const k of roofs) {
-      const x = toW(k % M.W), z = toW((k / M.W) | 0);
-      if (picked.some(p => Math.hypot(p.x - x, p.z - z) < 36)) continue;
-      picked.push({ x, z, h: M.hgt[k] });
-      if (picked.length >= 4) break;
-    }
-    const housing = lam(0x3a3c42, { map: metalTex });
-    for (const p of picked) {
-      mkMesh(Cy(0.5, 0.6, 0.8, 6), housing, p.x, p.h + 0.4, p.z);
-      glowSprite(0xfff4d0, 2.2, world, p.x, p.h + 1, p.z, 0.9);
-      const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 3.4, 1, 10, 1, true).translate(0, -0.5, 0), beamMat);
-      cone.position.set(p.x, p.h + 1, p.z);
-      world.add(cone);
-      const spot = new THREE.Mesh(new THREE.CircleGeometry(3.4, 14).rotateX(-Math.PI / 2), spotMat);
-      world.add(spot);
-      W.searches.push({ hx: p.x, hy: p.h + 1, hz: p.z, cx: p.x + rr(-6, 6), cz: p.z + rr(-6, 6), rx: rr(10, 16), rz: rr(10, 16), w: rr(0.25, 0.4), o: rr(0, 6), ph: rr(0, 6), sx: p.x, sz: p.z, R: 3.4, cone, spot });
-    }
-  } else {
-    for (const r of shuffleR(W.rooms.slice()).slice(0, 7)) {
-      if (r === G.startRoom) continue;
-      const x = toW(r.cx), z = toW(r.cy), y = floorY(x, z);
-      const beam = mkMesh(new THREE.CylinderGeometry(1.3, 1.9, 9, 8, 1, true), beamMat, x, y + 4.5, z);
-      beam.castShadow = false;
-      const pool = mkMesh(new THREE.CircleGeometry(1.9, 12).rotateX(-Math.PI / 2), spotMat, x, y + 0.05, z);
-      pool.castShadow = false;
-      W.shafts.push({ x, z, R: 1.9 });
-    }
-  }
-}
 /** Mushrooms and molds grow in damp corners against walls; the sewer is thick with them. */
 const fungusMats = {};
 function fungi(city) {
@@ -738,7 +668,7 @@ export function resetLists() {
 
 export function populate(info) {
   const { dist, pockets, byDist, metal, rooms, startRoom } = info;
-  const trial = G.mode === 'trial', city = M.kind === 'city', D = curD();
+  const city = M.kind === 'city', D = curD();
   resetLists();
   W.rooms = rooms;
   G.startRoom = startRoom;
@@ -768,7 +698,7 @@ export function populate(info) {
     }
     for (const [gx, gz, h] of roofs.slice(40, 43)) addChest(toW(gx), h, toW(gz));
     for (const [gx, gz, h] of roofs.slice(43, 46)) addCache(toW(gx), h, toW(gz));
-    if (!trial && rng.next() < 0.5) { const [gx, gz, h] = roofs[46] || roofs[0]; addChest(toW(gx), h, toW(gz), false, true); }
+    if (rng.next() < 0.5) { const [gx, gz, h] = roofs[46] || roofs[0]; addChest(toW(gx), h, toW(gz), false, true); }
     // Crate stacks against low walls as stepping stones up to the roofs.
     for (const r of shuffleR(others.slice()).slice(0, 10)) {
       const wa = wallAdj(r).filter(w => w.t === 0 && w.h <= 6);
@@ -805,7 +735,7 @@ export function populate(info) {
       const tl = roomTiles(r);
       ['crate', 'sponge', 'cap'].forEach((k, i) => { if (tl.length) { const [x, y] = tl[(i * 3) % tl.length]; addObj(k, toW(x), toW(y)); } });
       const wa = wallAdj(r).filter(w => w.t === 6);
-      if (wa.length) { const w = wa[ri(0, wa.length - 1)]; addCache(toW(w.x + w.dx), w.h, toW(w.y + w.dy)); addChest(toW(w.x + w.dx) + 0.5, w.h, toW(w.y + w.dy) + 0.5, !trial); }
+      if (wa.length) { const w = wa[ri(0, wa.length - 1)]; addCache(toW(w.x + w.dx), w.h, toW(w.y + w.dy)); addChest(toW(w.x + w.dx) + 0.5, w.h, toW(w.y + w.dy) + 0.5, true); }
     }
     // Cotton swabs next to acid, to lay across as bridges.
     const acid = [];
@@ -825,9 +755,9 @@ export function populate(info) {
         }
       }
     }
-    pockets.forEach((cells, i) => { const [x, y] = cells[0]; addCache(toW(x), 0, toW(y)); if (i % 2 === 0) { const [a, b] = cells[3]; addChest(toW(a), 0, toW(b), !trial); } });
-    shuffleR(others.slice()).slice(0, 3).forEach(r => { const wa = wallAdj(r).filter(w => w.t === 0); if (wa.length) { const w = wa[ri(0, wa.length - 1)]; addChest(toW(w.x + w.dx), w.h, toW(w.y + w.dy), !trial); } });
-    shuffleR(others.slice()).slice(0, 2).forEach(r => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addChest(toW(x), floorY(toW(x), toW(y)), toW(y), !trial, !trial && rng.next() < 0.5); } });
+    pockets.forEach((cells, i) => { const [x, y] = cells[0]; addCache(toW(x), 0, toW(y)); if (i % 2 === 0) { const [a, b] = cells[3]; addChest(toW(a), 0, toW(b), true); } });
+    shuffleR(others.slice()).slice(0, 3).forEach(r => { const wa = wallAdj(r).filter(w => w.t === 0); if (wa.length) { const w = wa[ri(0, wa.length - 1)]; addChest(toW(w.x + w.dx), w.h, toW(w.y + w.dy), true); } });
+    shuffleR(others.slice()).slice(0, 2).forEach(r => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addChest(toW(x), floorY(toW(x), toW(y)), toW(y), true, rng.next() < 0.5); } });
     const dead = [];
     for (let k = 0; k < M.W * M.H; k++) {
       if (M.grid[k] !== 1) continue;
@@ -836,38 +766,28 @@ export function populate(info) {
     }
     shuffleR(dead).slice(0, 3).forEach(k => addCache(toW(k % M.W), 0, toW((k / M.W) | 0)));
     shuffleR(others.filter(r => r.w >= 5 && r.h >= 4)).slice(0, 4).forEach(addRope);
-    if (!trial) shuffleR(others.slice()).slice(0, 4).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
+    shuffleR(others.slice()).slice(0, 4).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
   }
 
   // Hidden areas and set dressing.
-  if (!trial) setupHidden(info.hidden || [], !city);
+  setupHidden(info.hidden || [], !city);
   markSecrets();
   if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
   clutter(city);
   fungi(city);
-  if (!trial) searchlights(city);
 
-  // Shared: workbenches, pipes, live wires, nests or valves, predators, hazards.
-  const benchAt = w => { if (w) addBench(toW(w.x) - w.dx * 0.6, toW(w.y) - w.dy * 0.6, Math.atan2(w.dx, w.dy)); };
-  benchAt(wallAdj(startRoom)[0] || nearestWallSpot(startRoom.cx, startRoom.cy));
-  [byDist[4], byDist[Math.floor(byDist.length * 0.6)]].filter(Boolean).forEach(r => { const wa = wallAdj(r); benchAt(wa.length ? wa[ri(0, wa.length - 1)] : nearestWallSpot(r.cx, r.cy)); });
+  // Shared: pipes, live wires, nests, predators, hazards.
   for (const r of shuffleR(rooms.slice()).slice(0, 5)) { const wa = wallAdj(r); if (wa.length) addWire(wa[ri(0, wa.length - 1)]); }
   const pr = shuffleR(rooms.filter(r => wallAdj(r).length)).slice(0, 6);
   for (let i = 0; i + 1 < pr.length; i += 2) { const a = wallAdj(pr[i]), b = wallAdj(pr[i + 1]); const p = addPipe(a[ri(0, a.length - 1)]), q = addPipe(b[ri(0, b.length - 1)]); p.link = q; q.link = p; }
-  if (trial) {
-    byDist.slice(0, 5).filter((r, i) => i % 2 === 1 || i === 4).slice(0, 3).forEach((r, i) => { const tl = roomTiles(r); const [x, y] = tl[Math.floor(tl.length / 2)] || [r.cx, r.cy]; addValve(toW(x) + 1, toW(y) + 1, i); });
-    const er = byDist[0];
-    addExit(toW(er.cx), toW(er.cy), 'drain');
-  } else {
-    byDist.slice(0, 10).slice(0, 7).forEach(r => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addNest(toW(x), toW(y)); } });
-    if (city) {
-      const cand = byDist.slice(Math.floor(byDist.length * 0.3), Math.floor(byDist.length * 0.75)).filter(r => r.kind === 'cross');
-      const r = cand[ri(0, Math.max(0, cand.length - 1))] || byDist[Math.floor(byDist.length / 2)];
-      addManhole(toW(r.cx), toW(r.cy));
-    }
+  byDist.slice(0, 10).slice(0, 7).forEach(r => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addNest(toW(x), toW(y)); } });
+  if (city) {
+    const cand = byDist.slice(Math.floor(byDist.length * 0.3), Math.floor(byDist.length * 0.75)).filter(r => r.kind === 'cross');
+    const r = cand[ri(0, Math.max(0, cand.length - 1))] || byDist[Math.floor(byDist.length / 2)];
+    addManhole(toW(r.cx), toW(r.cy));
   }
   const pathRooms = shuffleR(others.slice());
-  for (let p = 0; p < (trial ? 1 : run.mods.includes('cats') ? 4 : 2); p++) {
+  for (let p = 0; p < (run.mods.includes('cats') ? 4 : 2); p++) {
     const loop = pathRooms.slice(p * 3, p * 3 + 3);
     if (loop.length < 3) break;
     let path = [];
@@ -877,7 +797,7 @@ export function populate(info) {
     }
     if (path.length > 4) addPred(path);
   }
-  if (!trial) placeTraps(rooms, startRoom);
+  placeTraps(rooms, startRoom);
   populateDucts(info.ducts || [], addCache);
   buildSetPieces(info);
   const open = [];

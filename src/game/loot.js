@@ -1,76 +1,30 @@
-// Handing out loot: items (with smart pity towards completing a mutation),
-// mutation fusion, cursed items, chests and corrupted cores.
-import { pick } from '../core/util.js';
-import { P, run, st } from '../core/state.js';
-import { ITEMS, MUTATIONS, CURSED } from '../data/items.js';
-import { boom, fx } from '../fx/fx.js';
+// Chests and bins: gold, and sometimes food. (Phase 3 adds locked chests that take keys.)
+import { rand } from '../core/util.js';
+import { P } from '../core/state.js';
+import { scrapDrop, dropFood } from '../combat/combat.js';
+import { boom, puff, dnum } from '../fx/fx.js';
+import { spawnEnemy } from '../entities/mobs.js';
+import { rummageMimic } from '../entities/roles.js';
 import { sfx } from '../audio/audio.js';
-import { addThreat } from '../combat/combat.js';
-import { banner, renderSlots } from '../ui/hud.js';
-import { jackpot } from './rules.js';
-
-/** Draw an item you don't own. If you hold half a recipe, its partner is favoured. */
-export function drawItem() {
-  const owned = new Set(run.items);
-  const partners = MUTATIONS.filter(m => !run.muts.includes(m.id) && owned.has(m.a) !== owned.has(m.b)).map(m => (owned.has(m.a) ? m.b : m.a)).filter(id => !owned.has(id));
-  if (partners.length && Math.random() < 0.35) return pick(partners);
-  const pool = Object.keys(ITEMS).filter(id => id !== 'cheese' && !owned.has(id));
-  return pool.length ? pick(pool) : 'cheese';
-}
-
-export function giveItem(id, quiet = false) {
-  const I = ITEMS[id];
-  run.items.push(id);
-  I.ap();
-  if (!quiet) banner(I.name, I.flav + (I.ing ? ' · mutation ingredient' : ''));
-  checkMutations();
-  renderSlots();
-}
-
-export function checkMutations() {
-  const owned = new Set(run.items);
-  for (const m of MUTATIONS) {
-    if (run.muts.includes(m.id) || !owned.has(m.a) || !owned.has(m.b)) continue;
-    run.muts.push(m.id);
-    st.mut[m.id] = true;
-    if (m.id === 'razorwire') st.thorns += 30;
-    if (m.id === 'overclock') st.specCd *= 0.65;
-    setTimeout(() => banner('Mutation · ' + m.name, m.desc), 900);
-    sfx('mutation');
-    boom(P.x, P.y + 0.8, P.z, 4, parseInt(m.col.slice(1), 16));
-    fx('ring', P.x, P.y, P.z, 5, parseInt(m.col.slice(1), 16), 0.6);
-    addThreat(0.8);
-  }
-}
-
-export function giveCursed(id) {
-  const pool = Object.keys(CURSED).filter(k => !run.cursed.includes(k));
-  if (!id) id = pool.length ? pick(pool) : null;
-  if (!id) { giveItem(drawItem()); return; }
-  const C = CURSED[id];
-  run.cursed.push(id);
-  C.ap();
-  banner('Cursed · ' + C.name, C.up + ' — but ' + C.dn.toLowerCase());
-  sfx('curse');
-  fx('ring', P.x, P.y, P.z, 4, 0xff2a2a, 0.7);
-  addThreat(1.2);
-  renderSlots();
-}
-
-/** Chests cost salvage, and each one opened this run costs more (cursed chests are free: they are the gamble). */
-export const chestCost = c => (c.cursed ? 0 : Math.round(12 * Math.pow(1.35, run.chestsOpened || 0)));
 
 export function giveChest(c) {
-  if (c.cursed) { giveCursed(); return; }
-  giveItem(drawItem());
-  if (jackpot()) setTimeout(() => giveItem(drawItem()), 700);
-  if (c.premium) { setTimeout(() => giveItem(drawItem()), 1200); run.scrap += 10 * st.salvage; }
-  addThreat(c.premium ? 0.5 : 0.3);
+  const n = c.premium ? 30 : c.cursed ? 18 : 12;
+  for (let i = 0; i < n; i++) scrapDrop(c.x + rand(-0.8, 0.8), c.y, c.z + rand(-0.8, 0.8));
+  if (c.premium || Math.random() < 0.4) dropFood(c.x + 1, c.y, c.z);
+  boom(c.x, c.y + 0.8, c.z, 2.4, 0xffd070);
+  sfx('key');
 }
 
-/** Corrupted cores dropped by elites: salvage and a free item. */
-export function collectCore() {
-  run.scrap += 10 * st.salvage;
-  giveItem(drawItem());
-  addThreat(0.3);
+/** Bins, dumpsters and junk heaps: gold, food, or something with teeth. (Keys join in Phase 3.) */
+export function rummage(b) {
+  if (rummageMimic(b)) return;
+  b.done = true;
+  if (b.lid) b.lid.rotation.x = -1.2;
+  puff(b.x, b.y + 1, b.z, 0x6a6258, 12, 2.5);
+  sfx('chew');
+  const r = Math.random();
+  if (r < 0.5) { for (let i = 0; i < (b.kind === 'heap' ? 8 : 5); i++) scrapDrop(b.x, b.y + 0.5, b.z); dnum(P.x, P.y + 1.6, P.z, 'Gold', 'info'); return; }
+  if (r < 0.75) { dropFood(b.x, b.y + 0.3, b.z); dnum(P.x, P.y + 1.6, P.z, 'Food', 'info'); return; }
+  if (r < 0.9) { for (let i = 0; i < 3; i++) spawnEnemy('roach', b.x + rand(-1, 1), b.z + rand(-1, 1), { pack: 1, plain: true }); dnum(P.x, P.y + 1.6, P.z, 'Something lives in there', 'info'); return; }
+  dnum(P.x, P.y + 1.6, P.z, 'Just trash', 'info');
 }
