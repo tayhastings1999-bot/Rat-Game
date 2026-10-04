@@ -123,6 +123,7 @@ function fieldTo(gx, gz) {
   return d;
 }
 /** Steer toward a world point along the field; returns a unit direction (or null when unreachable). */
+const OFF = 'off';
 function steerTo(x, z) {
   const gx = toG(x), gz = toG(z), px = toG(P.x), pz = toG(P.z);
   if (gx === px && gz === pz) { const l = Math.hypot(x - P.x, z - P.z) || 1; return [(x - P.x) / l, (z - P.z) / l]; }
@@ -136,7 +137,7 @@ function steerTo(x, z) {
   }
   const f = fieldTo(tx, tz);
   const here = inG(px, pz) ? f[gi(px, pz)] : -1;
-  if (here < 0) return null;
+  if (here < 0) return OFF; // the rat is off the field (roof, duct, prop): not the target's fault
   if (here <= 1) { const l = Math.hypot(x - P.x, z - P.z) || 1; return [(x - P.x) / l, (z - P.z) / l]; }
   let bd = here, bx = 0, bz = 0;
   for (const [dx, dz] of N8) {
@@ -153,7 +154,9 @@ function steerTo(x, z) {
 
 // ---------- goals: where to go next ----------
 const reachable = o => o && !B.banned.has(toG(o.x) + ',' + toG(o.z));
-const nearestOf = list => { let b = null, bd = 1e9; for (const o of list) { if (!reachable(o)) continue; const d = Math.hypot(o.x - P.x, o.z - P.z); if (d < bd) { bd = d; b = o; } } return b; };
+const nearestOf = (list, any = false) => { let b = null, bd = 1e9; for (const o of list) { if (!any && !reachable(o)) continue; const d = Math.hypot(o.x - P.x, o.z - P.z); if (d < bd) { bd = d; b = o; } } return b; };
+/** Main objectives (nests, exits) are never given up on: prefer unbanned ones, else the nearest anyway. */
+const nearestMust = list => nearestOf(list) || nearestOf(list, true);
 function exploreTarget() {
   // The nearest walkable tile not yet visited, sampled.
   let b = null, bd = 1e9;
@@ -182,13 +185,13 @@ function chooseTarget() {
   }
   if (B.goal === 'explore') return exploreTarget();
   if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed)); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
-  if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestOf(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
+  if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestMust(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
   if (b && !b.dead && B.goal !== 'survive') return { x: b.x, z: b.z, kind: 'boss', e: b };
   // Smashing the nests is the main objective (it wakes the boss); side objectives come after.
   const nests = W.enemies.filter(e => e.type === 'nest' && !e.dead);
-  if (nests.length && B.goal !== 'survive') { const n = nearestOf(nests); if (n) return { x: n.x, z: n.z, kind: 'nest', e: n }; }
+  if (nests.length && B.goal !== 'survive') { const n = nearestMust(nests); if (n) return { x: n.x, z: n.z, kind: 'nest', e: n }; }
   const ot = objTargets().filter(reachable);
   if (ot.length) { const o = nearestOf(ot); if (o) return { x: o.x, z: o.z, kind: 'objective', o }; }
   // Nothing to do: hunt the nearest crowd, or explore.
@@ -281,7 +284,12 @@ function think(dt) {
     const fight = tg.kind === 'boss' || tg.kind === 'mob' || tg.kind === 'nest';
     const want = fight ? (RANGED[run.cls] ? 6.5 : 1.6) : 0.6;
     if (tg.kind.startsWith('break-') && (dist < 1.6 || B.tacT > 0)) { breakAct(tg, 0.1 + B.profile.react * 0.3); return; }
-    if (dist > want) d = steerTo(tg.x, tg.z) || (B.banned.add(toG(tg.x) + ',' + toG(tg.z)), B.target = null, [0, 0]);
+    if (dist > want) {
+      const s = steerTo(tg.x, tg.z);
+      if (s === OFF) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist]; // head straight for it until back on the field
+      else if (s) d = s;
+      else { B.banned.add(toG(tg.x) + ',' + toG(tg.z)); B.target = null; }
+    }
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
@@ -415,6 +423,7 @@ function step(dt) {
 export const qa = {
   PROFILES,
   parseGoal,
+  get bot() { return B; },
   start({ profile = 'average', goal = 'progress', assist = false } = {}) {
     resetTelemetry();
     Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, target: null, field: null, fieldK: -1, ring: [], done: null, visited: new Set(), banned: new Set(), seenWind: new Map() });
