@@ -19,6 +19,7 @@ import { isSewer } from '../data/world.js';
 import { scrapDrop, dropGem } from '../combat/combat.js';
 import { spawnEnemy, moveBody } from '../entities/mobs.js';
 import { addRunt } from '../entities/rat.js';
+import { onCage } from './story.js';
 import { addChest } from '../world/build.js';
 import { banner } from '../ui/hud.js';
 
@@ -139,6 +140,7 @@ export function openCage(c) {
   puff(c.x, c.y + 0.6, c.z, 0x9ad0ff, 12, 3);
   addRunt();
   o.freed++;
+  onCage(o);
   dnum(c.x, c.y + 1.8, c.z, `Freed ${o.freed}/${o.cages.length}`, 'info');
   sfx('key');
   if (o.freed >= o.cages.length) finish(o, c.x, c.z);

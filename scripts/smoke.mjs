@@ -893,6 +893,46 @@ await step('set pieces: interior cutaway, back door, tram, crane, stall, washer'
   await S(() => __scurry.menu());
   await wait(400);
 });
+await step('story: prologue, Scab\'s choice, chapters, locked ending, journal', async () => {
+  const st = () => S(() => __scurry.G.state);
+  const through = async () => { for (let i = 0; i < 40 && (await st()) === 'story'; i++) { await page.keyboard.press('Space'); await rawWait(60); } };
+  await S(() => { const s = __scurry; s.G.testStory = true; s.story.resetStory(); s.G.mode = 'survival'; s.meta.startAt = 'row'; s.startRun('brawler'); s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
+  if (!(await rawUntil(() => __scurry.G.state === 'story', 6000))) throw new Error('no prologue');
+  await shot('12a-prologue');
+  await through();
+  if ((await S(() => __scurry.story.chapter())) !== 1) throw new Error('prologue did not start chapter 1');
+  // First catch: three choices; "I'm sorry" is mercy, two bonds.
+  await S(() => __scurry.story.onScabCaught({}, () => {}));
+  if (!(await rawUntil(() => __scurry.G.state === 'story', 3000))) throw new Error('no Scab scene');
+  await page.keyboard.press('Escape');
+  const opts = await S(() => document.querySelectorAll('#story .sopt').length);
+  if (opts !== 3) throw new Error(`${opts} choices`);
+  await shot('12b-scab-choice');
+  await page.keyboard.press('Digit3');
+  await through();
+  const s1 = await S(() => JSON.parse(JSON.stringify(__scurry.story.story())));
+  if (s1.ch !== 2 || !s1.sorry || s1.bonds !== 2 || s1.mercy !== 1) throw new Error('choice not recorded ' + JSON.stringify(s1));
+  // Scab escalates by chapter: poison from chapter 2, a crew after refusing him, gifts if allied, gone once crowned.
+  const modes = await S(() => { const s = __scurry.story, o = []; for (const [c, a] of [[1, null], [2, null], [5, false], [5, true], [7, null]]) { s.setChapter(c); s.story().ally = a; o.push(s.scabMode()); } return o.join(','); });
+  if (modes !== 'thief,poison,crew,ally,gone') throw new Error('scab modes ' + modes);
+  // The finale: without enough bonds, cutting him free is locked.
+  await S(() => { const s = __scurry.story; s.setChapter(7); s.story().bonds = 2; s.onBossDeath({ kind: 'ratking', scabKing: true }); });
+  if (!(await rawUntil(() => __scurry.G.state === 'story', 3000))) throw new Error('no finale');
+  await page.keyboard.press('Escape');
+  const locked = await S(() => document.querySelector('#story .sopt.locked') !== null);
+  if (!locked) throw new Error('cut-free ending not locked at 2 bonds');
+  await shot('12c-finale');
+  await page.keyboard.press('Digit1');
+  if ((await st()) !== 'story') throw new Error('a locked ending was taken');
+  await page.keyboard.press('Digit2');
+  await through();
+  await rawUntil(() => __scurry.G.state === 'play', 3000);
+  const end = await S(() => ({ ch: __scurry.story.chapter(), e: __scurry.story.story().ending }));
+  if (end.ch !== 8 || end.e !== 'leave') throw new Error('ending ' + JSON.stringify(end));
+  await S(() => __scurry.pause(true));
+  if (!(await S(() => document.querySelectorAll('.journal .jrow.done').length === 7))) throw new Error('journal');
+  await S(() => { __scurry.G.testStory = false; __scurry.story.resetStory(); __scurry.pause(false); });
+});
 await step('soak: 20s of live horde', async () => {
   await S(() => { __scurry.G.mode = 'survival'; __scurry.startRun('slinger'); __scurry.god(true); __scurry.run.threatBase = 8; });
   for (let i = 0; i < 10; i++) { await hold(['KeyW', 'KeyA', 'KeyS', 'KeyD'][i % 4], 1000); await page.keyboard.press('Space'); await wait(1000); }

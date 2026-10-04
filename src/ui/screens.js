@@ -1,5 +1,6 @@
 // Overlay screens: main menu, the Nest, pause, map, workbench, level-up,
 // death and trial results.
+import { journalHTML, CHAPTERS, chapter } from '../game/story.js';
 import { fmt, fmtT, commas, hexs, pick, loadJSON, saveJSON, weekSeed, $ } from '../core/util.js';
 import { G, run, st, meta, best, settings, saveMeta, saveSettings, saveBest } from '../core/state.js';
 import { CLASSES, UNLOCK, SKINS, isUnl, skinOk } from '../data/classes.js';
@@ -152,6 +153,7 @@ export function renderNest() {
 }
 
 // ---------- in-run screens ----------
+const storyTitle = () => { const n = chapter(), c = CHAPTERS[n]; return c ? `Chapter ${n} · ${c.t}` : n >= 8 ? 'Complete' : 'Not started'; };
 export function pause(on) {
   if (!on) { resume(); return; }
   G.state = 'paused';
@@ -164,6 +166,7 @@ export function pause(on) {
   const Cu = run.cursed.map(id => `<p><span class="chip" style="--cc:#ff3a3a">Cursed · ${CURSED[id].name}</span> ${CURSED[id].up}; ${CURSED[id].dn.toLowerCase()}.</p>`).join('');
   show(`<div class="panel narrow frame"><div class="kick px">${fmt(run.time)} · Lv ${run.level} · ${dName()}</div><h2>Paused</h2>
     ${run.mods.map(m => `<p><span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span> ${MODS[m].desc}</p>`).join('')}
+    ${G.mode !== 'trial' ? `<details class="jwrap"><summary class="px">Story · ${storyTitle()}</summary>${journalHTML()}</details>` : ''}
     ${Mu}${Cu}${Ju}
     ${(run.contracts || []).length ? `<h3 class="px" style="margin:8px 0 2px;font-size:13px;color:#c080ff">Contracts</h3>${run.contracts.map(c => `<p>${c.done ? '✓' : '◇'} <b>${CONTRACTS[c.id].name}</b> · ${CONTRACTS[c.id].desc} · ${c.p}/${CONTRACTS[c.id].n} · +${CONTRACTS[c.id].dom} Dominance</p>`).join('')}` : ''}
     ${Wp ? `<div class="tags">${Wp}</div>` : ''}${Tm ? `<div class="tags">${Tm}</div>` : ''}${It ? `<div class="tags">${It}</div>` : ''}${Au ? `<div class="tags">${Au}</div>` : ''}

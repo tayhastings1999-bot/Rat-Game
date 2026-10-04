@@ -22,6 +22,7 @@ import { coldOpen } from './feel.js';
 import { setupObjective } from './objectives.js';
 import { openRoutes, applyRoute } from './routes.js';
 import { storyBeat } from './personality.js';
+import { onRunStart, onDistrict, forcedObjective, storyGoal } from './story.js';
 import { startDaily, dailySeed, districtStart, todaysTwist } from './score.js';
 import { placeRoles } from '../entities/roles.js';
 
@@ -58,7 +59,7 @@ export function setupWorld(seed) {
   run.mods = G.mode === 'trial' || !D.haz ? pool.slice(0, 2) : [D.haz, pool[0]];
   buildWorld();
   populate(info);
-  setupObjective(info);
+  setupObjective(info, forcedObjective());
   unseedRng();
   clearFx();
   const s = info.startRoom;
@@ -135,7 +136,8 @@ export function startRun(k) {
   renderSlots();
   hud();
   G.last = performance.now();
-  banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), at ? 'Shortcut · three free picks to catch up' : storyBeat());
+  banner(G.mode === 'trial' ? 'Ghost Trial' : dName(), at ? 'Shortcut · three free picks to catch up' : storyGoal() || storyBeat());
+  onRunStart();
   dealContracts();
   districtStart();
   if (!at && G.mode !== 'trial') coldOpen();
@@ -181,6 +183,7 @@ function transition(apply, title, sub) {
     const got = checkUnlocks();
     setupWorld(run.daily ? dailySeed() : 'S' + Date.now());
     districtStart();
+    onDistrict();
     run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.3);
     const route = run.route;
     run.route = null;
@@ -188,7 +191,7 @@ function transition(apply, title, sub) {
     $('fade').style.opacity = 0;
     G.state = 'play';
     G.last = performance.now();
-    banner(title(), got.length ? 'Unlocked: ' + got.join(', ') : storyBeat());
+    banner(title(), got.length ? 'Unlocked: ' + got.join(', ') : storyGoal() || storyBeat());
     if (route) setTimeout(() => applyRoute(route), 1800);
   }, 450);
 }

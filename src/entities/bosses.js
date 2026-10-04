@@ -1,6 +1,7 @@
 // District bosses. Each has three phases (at 66% and 33% HP) that add new
 // attacks, erratic movement that changes direction without warning, and a
 // timed action queue for multi-part patterns.
+import { onBossDeath as storyBossDown } from '../game/story.js';
 import * as THREE from 'three';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
@@ -47,9 +48,14 @@ export function spawnBoss() {
     flash: 0, slow: 0, ang: 0, pT: 0, pD: 0, bT: 0, bD: 0, dT: 0, tT: 0, wind: 0, atkCd: 0, lunge: 0, ward: 0,
     phase: 1, cd: 2.2, st: 'move', tt: 0, tel: 0, seq: [], last: '', mvT: 0, mvDir: 1, oa: rand(0, TAU), ow: 1, hv: 0, mass: 8, bar: true,
   };
+  // The story's last chapters: the Rat King of the deep sewer is Scab, wearing the cracked crown.
+  if (kind === 'ratking' && G.scabKing) {
+    Object.assign(b, { name: 'Scab, the Knotted King', scabKing: true, lore: ['Your brother, in a crown of tails', '"Nobody leaves. Not this time. Not ever again."'] });
+    mesh.traverse(o => { if (o.material && o.material.color) o.material.color.multiplyScalar(0.7); });
+  }
   W.enemies.push(b);
   G.boss = b;
-  b.label = `${B.name.toUpperCase()} · I`;
+  b.label = `${b.name.toUpperCase()} · I`;
   $('bossLabel').textContent = b.label;
   banner('Something big has woken', 'Sniff it out (F), or keep your distance');
   sfx('boss');
@@ -451,6 +457,7 @@ export function bossStatus(e) {
 }
 
 export function onBossDeath(e) {
+  storyBossDown(e);
   G.victoryT = 2.6; // the rat rears up and roars (ratAnim.js)
   dropCreature(e.mesh);
   laser.visible = false;

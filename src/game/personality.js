@@ -11,6 +11,8 @@ import { spawnEnemy, moveBody } from '../entities/mobs.js';
 import { thiefAI } from './objectives.js';
 import { dropCrate } from './progress.js';
 import { banner } from '../ui/hud.js';
+import { puddle } from '../combat/hazards.js';
+import { scabMode, scabBark, scabLossLine, onScabCaught, tickStory } from './story.js';
 
 // ---------- boss intro cards ----------
 export const BOSS_LORE = {
@@ -23,7 +25,7 @@ export const BOSS_LORE = {
 };
 let cardT = null;
 export function bossIntro(b) {
-  const L = BOSS_LORE[b.kind] || ['', ''];
+  const L = b.lore || BOSS_LORE[b.kind] || ['', ''];
   const el = $('introCard');
   el.innerHTML = `<div class="px kick">${L[0]}</div><h1>${b.name}</h1><p>${L[1]}</p>`;
   el.classList.remove('on');
@@ -46,14 +48,15 @@ const STORY = [
   "The Court is close. Can you hear the throne creaking?",
   'Every street you take back is another nest that sleeps safe tonight.',
 ];
-export const storyBeat = () => STORY[Math.min(STORY.length - 1, run.tier || 0)];
+export const storyBeat = () => STORY[Math.min(STORY.length - 1, run.tier || 0)]; // used once the story (story.js) is finished
 export const epitaph = () => pick(['The streets remember your name.', 'Somewhere, a nest-mate is still running.', 'Scab will tell everyone he did it.', 'The Rat King laughs, for now.', 'Rats always come back.']);
 
 // ---------- Scab, the rival ----------
-const SCAB_BARKS = ['Ha! Too slow, nest-rat!', "Finders keepers!", "That chest? Mine now.", "You smell like a sewer. Wait, so do I.", 'Catch me if you can!', "I'm telling the King!"];
-const SCAB_LOSS = ['Ow! OW! Fine, have it!', "This isn't over!", 'Next time, nest-rat. Next time.'];
 /** Scab turns up about half a minute into most districts, heading for a chest. */
 function spawnScab() {
+  const mode = scabMode();
+  if (mode === 'gone') return;
+  if (mode === 'ally') { scabGift(); return; }
   const chests = W.chests.filter(c => !c.open && !c.cursed && c.y < 0.5 && Math.hypot(c.x - P.x, c.z - P.z) > 15);
   if (!chests.length) return;
   const c = chests[(Math.random() * chests.length) | 0];
@@ -67,12 +70,18 @@ function spawnScab() {
   const gx = toG(c.x), gz = toG(c.z);
   Object.assign(e, { scab: true, bar: true, xp: 0, spd: e.spd * 1.35, goal: c, field: inG(gx, gz) ? bfs(gx, gz, OPEN) : null, barkT: 2, fleeT: 0 });
   run.scab = e;
-  banner('Scab', `"${pick(SCAB_BARKS)}" · he's after a chest · catch him`);
+  e.mode = mode;
+  e.trailT = 1.5;
+  // Refused him at the bargain: he brings a crew.
+  if (mode === 'crew') for (let i = 0; i < 3; i++) spawnEnemy('mawling', e.x + rand(-2, 2), e.z + rand(-2, 2), { plain: true, elite: i === 0, force: true, name: "Scab's crew" });
+  banner('Scab', `"${scabBark()}" · he's after a chest${mode === 'poison' ? ' · watch for his poison' : mode === 'crew' ? ' · and he brought friends' : ''} · catch him`);
   sfx('caw');
 }
 function scabAI(e, dt) {
   e.barkT -= dt;
-  if (e.barkT <= 0) { e.barkT = rand(4, 7); dnum(e.x, e.y + 1.8, e.z, pick(SCAB_BARKS), 'info'); }
+  if (e.barkT <= 0) { e.barkT = rand(4, 7); dnum(e.x, e.y + 1.8, e.z, scabBark(), 'info'); }
+  // From chapter 2 he lays the Exterminator's stolen poison behind him as he runs.
+  if (e.mode !== 'thief') { e.trailT -= dt; if (e.trailT <= 0) { e.trailT = e.fleeT > 0 ? 1.1 : 2.2; puddle('poison', e.x, e.z, 1.6, 7, 'all'); } }
   if (e.fleeT > 0) {
     // Loot in his paws: run, and vanish if he gets away long enough.
     e.fleeT -= dt;
@@ -109,6 +118,14 @@ function scabAI(e, dt) {
   moveBody(e, dt, dir[0] / l * e.spd, dir[1] / l * e.spd);
   e.ang = Math.atan2(dir[0], dir[1]);
 }
+/** Allied with him (chapter 4-5): instead of robbing you, he leaves supplies and goes. */
+function scabGift() {
+  let x = P.x, z = P.z;
+  for (let i = 0; i < 12; i++) { const a = rand(0, 6.3), r = rand(3, 6), tx = P.x + Math.sin(a) * r, tz = P.z + Math.cos(a) * r, t = tAt(toG(tx), toG(tz)); if (t === 1 || t === 9 || t === 10) { x = tx; z = tz; break; } }
+  dropCrate(x, floorY(x, z), z);
+  puff(x, floorY(x, z) + 0.5, z, 0x6a6a6a, 14, 3);
+  banner('Scab was here', '"Don\'t make me regret this." · a weapon crate');
+}
 /** Called from kill(). */
 export function scabDown(e) {
   if (!e.scab) return;
@@ -117,12 +134,14 @@ export function scabDown(e) {
   const gy = floorY(e.x, e.z);
   for (let i = 0; i < (e.stolen ? 25 : 12); i++) scrapDrop(e.x, gy, e.z);
   dropCrate(e.x, gy, e.z);
+  // The first time you catch him, the story takes the moment (and Robbing him pays out here).
+  if (onScabCaught(e, () => { dropCrate(e.x + 1.4, gy, e.z); for (let i = 0; i < 20; i++) scrapDrop(e.x, gy, e.z); })) return;
   if (run.scabLosses >= 3 && !run.scabDone) {
     run.scabDone = true;
     run.btPick = (run.btPick || 0) + 1;
     run.pendingLv++;
     banner('Scab gives up', '"Fine! FINE! Take it, and leave me alone!" · a Breakthrough-grade pick');
-  } else banner('Scab drops the loot', `"${pick(SCAB_LOSS)}"`);
+  } else banner('Scab drops the loot', `"${scabLossLine()}"`);
 }
 
 // ---------- chatter from your rats ----------
@@ -139,6 +158,7 @@ function chatter(dt) {
 
 export function tickPersonality(dt, maxHp) {
   run.maxHpCache = maxHp;
+  tickStory();
   chatter(dt);
   const e = run.scab;
   if (e && !e.dead) scabAI(e, dt);

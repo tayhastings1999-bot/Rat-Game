@@ -110,7 +110,7 @@ Movement and signature moves:
 **Characters and story.**
 - *Boss intro cards.* Every boss gets an intro card with a title and a line ("Little thing. I can hear your heart from here."), plus a beat of slow-mo.
 - *The story.* Each district opens with a story beat, from your burned nest to the Rat King's Court.
-- *Scab.* Your rival rat shows up about half a minute into each district and runs for an unopened chest. He taunts you, steals the chest if he gets there, and escapes unless you catch him. Every time you beat him he comes back tougher; beat him three times and he gives up a Breakthrough-grade pick.
+- *Scab.* Your rival rat shows up about half a minute into each district and runs for an unopened chest. He taunts you, steals the chest if he gets there, and escapes unless you catch him. Every time you beat him he comes back tougher; beat him three times and he gives up a Breakthrough-grade pick. How he fights you changes with the story (below).
 - *Chatter.* Rats you've freed shout warnings and banter.
 
 **Ranks, score and sharing.**
@@ -206,6 +206,30 @@ Packs behave like packs:
 
 **Music.** A procedural soundtrack: a distorted boom-bap drum loop with stuttering trap hi-hat rolls and a discordant phrygian/tritone synth bass. Tempo and density climb from exploring (132 BPM) to crowded fights (148). Bosses get their own **sinister score**, in a different key per boss (the Rat King's is a tritone off). While the boss is asleep you hear a detuned drone and a heartbeat. The fight brings a cold, wordless formant choir moving through a phrygian/diminished progression, a tolling FM church bell and half-time doom drums. Phase 2 adds taiko and a pulsing sub bass. Phase 3 adds a frantic diminished arpeggio, stuttering hats and the siren, and the tempo quickens from 88 to 96 BPM. Music and effects have separate volume sliders.
 
+## The story
+
+**Wick and Bram.** The night Cinder Row burned, Wick ran and told the nest that their littermate Bram died under the falling beams. Bram didn't die. He heard Wick run. He crawled into the sewer, was taken in by the Rat King's Court, and learned the King sells whole colonies to the Exterminator so his Court stays fed. Bram, now **Scab**, lit the fire on Cinder Row himself to drive the nest out before the poison came. He saved them, and he can't forgive them for leaving him. His answer is the Knot: tie every rat to every other by the tail so no one is ever left behind again.
+
+The theme is the game's core verb. Running keeps you alive; going back is what makes you worth keeping. Wick's flaw (run, alone) and Scab's (hold on, by force) are the same wound. Scab is right about the threat and never lies to you. He feeds the Court's runts first, coughs from the smoke, and can't stand the dark. He is also the rat who steals your chests, lays poison in your path, takes Pip to see whether you'll go back, and spends the whole story making you strong enough to kill the King for him.
+
+**Chapters** unlock across runs as you hit milestones in play, and are saved:
+
+| # | Chapter | How it moves on |
+|---|---|---|
+| 1 | Smoke | Catch the chest thief |
+| 2 | A Dead Rat Walking | Reach a second district |
+| 3 | Pip | Free the caged rats; Pip is in the last cage |
+| 4 | Pest Control | Beat a boss in your third district or deeper (the Exterminator in Rust Yards) |
+| 5 | Below | Take a manhole into the sewer |
+| 6 | The Court of Tails | Beat the Rat King in the deep sewer |
+| 7 | Crown of Tails | Beat Scab, the Knotted King |
+
+**Choices change play.** When you first catch Scab you can let him go, rob him (a weapon crate and his salvage, right now) or tell him you're sorry. After the Exterminator you can help him against the King (he stops robbing you and leaves a weapon crate in each district) or refuse (he comes for your chests with a crew). From chapter 2 he lays stolen Exterminator poison as he runs. Once he's crowned he stops stealing; he's waiting for you as the final boss. Pip, once saved, starts every run beside you.
+
+**Bonds and endings.** Every caged rat you free, saving Pip, sparing Scab (and owning what you did) is a bond: proof Wick has learned to go back. The finale offers three endings, and **cutting Scab free of the Knot needs 8 bonds**; freeing Pip alone won't get you there. Each ending leaves a mark on every run after it: *Going Back* (Bram and Pip start beside you, +2 nest-mates on a shriek), *Still Running* (+8% speed) or *Long Live the King* (+10% damage, and the city fears you: +1 threat).
+
+Scenes pause the game. Space or a tap advances, Esc skips to the choice, 1–3 choose. The pause screen has a journal of chapters, choices and bonds. Harness runs (`?debug`) resolve scenes instantly so the bots and tests aren't interrupted.
+
 ## Controls
 
 WASD move · Space jump / hold on walls to climb · Shift tap to roll (i-frames), hold to sprint · C squeeze · Q special · G class signature move · X shriek (full combo) · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · mouse look (V toggles) · wheel zoom · Esc pause.
@@ -257,7 +281,7 @@ src/
   world/             tile grid + collision, sewer and city generators, mesh builder + population, setpieces.js (interiors, tram, market, crane, gardens, lairs)
   entities/          player, rat model/portraits + ratAnim.js, mobs (AI + spawning), roles.js (new mob roles, pack behaviour), bosses
   combat/            damage/deaths/drops/threat, weapons & specials, hazards (telegraphs, puddles)
-  game/              run flow (districts, sewer, banking), loot, update step, render sync + camera, input
+  game/              run flow (districts, sewer, banking), loot, update step, render sync + camera, input, story.js (chapters, scenes, choices)
   audio/             SFX + music sequencer
   ui/                HUD, screens (menu, Nest, pause, level-up, bench, endings), icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing

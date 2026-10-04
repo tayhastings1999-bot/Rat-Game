@@ -18,7 +18,7 @@ function glow(col, s, par, x = 0, y = 0, z = 0, op = 0.8) {
 }
 
 export function makeRat(C) {
-  if (skinOk(meta.skin)) C = { ...C, ...SKINS[meta.skin].over };
+  if (!C.npc && skinOk(meta.skin)) C = { ...C, ...SKINS[meta.skin].over }; // story characters keep their own colours
   // PS1 treatment: gouraud-lit, vertex-snapped, affinely textured.
   const g = new THREE.Group(), L = (c, o = {}) => ps1(new THREE.MeshLambertMaterial({ color: c, ...o }));
   const fur = L(C.fur, { map: furTex }), furD = L(new THREE.Color(C.fur).multiplyScalar(0.62).getHex(), { map: furTex }), spk = L(C.spike);
@@ -295,6 +295,8 @@ function portrait(C, close) {
   return cv.toDataURL();
 }
 export const PORT = {}, FACE = {};
+/** A close-up face for a story character (any class-like look: fur, spike, eye, gear, prim). */
+export const facePortrait = look => portrait(look, true);
 export function refreshPortraits() {
   for (const k in CLASSES) { PORT[k] = portrait(CLASSES[k], false); FACE[k] = portrait(CLASSES[k], true); }
 }

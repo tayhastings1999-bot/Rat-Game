@@ -1,4 +1,5 @@
 // Keyboard and mouse.
+import { advance as storyAdvance, skip as storySkip, choose as storyChoose } from './story.js';
 import { clamp } from '../core/util.js';
 import { G, P, run, settings, saveSettings } from '../core/state.js';
 import { canvas } from '../render/renderer.js';
@@ -43,6 +44,11 @@ export function initInput() {
       if (e.code === 'Escape') renderMenu('survival');
     } else if (s === 'dead' || s === 'done') {
       if (e.code === 'KeyR' || e.code === 'Enter') menu();
+    } else if (s === 'story') {
+      if (['Space', 'Enter', 'KeyE'].includes(e.code)) storyAdvance();
+      if (e.code === 'Escape') storySkip();
+      const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
+      if (i >= 0) storyChoose(i);
     } else if (s === 'levelup') {
       const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code), offers = currentOffers();
       if (i >= 0 && offers[i]) choose(offers[i]);

@@ -202,3 +202,28 @@ body.combat #contracts{opacity:.25}
 #rankStamp span{font-size:11px;color:var(--ink);text-shadow:0 2px 4px #000}
 #rankStamp .rS{color:#ffd040}#rankStamp .rA{color:#6ad06a}#rankStamp .rB{color:#6ad0ff}#rankStamp .rC{color:#c080ff}#rankStamp .rD{color:#9a96a0}
 .ranks{font:900 28px/1 serif;letter-spacing:.2em;color:#ffd040}
+/* Story scenes: a letterboxed dialogue box over the paused game */
+#story{position:fixed;left:0;right:0;bottom:0;top:0;display:none;align-items:flex-end;justify-content:center;padding:0 16px 5vh;z-index:30;background:linear-gradient(180deg,rgba(0,0,0,.55) 0,transparent 14%,transparent 62%,rgba(0,0,0,.7) 100%);cursor:pointer}
+#story.on{display:flex}
+#story .sbox{display:flex;gap:16px;align-items:flex-start;width:min(820px,100%);padding:16px 18px;box-sizing:border-box}
+#story .sface{width:96px;height:96px;flex:none;image-rendering:pixelated;border:2px solid var(--m4);background:#0b090c}
+#story .sbody{flex:1;min-width:0}
+#story .sname{font-size:14px;letter-spacing:.08em;margin-bottom:6px}
+#story .stext{font-size:clamp(17px,2.2vw,21px);line-height:1.4;min-height:3em;color:var(--ink)}
+#story .stext.narr{font-style:italic;color:#d8d0dc}
+#story .stext.mono{font-family:'Silkscreen',monospace;font-size:14px;color:#9be06a}
+#story .shint{font-size:11px;color:var(--dim);margin-top:8px;text-align:right}
+#story .sskip{margin-left:10px;opacity:.7}
+#story .schoice .sbody{display:flex;flex-direction:column;gap:8px}
+#story .sopt{display:grid;grid-template-columns:auto 1fr;column-gap:10px;text-align:left;background:#1b171f;border:2px solid var(--m4);color:var(--ink);padding:10px 12px;cursor:pointer;font:inherit}
+#story .sopt:hover{border-color:var(--gold)}
+#story .sopt b{font-size:17px}
+#story .sopt .d{grid-column:2;font-size:14px;color:var(--dim)}
+#story .sopt.locked{opacity:.5;cursor:not-allowed}
+#story .sopt .key{grid-row:span 2;align-self:center;font-size:13px;color:var(--gold)}
+@media (max-width:560px){#story .sface{width:64px;height:64px}#story .sbox{gap:10px;padding:12px}}
+.jwrap{margin:8px 0;text-align:left}.jwrap summary{cursor:pointer;color:var(--gold);font-size:13px}
+.journal{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.jrow{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start;font-size:14px}
+.jrow b.px{color:var(--gold);font-size:13px}.jrow span{display:block;color:var(--dim)}
+.jrow.lock{opacity:.45}.jrow.now b:not(.px){color:#ffd070}
