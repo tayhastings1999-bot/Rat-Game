@@ -118,9 +118,10 @@ await check('XP bar and automatic level-up (no pause)', async () => {
 await check('food heals, and healing caps at max HP', async () => {
   await fresh();
   await S(() => { const s = __scurry; s.run.hp = 20; s.dropFood(s.P.x, s.P.y, s.P.z); });
-  await sleep(600);
-  const low = await S(() => __scurry.run.hp);
-  assert(low > 20, `eating did not heal (${low})`);
+  let low = 20;
+  for (let i = 0; i < 20 && low <= 20; i++) { await sleep(100); low = await S(() => __scurry.run.hp); }
+  const why = await S(() => { const s = __scurry, f = s.W.foods[0]; return `state ${s.G.state}, hold ${s.G.qaHold}, foods ${s.W.foods.length}, rat ${[s.P.x, s.P.y, s.P.z].map(v => v.toFixed(1))}, food ${f ? [f.x, f.y, f.z].map(v => v.toFixed(1)) : '-'}`; });
+  assert(low > 20, `eating did not heal (${low}; ${why})`);
   await S(() => { const s = __scurry; s.run.hp = s.st.maxHp - 3; s.dropFood(s.P.x, s.P.y, s.P.z); });
   await sleep(600);
   const r = await S(() => ({ hp: __scurry.run.hp, max: __scurry.st.maxHp }));
