@@ -124,7 +124,8 @@ export const SIGS = {
   roof: {
     name: 'Dive Bomb', cd: 5.5, desc: 'Leap high, then plunge onto the nearest mob. The higher you fall from, the harder it hits.',
     use() {
-      if (P.onGround) { P.vy = 15; P.onGround = false; P.jumping = false; P.cut = true; }
+      // Always leap, even mid-step or bobbing in water: the plunge arms at the apex.
+      P.vy = Math.max(P.vy, 15); P.onGround = false; P.jumping = false; P.cut = true;
       P.diveArm = 1.2;
       P.diveY = P.y;
       anim('leap', 0.4);
