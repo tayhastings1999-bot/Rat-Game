@@ -32,7 +32,9 @@ const results = [];
 const check = async (name, fn) => {
   const e0 = errors.length;
   try { const r = await fn(); if (errors.length > e0) throw new Error('error: ' + errors[e0].msg); results.push({ name, ok: true, note: r || '' }); console.log(`ok   ${name}${r ? ' · ' + r : ''}`); }
-  catch (e) { results.push({ name, ok: false, note: e.message }); console.log(`FAIL ${name}: ${e.message}`); await page.screenshot({ path: OUT + name.replace(/\W+/g, '-') + '.png' }).catch(() => {}); }
+  catch (e) {
+    results.push({ name, ok: false, note: e.message }); console.log(`FAIL ${name}: ${e.message}`);
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=System check::${name}: ${e.message.replace(/\n/g, ' ')}`); await page.screenshot({ path: OUT + name.replace(/\W+/g, '-') + '.png' }).catch(() => {}); }
 };
 const assert = (c, msg) => { if (!c) throw new Error(msg); };
 const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
