@@ -23,6 +23,7 @@ import { onRunStart, onDistrict, forcedObjective, storyGoal } from './story.js';
 import { districtStart } from './score.js';
 import { placeRoles } from '../entities/roles.js';
 import { setupSecret } from './secrets.js';
+import { placePacks } from './nests.js';
 import { TUNE } from '../tuning.js';
 import { derive } from './stats.js';
 
@@ -55,6 +56,7 @@ export function setupWorld(seed) {
   populate(info);
   setupObjective(info, curD().secret ? 'nests' : forcedObjective()); // no side jobs in a secret zone
   setupSecret(info);
+  placePacks(info); // seeded, before the RNG is released
   unseedRng();
   clearFx();
   const s = info.startRoom;

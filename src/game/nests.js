@@ -9,6 +9,7 @@ import { G, P, W, run } from '../core/state.js';
 import { dnum, puff } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { FAMILIES, NEST_NAMES, curD, isSewer } from '../data/world.js';
+import { toW } from '../world/grid.js';
 import { INTRO, spawnEnemy } from '../entities/mobs.js';
 import { banner } from '../ui/hud.js';
 import { TUNE } from '../tuning.js';
@@ -67,6 +68,36 @@ export function tickNest(e, dt) {
   k.nest = e;
   e.kids.push(k);
   introduce(type);
+}
+
+/**
+ * Pre-placed packs: a few groups of the zone's families asleep in rooms
+ * between the start and the nests. A pack wakes all at once when you come
+ * close or hurt one of it. Seeded with the level, so they're always in the
+ * same rooms. (These replace the old street trickle; TUNE.packs.)
+ */
+export function placePacks(info) {
+  const K = TUNE.packs, D = curD(), z = run.tier || 0;
+  if (D.secret) return 0;
+  const n = Math.min(K.max, Math.round(K.perZone + K.perZoneGrow * z));
+  const rooms = (info.byDist || []).filter(r => r !== info.startRoom), lo = Math.floor(rooms.length * 0.15), hi = Math.max(lo + 1, Math.floor(rooms.length * 0.85));
+  const pool = rooms.slice(lo, hi), fams = D.fam || ['vermin'];
+  let placed = 0;
+  for (let i = 0; i < n && pool.length; i++) {
+    const r = pool.splice(Math.floor(rng.next() * pool.length), 1)[0], cx = toW(r.cx), cz = toW(r.cy);
+    const F = FAMILIES[fams[Math.floor(rng.next() * fams.length)]] || FAMILIES.vermin;
+    const size = Math.min(K.sizeMax, Math.round(K.size + K.sizeGrow * z));
+    const ti = Math.min(2, Math.floor(rng.next() * (z < 2 ? 2 : 3)));
+    for (let j = 0; j < size; j++) {
+      const e = spawnEnemy(F.types[ti], cx + (rng.next() - 0.5) * 4, cz + (rng.next() - 0.5) * 4, { plain: true, force: true, pack: 1 });
+      if (e) { e.sleep = i + 1; e.ang = rng.next() * 6.28; placed++; }
+    }
+  }
+  return placed;
+}
+/** Wake a sleeping pack (everyone with the same pack id). */
+export function wakePack(id) {
+  for (const e of W.enemies) if (e.sleep === id) { e.sleep = 0; e.cd = Math.max(e.cd || 0, 0.4); }
 }
 
 /** A street spawn between nests: one of the zone's families, mostly its weakest member early on. */

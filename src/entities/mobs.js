@@ -20,7 +20,7 @@ import { TUNE } from '../tuning.js';
 import { thiefAI } from '../game/objectives.js';
 import { ROLE_AI, tickFlee, catHunt } from './roles.js';
 import { creatureMesh } from '../render/pools.js';
-import { tickNest, ambientType } from '../game/nests.js';
+import { tickNest, ambientType, wakePack } from '../game/nests.js';
 import { reaperAI } from '../game/reaper.js';
 import { robberAI } from '../game/thieves.js';
 
@@ -544,6 +544,11 @@ export function updateEnemies(dt0, cap) {
   for (const e of W.enemies) {
     if (e.dead || e.held) continue; // held: in the Brawler's paws
     if (e.reaper) { reaperAI(e, dt0); continue; }
+    // A sleeping pack: still until you come close or hurt one of it, then they all wake.
+    if (e.sleep) {
+      if (e.hurt || (e.x - P.x) ** 2 + (e.z - P.z) ** 2 < TUNE.packs.wake ** 2) wakePack(e.sleep);
+      else { if (!e.fly) moveBody(e, dt0, 0, 0); continue; }
+    }
     let dt = dt0;
     if (!e.boss && !e.pred && !e.champion && e.type !== 'nest' && (e.x - P.x) ** 2 + (e.z - P.z) ** 2 > LOD_R2) {
       e._lod = (e._lod || 0) + dt0;

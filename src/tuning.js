@@ -92,7 +92,7 @@ export const TUNE = {
     warrenMinZone: 2, // no Warrens before this zone
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
     lowerOdds: 0.25, // chance a nest raises its family's lower-tier member instead
-    ambient: 0.35, // street spawns between nests (zone families only), × the old rate; 0 = nests only
+    ambient: 0, // street spawns between nests (zone families only), × the old rate; 0 = nests and packs only
     surges: 0, // 1 = periodic horde surges on top of the nests
   },
   bossVariants: {
@@ -133,6 +133,12 @@ export const TUNE = {
     goldFrac: 0.2, goldMin: 10, // share of carried gold taken when there's no key or vial
     escape: 12, // seconds of fleeing before it's gone for good
     bonus: 12, // extra gold when you catch it
+  },
+  packs: {
+    // Sleeping packs of the zone's families placed in rooms (game/nests.js placePacks).
+    perZone: 6, perZoneGrow: 0.5, max: 12, // packs per level
+    size: 4, sizeGrow: 0.5, sizeMax: 9, // mobs per pack
+    wake: 12, // a pack wakes when you come this close (or hurt one of it)
   },
   food: {
     // Health drains all the time; food is the only way back.
