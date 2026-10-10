@@ -4,7 +4,7 @@
 // food, so watch where you aim. Some food is moldy: it looks the same, but
 // eating it poisons you instead. Sniff (F) and moldy food shows green.
 import * as THREE from 'three';
-import { rand } from '../core/util.js';
+import { rand, angD } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { world, bury } from '../render/renderer.js';
 import { Cy } from '../render/models.js';
@@ -15,9 +15,13 @@ import { isSewer } from '../data/world.js';
 import { TUNE } from '../tuning.js';
 import { lowHealth } from './announcer.js';
 import { die } from '../ui/screens.js';
+import { PRIM } from '../combat/arsenal.js';
+import { CLASSES } from '../data/classes.js';
+import { mouseAim } from '../entities/player.js';
 
 const cheese = new THREE.MeshLambertMaterial({ color: 0xe8b84a, emissive: 0x4a3000, flatShading: true });
 const rind = new THREE.MeshLambertMaterial({ color: 0xc87a2a, emissive: 0x2a1000, flatShading: true });
+const warnMat = new THREE.SpriteMaterial({ map: flameTex, color: 0xff2a20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.95 });
 const moldMat = new THREE.SpriteMaterial({ map: flameTex, color: 0x6aff4a, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9 });
 const GEO = {
   crumb: Cy(0.16, 0.2, 0.16, 6),
@@ -39,7 +43,12 @@ export function dropFood(x, y, z, kind = 'crumb', opts = {}) {
   const fx0 = x + (opts.exact ? 0 : rand(-0.3, 0.3)), fz0 = z + (opts.exact ? 0 : rand(-0.3, 0.3));
   g.position.set(fx0, y + 0.4, fz0);
   world.add(g);
-  const f = { x: fx0, y, z: fz0, m: g, kind, mold, ms, safe: F.dropGrace };
+  const ws = new THREE.Sprite(warnMat);
+  ws.scale.setScalar(kind === 'cache' ? 1.8 : 1.3);
+  ws.position.y = 0.15;
+  ws.visible = false;
+  g.add(ws);
+  const f = { x: fx0, y, z: fz0, m: g, kind, mold, ms, ws, safe: F.dropGrace };
   W.foods.push(f);
   return f;
 }
@@ -86,11 +95,36 @@ function eat(kind, mold, x, y, z) {
   sfx('heal');
 }
 
-/** Pickups, mold that shows while sniffing, and the drain. */
+/** While you attack: the line (or swipe arc) your attack covers, so food in it can warn you. */
+function aimZone() {
+  if (G.state !== 'play' || !(G.attack || P.aimT > 0) || !run.cls) return null;
+  const PR = PRIM[CLASSES[run.cls].prim];
+  let a = P.aimT > 0 ? P.aim : P.facing;
+  if (!(P.aimT > 0)) { const m = G.aimAt || mouseAim(); if (m) a = Math.atan2(m.x - P.x, m.z - P.z); }
+  return { a, melee: !!PR.melee, R: PR.melee ? 2.8 * (st.area || 1) + 0.6 : (PR.range || 12) * (st.range || 1) };
+}
+function inZone(f, z) {
+  const dx = f.x - P.x, dz = f.z - P.z;
+  if (Math.abs(f.y - P.y) > 2.5) return false;
+  if (z.melee) return Math.hypot(dx, dz) < z.R && Math.abs(angD(Math.atan2(dx, dz), z.a)) < 1.3;
+  const along = dx * Math.sin(z.a) + dz * Math.cos(z.a), across = Math.abs(dx * Math.cos(z.a) - dz * Math.sin(z.a));
+  return along > 0 && along < z.R && across < TUNE.food.warnWidth;
+}
+/** Food your attack would hit flashes red (TUNE.food.warn). */
+function warnFood(f, z, holder) {
+  const on = !!z && TUNE.food.warn && inZone(f, z);
+  if (!f.ws && on) { f.ws = new THREE.Sprite(warnMat); f.ws.scale.setScalar(1.8); f.ws.position.y = 0.3; holder.add(f.ws); }
+  if (f.ws) f.ws.visible = on && Math.floor(G.time * 8) % 2 === 0;
+  if (on) run.foodWarned = (run.foodWarned || 0) + 1;
+}
+
+/** Pickups, mold that shows while sniffing, the line-of-fire warning, and the drain. */
 export function tickFood(dt) {
+  const zone = aimZone();
   for (let i = W.foods.length - 1; i >= 0; i--) {
     const f = W.foods[i];
     f.safe -= dt;
+    warnFood(f, zone, f.m);
     f.m.position.set(f.x, f.y + 0.4 + Math.sin(G.time * 3 + f.x) * 0.1, f.z);
     f.m.rotation.y += dt * 2;
     if (f.ms) f.ms.visible = !!P.scent;
@@ -103,6 +137,7 @@ export function tickFood(dt) {
   for (const c of W.caches) {
     if (c.taken) continue;
     c.g.rotation.y += dt;
+    warnFood(c, zone, c.g);
     if (Math.hypot(P.x - c.x, P.z - c.z) < 1.2 && Math.abs(P.y - c.y) < 1.3) {
       c.taken = true;
       bury(c.g);
@@ -113,8 +148,8 @@ export function tickFood(dt) {
   drain(dt);
 }
 
-/** Health drains all the time: TUNE.food.drainBase + drainPerZone × zone, in HP per second. */
-export const drainRate = () => TUNE.food.drainBase + TUNE.food.drainPerZone * (run.tier || 0);
+/** Health drains all the time: drainZone0 in the first zone, then drainBase + drainPerZone × zone, in HP per second. */
+export const drainRate = () => (run.tier || 0) === 0 ? TUNE.food.drainZone0 : TUNE.food.drainBase + TUNE.food.drainPerZone * (run.tier || 0);
 function drain(dt) {
   if (G.god || G.state !== 'play') return;
   run.hp -= drainRate() * dt;

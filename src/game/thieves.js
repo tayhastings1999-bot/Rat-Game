@@ -1,5 +1,5 @@
 // Thieves: gold-tinted rats that sprint at you, snatch something and run.
-// They take a Rot Vial if you carry one, otherwise a share of your gold, then
+// They take a key if you carry one, else a Rot Vial, else a share of your gold, then
 // flee along the streets and vanish if you let them go for long enough. Kill
 // one to get it all back with interest. One at a time, every so often.
 import { rand } from '../core/util.js';
@@ -8,7 +8,7 @@ import { dnum, puff } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, toW, floorY, flowDir } from '../world/grid.js';
 import { spawnEnemy, moveBody } from '../entities/mobs.js';
-import { scrapDrop } from '../combat/combat.js';
+import { scrapDrop, dropKey } from '../combat/combat.js';
 import { thiefAI } from './objectives.js';
 import { dropVial } from './vials.js';
 import { TUNE } from '../tuning.js';
@@ -53,7 +53,8 @@ export function robberAI(e, dt) {
 
 function steal(e) {
   const T = TUNE.thief;
-  if (run.vials > 0) { run.vials--; e.loot = { vial: 1, what: 'a Rot Vial' }; }
+  if (T.takesKeys && run.keys > 0) { run.keys--; e.loot = { key: 1, what: 'your key' }; }
+  else if (run.vials > 0) { run.vials--; e.loot = { vial: 1, what: 'a Rot Vial' }; }
   else {
     const g = Math.min(run.scrap, Math.max(T.goldMin, Math.floor(run.scrap * T.goldFrac)));
     if (g <= 0) { e.loot = { what: 'nothing' }; }
@@ -71,6 +72,7 @@ export function robberDown(e) {
   run.robber = null;
   const gy = floorY(e.x, e.z), L = e.loot || {};
   if (L.vial) dropVial(e.x, gy, e.z);
+  if (L.key) dropKey(e.x, gy, e.z);
   const n = Math.ceil((L.gold || 0) / 1) + TUNE.thief.bonus;
   for (let i = 0; i < Math.min(60, n); i++) scrapDrop(e.x + rand(-1, 1), gy, e.z + rand(-1, 1));
   if (n > 60) run.scrap += n - 60; // the rest straight into your pocket

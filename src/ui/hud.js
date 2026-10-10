@@ -136,6 +136,7 @@ export function drawMap(cv, px, radius) {
   if (G.manhole) dot(G.manhole, '#b070ff', 7);
   if (G.exitD) dot(G.exitD, '#ffffff', 7);
   if (G.secretExit) dot(G.secretExit, '#b070ff', 6);
+  if (G.grave && !G.grave.woke) dot(G.grave, '#9ad0ff', 5);
   objTargets().forEach(t => dot(t, '#ffd040', 7));
   if (G.boss) dot(G.boss, '#ff2a60', 8);
   const em = G.evMarker;

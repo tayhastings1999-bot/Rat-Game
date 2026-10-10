@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { rand } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
-import { scene, dropCreature } from '../render/renderer.js';
+import { scene, world, dropCreature } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
 import { puff, spark, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -56,9 +56,40 @@ export function spawnReaper(x, z) {
   return e;
 }
 
-/** Zone timer: the Reaper rises if you dawdle. */
+/** A grave (levels with `grave` in data/levels.js): the Reaper sleeps here and rises when you come close. */
+export function addGrave(x, z) {
+  const g = new THREE.Group(), y = floorY(x, z), stone = new THREE.MeshLambertMaterial({ color: 0x5a5866, flatShading: true });
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 0.3), stone);
+  slab.position.y = 0.75;
+  slab.rotation.z = 0.08;
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.3, 10, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2), stone);
+  top.position.y = 1.5;
+  const mound = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x2a2018, flatShading: true }));
+  mound.scale.set(0.9, 0.35, 1.5);
+  mound.position.z = 1.1;
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, color: 0x9ad0ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.45 }));
+  glow.scale.setScalar(2.4);
+  glow.position.set(0, 0.4, 1.1);
+  g.add(slab, top, mound, glow);
+  g.position.set(x, y, z);
+  world.add(g);
+  G.grave = { x, z, g, glow, woke: false };
+}
+
+/** Zone timer: the Reaper rises if you dawdle. A level's grave wakes it when you come near. */
 export function tickReaperSpawn(dt) {
-  const R = TUNE.reaper;
+  const R = TUNE.reaper, gv = G.grave;
+  if (gv && !gv.woke) {
+    gv.glow.material.opacity = 0.35 + 0.2 * Math.sin(G.time * 2);
+    if (Math.hypot(P.x - gv.x, P.z - gv.z) < R.graveWake && !(run.reaper && !run.reaper.dead)) {
+      gv.woke = true;
+      gv.glow.visible = false;
+      const e = spawnReaper(gv.x, gv.z + 1);
+      e.fromGrave = true;
+      bark('Something climbs out of the grave…');
+      return;
+    }
+  }
   if ((run.tier || 0) < R.minZone || G.boss || run.secret || (run.reaper && !run.reaper.dead)) return;
   run.reaperT = (run.reaperT ?? R.delay) - dt;
   if (run.reaperT <= 0) { run.reaperT = R.returnAfter; spawnReaper(); }

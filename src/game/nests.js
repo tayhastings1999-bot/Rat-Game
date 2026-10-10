@@ -25,7 +25,7 @@ export const nestCount = () => { const s = curD().secret; return s === 'garden' 
 /** Seeded tier and family for the i-th nest of the zone. */
 export function rollNest(i) {
   const z = run.tier || 0, r = rng.next();
-  const pw = Math.min(N().warrenMax, N().warrenBase + N().warrenPerZone * z), pb = N().burrowBase + N().burrowPerZone * z;
+  const pw = z < N().warrenMinZone ? 0 : Math.min(N().warrenMax, N().warrenBase + N().warrenPerZone * z), pb = N().burrowBase + N().burrowPerZone * z;
   const tier = curD().secret === 'garden' ? 3 : r < pw ? 3 : r < pw + pb ? 2 : 1;
   const fams = curD().fam || ['vermin'];
   // The zone's first family is the most common: it gets every other nest.

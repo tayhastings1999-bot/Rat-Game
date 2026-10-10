@@ -19,6 +19,7 @@ const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
 import { curD, isSewer, FAMILIES } from '../data/world.js';
 import { initNest, rollNest, nestCount } from '../game/nests.js';
 import { placeSecretDrain } from '../game/secrets.js';
+import { addGrave } from '../game/reaper.js';
 import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
 import { placeTraps } from '../game/traps.js';
@@ -666,6 +667,7 @@ export function resetLists() {
   W.cracks = new Map();
   G.exitD = null;
   G.secretExit = null;
+  G.grave = null;
   G.exits = [];
   G.manhole = null;
   for (const f of flasks) { f.on = false; f.m.visible = false; }
@@ -786,6 +788,8 @@ export function populate(info) {
   for (const r of shuffleR(rooms.slice()).slice(0, 5)) { const wa = wallAdj(r); if (wa.length) addWire(wa[ri(0, wa.length - 1)]); }
   const pr = shuffleR(rooms.filter(r => wallAdj(r).length)).slice(0, 6);
   for (let i = 0; i + 1 < pr.length; i += 2) { const a = wallAdj(pr[i]), b = wallAdj(pr[i + 1]); const p = addPipe(a[ri(0, a.length - 1)]), q = addPipe(b[ri(0, b.length - 1)]); p.link = q; q.link = p; }
+  // A grave for the Reaper in levels that have one: mid-distance from the start.
+  if (D.grave && byDist.length) { const r = byDist[Math.floor(byDist.length * 0.45)], tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addGrave(toW(x), toW(y)); } }
   // Nests go in the far rooms: count, tier and family per zone (game/nests.js, TUNE.nests).
   byDist.slice(0, Math.max(10, nestCount())).slice(0, nestCount()).forEach((r, i) => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)], n = rollNest(i); addNest(toW(x), toW(y), n.tier, n.fam); } });
   if (city) {

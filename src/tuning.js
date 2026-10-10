@@ -89,6 +89,7 @@ export const TUNE = {
     range: 45, // nests only spawn while you're this close
     count: 7, countPerZone: 0.5, countMax: 12, // nests per zone
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
+    warrenMinZone: 2, // no Warrens before this zone
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
     lowerOdds: 0.25, // chance a nest raises its family's lower-tier member instead
     ambient: 0.35, // street spawns between nests (zone families only), × the old rate; 0 = nests only
@@ -118,6 +119,7 @@ export const TUNE = {
     drainCap: 120, // it leaves after draining this much
     hp: 360, // × (1 + 0.3 per zone); one or two Rot Vials
     staggerT: 0.35, // normal hits push it back for this long
+    graveWake: 13, // a level's grave wakes the Reaper when you come this close
     spawnDist: 18,
     gold: 40, xp: 300,
   },
@@ -127,17 +129,21 @@ export const TUNE = {
     first: 45, every: 80, // seconds until the first thief, then between thieves (±20%)
     speed: 1.6, // × a mawling's speed
     hpMul: 4,
-    goldFrac: 0.2, goldMin: 10, // share of carried gold taken when there's no vial
+    takesKeys: 1, // 1 = a key is the first thing a thief grabs
+    goldFrac: 0.2, goldMin: 10, // share of carried gold taken when there's no key or vial
     escape: 12, // seconds of fleeing before it's gone for good
     bonus: 12, // extra gold when you catch it
   },
   food: {
     // Health drains all the time; food is the only way back.
     drainBase: 0.5, drainPerZone: 0.1, // HP per second = drainBase + drainPerZone × zone (zone 0 first)
+    drainZone0: 0.3, // the first zone drains gentler
     crumb: 25, wedge: 60, cache: 120, // HP each size restores
     mold: 0.12, moldSewer: 0.25, // chance a drop is moldy (surface, sewer)
     moldPoison: 5, // seconds of poison from eating moldy food
     dropGrace: 0.4, // seconds a fresh drop can't be destroyed by your attacks
+    warn: true, // food in your line of fire flashes red while you attack
+    warnWidth: 0.9, // half-width of the shot line that counts
     killOdds: 0.012, killOddsLow: 0.05, // crumb chance per kill (healthy / below 35% HP)
   },
   announcer: {
