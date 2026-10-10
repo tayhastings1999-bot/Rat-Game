@@ -16,12 +16,12 @@ import { TUNE } from '../tuning.js';
 /** Spawner: one thief at a time, never during a boss fight. */
 export function tickThieves(dt) {
   const T = TUNE.thief;
-  if ((run.tier || 0) < T.minZone || G.boss || !M.spawnTiles || !M.spawnTiles.length) return;
+  if ((run.tier || 0) < T.minZone || G.boss || (run.secret && run.secret !== 'run') || !M.spawnTiles || !M.spawnTiles.length) return;
   if (run.robber && !run.robber.dead) return;
   run.robber = null;
   run.robT = (run.robT ?? T.first) - dt;
   if (run.robT > 0) return;
-  run.robT = T.every * rand(0.8, 1.2);
+  run.robT = (run.secret === 'run' ? 9 : T.every) * rand(0.8, 1.2); // the Rat Run is crawling with them
   const k = M.spawnTiles[(Math.random() * M.spawnTiles.length) | 0];
   const e = spawnEnemy('mawling', toW(k % M.W), toW((k / M.W) | 0), { plain: true, sc: 1.15, hpMul: T.hpMul * (1 + (run.tier || 0) * 0.4), force: true });
   if (!e) return;

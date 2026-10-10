@@ -14,7 +14,8 @@ import { puddle, tickHaz } from '../combat/hazards.js';
 import { stepPlayer, primary, keys, chewTarget, doChew, tickInteractives } from '../entities/player.js';
 import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
 import { spawnBoss } from '../entities/bosses.js';
-import { exitRoad, exitLadder } from './flow.js';
+import { exitRoad, exitLadder, openGate, enterSecret, exitSecret } from './flow.js';
+import { tickSecret, tickSecretDrain } from './secrets.js';
 import { comboTick } from './swarm.js';
 import { tickForage } from './forage.js';
 import { tickScent } from './scent.js';
@@ -347,7 +348,9 @@ export function update(dt) {
   // Carrying the cheese wheel draws the horde twice as fast.
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
   // Smashing every nest wakes the boss.
-  if (!run.bossDone && !G.boss && run.nests <= 0 && M.spawnTiles.length) spawnBoss();
+  if (!run.bossDone && !G.boss && run.nests <= 0 && M.spawnTiles.length && !run.secret) spawnBoss();
+  tickSecret(dt, openGate, exitSecret);
+  tickSecretDrain(dt, enterSecret);
   updateEnemies(dt, cap);
   tickForage(dt);
   comboTick(dt);
@@ -373,7 +376,8 @@ export function update(dt) {
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);
   if (ex) {
-    if (ex.kind === 'road') exitRoad();
+    if (run.secret) exitSecret();
+    else if (ex.kind === 'road') exitRoad();
     else if (ex.kind === 'ladder') exitLadder();
   }
   seenT -= dt;

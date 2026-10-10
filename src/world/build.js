@@ -18,6 +18,7 @@ import * as TEX from '../render/textures.js';
 const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
 import { curD, isSewer, FAMILIES } from '../data/world.js';
 import { initNest, rollNest, nestCount } from '../game/nests.js';
+import { placeSecretDrain } from '../game/secrets.js';
 import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
 import { placeTraps } from '../game/traps.js';
@@ -664,6 +665,7 @@ export function resetLists() {
   for (const k of Object.keys(W)) if (Array.isArray(W[k])) W[k] = [];
   W.cracks = new Map();
   G.exitD = null;
+  G.secretExit = null;
   G.exits = [];
   G.manhole = null;
   for (const f of flasks) { f.on = false; f.m.visible = false; }
@@ -774,6 +776,7 @@ export function populate(info) {
 
   // Hidden areas and set dressing.
   setupHidden(info.hidden || [], !city);
+  if (D.secretTo) placeSecretDrain(info.hidden || [], D.secretTo);
   markSecrets();
   if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
   clutter(city);
@@ -885,6 +888,9 @@ export function applyLighting(D, city) {
     scene.fog = blackout ? new THREE.Fog(0x080608, 6, 30) : new THREE.Fog(D.fog, 26, 60);
     scene.background = new THREE.Color(D.fog);
   }
+  // Night remixes: moonlight instead of dusk. The deep sewer: darker and closer.
+  if (D.night) { hemi.color.set(0x8090c8); hemi.intensity *= 0.62; sun.color.set(0x8aa0ff); sun.intensity *= 0.45; scene.fog.near *= 0.8; scene.fog.far *= 0.85; }
+  if (D.deep) { hemi.intensity *= 0.75; scene.fog.near *= 0.8; scene.fog.far *= 0.8; }
   if (run.rain) { scene.fog.near *= 0.7; scene.fog.far *= 0.8; hemi.intensity *= 0.85; }
   G.fogNear = scene.fog.near;
   G.fogFar = scene.fog.far;

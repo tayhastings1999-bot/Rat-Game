@@ -9,7 +9,7 @@ import { scene, dropCreature } from '../render/renderer.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, inG, toW, floorY, collideBody } from '../world/grid.js';
-import { BOSSES, curD, isSewer } from '../data/world.js';
+import { BOSSES, FAMILIES, curD, isSewer } from '../data/world.js';
 import { glob } from '../combat/arsenal.js';
 import { hurtP, scrapDrop, dropKey } from '../combat/combat.js';
 import { addXP } from '../game/progress.js';
@@ -21,14 +21,26 @@ import { addChest } from '../world/build.js';
 import { rankDistrict } from '../game/score.js';
 import { openGate, checkUnlocks } from '../game/flow.js';
 import { creatureMesh } from '../render/pools.js';
+import { BOSS_VARIANTS } from '../data/levels.js';
+import { TUNE } from '../tuning.js';
+
+/** "and Brood" variants call the zone's families in around them. */
+function callBrood(e) {
+  const fams = curD().fam || ['vermin'];
+  for (let i = 0; i < TUNE.bossVariants.broodAdds; i++) {
+    const F = FAMILIES[fams[i % fams.length]] || FAMILIES.vermin, a = rand(0, TAU);
+    spawnEnemy(F.types[Math.min(2, 1 + (i % 2))], e.x + Math.sin(a) * 4, e.z + Math.cos(a) * 4, { plain: true, force: true });
+  }
+  fx('ring', e.x, floorY(e.x, e.z), e.z, 6, 0x60ff60, 0.6);
+}
 
 const BASE_R = { ghoul: 0.62, tick: 0.4, brute: 0.9, crow: 0.5, drone: 0.95, ratking: 1.25 };
 const BASE_H = { ghoul: 1.3, tick: 0.55, brute: 2.1, crow: 0.6, drone: 1.8, ratking: 1.7 };
 const ROMAN = ['I', 'II', 'III'];
 
 export function spawnBoss() {
-  const kind = curD().boss, B = BOSSES[kind];
-  const hp = Math.round(B.hp * (1 + 0.7 * run.tier) * (1 + (run.T || 0) * 0.06));
+  const D = curD(), kind = D.boss, B = BOSSES[kind], V = D.bossV && BOSS_VARIANTS[D.bossV], BV = TUNE.bossVariants;
+  const hp = Math.round(B.hp * (1 + 0.7 * run.tier) * (1 + (run.T || 0) * 0.06) * (V ? BV.remixHp * (D.bossV === 'armored' ? BV.armoredHp : 1) : 1));
   // Wake as far from the rat as the horde can walk.
   let k = -1, bd = -1;
   for (const t of M.spawnTiles) if (M.flow[t] > bd) { bd = M.flow[t]; k = t; }
@@ -53,8 +65,18 @@ export function spawnBoss() {
     Object.assign(b, { name: 'Scab, the Knotted King', scabKing: true, lore: ['Your brother, in a crown of tails', '"Nobody leaves. Not this time. Not ever again."'] });
     mesh.traverse(o => { if (o.material && o.material.color) o.material.color.multiplyScalar(0.7); });
   }
+  // Remixed levels: a variant of the boss (a new name, a tint and a twist).
+  if (V && !b.scabKing) {
+    b.variant = D.bossV;
+    b.name += V.suffix;
+    b.loreKick = 'Variant · ' + V.desc;
+    mesh.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(new THREE.Color(V.tint), 0.35); });
+    if (D.bossV === 'frenzied') b.spd *= BV.frenziedSpd;
+    if (D.bossV === 'armored') b.armored = BV.armoredTaken;
+  }
   W.enemies.push(b);
   G.boss = b;
+  if (b.variant === 'brood') callBrood(b);
   b.label = `${b.name.toUpperCase()} · I`;
   $('bossLabel').textContent = b.label;
   banner('Something big has woken', 'Sniff it out (F), or keep your distance');
@@ -86,6 +108,7 @@ function phaseUp(e, n) {
   fx('ring', e.x, gy, e.z, 9, 0xff2a60, 1.1);
   const add = { tabby: 'cat', murder: 'crow', exterm: 'wasp', maw: 'mawling', brood: 'tick', ratking: 'mawling' }[e.kind];
   for (let i = 0; i < 3 + n; i++) spawnEnemy(add, e.x + rand(-4, 4), e.z + rand(-4, 4), { plain: i > 0 });
+  if (e.variant === 'brood') callBrood(e);
   if (e.kind === 'ratking' && n === 3) {
     for (let i = 0; i < 2; i++) spawnEnemy('mawling', e.x + rand(-3, 3), e.z + rand(-3, 3), { elite: true, sc: 1.8, corrupt: pick(['haste', 'leech']) });
     dnum(e.x, e.y + e.h + 1, e.z, 'The princes wake', 'info');
@@ -443,7 +466,7 @@ export function bossAI(e, dt, dx, dz, d) {
   }
   if (!e.hidden && mobState(e, dt, dx, dz)) return true;
   trySidestep(e);
-  e.cd -= dt * (1 + 0.25 * (e.phase - 1)) * Math.sqrt(run.atkM || 1);
+  e.cd -= dt * (1 + 0.25 * (e.phase - 1)) * Math.sqrt(run.atkM || 1) * (e.variant === 'frenzied' ? TUNE.bossVariants.frenziedRate : 1);
   AI[e.kind](e, dt, dx, dz, d);
   // Contact damage: bosses hurt to touch.
   if (!e.hidden && d < e.r + 0.6 && Math.abs(P.y - e.y) < e.h) hurtP(e.dmg * 0.6, e);

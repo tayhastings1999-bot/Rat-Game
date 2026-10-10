@@ -94,6 +94,19 @@ export const TUNE = {
     ambient: 0.35, // street spawns between nests (zone families only), × the old rate; 0 = nests only
     surges: 0, // 1 = periodic horde surges on top of the nests
   },
+  bossVariants: {
+    // Remixed levels field a variant of their boss (data/levels.js BOSS_VARIANTS).
+    remixHp: 1.1, // every variant
+    frenziedSpd: 1.12, frenziedRate: 1.35, // Unleashed: move speed ×, attack rate ×
+    armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP ×
+    broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
+  },
+  secrets: {
+    // Secret zones (game/secrets.js).
+    vaultTime: 60, vaultChests: 8, vaultCaches: 6, vaultVials: 3, // The Cheese Vault
+    runTime: 45, runGold: 120, runCaches: 3, // The Rat Run: gold piles of 3, and thieves
+    gardenNests: 6, gardenChests: 4, // The Bone Garden: all Warrens; premium chests when they fall
+  },
   reaper: {
     // Rises when you linger in a zone; drains on touch; only vials and turbo blasts hurt it.
     minZone: 1, // first zone it can appear in (0 = the first zone)

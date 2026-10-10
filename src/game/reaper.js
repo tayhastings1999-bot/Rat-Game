@@ -59,7 +59,7 @@ export function spawnReaper(x, z) {
 /** Zone timer: the Reaper rises if you dawdle. */
 export function tickReaperSpawn(dt) {
   const R = TUNE.reaper;
-  if ((run.tier || 0) < R.minZone || G.boss || (run.reaper && !run.reaper.dead)) return;
+  if ((run.tier || 0) < R.minZone || G.boss || run.secret || (run.reaper && !run.reaper.dead)) return;
   run.reaperT = (run.reaperT ?? R.delay) - dt;
   if (run.reaperT <= 0) { run.reaperT = R.returnAfter; spawnReaper(); }
 }

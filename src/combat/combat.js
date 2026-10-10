@@ -92,7 +92,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   const gm = guardMul(e, ang, base);
   if (gm < 1) { d *= gm; kb *= 0.2; }
   if (e.recov > 0 && !e.boss) { d *= 1.25; if (!e.openShown) { e.openShown = true; dnum(e.x, e.y + e.h + 0.6, e.z, 'OPEN', 'crit'); } } // punish the overextension
-  if (e.boss) d *= onBossHit(e, d); // exposed bosses take more; bursts break their poise
+  if (e.boss) d *= onBossHit(e, d) * (e.armored || 1); // exposed bosses take more; bursts break their poise; iron-hided variants less
   d = Math.max(1, Math.round(d));
   e.hp -= d;
   e.flash = 0.1;

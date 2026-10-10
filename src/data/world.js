@@ -1,5 +1,6 @@
 // Enemy stats, bosses, districts and hazard modifiers.
 import { run } from '../core/state.js';
+import { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS } from './levels.js';
 
 export const EN = {
   cat: { hp: 55, spd: 5.4, dmg: 13, r: 0.7, h: 1.4, xp: 5, col: 0xb8783a, blood: 0xa01010, sc: 0.8, mass: 1.5 },
@@ -81,14 +82,27 @@ export const SEWER = [
 ];
 
 const ROMAN = ['', ' II', ' III', ' IV', ' V', ' VI'];
-export const curD = () => (run.layer === 'sewer' ? SEWER[(run.sewerIdx || 0) % SEWER.length] : SURFACE[(run.district || 0) % SURFACE.length]);
-export const isSewer = () => run.layer === 'sewer';
-export const dName = () => {
-  if (run.layer === 'sewer') {
-    const i = run.sewerIdx || 0;
-    return SEWER[i % SEWER.length].name + ROMAN[Math.min(5, Math.floor(i / SEWER.length))];
+/** The current level entry (data/levels.js): a secret zone, a sewer level or a city level. */
+export const curL = () => run.secret ? SECRET_LEVELS[run.secret] : run.layer === 'sewer' ? SEWER_LEVELS[(run.sewerIdx || 0) % SEWER_LEVELS.length] : CITY_LEVELS[(run.district || 0) % CITY_LEVELS.length];
+/** How many times the level list has looped (later laps get a numeral and a new seed). */
+const lap = () => run.secret ? 0 : run.layer === 'sewer' ? Math.floor((run.sewerIdx || 0) / SEWER_LEVELS.length) : Math.floor((run.district || 0) / CITY_LEVELS.length);
+const dCache = new Map();
+/** The zone template for the current level, with the level's overrides merged in. `name` stays the base zone's (set pieces key off it); `title` is what the player sees. */
+export function curD() {
+  const L = curL();
+  let D = dCache.get(L);
+  if (!D) {
+    const B = L.kind === 'sewer' || (!L.kind && SEWER_LEVELS.includes(L)) ? SEWER[L.base] : SURFACE[L.base];
+    D = { ...B, ...(L.over || {}), title: L.title || B.name, level: L.id, night: !!L.night, deep: /-d$/.test(L.id), secret: L.secret || null, grave: !!L.grave, secretTo: L.secretTo || null, bossV: L.bossV || null };
+    if (L.haz !== undefined) D.haz = L.haz;
+    if (L.fam) D.fam = L.fam;
+    if (L.boss) D.boss = L.boss;
+    dCache.set(L, D);
   }
-  const i = run.district || 0;
-  return SURFACE[i % SURFACE.length].name + ROMAN[Math.min(5, Math.floor(i / SURFACE.length))];
-};
-export const nextSurfaceName = () => SURFACE[((run.district || 0) + 1) % SURFACE.length].name;
+  return D;
+}
+/** The fixed seed for this level (and lap). */
+export const levelSeed = () => curL().seed + (lap() ? '-' + lap() : '');
+export const isSewer = () => run.layer === 'sewer';
+export const dName = () => curD().title + ROMAN[Math.min(5, lap())];
+export const nextSurfaceName = () => { const L = CITY_LEVELS[((run.district || 0) + 1) % CITY_LEVELS.length]; return L.title || SURFACE[L.base].name; };

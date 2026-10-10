@@ -26,7 +26,7 @@ let cardT = null;
 export function bossIntro(b) {
   const L = b.lore || BOSS_LORE[b.kind] || ['', ''];
   const el = $('introCard');
-  el.innerHTML = `<div class="px kick">${L[0]}</div><h1>${b.name}</h1><p>${L[1]}</p>`;
+  el.innerHTML = `<div class="px kick">${b.loreKick || L[0]}</div><h1>${b.name}</h1><p>${L[1]}</p>`;
   el.classList.remove('on');
   void el.offsetWidth;
   el.classList.add('on');

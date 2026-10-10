@@ -20,13 +20,13 @@ export const tierHp = () => [N().hp1, N().hp2, N().hp3].map(h => h * scale());
 export const tierName = t => NEST_NAMES[t - 1] || 'Nest';
 
 /** How many nests this zone gets. */
-export const nestCount = () => Math.min(N().countMax, Math.round(N().count + N().countPerZone * (run.tier || 0)));
+export const nestCount = () => { const s = curD().secret; return s === 'garden' ? TUNE.secrets.gardenNests : s ? 0 : Math.min(N().countMax, Math.round(N().count + N().countPerZone * (run.tier || 0))); };
 
 /** Seeded tier and family for the i-th nest of the zone. */
 export function rollNest(i) {
   const z = run.tier || 0, r = rng.next();
   const pw = Math.min(N().warrenMax, N().warrenBase + N().warrenPerZone * z), pb = N().burrowBase + N().burrowPerZone * z;
-  const tier = r < pw ? 3 : r < pw + pb ? 2 : 1;
+  const tier = curD().secret === 'garden' ? 3 : r < pw ? 3 : r < pw + pb ? 2 : 1;
   const fams = curD().fam || ['vermin'];
   // The zone's first family is the most common: it gets every other nest.
   const fam = i % 2 === 0 ? fams[0] : fams[1 + ((i >> 1) % Math.max(1, fams.length - 1))] || fams[0];

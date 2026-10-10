@@ -14,6 +14,7 @@ import { bossIntro } from '../game/personality.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART } from './icons.js';
 import { SIGS } from '../game/signature.js';
 import { BLASTS } from '../game/turbo.js';
+import { secretText } from '../game/secrets.js';
 import { TUNE } from '../tuning.js';
 
 export function initHudIcons() {
@@ -35,7 +36,8 @@ export function renderSlots() {
 
 function objective() {
   const key = !isSewer() ? (run.keys ? ' · Manhole unlocked: descend into the sewer' : ' · Manhole locked') : '';
-  const ot = objText();
+  const ot = objText(), sec = secretText();
+  if (sec) return sec;
   if (G.exitD) return isSewer() ? 'A ladder leads up to the streets · F to sniff it out' : `The road to ${nextSurfaceName()} is open · F to sniff it out${run.keys ? ' · or take the manhole down' : ''}`;
   if (G.boss) return G.boss.revealed ? 'Boss awake' : 'Something big is awake · F to sniff it out';
   if (ot) return ot + ` · Nests left ${run.nests}`;
@@ -133,6 +135,7 @@ export function drawMap(cv, px, radius) {
   W.enemies.filter(e => e.type === 'nest').forEach(e => dot(e, '#ff3a20', 6));
   if (G.manhole) dot(G.manhole, '#b070ff', 7);
   if (G.exitD) dot(G.exitD, '#ffffff', 7);
+  if (G.secretExit) dot(G.secretExit, '#b070ff', 6);
   objTargets().forEach(t => dot(t, '#ffd040', 7));
   if (G.boss) dot(G.boss, '#ff2a60', 8);
   const em = G.evMarker;

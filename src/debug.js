@@ -1,5 +1,5 @@
 // Hooks for automated smoke tests and manual debugging (window.__scurry).
-import { startRun, menu, enterSewer, exitRoad, exitLadder } from './game/flow.js';
+import { startRun, menu, enterSewer, exitRoad, exitLadder, setupWorld } from './game/flow.js';
 import { spawnBoss } from './entities/bosses.js';
 import { spawnEnemy, pickType, addPred, mobState, moveBody, wait } from './entities/mobs.js';
 import { angD } from './core/util.js';
@@ -45,14 +45,15 @@ import { turboBlast, turboGain } from './game/turbo.js';
 import { breakFoodAt, drainRate } from './game/food.js';
 import { tickNest, tierHp } from './game/nests.js';
 import { fadeU } from './render/fade.js';
-import { FAMILIES } from './data/world.js';
+import { FAMILIES, curD, dName, levelSeed } from './data/world.js';
+import { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS } from './data/levels.js';
 
 export function debugApi(state) {
   initDebugPanel();
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, dropKey, fadeU, FAMILIES, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, die, pause, dropKey, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {

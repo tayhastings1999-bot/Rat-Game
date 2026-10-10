@@ -9,7 +9,7 @@ import { genCity } from '../world/cityGen.js';
 import { genSewer } from '../world/sewerGen.js';
 import { carveDucts } from '../world/ducts.js';
 import { buildWorld, populate, addExit } from '../world/build.js';
-import { curD, dName, isSewer, MODS } from '../data/world.js';
+import { curD, dName, isSewer, MODS, levelSeed } from '../data/world.js';
 import { CLASSES, SKINS } from '../data/classes.js';
 import { zoneScaling } from '../combat/combat.js';
 import { need } from './progress.js';
@@ -22,6 +22,7 @@ import { storyBeat } from './personality.js';
 import { onRunStart, onDistrict, forcedObjective, storyGoal } from './story.js';
 import { districtStart } from './score.js';
 import { placeRoles } from '../entities/roles.js';
+import { setupSecret } from './secrets.js';
 import { TUNE } from '../tuning.js';
 import { derive } from './stats.js';
 
@@ -52,7 +53,8 @@ export function setupWorld(seed) {
   zoneScaling();
   buildWorld();
   populate(info);
-  setupObjective(info, forcedObjective());
+  setupObjective(info, curD().secret ? 'nests' : forcedObjective()); // no side jobs in a secret zone
+  setupSecret(info);
   unseedRng();
   clearFx();
   const s = info.startRoom;
@@ -95,7 +97,7 @@ export function startRun(k) {
   run.hp = st.maxHp;
   meta.runs = (meta.runs || 0) + 1;
   saveMeta();
-  const seed = 'S' + Date.now();
+  const seed = levelSeed(); // every level has a fixed layout (data/levels.js)
   setupWorld(seed);
   run.seed = seed;
   setRat(C);
@@ -147,7 +149,8 @@ function transition(apply, title) {
     meta.maxDistrict = Math.max(meta.maxDistrict, run.district);
     if (isSewer()) meta.maxSewer = Math.max(meta.maxSewer, run.sewerIdx);
     const got = checkUnlocks();
-    setupWorld('S' + Date.now());
+    run.seed = levelSeed();
+    setupWorld(run.seed);
     districtStart();
     onDistrict();
     run.hp = Math.min(st.maxHp, run.hp + st.maxHp * 0.3);
@@ -167,6 +170,16 @@ export function enterSewer() {
 }
 export function exitRoad() {
   transition(() => { run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : ''));
+}
+/** Drop through a hidden drain into a secret zone (the level's boss is skipped). */
+export function enterSecret(kind) {
+  meta.secrets = (meta.secrets || 0) + 1;
+  transition(() => { run.secret = kind; }, () => 'Secret · ' + dName());
+}
+/** Out of a secret zone: on to the level after the one you left. */
+export function exitSecret() {
+  const sewer = run.layer === 'sewer';
+  transition(() => { run.secret = null; if (sewer) { run.layer = 'surface'; run.sewerIdx++; } run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : ''));
 }
 export function exitLadder() {
   transition(() => { run.layer = 'surface'; run.district++; run.sewerIdx++; run.tier++; }, () => 'Back on the streets · ' + dName());
