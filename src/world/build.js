@@ -16,7 +16,8 @@ import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, b
 import { populateDucts, applyCutaway } from './ducts.js';
 import * as TEX from '../render/textures.js';
 const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
-import { curD, isSewer } from '../data/world.js';
+import { curD, isSewer, FAMILIES } from '../data/world.js';
+import { initNest, rollNest, nestCount } from '../game/nests.js';
 import { OBJ } from '../data/props.js';
 import { FUNGI } from '../data/fungi.js';
 import { placeTraps } from '../game/traps.js';
@@ -299,8 +300,8 @@ function addWire(w) {
   world.add(g);
   W.inter.push({ kind: 'wire', x: toW(w.x), z: toW(w.y), wx: x, wz: z, g, sp, used: false, cd: 0 });
 }
-function addNest(x, z) {
-  const g = new THREE.Group();
+function addNest(x, z, tier = 2, fam = 'vermin') {
+  const g = new THREE.Group(), col = (FAMILIES[fam] || FAMILIES.vermin).col;
   mkMesh(Co(1.4, 1.5, 7), lam(0x3a2e24, { map: furTex }), 0, 0.75, 0, g);
   const bone = lam(0xcfc2a4);
   for (let i = 0; i < 9; i++) {
@@ -308,12 +309,14 @@ function addNest(x, z) {
     const b = mkMesh(Cy(0.07, 0.07, rand(0.6, 1.1), 5), bone, Math.sin(a) * r, rand(0.2, 0.9), Math.cos(a) * r, g);
     b.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
   }
-  const core = mkMesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: 0xff3a20 }), 0, 1.3, 0, g);
-  glowSprite(0xff3a20, 2.2, g, 0, 1.3, 0, 0.6);
+  const core = mkMesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: col }), 0, 1.3, 0, g);
+  glowSprite(col, 2.2, g, 0, 1.3, 0, 0.6);
+  if (tier === 3) for (const s of [-1, 1]) mkMesh(new THREE.IcosahedronGeometry(0.25, 0), new THREE.MeshBasicMaterial({ color: col }), s * 0.7, 0.9, 0.3, g);
   g.position.set(x, 0, z);
   world.add(g);
-  const hp = 260 * (1 + run.tier * 0.5) * (isSewer() ? 1.5 : 1);
-  W.enemies.push({ type: 'nest', x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp, r: 1.3, h: 1.8, heavy: true, mesh: g, core, spawnT: rand(1, 4), col: 0x3a2e24, blood: 0x5a1a10, flash: 0, slow: 0, bar: true, pT: 0, bT: 0, dT: 0, tT: 0, ward: 0 });
+  const e = { type: 'nest', x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp: 1, maxHp: 1, r: 1.3, h: 1.8, heavy: true, mesh: g, core, col: 0x3a2e24, blood: 0x5a1a10, flash: 0, slow: 0, bar: true, pT: 0, bT: 0, dT: 0, tT: 0, ward: 0 };
+  initNest(e, tier, fam);
+  W.enemies.push(e);
   run.nests++;
 }
 function addZone(type, x, z) {
@@ -780,7 +783,8 @@ export function populate(info) {
   for (const r of shuffleR(rooms.slice()).slice(0, 5)) { const wa = wallAdj(r); if (wa.length) addWire(wa[ri(0, wa.length - 1)]); }
   const pr = shuffleR(rooms.filter(r => wallAdj(r).length)).slice(0, 6);
   for (let i = 0; i + 1 < pr.length; i += 2) { const a = wallAdj(pr[i]), b = wallAdj(pr[i + 1]); const p = addPipe(a[ri(0, a.length - 1)]), q = addPipe(b[ri(0, b.length - 1)]); p.link = q; q.link = p; }
-  byDist.slice(0, 10).slice(0, 7).forEach(r => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addNest(toW(x), toW(y)); } });
+  // Nests go in the far rooms: count, tier and family per zone (game/nests.js, TUNE.nests).
+  byDist.slice(0, Math.max(10, nestCount())).slice(0, nestCount()).forEach((r, i) => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)], n = rollNest(i); addNest(toW(x), toW(y), n.tier, n.fam); } });
   if (city) {
     const cand = byDist.slice(Math.floor(byDist.length * 0.3), Math.floor(byDist.length * 0.75)).filter(r => r.kind === 'cross');
     const r = cand[ri(0, Math.max(0, cand.length - 1))] || byDist[Math.floor(byDist.length / 2)];

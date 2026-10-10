@@ -43,7 +43,7 @@ const TK_RGB = { melee: [2.6, 0.55, 0.42], shot: [1.8, 0.65, 2.7], area: [2.7, 2
 function mobColor(e) {
   const t = G.time;
   if (e.flash > 0) return tmpC.setScalar(3.5);
-  if (e.thief) return tmpC.setRGB(2, 1.6, 0.3);
+  if (e.thief || e.robber) return tmpC.setRGB(2, 1.6, 0.3);
   if (e.scab) return tmpC.setRGB(1.5, 0.6, 1.8);
   if (e.disguise) return P.scent ? tmpC.setRGB(2.4, 0.5, 0.4) : tmpC.setScalar(1);
   if (e.hidden) return tmpC.setRGB(0.6, 2.2, 0.5);
@@ -94,7 +94,7 @@ export function sync(dt) {
   let rings = 0;
   for (const e of W.enemies) {
     if (e.mesh) {
-      if (e.type === 'nest' || e.rival) continue;
+      if (e.type === 'nest' || e.rival || e.reaper) continue; // these place their own meshes
       e.mesh.visible = !e.hidden;
       const rg = e.mesh.userData.rig;
       if (rg) { animTick(e, dt, e.mesh.userData.rigKey, P.x, P.z); writePose(e, rg.rA.value, rg.rB.value); }

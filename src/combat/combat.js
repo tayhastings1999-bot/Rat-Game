@@ -30,6 +30,8 @@ import { turboGain } from '../game/turbo.js';
 import { dropVial } from '../game/vials.js';
 import { dropFood, breakFoodAt } from '../game/food.js';
 import { lowHealth } from '../game/announcer.js';
+import { reaperBlocks, reaperDown } from '../game/reaper.js';
+import { robberDown } from '../game/thieves.js';
 export { dropFood };
 
 // ---------- queries ----------
@@ -71,6 +73,7 @@ const isMelee = src => MELEE.has(src) || (src === 'primary' && st.meleePrim);
 export function hit(e, base, ang, kb, src, quiet, itemFx) {
   if (e.dead) return;
   if (e.invuln > 0) { if (!quiet) spark(e.x, e.y + e.h * 0.6, e.z, 0.8, 0x9ad0ff); return; }
+  if (e.reaper && reaperBlocks(e, src, ang)) return;
   const melee = isMelee(src);
   kb = ((kb || 0) * 1.7 * st.kb) / (e.mass || 1);
   if (kb > 6 && !e.heavy && !e.fly && !e.boss && ang != null && e.type !== 'nest') {
@@ -178,6 +181,8 @@ export function kill(e) {
   }
   if (e.bounty) bountyKill(e);
   if (e.thief) thiefDown(e);
+  if (e.robber) robberDown(e);
+  if (e.reaper) { reaperDown(e); return; }
   packRage(e);
   if (e.type === 'mimic') { dropLoot(e.x, floorY(e.x, e.z), e.z, 16); if (e.bin) e.bin.done = true; }
   if (e.scab) scabDown(e);

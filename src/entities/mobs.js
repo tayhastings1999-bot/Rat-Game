@@ -20,6 +20,9 @@ import { TUNE } from '../tuning.js';
 import { thiefAI } from '../game/objectives.js';
 import { ROLE_AI, tickFlee, catHunt } from './roles.js';
 import { creatureMesh } from '../render/pools.js';
+import { tickNest } from '../game/nests.js';
+import { reaperAI } from '../game/reaper.js';
+import { robberAI } from '../game/thieves.js';
 
 const CORRUPT_KEYS = Object.keys(CORRUPT);
 
@@ -561,6 +564,7 @@ export function updateEnemies(dt0, cap) {
   lodTick = (lodTick + 1) % 3;
   for (const e of W.enemies) {
     if (e.dead || e.held) continue; // held: in the Brawler's paws
+    if (e.reaper) { reaperAI(e, dt0); continue; }
     let dt = dt0;
     if (!e.boss && !e.pred && !e.champion && e.type !== 'nest' && (e.x - P.x) ** 2 + (e.z - P.z) ** 2 > LOD_R2) {
       e._lod = (e._lod || 0) + dt0;
@@ -592,18 +596,11 @@ export function updateEnemies(dt0, cap) {
       e.pT -= dt;
       e.bT -= dt;
     }
-    if (e.type === 'nest') {
-      e.core.scale.setScalar(1 + Math.sin(G.time * 5 + e.x) * 0.15 + (e.flash > 0 ? 0.4 : 0));
-      e.spawnT -= dt;
-      if (e.spawnT <= 0 && Math.hypot(e.x - P.x, e.z - P.z) < 45) {
-        e.spawnT = Math.max(1.4, 3.4 - run.time / 150) / (1 + (run.T || 0) * 0.04);
-        if (W.enemies.length < TUNE.enemies.cap) { const a = rand(0, TAU); spawnEnemy(pickType(), e.x + Math.sin(a) * 2, e.z + Math.cos(a) * 2); }
-      }
-      continue;
-    }
+    if (e.type === 'nest') { tickNest(e, dt); continue; }
     if (e.demo && G.demo) { G.demo(e, dt); continue; } // debug animation gallery
     if (e.rival) continue; // rival nests (Squeeze Network) are static; ducts.js runs them
     if (e.thief) { thiefAI(e, dt); continue; }
+    if (e.robber) { robberAI(e, dt); continue; }
     if (e.scab) continue; // personality.js runs Scab
     if (e.corrupt) tickCorrupt(e, dt);
     const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
@@ -748,12 +745,14 @@ function tickCorrupt(e, dt) {
  */
 export function spawnTick(dt) {
   const TL = run.T || 0, mins = (run.time - (run.dStart || 0)) / 60;
-  rosterIntros(dt);
+  const amb = TUNE.nests.ambient;
+  if (amb > 0) rosterIntros(dt);
   const cap = Math.min(TUNE.enemies.cap, (14 + mins * 9 + TL * 6 + run.tier * 10) * (run.moon ? 1.4 : 1));
   run.lullT = (run.lullT || 0) - dt;
   run.spawnT -= dt;
-  if (run.spawnT <= 0 && M.spawnTiles.length) {
-    const base = Math.max(0.18, 1.6 / (1 + TL * 0.12 + mins * 0.05));
+  // Nests are the horde's source (game/nests.js); street spawns only if TUNE.nests.ambient > 0.
+  if (amb > 0 && run.spawnT <= 0 && M.spawnTiles.length) {
+    const base = Math.max(0.18, 1.6 / (1 + TL * 0.12 + mins * 0.05)) / amb;
     run.spawnT = base * (run.moon ? 0.5 : 1) * (run.lullT > 0 ? 2.5 : 1);
     const n = 1 + Math.floor(TL * 0.25);
     for (let i = 0; i < n && W.enemies.length < cap; i++) {
@@ -763,7 +762,7 @@ export function spawnTick(dt) {
   }
   {
     run.surgeT -= dt;
-    if (run.surgeT <= 0 && M.spawnTiles.length) {
+    if (TUNE.nests.surges && run.surgeT <= 0 && M.spawnTiles.length) {
       run.surgeT = Math.max(40, 70 - TL * 1.5);
       run.lullT = 12;
       sfx('screech');

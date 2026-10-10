@@ -31,6 +31,8 @@ import { tickSig } from './signature.js';
 import { tickTurbo } from './turbo.js';
 import { tickVials } from './vials.js';
 import { tickFood, breakFoodAt } from './food.js';
+import { tickReaperSpawn } from './reaper.js';
+import { tickThieves } from './thieves.js';
 import { tickSetPieces } from '../world/setpieces.js';
 
 let seenT = 0;
@@ -366,6 +368,8 @@ export function update(dt) {
   tickSetPieces(dt);
   updatePickups(dt);
   tickFood(dt);
+  tickReaperSpawn(dt);
+  tickThieves(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);
   if (ex) {

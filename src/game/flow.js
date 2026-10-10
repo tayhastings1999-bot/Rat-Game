@@ -136,6 +136,8 @@ function transition(apply, title) {
   $('fade').style.opacity = 1;
   setTimeout(() => {
     apply();
+    run.reaper = run.robber = null; // their meshes go with the old district
+    run.reaperT = run.robT = null;
     run.bossDone = false;
     run.evT = 45;
     run.scabSeen = false;

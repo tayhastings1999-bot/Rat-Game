@@ -76,9 +76,47 @@ export const TUNE = {
     start: 1, // carried at the start of a run
     max: 9,
     radius: 11,
-    dmg: 120, nestDmg: 90, bossDmg: 260,
+    dmg: 120, nestDmg: 90, bossDmg: 260, reaperDmg: 300,
     poison: 4, // seconds of rot on everything hit
     chestOdds: 0.3, binOdds: 0.08, eliteOdds: 0.1, // chance to drop one (premium chests always do)
+  },
+  nests: {
+    // Three tiers. Damage knocks a nest down a tier once its HP falls below the next tier's.
+    hp1: 160, hp2: 320, hp3: 560, // Litter Pile, Burrow, Warren (× zone and sewer scaling)
+    every1: 4.5, every2: 3.2, every3: 2.2, // seconds between spawns while you're in range
+    kids1: 6, kids2: 10, kids3: 14, // live children a nest keeps at most
+    xp1: 15, xp2: 25, xp3: 40,
+    range: 45, // nests only spawn while you're this close
+    count: 7, countPerZone: 0.5, countMax: 12, // nests per zone
+    warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
+    burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
+    lowerOdds: 0.25, // chance a nest raises its family's lower-tier member instead
+    ambient: 0, // spawns from the streets themselves, × (0 = nests are the only source)
+    surges: 0, // 1 = periodic horde surges on top of the nests
+  },
+  reaper: {
+    // Rises when you linger in a zone; drains on touch; only vials and turbo blasts hurt it.
+    minZone: 1, // first zone it can appear in (0 = the first zone)
+    delay: 150, // seconds in a zone before it rises
+    returnAfter: 90, // seconds before it comes back after leaving
+    spd: 3.4, // glides through walls; slower than every rat
+    reach: 1.4,
+    dps: 22, // health drained per second while touching you
+    drainCap: 120, // it leaves after draining this much
+    hp: 360, // × (1 + 0.3 per zone); one or two Rot Vials
+    staggerT: 0.35, // normal hits push it back for this long
+    spawnDist: 18,
+    gold: 40, xp: 300,
+  },
+  thief: {
+    // Snatches a Rot Vial (or gold) and runs. Kill it to get everything back.
+    minZone: 0,
+    first: 45, every: 80, // seconds until the first thief, then between thieves (±20%)
+    speed: 1.6, // × a mawling's speed
+    hpMul: 4,
+    goldFrac: 0.2, goldMin: 10, // share of carried gold taken when there's no vial
+    escape: 12, // seconds of fleeing before it's gone for good
+    bonus: 12, // extra gold when you catch it
   },
   food: {
     // Health drains all the time; food is the only way back.

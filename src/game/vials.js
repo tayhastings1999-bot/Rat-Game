@@ -50,7 +50,7 @@ export function throwVial() {
   const V = TUNE.vials, R = V.radius;
   for (const e of near(P.x, P.y, P.z, R, 6)) {
     const a = Math.atan2(e.x - P.x, e.z - P.z);
-    hit(e, e.type === 'nest' ? V.nestDmg : e.boss ? V.bossDmg : V.dmg, a, e.boss ? 0 : 14, 'vial');
+    hit(e, e.reaper ? V.reaperDmg : e.type === 'nest' ? V.nestDmg : e.boss ? V.bossDmg : V.dmg, a, e.boss ? 0 : 14, 'vial');
     e.pT = Math.max(e.pT || 0, V.poison);
     e.pD = Math.max(e.pD || 0, 6);
   }

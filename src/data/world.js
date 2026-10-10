@@ -31,6 +31,20 @@ export const BOSSES = {
   ratking: { name: 'The Rat King', geo: 'ratking', sc: 2.6, hp: 7000, spd: 3.9, col: 0x6e6874, blood: 0x8a0c0c },
 };
 
+/**
+ * Enemy families. Each nest raises one family; its tier picks the member
+ * (Litter Pile → first, Burrow → second, Warren → third). Zones list the
+ * families their nests draw from (`fam`), first one most often.
+ */
+export const FAMILIES = {
+  vermin: { name: 'Vermin', types: ['roach', 'tick', 'mawling'], col: 0xff3a20 },
+  wings: { name: 'Wings', types: ['bat', 'wasp', 'crow'], col: 0x5ab0ff },
+  rot: { name: 'Rot', types: ['spitter', 'ghoul', 'bloat'], col: 0x9be06a },
+  prowl: { name: 'Prowlers', types: ['cat', 'shade', 'moth'], col: 0xffa040 },
+  guard: { name: 'Guards', types: ['shieldrat', 'priest', 'brute'], col: 0xc070ff },
+};
+export const NEST_NAMES = ['Litter Pile', 'Burrow', 'Warren'];
+
 export const MODS = {
   currents: { name: 'Erratic Currents', desc: 'Vents shove you around, and some launch you skyward. Their direction keeps shifting.', col: '#9ad0ff' },
   gravity: { name: 'Shifting Gravity', desc: 'Zones flip between feather-light and crushing, then drift elsewhere.', col: '#c080ff' },
@@ -48,22 +62,22 @@ export const MODS = {
  * `palette` holds facade colours; `heights` the roof heights a building can roll.
  */
 export const SURFACE = [
-  { name: 'Cinder Row', kind: 'city', boss: 'tabby', haz: 'cats', floor: 0x8e8a84, grout: '#4a4744', brick: 0x8a5a44, fog: 0x151320, sky: 0x1a1628, lamp: 0xffb060,
+  { name: 'Cinder Row', fam: ['vermin', 'prowl'], kind: 'city', boss: 'tabby', haz: 'cats', floor: 0x8e8a84, grout: '#4a4744', brick: 0x8a5a44, fog: 0x151320, sky: 0x1a1628, lamp: 0xffb060,
     palette: [0x8a5a44, 0x7a4a3a, 0x9a6a50, 0x6a5048], metal: 0.12, heights: [4.5, 6, 7.5], park: 0.12, yard: 0.14, lot: 0.08, neon: [0xff3a6a, 0xffb040], water: 0.2 },
-  { name: 'Neon Market', kind: 'city', boss: 'murder', haz: 'bloodmoon', floor: 0x7a7680, grout: '#3a3640', brick: 0x6a5a70, fog: 0x160f1e, sky: 0x1c1030, lamp: 0xff80d0,
+  { name: 'Neon Market', fam: ['vermin', 'wings'], kind: 'city', boss: 'murder', haz: 'bloodmoon', floor: 0x7a7680, grout: '#3a3640', brick: 0x6a5a70, fog: 0x160f1e, sky: 0x1c1030, lamp: 0xff80d0,
     palette: [0x6a5a70, 0x5a4a5a, 0x7a6a6a, 0x4a4a5a], metal: 0.3, heights: [6, 7.5, 9, 11], park: 0.06, yard: 0.08, lot: 0.12, neon: [0xff3ad0, 0x3ad0ff, 0xb0ff3a, 0xffe03a], water: 0.25 },
-  { name: 'Rust Yards', kind: 'city', boss: 'exterm', haz: 'bait', floor: 0x847a6a, grout: '#3e3428', brick: 0x7a5a3a, fog: 0x18140e, sky: 0x201810, lamp: 0xffc070,
+  { name: 'Rust Yards', fam: ['vermin', 'guard', 'rot'], kind: 'city', boss: 'exterm', haz: 'bait', floor: 0x847a6a, grout: '#3e3428', brick: 0x7a5a3a, fog: 0x18140e, sky: 0x201810, lamp: 0xffc070,
     palette: [0x7a6a5a, 0x6a5a4a, 0x8a5a3a, 0x5a5048], metal: 0.45, heights: [4.5, 6, 7.5, 9], park: 0.03, yard: 0.2, lot: 0.18, neon: [0xffb040], water: 0.1, acid: 0.25 },
-  { name: 'Hollow Heights', kind: 'city', boss: 'murder', haz: 'tides', floor: 0x8a8a80, grout: '#4a4a40', brick: 0x9a7a60, fog: 0x121822, sky: 0x141a2a, lamp: 0xd0e0ff,
+  { name: 'Hollow Heights', fam: ['wings', 'prowl', 'guard'], kind: 'city', boss: 'murder', haz: 'tides', floor: 0x8a8a80, grout: '#4a4a40', brick: 0x9a7a60, fog: 0x121822, sky: 0x141a2a, lamp: 0xd0e0ff,
     palette: [0x9a7a60, 0x8a8a7a, 0xa08a6a, 0x7a6a5a], metal: 0.06, heights: [4.5, 4.5, 6], park: 0.25, yard: 0.3, lot: 0.06, neon: [0x3ad0ff], water: 0.3 },
 ];
 export const SEWER = [
-  { name: 'The Undersewer', kind: 'sewer', boss: 'maw', floor: 0x8a8274, grout: '#3a342c', brick: 0x8a5a44, fog: 0x14100e, lamp: 0xffb060 },
-  { name: 'Flooded Cisterns', kind: 'sewer', boss: 'brood', haz: 'tides', floor: 0x6e8680, grout: '#223430', brick: 0x587068, fog: 0x0e1816, lamp: 0x80e0d0, water: 0.45, acid: 0.1 },
-  { name: "Butcher's Drain", kind: 'sewer', boss: 'ratking', haz: 'cats', floor: 0x8e6c66, grout: '#3a1612', brick: 0x7a3a30, fog: 0x1a0a08, lamp: 0xff6a40 },
-  { name: 'Frozen Pipeworks', kind: 'sewer', boss: 'maw', haz: 'collapse', ice: true, floor: 0xa8bccc, grout: '#34424e', brick: 0x6a7e90, fog: 0x121a22, lamp: 0xa8d8ff, water: 0.1, acid: 0.1 },
-  { name: 'Toxic Refinery', kind: 'sewer', boss: 'brood', haz: 'bait', floor: 0x7e8c52, grout: '#262e14', brick: 0x5e6c3a, fog: 0x121a08, lamp: 0xc8f040, water: 0.08, acid: 0.5 },
-  { name: "Rat King's Court", kind: 'sewer', boss: 'ratking', haz: 'bloodmoon', floor: 0x8e7c5a, grout: '#2a2010', brick: 0x6a4a6a, fog: 0x160c16, lamp: 0xffd070 },
+  { name: 'The Undersewer', fam: ['vermin', 'rot'], kind: 'sewer', boss: 'maw', floor: 0x8a8274, grout: '#3a342c', brick: 0x8a5a44, fog: 0x14100e, lamp: 0xffb060 },
+  { name: 'Flooded Cisterns', fam: ['vermin', 'wings', 'rot'], kind: 'sewer', boss: 'brood', haz: 'tides', floor: 0x6e8680, grout: '#223430', brick: 0x587068, fog: 0x0e1816, lamp: 0x80e0d0, water: 0.45, acid: 0.1 },
+  { name: "Butcher's Drain", fam: ['guard', 'prowl', 'vermin'], kind: 'sewer', boss: 'ratking', haz: 'cats', floor: 0x8e6c66, grout: '#3a1612', brick: 0x7a3a30, fog: 0x1a0a08, lamp: 0xff6a40 },
+  { name: 'Frozen Pipeworks', fam: ['rot', 'wings', 'guard'], kind: 'sewer', boss: 'maw', haz: 'collapse', ice: true, floor: 0xa8bccc, grout: '#34424e', brick: 0x6a7e90, fog: 0x121a22, lamp: 0xa8d8ff, water: 0.1, acid: 0.1 },
+  { name: 'Toxic Refinery', fam: ['rot', 'vermin', 'guard'], kind: 'sewer', boss: 'brood', haz: 'bait', floor: 0x7e8c52, grout: '#262e14', brick: 0x5e6c3a, fog: 0x121a08, lamp: 0xc8f040, water: 0.08, acid: 0.5 },
+  { name: "Rat King's Court", fam: ['vermin', 'wings', 'rot', 'prowl', 'guard'], kind: 'sewer', boss: 'ratking', haz: 'bloodmoon', floor: 0x8e7c5a, grout: '#2a2010', brick: 0x6a4a6a, fog: 0x160c16, lamp: 0xffd070 },
 ];
 
 const ROMAN = ['', ' II', ' III', ' IV', ' V', ' VI'];
