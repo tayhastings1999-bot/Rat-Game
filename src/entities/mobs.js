@@ -20,7 +20,7 @@ import { TUNE } from '../tuning.js';
 import { thiefAI } from '../game/objectives.js';
 import { ROLE_AI, tickFlee, catHunt } from './roles.js';
 import { creatureMesh } from '../render/pools.js';
-import { tickNest } from '../game/nests.js';
+import { tickNest, ambientType } from '../game/nests.js';
 import { reaperAI } from '../game/reaper.js';
 import { robberAI } from '../game/thieves.js';
 
@@ -69,27 +69,6 @@ export function pickType() {
   let r = Math.random() * tot;
   for (const k in mix) { r -= mix[k]; if (r <= 0) return k; }
   return 'mawling';
-}
-
-/** Announce newly unlocked mob types with a banner and a small introductory group. */
-function rosterIntros(dt) {
-  if (!run.seenMobs) run.seenMobs = {};
-  run.introCd = (run.introCd || 0) - dt;
-  if (run.introCd > 0) return;
-  const t = rosterClock();
-  for (const [k, at] of roster()) {
-    if (t < at || run.seenMobs[k]) continue;
-    run.seenMobs[k] = true;
-    if (at === 0) continue;
-    run.introCd = 8; // one new threat every few seconds at most
-    banner('New threat · ' + INTRO[k][0], INTRO[k][1]);
-    const n = k === 'brute' || k === 'ghoul' ? 1 : 3;
-    for (let i = 0; i < n && M.spawnTiles.length; i++) {
-      const s = M.spawnTiles[randi(0, M.spawnTiles.length - 1)];
-      spawnEnemy(k, toW(s % M.W) + rand(-1, 1), toW((s / M.W) | 0) + rand(-1, 1), { plain: true });
-    }
-    return; // one introduction at a time
-  }
 }
 
 /**
@@ -746,7 +725,6 @@ function tickCorrupt(e, dt) {
 export function spawnTick(dt) {
   const TL = run.T || 0, mins = (run.time - (run.dStart || 0)) / 60;
   const amb = TUNE.nests.ambient;
-  if (amb > 0) rosterIntros(dt);
   const cap = Math.min(TUNE.enemies.cap, (14 + mins * 9 + TL * 6 + run.tier * 10) * (run.moon ? 1.4 : 1));
   run.lullT = (run.lullT || 0) - dt;
   run.spawnT -= dt;
@@ -757,7 +735,7 @@ export function spawnTick(dt) {
     const n = 1 + Math.floor(TL * 0.25);
     for (let i = 0; i < n && W.enemies.length < cap; i++) {
       const k = M.spawnTiles[randi(0, M.spawnTiles.length - 1)];
-      spawnEnemy(pickType(), toW(k % M.W) + rand(-1.4, 1.4), toW((k / M.W) | 0) + rand(-1.4, 1.4));
+      spawnEnemy(ambientType(), toW(k % M.W) + rand(-1.4, 1.4), toW((k / M.W) | 0) + rand(-1.4, 1.4));
     }
   }
   {

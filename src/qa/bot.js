@@ -20,15 +20,17 @@ import { objTargets } from '../game/objectives.js';
 import { PRIM } from '../combat/arsenal.js';
 import { CLASSES } from '../data/classes.js';
 import { grabTarget, dropCarry } from '../entities/player.js';
+import { throwVial } from '../game/vials.js';
+import { turboBlast, turboDown, turboUp } from '../game/turbo.js';
 
 // ---------- skill profiles ----------
 export const PROFILES = {
   // Reacts late, rarely dodges, wanders into crowds, aims loosely.
-  novice: { react: 0.65, dodge: 0.15, kite: 0.15, special: 0.25, sig: 0.1, heal: 0.25, loot: 0.3, aimErr: 1.6, jitter: 0.45 },
+  novice: { react: 0.65, dodge: 0.15, kite: 0.15, special: 0.25, sig: 0.1, heal: 0.25, loot: 0.3, aimErr: 1.6, jitter: 0.45, sniff: 0.1, eatAt: 0.35, vialCrowd: 14, turbo: 0.2 },
   // Reacts in a third of a second, dodges half the time, kites a little.
-  average: { react: 0.32, dodge: 0.5, kite: 0.55, special: 0.6, sig: 0.5, heal: 0.55, loot: 0.6, aimErr: 0.7, jitter: 0.2 },
+  average: { react: 0.32, dodge: 0.5, kite: 0.55, special: 0.6, sig: 0.5, heal: 0.55, loot: 0.6, aimErr: 0.7, jitter: 0.2, sniff: 0.5, eatAt: 0.5, vialCrowd: 10, turbo: 0.5 },
   // Near-perfect reads, dodges through wind-ups, keeps its range, aims true.
-  expert: { react: 0.12, dodge: 0.9, kite: 0.9, special: 0.9, sig: 0.9, heal: 0.85, loot: 0.9, aimErr: 0.15, jitter: 0.05 },
+  expert: { react: 0.12, dodge: 0.9, kite: 0.9, special: 0.9, sig: 0.9, heal: 0.85, loot: 0.9, aimErr: 0.15, jitter: 0.05, sniff: 0.9, eatAt: 0.6, vialCrowd: 8, turbo: 0.9 },
 };
 const RANGED = { slinger: 1, warlock: 1, plague: 1, roof: 1 };
 
@@ -176,7 +178,12 @@ function chooseTarget() {
     const m = nearestOf(W.enemies.filter(e => !e.dead && !e.hidden && !e.mesh));
     return m ? { x: m.x, z: m.z, kind: 'mob', e: m } : exploreTarget();
   }
-  if (run.hp < st.maxHp * 0.4 && Math.random() < pr.heal && foods.length) { const f = nearestOf(foods); if (f) return { x: f.x, z: f.z, kind: 'food' }; }
+  // Eat: health drains all the time. Skip moldy food the bot has sniffed out, and don't waste a big meal.
+  if (run.hp < st.maxHp * pr.eatAt && Math.random() < pr.heal) {
+    const edible = [...foods.filter(f => !(f.mold && f.sniffed)), ...W.caches.filter(c => !c.taken)].filter(f => Math.hypot(f.x - P.x, f.z - P.z) < 60);
+    const f = nearestOf(edible);
+    if (f) return { x: f.x, z: f.z, kind: 'food', o: f };
+  }
   if (B.goal === 'break') return breakTarget();
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };
@@ -195,7 +202,7 @@ function chooseTarget() {
   const ot = objTargets().filter(reachable);
   if (ot.length) { const o = nearestOf(ot); if (o) return { x: o.x, z: o.z, kind: 'objective', o }; }
   // Nothing to do: hunt the nearest crowd, or explore.
-  const mob = nearestOf(W.enemies.filter(e => !e.dead && !e.hidden && !e.disguise && !e.mesh));
+  const mob = nearestOf(W.enemies.filter(e => !e.dead && !e.hidden && !e.disguise && !e.mesh && !e.reaper));
   if (mob && Math.random() < 0.6) return { x: mob.x, z: mob.z, kind: 'mob', e: mob };
   return exploreTarget();
 }
@@ -303,7 +310,18 @@ function think(dt) {
   // Novices wobble.
   d = [d[0] + rand(-pr.jitter, pr.jitter), d[1] + rand(-pr.jitter, pr.jitter)];
   setDir(d[0], d[1]);
-  // Abilities.
+  // The Reaper: normal hits don't hurt it, so keep away and throw a vial when it's close.
+  const rp = run.reaper && !run.reaper.dead ? run.reaper : null, rd = rp ? Math.hypot(rp.x - P.x, rp.z - P.z) : 99;
+  if (rp && rd < 9 && B.goal !== 'die') { const l = rd || 1; d = [(P.x - rp.x) / l + d[0] * 0.3, (P.z - rp.z) / l + d[1] * 0.3]; setDir(d[0], d[1]); }
+  if (rp && rd < 6 && run.vials > 0 && Math.random() < pr.special) { throwVial(); T.vials = (T.vials || 0) + 1; }
+  // Sniffing reveals moldy food: the bot "remembers" what it smelled.
+  if (Math.random() < pr.sniff * 0.1) for (const f of W.foods) if (Math.hypot(f.x - P.x, f.z - P.z) < 20) f.sniffed = true;
+  // Abilities. A Rot Vial into a big crowd (or a nest fight going badly); turbo when the meter allows.
+  const near8 = W.enemies.filter(e => !e.dead && !e.disguise && e.type !== 'nest' && Math.hypot(e.x - P.x, e.z - P.z) < 8).length;
+  if (run.vials > 0 && (near8 >= pr.vialCrowd || (near8 >= 5 && run.hp < st.maxHp * 0.25))) { throwVial(); T.vials = (T.vials || 0) + 1; }
+  const segs = Math.floor(run.turbo || 0);
+  if (segs >= 2 && (near8 >= 5 || (G.boss && G.boss.revealed && Math.hypot(G.boss.x - P.x, G.boss.z - P.z) < 8)) && Math.random() < pr.turbo) { turboBlast(); T.blasts = (T.blasts || 0) + 1; }
+  else if (segs >= 1 && th.crowd >= 4 && Math.random() < pr.turbo * 0.3) { turboDown(); useSpecial(); turboUp(); T.turboMoves = (T.turboMoves || 0) + 1; }
   if (th.crowd >= 4 && Math.random() < pr.special) useSpecial();
   if (SIGS[run.cls] && th.crowd >= 2 && Math.random() < pr.sig * 0.5) useSig();
 }
@@ -319,12 +337,14 @@ function aimAttack() {
   if (!t) {
     let bd = reach * reach;
     for (const e of W.enemies) {
-      if (e.dead || e.hidden || e.disguise || (e.pred && e.mode === 'patrol')) continue;
+      if (e.dead || e.hidden || e.disguise || e.reaper || (e.pred && e.mode === 'patrol')) continue;
       const d = (e.x - P.x) ** 2 + (e.z - P.z) ** 2;
       if (d < bd) { bd = d; t = e; }
     }
   }
   if (!t) { G.attack = false; G.aimAt = null; return; }
+  // Walking to food with nothing close: hold fire, or the shots smash the meal.
+  if (B.target && B.target.kind === 'food' && Math.hypot(t.x - P.x, t.z - P.z) > 4) { G.attack = false; G.aimAt = null; return; }
   const err = B.profile.aimErr || 0;
   if (!B.aimOff || Math.random() < 0.1) B.aimOff = [rand(-err, err), rand(-err, err)];
   G.aimAt = { x: t.x + B.aimOff[0], z: t.z + B.aimOff[1] };
@@ -484,6 +504,7 @@ export const qa = {
   bot: B,
 };
 function lastHurt() {
+  if (run.starved) return 'starved';
   const r = B.ring[B.ring.length - 1];
   return r ? r.near.join(' ') : '';
 }

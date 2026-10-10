@@ -41,8 +41,10 @@ await page.goto('http://localhost:5189/?debug');
 await page.waitForFunction(() => window.__scurry && window.__scurry.qa && document.querySelector('#overlay h1'), null, { timeout: 60000 });
 const fresh = async (cls = 'brawler') => {
   await S(c => { const s = __scurry; s.qa.stop(); s.G.testNoRoles = true; s.startRun(c); s.god(false); Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, scabSeen: true, lurkT: 1e9 }); s.W.enemies.forEach(e => { if (e.type !== 'nest') e.dead = true; }); }, cls);
-  for (let i = 0; i < 40; i++) {
-    if ((await S(() => __scurry.G.state)) === 'play') return;
+  // Wait for play, and for a few frames of game time: the first frames of a fresh district
+  // can stall on shader compiles, and spawn tiles and pickups only exist after an update.
+  for (let i = 0; i < 80; i++) {
+    if ((await S(() => __scurry.G.state === 'play' && __scurry.run.time >= 0.15))) return;
     await sleep(80);
   }
   throw new Error('run never reached play state: ' + (await S(() => __scurry.G.state)));
@@ -154,6 +156,7 @@ await check('dodge has a cooldown', async () => {
   const cd = await S(() => __scurry.TUNE.player.rollCd);
   await page.keyboard.press('ShiftLeft');
   const r1 = await S(() => __scurry.P.roll > 0 || __scurry.P.rollCd > 0);
+  const why = await S(() => { const P = __scurry.P; return { roll: P.roll, cd: P.rollCd, squeeze: P.squeeze, chew: P.chewing, st: __scurry.G.state, focus: document.activeElement && document.activeElement.tagName }; });
   const t0 = await S(() => ({ t: __scurry.run.time, cd: __scurry.P.rollCd, st: __scurry.G.state }));
   await gameWait(0.4);
   const t1 = await S(() => ({ t: __scurry.run.time, cd: __scurry.P.rollCd, st: __scurry.G.state }));
@@ -162,7 +165,7 @@ await check('dodge has a cooldown', async () => {
   await gameWait(cd);
   await page.keyboard.press('ShiftLeft');
   const r3 = await S(() => __scurry.P.roll > 0);
-  assert(r1, 'first dodge did not start');
+  assert(r1, `first dodge did not start (${JSON.stringify(why)})`);
   assert(blocked, `dodged again inside the cooldown (${JSON.stringify(dbg)})`);
   assert(r3, 'could not dodge after the cooldown');
 });
@@ -179,6 +182,110 @@ await check('attacks fire only while held, toward the aim point', async () => {
   assert(idle === 0, `fired ${idle} shots without attacking`);
   assert(r.n > 0, 'held attack did not fire');
   assert(r.vx > Math.abs(r.vz), 'shot did not go toward the aim point ' + JSON.stringify(r));
+});
+// ---------------------------------------------------------------- Phase 2 systems
+const gameWait = secs => S(t => new Promise(r => { const end = __scurry.run.time + t; const w = () => (__scurry.run.time >= end || __scurry.G.state !== 'play') ? r() : setTimeout(w, 50); w(); }), secs);
+await check('class stats turn into the numbers the game uses', async () => {
+  const bad = [];
+  for (const k of ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof']) {
+    await fresh(k);
+    const r = await S(k => { const s = __scurry, T = s.TUNE, c = T.classes[k], S0 = T.stats; return { st: { hp: s.st.maxHp, sp: s.st.speed, pm: s.st.primMul, mm: s.st.magMul, cd: s.st.cd }, want: { hp: c.hp, sp: S0.spdBase + S0.spdPer * c.spd, pm: S0.strBase + S0.strPer * c.str, mm: S0.magBase + S0.magPer * c.mag, cd: Math.max(0.5, S0.rateBase - S0.ratePer * c.spd) } }; }, k);
+    for (const f of ['hp', 'pm', 'mm', 'cd']) if (Math.abs(r.st[f] - r.want[f]) > 0.01) bad.push(`${k}.${f} ${r.st[f]} vs ${r.want[f]}`);
+    if (Math.abs(r.st.sp - r.want.sp) > 0.6) bad.push(`${k}.speed ${r.st.sp} vs ${r.want.sp}`); // story marks may add 8%
+  }
+  assert(!bad.length, bad.join('; '));
+  return '7 classes';
+});
+await check('turbo: damage fills the meter, tap X blasts, X + Q fires a turbo special', async () => {
+  await fresh();
+  const fill = await S(() => { const s = __scurry, P = s.P; const e = s.spawnEnemy('brute', P.x + 2, P.z, { plain: true, force: true, hpMul: 80 }); e.spd = 0; e.cd = 99; e.atk = 99; for (let i = 0; i < 60; i++) s.hit(e, 30, 0, 0, 'primary', true); return s.run.turbo; });
+  assert(fill >= 2, `meter only ${fill.toFixed(2)} after 60 hits`);
+  await page.keyboard.press('KeyX');
+  await sleep(150);
+  const b = await S(() => ({ t: __scurry.run.turbo, n: __scurry.run.blasts || 0 }));
+  assert(b.n === 1 && b.t < 1, `blast: ${JSON.stringify(b)}`);
+  await S(() => { __scurry.run.turbo = 1.5; __scurry.run.specT = 9; });
+  await page.keyboard.down('KeyX'); await page.keyboard.press('KeyQ'); await page.keyboard.up('KeyX');
+  await sleep(150);
+  const q = await S(() => ({ t: __scurry.run.turbo, n: __scurry.run.turbos || 0, boosted: __scurry.P.turboT > 0 }));
+  assert(q.n === 1 && Math.abs(q.t - 0.5) < 0.05, `turbo special: ${JSON.stringify(q)}`);
+  return `filled ${fill.toFixed(2)} segments`;
+});
+await check('Rot Vials: Z throws one, it hits everything around, and you carry at most the max', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry, P = s.P; s.run.vials = 2; const es = [3, -4, 6].map(d => s.spawnEnemy('ghoul', P.x + d, P.z + 1, { plain: true, force: true, hpMul: 20 })); es.forEach(e => { e.spd = 0; e.cd = 99; }); return es.map(e => e.hp); });
+  await page.keyboard.press('KeyZ');
+  await sleep(150);
+  const a = await S(() => ({ v: __scurry.run.vials, hp: __scurry.W.enemies.filter(e => e.type === 'ghoul').map(e => e.hp) }));
+  assert(a.v === 1, `vials ${a.v}`);
+  assert(a.hp.length === 3 && a.hp.every((h, i) => h < r[i]), `not every ghoul was hit: ${a.hp} vs ${r}`);
+  const cap = await S(async () => { const s = __scurry, max = s.TUNE.vials.max; s.run.vials = max; s.dropVial(s.P.x, s.P.y, s.P.z); await new Promise(r => setTimeout(r, 600)); return { v: s.run.vials, max, left: s.W.vials.length }; });
+  assert(cap.v === cap.max && cap.left >= 1, `over the cap: ${JSON.stringify(cap)}`);
+  return 'hit 3/3';
+});
+await check('health drains at the zone rate, and food sizes heal 25 / 60 / 120', async () => {
+  await fresh();
+  const a = await S(() => ({ hp: __scurry.run.hp = 150, t: __scurry.run.time, rate: __scurry.drainRate() }));
+  await gameWait(2);
+  const b = await S(() => ({ hp: __scurry.run.hp, t: __scurry.run.time }));
+  near((a.hp - b.hp) / (b.t - a.t), a.rate, 0.08, 'drain HP/s');
+  const got = {};
+  for (const k of ['crumb', 'wedge', 'cache']) {
+    await S(k => { const s = __scurry; s.run.hp = 10; s.dropFood(s.P.x, s.P.y, s.P.z, k, { mold: false, exact: true }); }, k);
+    let h = 10;
+    for (let i = 0; i < 20 && h <= 10; i++) { await sleep(100); h = await S(() => __scurry.run.hp); }
+    got[k] = Math.round(h - 10);
+  }
+  near(got.crumb, 25, 2, 'crumb'); near(got.wedge, 60, 2, 'wedge'); near(got.cache, 120, 2, 'cache');
+  return `${a.rate} HP/s · ${got.crumb}/${got.wedge}/${got.cache}`;
+});
+await check('moldy food poisons (and only shows while sniffing); attacks destroy food', async () => {
+  await fresh();
+  const m = await S(async () => { const s = __scurry, P = s.P; s.run.hp = 100; P.poisonT = 0; const f = s.dropFood(P.x + 3, P.y, P.z, 'wedge', { mold: true, exact: true }); const hidden = !f.ms.visible; P.scent = true; const wait = t => new Promise(r => { const end = s.run.time + t; const w = () => s.run.time >= end ? r() : setTimeout(w, 30); w(); }); await wait(0.2); const shown = f.ms.visible; P.scent = false; P.x += 3; await wait(0.3); return { hidden, shown, poison: P.poisonT > 0, eaten: s.run.moldEaten || 0 }; });
+  assert(m.hidden && m.shown, `mold visibility: ${JSON.stringify(m)}`);
+  assert(m.poison && m.eaten === 1, `moldy food did not poison: ${JSON.stringify(m)}`);
+  const d = await S(() => { const s = __scurry, P = s.P; const f = s.dropFood(P.x + 0.5, P.y, P.z + 3, 'wedge', { mold: false, exact: true }); f.safe = 0; const n = s.breakFoodAt(P.x + 0.5, P.z + 3, 0.5, P.y); return { n, left: s.W.foods.includes(f), lost: s.run.foodLost }; });
+  assert(d.n === 1 && !d.left, `food not destroyed: ${JSON.stringify(d)}`);
+  return 'poisoned · destroyed';
+});
+await check('nests: three tiers, a family each, damage knocks them down a tier', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry, ns = s.W.enemies.filter(e => e.type === 'nest'); const n = ns.sort((a, b) => b.tier - a.tier)[0]; const t0 = n.tier; if (t0 > 1) { n.hp = s.tierHp()[t0 - 2] - 1; s.tickNest(n, 0.02); } return { count: ns.length, tiers: [...new Set(ns.map(e => e.name))], fams: [...new Set(ns.map(e => e.fam))], t0, t1: n.tier, run: s.run.nests }; });
+  assert(r.count >= 7 && r.count === r.run, `nest count ${r.count} vs run.nests ${r.run}`);
+  assert(r.fams.length >= 1 && r.fams.every(Boolean), 'nest without a family');
+  if (r.t0 > 1) assert(r.t1 === r.t0 - 1, `tier did not drop: ${r.t0} → ${r.t1}`);
+  return `${r.count} nests · ${r.tiers.join('/')} · ${r.fams.join('/')}`;
+});
+await check('the Reaper shrugs off claws but not a Rot Vial', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry, P = s.P; const e = s.spawnReaper(P.x + 3, P.z); const h0 = e.hp; s.hit(e, 80, 0, 0, 'primary'); const h1 = e.hp; s.run.vials = 1; s.throwVial(); return { h0, h1, h2: e.hp, dead: e.dead }; });
+  assert(r.h1 === r.h0, `claws hurt the Reaper: ${r.h0} → ${r.h1}`);
+  assert(r.h2 < r.h1 || r.dead, 'vial did nothing to the Reaper');
+  return r.dead ? 'banished by one vial' : `vial took ${Math.round(r.h1 - r.h2)}`;
+});
+await check('thieves steal a vial and give it back when caught', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry; s.run.vials = 1; s.run.robT = 0; s.run.robber = null; s.tickThieves(0.05); const e = s.run.robber; if (!e) return { none: true }; e.x = s.P.x + 0.4; e.z = s.P.z; e.y = s.P.y; s.robberAI(e, 0.02); const stole = s.run.vials === 0 && e.mode === 'flee'; s.kill(e); return { stole, back: s.W.vials.length }; });
+  assert(!r.none, 'no thief spawned');
+  assert(r.stole, 'thief did not steal the vial');
+  assert(r.back >= 1, 'vial not dropped when caught');
+  return 'stolen and recovered';
+});
+await check('walls between the camera and the rat open a see-through hole', async () => {
+  await fresh();
+  await sleep(300);
+  const r = await S(() => { const f = __scurry.fadeU; return { amt: f.fadeAmt.value, r: f.fadeScr.value.z }; });
+  assert(r.amt > 0.5 && r.r > 4, `fade off in play: ${JSON.stringify(r)}`);
+  return `radius ${Math.round(r.r)}px`;
+});
+await check('every action has a key, a touch button and How to Play text', async () => {
+  const r = await S(() => {
+    const how = __scurry.HOWTO, btns = [...document.querySelectorAll('#tBtns [data-b], #tTop [data-b]')].map(b => b.dataset.b);
+    const need = { attack: ['atk', 'J</kbd>'], dodge: ['roll', 'Shift'], jump: ['jump', 'Space'], special: ['spec', '<kbd>Q</kbd>'], sig: ['sig', '<kbd>G</kbd>'], turbo: ['turbo', '<kbd>X</kbd>'], vial: ['vial', '<kbd>Z</kbd>'], use: ['use', '<kbd>E</kbd>'], lock: ['lock', '<kbd>R</kbd>'], sniff: ['scent', '<kbd>F</kbd>'], map: ['map', '<kbd>M</kbd>'], pause: ['pause', 'Esc'] };
+    return Object.entries(need).filter(([, [b, k]]) => !btns.includes(b) || !how.includes(k)).map(([n]) => n);
+  });
+  assert(!r.length, 'missing: ' + r.join(', '));
+  return '12 actions';
 });
 await check('save file round-trips', async () => {
   const r = await S(() => {

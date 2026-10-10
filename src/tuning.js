@@ -52,10 +52,10 @@ export const TUNE = {
     brawler: { hp: 170, str: 8, spd: 5, arm: 6, mag: 3, leech: 0.3 },
     plague: { hp: 120, str: 4, spd: 4, arm: 4, mag: 8, leech: 0 },
     slinger: { hp: 120, str: 5, spd: 8, arm: 4, mag: 4, leech: 0 },
-    warlock: { hp: 85, str: 3, spd: 5, arm: 2, mag: 10, leech: 0 },
+    warlock: { hp: 100, str: 3, spd: 5, arm: 2, mag: 10, leech: 0 },
     tank: { hp: 215, str: 6, spd: 3, arm: 9, mag: 4, leech: 0.6 },
     sneak: { hp: 90, str: 6, spd: 9, arm: 2, mag: 5, leech: 0 },
-    roof: { hp: 80, str: 4, spd: 9, arm: 2, mag: 7, leech: 0 },
+    roof: { hp: 95, str: 4, spd: 9, arm: 2, mag: 7, leech: 0 },
   },
   turbo: {
     // A 3-segment meter filled by damage you deal. Hold X + Q or X + G for the turbo
@@ -91,7 +91,7 @@ export const TUNE = {
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
     lowerOdds: 0.25, // chance a nest raises its family's lower-tier member instead
-    ambient: 0, // spawns from the streets themselves, × (0 = nests are the only source)
+    ambient: 0.35, // street spawns between nests (zone families only), × the old rate; 0 = nests only
     surges: 0, // 1 = periodic horde surges on top of the nests
   },
   reaper: {

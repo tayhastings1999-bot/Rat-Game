@@ -5,7 +5,7 @@ import { tuneEntries, setTune } from '../tuning.js';
 export function initDebugPanel() {
   if (document.getElementById('tunePanel')) return;
   const css = document.createElement('style');
-  css.textContent = `#tuneBtn{position:fixed;right:8px;top:50%;z-index:60;font:11px monospace;background:#221e26;color:#f2b233;border:1px solid #5e5868;padding:4px 8px;cursor:pointer}
+  css.textContent = `#tuneBtn{position:fixed;left:40%;top:4px;z-index:60;font:11px monospace;background:#221e26;color:#f2b233;border:1px solid #5e5868;padding:4px 8px;cursor:pointer}
 #tunePanel{position:fixed;right:8px;top:8px;bottom:8px;width:300px;overflow:auto;z-index:61;background:rgba(19,16,21,.94);color:#f4efe6;border:1px solid #5e5868;font:12px monospace;padding:8px;display:none}
 #tunePanel.on{display:block}#tunePanel h4{margin:10px 0 4px;color:#f2b233;font:bold 12px monospace;text-transform:uppercase}
 #tunePanel label{display:grid;grid-template-columns:1fr 90px;gap:6px;align-items:center;margin:2px 0}

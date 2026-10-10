@@ -69,8 +69,17 @@ export function tickNest(e, dt) {
   introduce(type);
 }
 
+/** A street spawn between nests: one of the zone's families, mostly its weakest member early on. */
+export function ambientType() {
+  const fams = curD().fam || ['vermin'], F = FAMILIES[fams[(Math.random() * fams.length) | 0]] || FAMILIES.vermin;
+  const z = run.tier || 0, r = Math.random(), ti = r < Math.max(0.2, 0.75 - 0.12 * z) ? 0 : r < 0.92 ? 1 : 2;
+  const t = F.types[ti];
+  introduce(t);
+  return t;
+}
+
 /** The first time a type turns up in a run, a banner says what it does. */
-function introduce(type) {
+export function introduce(type) {
   if (!run.seenMobs) run.seenMobs = {};
   if (run.seenMobs[type] || !INTRO[type]) return;
   run.seenMobs[type] = true;

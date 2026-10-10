@@ -44,7 +44,7 @@ a{color:var(--gold)}a:hover{color:#ffd070}
 .bar.en i{background:linear-gradient(180deg,#8fd0ff,#3a8fe0 55%,#1e4a90)}
 .bar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px}
 #slots{display:flex;gap:6px;margin-top:2px}
-.tlab{font-size:9px;letter-spacing:.06em;color:var(--gold);width:20px;text-align:center}
+.tlab{font-size:8px;letter-spacing:.02em;color:var(--gold);min-width:20px;text-align:center}
 #turbo{flex:1;display:flex;gap:4px}
 #turbo i{position:relative;flex:1;height:10px;background:var(--m0);border:2px solid #000;box-shadow:inset 0 0 0 1px var(--m3)}
 #turbo b{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(180deg,#fff0a0,#f2b233 55%,#8a5a10)}
@@ -167,6 +167,8 @@ textarea{-webkit-user-select:text;user-select:text}
 #touch{position:fixed;inset:0;pointer-events:none;display:none;z-index:4}
 body.touch.playing #touch{display:block}
 body.touch #hint,body.touch #timer{display:none}
+/* The action buttons need the right edge: the minimap moves to the top left, smaller. */
+body.touch #mapBox{right:auto;left:calc(10px + env(safe-area-inset-left,0px));top:58px;transform:scale(.6);transform-origin:top left}
 body.touch #plate{left:50%;transform:translateX(-50%);bottom:14px}
 body.touch #portrait{display:none}
 body.touch #items{left:50%;transform:translateX(-50%);bottom:168px;justify-content:center}
@@ -174,7 +176,7 @@ body.touch #tip{bottom:160px}
 #tStick{position:absolute;left:calc(20px + env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:130px;height:130px;border-radius:50%;background:rgba(10,8,12,.45);border:2px solid rgba(244,239,230,.28);pointer-events:auto;touch-action:none}
 #tStick i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(244,239,230,.3);border:2px solid rgba(244,239,230,.65)}
 #tBtns{position:absolute;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(3,62px);grid-auto-rows:62px;gap:10px;pointer-events:auto}
-#tTop{position:absolute;top:calc(34px + env(safe-area-inset-top,0px));right:calc(156px + env(safe-area-inset-right,0px));display:flex;gap:10px;pointer-events:auto}
+#tTop{position:absolute;top:calc(34px + env(safe-area-inset-top,0px));right:calc(18px + env(safe-area-inset-right,0px));display:flex;gap:10px;pointer-events:auto}
 @media (min-width:901px) and (min-height:561px){#tTop{top:auto;bottom:calc(230px + env(safe-area-inset-bottom,0px));right:18px}}
 .tb{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:62px;height:62px;border-radius:50%;font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.04em;color:var(--ink);background:rgba(20,16,22,.62);border:2px solid rgba(244,239,230,.35);touch-action:none;-webkit-tap-highlight-color:transparent}
 .tb.on{background:rgba(224,56,44,.7);border-color:#ff8a7a}

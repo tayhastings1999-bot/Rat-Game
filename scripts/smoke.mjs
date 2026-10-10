@@ -156,16 +156,18 @@ await step('city interactions: chest, boards, climb, power line, key, manhole', 
   await S(() => __scurry.exitLadder()); await wait(1200);
   await S(() => { __scurry.run.district = 0; });
 });
-await step('staggered roster, secrets, lairs, melee kit', async () => {
+await step('nests raise their family, secrets, lairs, melee kit', async () => {
   await S(() => { __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
   await wait(600);
-  // Early on only mawlings spawn; later types unlock on schedule with a banner.
-  const early = await S(() => { const s = new Set(); for (let i = 0; i < 200; i++) s.add(__scurry.pickType()); return [...s]; });
-  if (early.length !== 1 || early[0] !== 'mawling') throw new Error('early roster ' + early);
-  await S(() => { __scurry.run.time = 170; });
-  const seen = (await until(() => Object.keys(__scurry.run.seenMobs).includes('roach') && Object.keys(__scurry.run.seenMobs), 5000)) || await S(() => Object.keys(__scurry.run.seenMobs));
-  if (!seen.includes('roach')) throw new Error('roster intros not firing: ' + seen);
-  await S(() => { __scurry.run.time = 5; });
+  // Stand near a nest: it raises its family's member for its tier, and the new type gets a banner.
+  const nest = await S(() => { const s = __scurry, n = s.W.enemies.find(e => e.type === 'nest'); n.tag = 'probe'; s.P.x = n.x + 5; s.P.z = n.z; s.P.y = 0; n.spawnT = 0; return { fam: n.fam, tier: n.tier }; });
+  const kid = await until(() => { const n = __scurry.W.enemies.find(e => e.tag === 'probe'); return n && n.kids && n.kids.length && n.kids[0].type; }, 8000);
+  if (!kid) throw new Error('nest raised nothing');
+  const fam = await S(f => __scurry.FAMILIES[f].types, nest.fam);
+  if (!fam.includes(kid)) throw new Error(`nest of ${nest.fam} raised a ${kid}`);
+  const seen = await S(() => Object.keys(__scurry.run.seenMobs || {}));
+  if (!seen.includes(kid)) throw new Error('no intro for ' + kid);
+  console.log('     nest:', JSON.stringify({ ...nest, kid }));
   // Secret wall: gnaw it open.
   const sec = await S(() => { const { M } = __scurry; for (let k = 0; k < M.W * M.H; k++) if (M.secret[k] === 1 && M.grid[k] === 3) { const gx = k % M.W, gz = (k / M.W) | 0; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = M.grid[(gz + dz) * M.W + gx + dx]; if ((n === 1 || n === 10 || n === 9) && M.flow[(gz + dz) * M.W + gx + dx] >= 0) return { k, gx, gz, dx, dz }; } } return null; });
   if (!sec) throw new Error('no reachable secret wall in the city');
@@ -344,7 +346,7 @@ await step('district objectives: heist, rescue, beacon, thief', async () => {
   if (!(await until(() => __scurry.run.obj.done && __scurry.objDone(), 3000))) throw new Error('wheel delivery did not complete');
   // Rescue: gnaw one cage for real, open the rest.
   await S(() => __scurry.forceObjective('rescue'));
-  const c = await S(() => { const c = __scurry.run.obj.cages[0]; return { x: c.x, z: c.z, y: c.y, n: __scurry.run.obj.cages.length }; });
+  const c = await S(() => { const s = __scurry, c = s.run.obj.cages[0]; s.W.pipes = s.W.pipes.filter(p => Math.hypot(p.x - c.x, p.z - c.z) > 4); return { x: c.x, z: c.z, y: c.y, n: s.run.obj.cages.length }; }); // a squeeze pipe right by the cage would take the E press
   await tp(c.x + 1, c.z, c.y);
   await until(() => __scurry.chewTarget() && __scurry.chewTarget().kind === 'cage', 3000);
   const opened = await gnawUntil(() => __scurry.run.obj.cages[0].open);
@@ -516,16 +518,19 @@ await step('new classes play', async () => {
     await wait(800);
   }
 });
-await step('sewer sneak: open from the start, smoke bomb, backstab shiv', async () => {
+await step('sewer sneak: no stealth, smoke bomb blinds, backstab shiv', async () => {
   await S(() => __scurry.menu());
   await wait(400);
   await page.click('.card[data-k="sneak"]');
   await rawWait(600);
-  const s0 = await S(() => ({ st: __scurry.G.state, scent: __scurry.st.scentMax, sq: __scurry.st.squeezeMul }));
-  if (s0.st !== 'play' || s0.scent !== 16 || !(s0.sq > 1)) throw new Error('sneak start ' + JSON.stringify(s0));
-  await S(() => { const { W } = __scurry; __scurry.god(true); for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); __scurry.run.specT = 0; });
+  const s0 = await S(() => ({ st: __scurry.G.state, hp: __scurry.st.maxHp, want: __scurry.TUNE.classes.sneak.hp, scent: __scurry.st.scentMax, sq: __scurry.st.squeezeMul }));
+  if (s0.st !== 'play' || s0.hp !== s0.want || s0.scent !== 8 || s0.sq !== 1) throw new Error('sneak start ' + JSON.stringify(s0));
+  await S(() => { const { W, P } = __scurry; __scurry.god(true); for (const e of W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); __scurry.run.specT = 0; const b = __scurry.spawnEnemy('ghoul', P.x + 2, P.z, { plain: true, force: true, hpMul: 20 }); b.spd = 0; b.cd = 99; b.tag = 'blind'; });
   await page.keyboard.press('KeyQ');
   if (!(await until(() => __scurry.W.smokes.length, 3000))) throw new Error('smoke bomb did nothing');
+  if (!(await until(() => __scurry.W.enemies.some(e => e.tag === 'blind' && e.smokeT > 0), 3000))) throw new Error('smoke did not blind the mob inside');
+  const vuln = await S(() => { const s = __scurry, e = s.W.enemies.find(e => e.tag === 'blind'); e.smokeT = 1; const h = e.hp; s.hit(e, 10, 0, 0, 'event', true); return h - e.hp; });
+  if (vuln < 12) throw new Error('blinded mob took ' + vuln + ' from a 10 hit');
   // Stand behind a mob facing away and stab: a backstab.
   await S(() => { const { P } = __scurry; const e = __scurry.spawnEnemy('mawling', P.x, P.z + 1.4, { hpMul: 20, plain: true, force: true }); if (e) { e.spd = 0; e.cd = 99; e.ang = 0; e.tag = 'mark'; } __scurry.G.aimAt = { x: P.x, z: P.z + 1.4 }; __scurry.G.attack = true; });
   const hit = await until(() => __scurry.W.enemies.some(e => e.tag === 'mark' && e.hp < e.maxHp), 4000);

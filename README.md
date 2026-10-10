@@ -27,7 +27,7 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 ## What's in the game
 
-**Rebuild in progress.** Scurry is being rebuilt into a single-player dungeon brawler: a walkable hub, two realms of zones, a fixed camera, direct aim combat, constant health drain, generators (nests) that pour out one enemy family each, keys and treasure, and persistent heroes from level 1 to 99. The work lands in phases. **Phase 1 (this build)** cut the roguelite layer: the threat engine, level-up picks and weapons, tomes, rule breakers, keystones, breakthrough trials, mutations, cursed loot and volatile junk, the Nest shop, the Daily Run, contracts, the shriek, stamina and sprint, Momentum Scramble, the light meter and owls, the Pesticide Rag and the road choice between districts. What's left is described below; later phases add the hub, turbo, health drain, power-ups, secrets and the new progression.
+**Rebuild in progress.** Scurry is being rebuilt into a single-player dungeon brawler: a walkable hub, two realms of zones, a fixed camera, direct aim combat, constant health drain, generators (nests) that pour out one enemy family each, keys and treasure, and persistent heroes from level 1 to 99. The work lands in phases. **Phase 1** cut the roguelite layer (the threat engine, level-up picks, weapons and tomes, rule breakers, mutations, cursed loot, the Nest shop, the Daily Run, contracts, the shriek, stamina, the light meter and the road choice). **Phase 2 (this build)** added the combat core: a fixed camera that sees through walls, four class stats, the turbo meter and moves, Rot Vials, constant health drain with three sizes of food (some of it moldy, all of it breakable), tiered nests that each raise one enemy family, the Reaper, thieves and a low-health announcer. Later phases add fixed levels, power-ups, secrets, the hub and the new progression.
 
 **Structure.** A run is a chain of procedural city districts: a jittered street grid with sidewalks, alleys, buildings of different roof heights, parks, yards, parking lots, cars, street lamps, neon, rooftop clutter and power lines between roofs. **Smash every nest to wake the district boss.** Killing it opens a single road to the next neighbourhood and drops a **sewer key**.
 
@@ -35,9 +35,19 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 **Difficulty by zone.** Enemy strength comes from a per-zone table instead of the old threat engine: each zone has a difficulty index (`zone.threatPerZone` × zone number) that scales enemy HP, damage, speed, attack rate and elite odds. All of it lives in `src/tuning.js`.
 
-**Pacing.** Mob types join the horde on a schedule (mawlings first, then roaches, bats, crows… shades last), each announced with a banner. Spawns come in surges with short lulls between them, capped at 200 live enemies.
+**Nests.** Nests are where the horde comes from. Between them, a light trickle of street spawns (about a third of the old rate, `nests.ambient`) draws only from the zone's own families; horde surges are off (`nests.surges`). Each nest raises one **family**, and zones list which families they draw from:
 
-**Leveling.** Kills pay XP straight into your bar (nests 20, rivals 40, bosses 220). Level-ups are automatic: a banner, a shockwave that shoves the horde back and a small heal. There are no picks. XP to the next level is `base + lin·(L−1) + mul·(L−1)^exp`, capped at level 99.
+| Family | Litter Pile | Burrow | Warren |
+|---|---|---|---|
+| Vermin | roaches | ticks | mawlings |
+| Wings | bats | wasps | crows |
+| Rot | gob spitters | ghouls | bloats |
+| Prowlers | feral cats | shades | moths |
+| Guards | lidbearers | rot priests | brutes |
+
+A **Litter Pile** (160 HP) spawns slowly and keeps 6 children; a **Burrow** (320) is faster and keeps 10; a **Warren** (560) spawns every ~2s and keeps 14. Damage knocks a nest down a tier as its HP falls (a half-smashed Warren is a Burrow), and each nest sometimes raises its family's weaker member. Later zones have more nests, more Warrens and more HP. A type's first appearance gets a banner. At most 200 enemies are alive at once.
+
+**Leveling.** Kills pay XP straight into your bar (nests 15/25/40 by tier, rivals 40, bosses 220). Level-ups are automatic: a banner, a shockwave that shoves the horde back and a small heal. There are no picks. XP to the next level is `base + lin·(L−1) + mul·(L−1)^exp`, capped at level 99.
 
 **Gold.** Chests, bins, bounties and kills drop **gold** (the old salvage). Chests are free to open. Gold you carry is banked when the run ends and shows on the menu; the shop that spends it arrives in Phase 4.
 
@@ -87,11 +97,33 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
 - *Scab*, your rival, shows up about half a minute into each district and runs for an unopened chest. Beat him three times and he gives up a stash of supplies.
 - *District ranks* from S to D (clear time, HP lost, perfect dodges, side job), a *run score*, and a **Share run card** PNG on the death screen.
 
-**Classes.** Seven rats, all open from the start. Melee rats (Gutter Brawler, Sewer Rat) lunge into range, heal a little on every hit, take 20% less damage from bites and build **Bloodlust** from kills.
-- *Gutter Brawler*, *Plaguebearer*, *Sewer Slinger*, *Rat Warlock*, *Sewer Rat* (tank: Gnash plus a reflecting Bulwark), *Roof Rat* (double jump, Needle Darts, Updraft).
-- *Sewer Sneak* (evasive): 70 HP, a 16-second scent gauge that refills twice as fast, a faster squeeze, a **Shiv** that deals 1.8× from behind, a **Smoke Bomb** that hides you from predators and slows the horde inside, and **Shadowstep**.
+**Classes and stats.** Seven rats, all open from the start. Each has four stats from 1 to 10 (`TUNE.classes`), shown on its menu card: **Strength** scales primary attack damage, **Speed** sets move speed and attack and cooldown rate, **Armor** cuts damage taken (5.5% per point), and **Magic** scales specials, signatures, turbo and vials and fills the turbo meter faster.
 
-**Signature moves (G).** Grab & Hurl (Brawler), Blight Burst (Plaguebearer), Ricochet (Slinger), Hex Marks (Warlock), Shield Parry (Sewer Rat), Shadowstep (Sneak: reappear behind the nearest mob) and Dive Bomb (Roof Rat).
+| Rat | HP | STR | SPD | ARM | MAG | Kit |
+|---|---|---|---|---|---|---|
+| Gutter Brawler | 170 | 8 | 5 | 6 | 3 | Claw Rake, Leap Slam, Grab & Hurl, life-steal 0.3/hit, Bloodlust |
+| Plaguebearer | 120 | 4 | 4 | 4 | 8 | Blight Lob, Plague Nova, Blight Burst |
+| Sewer Slinger | 120 | 5 | 8 | 4 | 4 | Sling Stone, Stone Volley, Ricochet |
+| Rat Warlock | 100 | 3 | 5 | 2 | 10 | Hex Bolt, Blink, Hex Marks |
+| Sewer Rat | 215 | 6 | 3 | 9 | 4 | Gnash, Bulwark, Shield Parry, life-steal 0.6/hit, Bloodlust |
+| Sewer Sneak | 90 | 6 | 9 | 2 | 5 | Shiv (1.8× from behind), Smoke Bomb, Shadowstep |
+| Roof Rat | 95 | 4 | 9 | 2 | 7 | Needle Darts, Updraft, Dive Bomb, double jump |
+
+The Sewer Sneak no longer relies on stealth: its Smoke Bomb blinds the horde inside (they take 1.3× damage and are slowed) instead of hiding you from predators, and it has the standard scent gauge and squeeze.
+
+**Turbo (X).** Damage you deal fills a three-segment turbo meter under your health (Magic fills it faster). **Tap X** for your class **turbo blast**, which spends every full segment and grows with how many (×1, ×1.75, ×2.5): Knuckle Quake (Brawler), Plague Tide, Stone Storm, Hex Storm, Iron Wall (Sewer Rat), Thousand Cuts (Sneak) and Sky Rain (Roof Rat). **Hold X and press Q or G** for the turbo version of your special or signature: one segment, ignores the cooldown, double damage and a 1.5× radius, plus a twist (a second ring of stones, a poisoning nova, a burning smoke cloud, a longer Bulwark, a longer Blink). Hold X and let go without pressing anything and turbo stays armed for 1.5s, which is how touch players use it.
+
+**Rot Vials (Z).** Carry up to 9 (you start with 1). Throwing one bursts rot around you: heavy damage to everything within 11 units, nests and bosses included, plus poison. Vials turn up in chests (30%, premium always), bins and on corrupted elites, and lie on the floor as green flasks.
+
+**Food and health drain.** Your health drains all the time: 0.5 HP/s in the first zone, +0.1 per zone after. Run out and you starve. Food is the way back: **crumbs** (25 HP) from kills, **cheese wedges** (60) from nests, chests and bins, and whole **caches** (120) from premium chests, predators and hidden pockets. Your own shots, swipes and area attacks **destroy food** they touch (a shot stops there), so watch where you aim; vials and turbo blasts don't. Some food is **moldy** (12% on the surface, 25% in the sewer): it looks the same, but eating it poisons you. Sniff (F) and moldy food glows green. When health dips below 30% and again below 12%, the **announcer** calls it out; its voice (your browser's built-in speech) can be turned on in the pause menu.
+
+**The Reaper.** From the second zone on, if you're still in a zone after 150 seconds, the Reaper rises. It glides straight at you through walls, slower than any rat, and its touch drains 22 HP/s. Claws and shots only push it back; a **Rot Vial** or a **turbo blast** hurts it, and one vial usually banishes it (gold, a cache and 300 XP). If it drains 120 HP it fades, and comes back 90 seconds later if you're still dawdling.
+
+**Thieves.** About every 80 seconds a gold-tinted thief sprints at you, snatches a Rot Vial (or a fifth of your gold) and flees along the streets. It's gone for good after 12 seconds. Catch it to get everything back, plus a tip.
+
+**Signature moves (G).** Grab & Hurl (Brawler), Blight Burst (Plaguebearer), Ricochet (Slinger), Hex Marks (Warlock), Shield Parry (Sewer Rat), Shadowstep (Sneak: reappear behind the nearest mob, facing its back) and Dive Bomb (Roof Rat).
+
+**Camera.** A fixed-angle follow camera (`TUNE.camera`; the wheel zooms). It never moves to dodge buildings: anything between the camera and the rat gets a dithered see-through hole around the rat instead, so you're never hidden. Inside crawlspaces and buildings the camera tips over to look down into the cutaway.
 
 **How things move.** Every creature runs on a lightweight vertex skeleton (body, head, four legs, tail, two wings), so the whole horde stays instanced while it moves like animals: strides follow distance covered, mobs lean into turns, coil before an attack and are briefly **OPEN** (+25% damage) after it. Wind-ups glow by attack kind: **red = melee, purple = projectile, yellow = area** (green = a priest's heal). Each class has its own silhouette.
 
@@ -101,7 +133,7 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
 
 **Music.** A procedural soundtrack: boom-bap drums with trap hi-hat rolls and a discordant phrygian bass that climbs from 132 to 148 BPM in crowded fights. Each boss gets its own score (choir, FM bell, doom drums) that intensifies per phase. Music and effects have separate volume sliders.
 
-**Tuning and the debug panel.** Every rebuilt number lives in `src/tuning.js` (`TUNE`). Open the game with `?debug` and a **Tune** button appears on the right edge: it lists every value by group and edits them live. Older numbers move into the file as their systems are rebuilt.
+**Tuning and the debug panel.** Every rebuilt number lives in `src/tuning.js` (`TUNE`): camera, stats and classes, turbo, vials, nests, the Reaper, thieves, food and the announcer among them. Open the game with `?debug` and a **Tune** button appears on the right edge: it lists every value by group and edits them live (class stat edits re-apply to your rat at once). Older numbers move into the file as their systems are rebuilt.
 
 ## The story
 
@@ -129,9 +161,9 @@ Scenes pause the game. Space or a tap advances, Esc skips to the choice, 1–3 c
 
 ## Controls
 
-WASD move · mouse aims on the ground · left click or J attacks (hold to repeat) · Shift dodge (1.2s cooldown, i-frames) · Space jump / hold on walls to climb · C squeeze · Q special · G class signature move · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · wheel zoom · Esc pause. The camera follows at a fixed angle.
+WASD move · mouse aims on the ground · left click or J attacks (hold to repeat) · Shift dodge (1.2s cooldown, i-frames) · Space jump / hold on walls to climb · C squeeze · Q special · G class signature move · X turbo (tap: blast; hold + Q/G: turbo special or signature) · Z Rot Vial · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · wheel zoom · Esc pause. The camera follows at a fixed angle. The pause menu repeats all of this under **Controls**.
 
-**Touch:** the left stick moves. Hold **Attack** to fire at the nearest enemy in a cone in front of you (no cone target: straight ahead). Jump (hold on walls to climb), Dodge, Special, Sig, Use (hold to gnaw), Lock and Sniff sit on the right; Map and Pause at the top.
+**Touch:** the left stick moves. Hold **Attack** to fire at the nearest enemy in a cone in front of you (no cone target: straight ahead). On the right: Lock, Sniff and Vial; Special, Sig and **Turbo** (tap for the blast; hold it, let go, then tap Special or Sig within 1.5s for the turbo version); Use (hold to gnaw), Dodge and Jump (hold on walls to climb). Map and Pause sit at the top.
 
 ## QA pipeline
 
@@ -142,7 +174,7 @@ Five stages, cheapest first. Anything a script can check deterministically is a 
 | 1 · Boot gate | `npm run build && npm run test:boot` | Deterministic | ~15s | Production bundle loads, menu and every class card render, a run starts from the real button, the loop advances and draws, pause and resume, no console errors. | Every push |
 | 2 · System, UI, fuzz | `npm run smoke && npm run test:system` | Deterministic + fuzz | ~2 min | Every button on every screen from fresh state. Damage, armour and i-frames; HP and XP bars; XP auto level-up; food healing and cap; kills and drops; dodge cooldown; held attack toward the aim point; save round-trip. Random input, random teleports and random clicks with crash/NaN/out-of-bounds checks. | Every push |
 | 3 · Exploration | `npm run playtest -- --hours=2` | Bots | hours | Static level checks over many districts, plain-language goals, the critical path, and an adversarial bot that tries to break out of the map: wall-hugging, edge and climb exploits, prop jumps, corner traps. | Quick version every push, full nightly |
-| 4 · Combat + synergy | part of `npm run playtest` | Bots + statistics | ~20 min | Every class at three skill levels (bots aim and attack manually, with profile-based aim error) and a class kit sweep against a fixed horde. Flags kits that trivialise combat (>3× median damage) or do nothing, and damage spikes that take a third of HP in 5s. | Quick every push, full nightly |
+| 4 · Combat + synergy | part of `npm run playtest` | Bots + statistics | ~20 min | Every class at three skill levels (bots aim and attack manually with profile-based aim error, eat, sniff out mold, throw vials and use turbo) and a class kit sweep in which each class hunts the zone's nests. Flags kits that trivialise combat (>3× median damage) or do nothing, and damage spikes that take a third of HP in 5s. | Quick every push, full nightly |
 | 5 · Soak | `npm run soak -- --hours=24` | Script driving bots | 24h+ | Back-to-back runs through the real menus with page reloads. Heap, geometry, texture and scene-object trends per hour, logic cost as mobs scale, and save integrity (every key parses, lifetime totals never go down, the run counter goes up by exactly one). | Nightly (5.5h hosted) |
 
 ```mermaid
@@ -173,13 +205,14 @@ Profiling a 7-minute late-game scene showed mob AI at 26µs per mob and 300+ nes
 src/
   main.js            boot + frame loop
   core/              util (math, RNG, storage) and shared state singletons
-  render/            renderer + pixel post shader, procedural textures, creature models, instancing pools, rig.js (vertex skeleton)
+  render/            renderer + pixel post shader, procedural textures, creature models, instancing pools, rig.js (vertex skeleton), fade.js (see-through hole)
   tuning.js          every rebuilt gameplay number (TUNE), edited live by the ?debug panel
   data/              classes, enemies/bosses/districts/modifiers, corruptions, props
   world/             tile grid + collision, sewer and city generators, mesh builder + population, setpieces.js (interiors, tram, market, crane, gardens, lairs)
   entities/          player, rat model/portraits + ratAnim.js, mobs (AI + spawning), roles.js (new mob roles, pack behaviour), bosses
   combat/            damage/deaths/drops/zone scaling, primaries & specials, hazards (telegraphs, puddles)
-  game/              run flow (districts, sewer, banking), progress (XP, levels, gold), loot, update step, render sync + camera, input, story.js
+  game/              run flow (districts, sewer, banking), progress (XP, levels, gold), stats (class stats), turbo, vials, food (drain, sizes, mold),
+                     nests (tiers, families), reaper, thieves, announcer, loot, update step, render sync + camera, input, story.js
   audio/             SFX + music sequencer
   ui/                HUD, screens (menu, pause, map, death, endings), debugPanel.js, icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
@@ -194,6 +227,7 @@ Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta`
 ## Known gaps
 
 - Touch controls are tuned for landscape phones and tablets; portrait works but is cramped.
-- Mid-rebuild (Phase 1 of 5): there's no hub, health drain, turbo, power-ups, shop or save slots yet, and gold has nothing to buy.
+- Mid-rebuild (Phase 2 of 5): there's no hub, power-ups, shop or save slots yet, levels are still freshly generated each run, and gold has nothing to buy.
+- Turbo specials and signatures are the normal move with more damage and radius plus a small twist, not bespoke animations.
 - Climbing still works on any wall; Phase 3 limits it to marked pipes and fire escapes.
 - Balance (zone table, boss HP, drop rates) comes from design intent and automated runs, not playtesting.

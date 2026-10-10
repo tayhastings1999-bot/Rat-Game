@@ -201,14 +201,14 @@ if (want('adversarial')) {
 // ---------------------------------------------------------------- class kit sweep (stage 4)
 // Every class's kit (primary, special, signature) played by the same bot in the
 // same zone. A class far above the median trivializes the game; far below is a
-// dead pick. (Phase 2 adds each class's turbo moves to the sweep.)
+// dead pick. The bot hunts nests (where the horde is) and uses turbo and vials like a player.
 if (want('synergy')) {
   log('class kit sweep');
   const builds = ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof'].map(c => ({ name: c, cls: c }));
   const list = builds;
   const secs = QUICK ? 75 : 150, reps = QUICK ? 1 : 2, rows = [];
   for (const b of list) for (let r = 0; r < reps; r++) {
-    await begin(b.cls, { profile: 'average', goal: 'survive' });
+    await begin(b.cls, { profile: 'average', goal: 'nests' }); // the horde is at the nests now
     const d0 = await S(() => __scurry.run.dmg);
     const st = await play(secs, 5);
     const x = await S(() => ({ t: __scurry.qa.telemetry().simTime, kills: __scurry.run.kills, dmg: __scurry.run.dmg, taken: __scurry.qa.telemetry().dmgTaken, dead: __scurry.G.state === 'dead' }));
