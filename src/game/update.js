@@ -28,6 +28,8 @@ import { tickPersonality } from './personality.js';
 import { banner } from '../ui/hud.js';
 import { tickRoles } from '../entities/roles.js';
 import { tickSig } from './signature.js';
+import { tickTurbo } from './turbo.js';
+import { tickVials } from './vials.js';
 import { tickSetPieces } from '../world/setpieces.js';
 
 let seenT = 0;
@@ -381,6 +383,8 @@ export function update(dt) {
   tickPersonality(dt, st.maxHp);
   tickRoles(dt);
   tickSig(dt);
+  tickTurbo(dt);
+  tickVials(dt);
   tickSetPieces(dt);
   updatePickups(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];

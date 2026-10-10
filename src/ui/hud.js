@@ -13,6 +13,8 @@ import { objText, objTargets } from '../game/objectives.js';
 import { bossIntro } from '../game/personality.js';
 import { ICON, IC_SCRAP, IC_KEY, IC_HEART } from './icons.js';
 import { SIGS } from '../game/signature.js';
+import { BLASTS } from '../game/turbo.js';
+import { TUNE } from '../tuning.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
@@ -25,7 +27,9 @@ export function renderSlots() {
   $('slots').innerHTML =
     `<div class="slot prim" title="${PRIM[C.prim].name}">${ICON[C.prim]}</div>` +
     `<div class="slot spec" title="Q · ${SPECIALS[C.special].name}">${ICON[C.special]}<i class="cd" id="specCd"></i><em>Q</em></div>` +
-    (SIGS[run.cls] ? `<div class="slot sig" title="G · ${SIGS[run.cls].name}: ${SIGS[run.cls].desc}">${ICON.sig}<i class="cd" id="sigCd"></i><em>G</em></div>` : '');
+    (SIGS[run.cls] ? `<div class="slot sig" title="G · ${SIGS[run.cls].name}: ${SIGS[run.cls].desc}">${ICON.sig}<i class="cd" id="sigCd"></i><em>G</em></div>` : '') +
+    `<div class="slot vial" title="Z · Rot Vial: burst of rot around you (max ${TUNE.vials.max})">${ICON.vial}<em>Z</em><span class="cnt" id="vialN">${run.vials || 0}</span></div>` +
+    (BLASTS[run.cls] ? `<div class="slot turbo" title="X · ${BLASTS[run.cls].name}: ${BLASTS[run.cls].desc} Hold X with Q or G for a turbo special or signature.">${ICON.turbo}<em>X</em></div>` : '');
   $('items').innerHTML = '';
 }
 
@@ -46,6 +50,12 @@ export function hud() {
   const sc = $('sigCd'), SG = SIGS[run.cls];
   if (sc && SG) sc.style.height = Math.max(0, run.sigT / (SG.cd * st.cd) * 100) + '%';
   $('xpFill').style.width = Math.min(100, run.xp / run.need * 100) + '%';
+  { const vn = $('vialN'); if (vn) vn.textContent = run.vials || 0; }
+  // Turbo: three segments; full ones glow, and the bar flashes when one fills.
+  const tb = $('turbo'), tv = run.turbo || 0;
+  tb.classList.toggle('flash', (G.turboFlash || 0) > 0);
+  tb.classList.toggle('held', !!G.turboHeld);
+  [...tb.children].forEach((el, i) => { const f = Math.max(0, Math.min(1, tv - i)); el.firstChild.style.width = f * 100 + '%'; el.classList.toggle('full', f >= 1); });
   $('lvlBig').textContent = String(run.level).padStart(2, '0');
   $('res').innerHTML =
     `<div class="r">${IC_SCRAP}<span>${Math.floor(run.scrap)}</span>${run.keys ? `<span class="keyc">${IC_KEY}<span>${run.keys}</span></span>` : ''}</div>` +

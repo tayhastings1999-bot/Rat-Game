@@ -85,16 +85,16 @@ await check('damage, armor and i-frames', async () => {
   await fresh();
   const r = await S(() => {
     const s = __scurry, run = s.run, st = s.st;
-    st.taken = 1; st.armor = 3; s.P.inv = 0; s.P.parry = 0; s.P.bulwark = 0; run.hp = 100;
+    st.taken = 0.7; s.P.inv = 0; s.P.parry = 0; s.P.bulwark = 0; run.hp = 100; // taken = 1 − 0.055·Armor
     if (s.G.state !== 'play') return { state: s.G.state };
     s.hurtP(20, null);
     const first = 100 - run.hp, invAfter = s.P.inv;
     const h = run.hp; s.hurtP(20, null); const during = h - run.hp; // inside i-frames
-    s.P.inv = 0; const h2 = run.hp; s.hurtP(20, null, true); const raw = h2 - run.hp; // raw ignores armor and i-frames
+    s.P.inv = 0; st.taken = 1; const h2 = run.hp; s.hurtP(20, null, true); const raw = h2 - run.hp; // raw hazards ignore i-frames
     return { first, invAfter, during, raw, tier: run.tier };
   });
   assert(!r.state, 'not in play: ' + r.state);
-  near(r.first, Math.round(20 * (1 + 0.1 * r.tier) - 3), 1, 'armored hit');
+  near(r.first, Math.round(20 * 0.7 * (1 + 0.1 * r.tier)), 1, 'armored hit');
   assert(r.invAfter > 0, 'no i-frames after a hit');
   assert(r.during === 0, `damage taken during i-frames (${r.during})`);
   near(r.raw, 20, 1, 'raw hazard damage');
@@ -142,10 +142,11 @@ await check('hits, kills and XP', async () => {
   assert(r.killed === 1 && r.dead, 'kill not counted');
   assert(r.xp > 0, 'kill gave no XP');
 });
-await check('the plate shows the class kit: primary, special, signature', async () => {
+await check('the plate shows the class kit: primary, special, signature, vial, turbo', async () => {
   await fresh('warlock');
-  const n = await S(() => { __scurry.renderSlots(); return document.querySelectorAll('#slots .slot').length; });
-  assert(n === 3, `${n} kit slots`);
+  const r = await S(() => { __scurry.renderSlots(); return { n: document.querySelectorAll('#slots .slot').length, turbo: document.querySelectorAll('#turbo i').length }; });
+  assert(r.n === 5, `${r.n} kit slots`);
+  assert(r.turbo === 3, `${r.turbo} turbo segments`);
 });
 await check('dodge has a cooldown', async () => {
   await fresh();
@@ -153,14 +154,16 @@ await check('dodge has a cooldown', async () => {
   const cd = await S(() => __scurry.TUNE.player.rollCd);
   await page.keyboard.press('ShiftLeft');
   const r1 = await S(() => __scurry.P.roll > 0 || __scurry.P.rollCd > 0);
+  const t0 = await S(() => ({ t: __scurry.run.time, cd: __scurry.P.rollCd, st: __scurry.G.state }));
   await gameWait(0.4);
+  const t1 = await S(() => ({ t: __scurry.run.time, cd: __scurry.P.rollCd, st: __scurry.G.state }));
   await page.keyboard.press('ShiftLeft');
-  const blocked = await S(() => __scurry.P.roll <= 0);
+  const blocked = await S(() => __scurry.P.roll <= 0), dbg = { t0, t1 };
   await gameWait(cd);
   await page.keyboard.press('ShiftLeft');
   const r3 = await S(() => __scurry.P.roll > 0);
   assert(r1, 'first dodge did not start');
-  assert(blocked, 'dodged again inside the cooldown');
+  assert(blocked, `dodged again inside the cooldown (${JSON.stringify(dbg)})`);
   assert(r3, 'could not dodge after the cooldown');
 });
 await check('attacks fire only while held, toward the aim point', async () => {

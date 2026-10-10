@@ -69,14 +69,14 @@ export function glob(x, y, z, vx, vy, vz, dmg, col = 0xff4a2a, slow = false) {
 
 export const SPECIALS = {
   slam: { name: 'Leap Slam', cd: 5, use() { P.vy = 15; P.jumping = false; P.cut = true; const s = st.speed * 1.2; P.vx = Math.sin(P.facing) * s; P.vz = Math.cos(P.facing) * s; P.slam = true; P.onGround = false; P.lock = 0.5; } },
-  nova: { name: 'Plague Nova', cd: 7, use() { const R = 6 * st.area; aoe(P.x, P.y, P.z, R, 45, 14, 'special', 2.5, true); boom(P.x, P.y + 0.4, P.z, R * 1.4, 0xa9e06a); fx('ring', P.x, P.y, P.z, R, 0xa9e06a, 0.5); G.shake = 0.3; } },
-  volley: { name: 'Stone Volley', cd: 4.5, use() { for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; shoot(P.x, P.y + 0.7, P.z, Math.sin(a), 0, Math.cos(a), 22, 18, 2, 'special', { col: 0xf2d090 }); } } },
+  nova: { name: 'Plague Nova', cd: 7, use() { const R = 6 * st.area; aoe(P.x, P.y, P.z, R, 45, 14, 'special', 2.5, true); if (P.turboT > 0) for (const e of near(P.x, P.y, P.z, R)) { e.pT = Math.max(e.pT || 0, 5); e.pD = Math.max(e.pD || 0, 6); } boom(P.x, P.y + 0.4, P.z, R * 1.4, 0xa9e06a); fx('ring', P.x, P.y, P.z, R, 0xa9e06a, 0.5); G.shake = 0.3; } },
+  volley: { name: 'Stone Volley', cd: 4.5, use() { const ring = o => { for (let i = 0; i < 20; i++) { const a = (i + o) / 20 * TAU; shoot(P.x, P.y + 0.7, P.z, Math.sin(a), 0, Math.cos(a), 22, 18, 2, 'special', { col: 0xf2d090 }); } }; ring(0); if (P.turboT > 0) setTimeout(() => { if (G.state === 'play') ring(0.5); }, 150); } },
   blink: {
     name: 'Blink', cd: 3.5,
     use() {
       aoe(P.x, P.y, P.z, 3 * st.area, 35, 8, 'special');
       boom(P.x, P.y + 0.5, P.z, 3, 0xc080ff);
-      for (let s = 7; s > 0; s -= 0.5) {
+      for (let s = P.turboT > 0 ? 10 : 7; s > 0; s -= 0.5) {
         const nx = P.x + P.wx * s, nz = P.z + P.wz * s, t = tileAt(nx, nz);
         if (!solidFor(t, true) || P.y >= topAt(toG(nx), toG(nz)) - 0.1) { P.x = nx; P.z = nz; break; }
       }
@@ -88,7 +88,7 @@ export const SPECIALS = {
   bulwark: {
     name: 'Bulwark', cd: 9,
     use() {
-      P.bulwark = 3;
+      P.bulwark = P.turboT > 0 ? 6 : 3;
       aoe(P.x, P.y, P.z, 3.6 * st.area, 22, 18, 'special');
       boom(P.x, P.y + 0.6, P.z, 4, 0xffb070);
       fx('ring', P.x, P.y, P.z, 3.6 * st.area, 0xffb070, 0.4);
@@ -96,10 +96,11 @@ export const SPECIALS = {
     },
   },
   smoke: {
-    // Smoke bomb: a cloud that slows and confuses the horde inside.
+    // Smoke bomb: a choking cloud. The horde inside is slowed, off its rhythm and blinded,
+    // so it takes extra damage (TUNE.sneak.smokeVuln). A turbo cloud also burns.
     name: 'Smoke Bomb', cd: 8,
     use() {
-      W.smokes.push({ x: P.x, z: P.z, R: 5 * st.area, t: 4.5 });
+      W.smokes.push({ x: P.x, z: P.z, R: 5 * st.area, t: P.turboT > 0 ? 7 : 4.5, burn: P.turboT > 0 });
       puff(P.x, P.y + 0.5, P.z, 0x8a8a8a, 30, 6);
       sfx('roll');
     },
@@ -110,7 +111,7 @@ export const SPECIALS = {
       aoe(P.x, P.y, P.z, 3 * st.area, 25, 12, 'special');
       for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; shoot(P.x, P.y + 0.3, P.z, Math.sin(a), -0.05, Math.cos(a), 14, 10, 1, 'special', { col: 0x9ad8ff, life: 0.5 }); }
       puff(P.x, P.y + 0.2, P.z, 0xc8e8ff, 14, 4);
-      P.vy = 19; P.onGround = false; P.jumping = false; P.cut = true;
+      P.vy = P.turboT > 0 ? 24 : 19; P.onGround = false; P.jumping = false; P.cut = true;
     },
   },
 };
@@ -153,7 +154,7 @@ export const PRIM = {
         swipeFx(A, R, 0xd8f0e0);
         for (const e of near(P.x, P.y, P.z, R + 0.3, TUNE.combat.meleeFlyReach)) {
           if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) > 0.9) continue;
-          const back = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.ang || 0)) > 2.1, m = back ? 1.8 : 1;
+          const back = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.ang || 0)) > 2.1, m = back ? TUNE.sneak.backstab : 1;
           hit(e, 16 * m, A, 3, 'primary', false, true);
           if (back && landed === 0) dnum(e.x, e.y + e.h + 0.5, e.z, 'BACKSTAB', 'crit');
           landed++;

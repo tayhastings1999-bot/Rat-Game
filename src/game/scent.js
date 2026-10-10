@@ -11,6 +11,8 @@ import { dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, gi, inG, toG, toW, tAt, floorY, descend, nearOpen } from '../world/grid.js';
 import { objTargets } from './objectives.js';
+import { hit } from '../combat/combat.js';
+import { TUNE } from '../tuning.js';
 
 export const TOX = { cone: 0xff2ad8, print: 0xc8ff20, gnaw: 0x20ffc8, alert: 0xff3a20 };
 
@@ -76,18 +78,21 @@ function scan() {
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < 40) gnaw.push({ x: b.x, y: 1.3, z: b.z, s: 0.8 });
 }
 
-/** Smoke clouds (Sewer Sneak): the horde inside is slowed, loses its rhythm, and predators lose your trail. */
+/** Smoke clouds (Sewer Sneak): the horde inside is slowed, loses its rhythm and is blinded (takes extra damage). */
 function tickSmoke(dt) {
-  P.smoke = false;
   for (const s of W.smokes) {
     s.t -= dt;
+    s.tick = (s.tick || 0) - dt;
+    const burn = s.burn && s.tick <= 0;
+    if (burn) s.tick = 0.5;
     if (Math.random() < dt * 14) { const a = Math.random() * 6.3, r = Math.random() * s.R; W.parts.push({ x: s.x + Math.sin(a) * r, y: floorY(s.x, s.z) + 0.3, z: s.z + Math.cos(a) * r, vx: 0, vy: 0.8, vz: 0, life: 1.4, c: 0x8a8a8a, s: 3, ng: true }); }
-    if (Math.hypot(P.x - s.x, P.z - s.z) < s.R) P.smoke = true;
     for (const e of W.enemies) {
-      if (e.dead || e.boss || Math.hypot(e.x - s.x, e.z - s.z) > s.R) continue;
+      if (e.dead || Math.hypot(e.x - s.x, e.z - s.z) > s.R) continue;
+      e.smokeT = 0.3;
+      if (burn) hit(e, TUNE.sneak.smokeTurboDps * 0.5, null, 0, 'special', true);
+      if (e.boss) continue;
       e.slow = Math.max(e.slow || 0, 0.3);
       if (e.cd != null) e.cd = Math.max(e.cd, 0.25);
-      if (e.pred && e.mode === 'hunt') e.lost = (e.lost || 0) + dt * 2;
     }
   }
   keep(W.smokes, s => s.t > 0);

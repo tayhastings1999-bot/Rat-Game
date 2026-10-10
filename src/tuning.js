@@ -36,6 +36,55 @@ export const TUNE = {
     rollIframes: 0.34, // invulnerability during the dodge
     rollSpeed: 2.3, // dodge speed, × move speed
   },
+  stats: {
+    // Four class stats (1–10) turn into numbers: Strength → primary damage, Speed → move
+    // speed and attack rate, Armor → damage taken, Magic → special, signature, turbo and
+    // vial damage plus how fast the turbo meter fills.
+    strBase: 0.7, strPer: 0.06, // primary damage × (strBase + strPer·STR)
+    spdBase: 5.6, spdPer: 0.32, // move speed = spdBase + spdPer·SPD
+    rateBase: 1.12, ratePer: 0.024, // attack and cooldown time × (rateBase − ratePer·SPD)
+    armPer: 0.055, // damage taken × (1 − armPer·ARM)
+    magBase: 0.7, magPer: 0.06, // special, turbo and vial damage × (magBase + magPer·MAG)
+    gainBase: 0.6, gainPer: 0.08, // turbo fill × (gainBase + gainPer·MAG)
+  },
+  classes: {
+    // Base HP, the four stats, and melee life-steal per hit.
+    brawler: { hp: 170, str: 8, spd: 5, arm: 6, mag: 3, leech: 0.3 },
+    plague: { hp: 120, str: 4, spd: 4, arm: 4, mag: 8, leech: 0 },
+    slinger: { hp: 120, str: 5, spd: 8, arm: 4, mag: 4, leech: 0 },
+    warlock: { hp: 85, str: 3, spd: 5, arm: 2, mag: 10, leech: 0 },
+    tank: { hp: 215, str: 6, spd: 3, arm: 9, mag: 4, leech: 0.6 },
+    sneak: { hp: 90, str: 6, spd: 9, arm: 2, mag: 5, leech: 0 },
+    roof: { hp: 80, str: 4, spd: 9, arm: 2, mag: 7, leech: 0 },
+  },
+  turbo: {
+    // A 3-segment meter filled by damage you deal. Hold X + Q or X + G for the turbo
+    // version of your special or signature; tap X alone for your class turbo blast.
+    segments: 3,
+    gainPerDmg: 0.002, // segments per point of damage dealt (×Magic)
+    specialCost: 1, sigCost: 1,
+    window: 1.5, // seconds a turbo special or signature stays boosted
+    moveDmg: 2, // turbo special/signature damage ×
+    moveArea: 1.5, // turbo special/signature radius ×
+    blastMin: 1, // segments needed for a blast (it spends every full one)
+    blastBase: 1, blastPerSeg: 0.75, // blast power × (base + perSeg·(segments − 1))
+    tapTime: 0.35, // X released within this many seconds without Q/G = blast
+    armTime: 1.5, // held longer and let go: turbo stays armed this long for the next Q or G
+  },
+  vials: {
+    // Rot Vials (Z): burst around you, hitting everything in the radius. Damage × Magic.
+    start: 1, // carried at the start of a run
+    max: 9,
+    radius: 11,
+    dmg: 120, nestDmg: 90, bossDmg: 260,
+    poison: 4, // seconds of rot on everything hit
+    chestOdds: 0.3, binOdds: 0.08, eliteOdds: 0.1, // chance to drop one (premium chests always do)
+  },
+  sneak: {
+    backstab: 1.8, // Shiv damage × from behind
+    smokeVuln: 1.3, // enemies in the Smoke Bomb take this × damage
+    smokeTurboDps: 14, // a turbo Smoke Bomb also burns this much per second
+  },
   combat: {
     meleeFlyReach: 6, // melee primaries swat flying enemies up to this far above the rat
   },
@@ -61,9 +110,12 @@ export function tuneEntries(o = TUNE, pre = '') {
   }
   return out;
 }
+/** Systems that cache derived numbers (class stats) re-read them when a value changes. */
+export const tuneHooks = [];
 export function setTune(path, v) {
   const ks = path.split('.'), last = ks.pop();
   let o = TUNE;
   for (const k of ks) o = o[k];
   o[last] = typeof o[last] === 'number' ? +v : typeof o[last] === 'boolean' ? !!v : v;
+  for (const h of tuneHooks) h(path);
 }

@@ -27,6 +27,8 @@ import { scabDown } from '../game/personality.js';
 import { banner } from '../ui/hud.js';
 import { die } from '../ui/screens.js';
 import { tryParry } from '../game/signature.js';
+import { turboGain } from '../game/turbo.js';
+import { dropVial } from '../game/vials.js';
 
 // ---------- queries ----------
 /** Enemies within R of a point. `up`: how far above it still counts (melee swats reach flyers higher). */
@@ -60,6 +62,7 @@ export const nearest = R => {
 };
 
 const MELEE = new Set(['claw', 'whip', 'bite']);
+const MAGIC_SRC = new Set(['special', 'turbo', 'vial']);
 const isMelee = src => MELEE.has(src) || (src === 'primary' && st.meleePrim);
 
 // ---------- player → enemy ----------
@@ -73,7 +76,10 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
     e.bonk = 0.6;
     if (base >= 25) G.shake = Math.max(G.shake, 0.1 * settings.shake);
   }
-  let d = base * st.dmg * (src === 'primary' ? st.primMul : 1);
+  // Strength scales the primary; Magic scales specials, signatures, turbo and vials.
+  let d = base * st.dmg * (src === 'primary' ? st.primMul : MAGIC_SRC.has(src) ? st.magMul : 1);
+  if (src === 'special' && P.turboT > 0) d *= TUNE.turbo.moveDmg;
+  if (e.smokeT > 0) d *= TUNE.sneak.smokeVuln; // blinded inside a Smoke Bomb
   const crit = perfectCrit() || Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   e.lastSrc = src;
   if (crit) d *= st.critMul;
@@ -90,6 +96,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   e.hurt = true;
   P.lastHitT = G.time;
   if (src !== 'swarm' && src !== 'dot') comboGain(Math.min(4, 0.6 + d / 12));
+  if (src !== 'turbo') turboGain(d);
   sfx('hit');
   if (crit || d >= 40) G.hitStop = Math.max(G.hitStop, 0.035);
   run.dmgBy[src] = (run.dmgBy[src] || 0) + d;
@@ -123,8 +130,7 @@ export function hurtP(d, from, raw) {
     d *= 0.3;
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
   }
-  if (from && from.hp != null) d *= st.guard; // melee classes brace against bites and swipes
-  d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (1 + 0.1 * run.tier) - (raw ? 0 : st.armor)));
+  d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (1 + 0.1 * run.tier))); // st.taken comes from Armor
   run.hp -= d;
   run.dHurt = (run.dHurt || 0) + d;
   if (G.qa) G.qa.hurt(d, from, raw);
@@ -208,6 +214,7 @@ export function kill(e) {
 }
 
 function corruptDeath(e) {
+  if (Math.random() < TUNE.vials.eliteOdds) dropVial(e.x, floorY(e.x, e.z), e.z);
   for (let i = 0; i < 5; i++) scrapDrop(e.x, e.y, e.z);
   for (let i = 0; i < 3; i++) scrapDrop(e.x, e.y, e.z);
   if (!isSewer() && !run.keys && !W.keys.length && Math.random() < 0.22) dropKey(e.x, e.y, e.z);

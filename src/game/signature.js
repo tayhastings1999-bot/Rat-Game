@@ -5,7 +5,7 @@
 //   Slinger   Ricochet     — a heavy stone that banks off walls four times.
 //   Warlock   Hex Marks    — mark up to five mobs ahead; the marks detonate.
 //   Tank      Shield Parry — brace: the next hit is blocked, stuns and reflects.
-//   Sneak     Shadowstep   — vanish and reappear behind a mob, shiv ready.
+//   Sneak     Shadowstep   — vanish and reappear behind a mob, facing its back.
 //   Roof Rat  Dive Bomb    — leap high, then plunge onto the nearest mob.
 import { rand, angD } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
@@ -14,6 +14,7 @@ import { sfx } from '../audio/audio.js';
 import { floorY, tileAt, solidFor } from '../world/grid.js';
 import { hit, aoe, near, nearest } from '../combat/combat.js';
 import { shoot } from '../combat/arsenal.js';
+import { tryTurboMove } from './turbo.js';
 
 const anim = (kind, dur) => { P.sig = { kind, t: dur, dur }; };
 
@@ -95,7 +96,7 @@ export const SIGS = {
     },
   },
   sneak: {
-    name: 'Shadowstep', cd: 6, desc: 'Vanish and reappear behind the nearest mob with your ambush shiv ready.',
+    name: 'Shadowstep', cd: 6, desc: 'Vanish and reappear behind the nearest mob, facing its back for a backstab.',
     use() {
       const t = nearest(11);
       if (!t || t.boss && t.fly) return false;
@@ -136,9 +137,11 @@ export const SIGS = {
 };
 
 export function useSig() {
-  if (G.state !== 'play' || run.sigT > 0 || P.squeeze || P.grab) return;
+  if (G.state !== 'play' || P.squeeze || P.grab) return;
   const S = SIGS[run.cls];
   if (!S) return;
+  if (tryTurboMove('sig', () => S.use())) return; // X held: the turbo version, no cooldown
+  if (run.sigT > 0) return;
   if (S.use() === false) { dnum(P.x, P.y + 1.6, P.z, 'Nothing in reach', 'info'); run.sigT = 0.4; return; }
   run.sigT = S.cd * st.cd;
   run.sigs = (run.sigs || 0) + 1;

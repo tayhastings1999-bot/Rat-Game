@@ -20,6 +20,7 @@ import { sfx } from '../audio/audio.js';
 import { CLASSES } from '../data/classes.js';
 import { FACE, facePortrait } from '../entities/rat.js';
 import { banner } from '../ui/hud.js';
+import { marks } from './stats.js';
 
 // ---------- the cast ----------
 const LOOKS = {
@@ -271,9 +272,11 @@ export function onRunStart() {
   const s = S();
   G.scabKing = s.ch >= 7; // chapter 7: the Rat King in the deep sewer is Scab
   // The ending leaves a mark on every run after it.
-  if (s.ending === 'cut') st.healMul *= 1.15;
-  if (s.ending === 'leave') st.speed *= 1.08;
-  if (s.ending === 'crown') { st.dmg += 0.1; st.taken *= 1.1; }
+  Object.assign(marks, { heal: s.ending === 'cut' ? 1.15 : 1, speed: s.ending === 'leave' ? 1.08 : 1, dmg: s.ending === 'crown' ? 0.1 : 0, taken: s.ending === 'crown' ? 1.1 : 1 });
+  st.healMul *= marks.heal;
+  st.speed *= marks.speed;
+  st.dmg += marks.dmg;
+  st.taken *= marks.taken;
   if (s.ch === 0) play('prologue', () => { s.ch = 1; save(); chapterCard(); });
   else if ((s.ch === 2 || s.ch === 3) && run.obj && run.obj.kind === 'rescue' && run.tier >= 1) pipDistrict(); // a shortcut start lands straight in Pip's district
   else setTimeout(chapterCard, 2600);

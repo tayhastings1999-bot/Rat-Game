@@ -714,7 +714,7 @@ function predAI(e, dt, d) {
     collideBody(e, py, e.r * 0.7, e.h, false);
     return true;
   }
-  if (d > 18 || P.smoke || P.inDuct) {
+  if (d > 18 || P.inDuct) {
     e.lost += dt;
     if (e.lost > 4) {
       e.mode = 'patrol';

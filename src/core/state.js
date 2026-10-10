@@ -33,7 +33,7 @@ export const W = {
   rooms: [], objs: [], plats: [], inter: [], chests: [], caches: [], pipes: [],
   lamps: [], zones: [], enemies: [], scraps: [], keys: [],
   pproj: [], eproj: [], parts: [], foods: [], scentPaths: [], baits: [], gibs: [], corpses: [], uses: [], washers: [],
-  puddles: [], hazQ: [], lines: [], lairs: [], secrets: [], fungi: [], bins: [], volt: [], neons: [], prints: [], traps: [], falling: [], shocks: [], smokes: [], ductWires: [], ductNets: [], crates: [],
+  puddles: [], hazQ: [], lines: [], lairs: [], secrets: [], fungi: [], bins: [], volt: [], neons: [], prints: [], traps: [], falling: [], shocks: [], smokes: [], vials: [], ductWires: [], ductNets: [], crates: [],
   cracks: new Map(),
 };
 

@@ -21,6 +21,7 @@ import { banner } from '../ui/hud.js';
 import { TUNE } from '../tuning.js';
 import { diveLand } from '../game/signature.js';
 import { boltTarget } from '../world/setpieces.js';
+import { tryTurboMove } from '../game/turbo.js';
 
 export const keys = {};
 /** On-screen joystick (touch). x = right, y = forward, each -1..1. */
@@ -193,8 +194,10 @@ export function toggleLock() {
 }
 
 export function useSpecial() {
-  if (run.specT > 0 || P.squeeze) return;
+  if (P.squeeze) return;
   const S = SPECIALS[CLASSES[run.cls].special];
+  if (tryTurboMove('special', () => S.use())) return; // X held: the turbo version, no cooldown
+  if (run.specT > 0) return;
   S.use();
   run.specT = S.cd * st.specCd * st.cd;
 }

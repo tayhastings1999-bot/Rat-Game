@@ -12,6 +12,8 @@ import { toggleScent } from './scent.js';
 import { pause, resume, openMap } from '../ui/screens.js';
 import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
+import { turboDown, turboUp } from './turbo.js';
+import { throwVial } from './vials.js';
 
 /** Attack is held while the mouse button, J or the touch button is down. */
 const held = { mouse: false, key: false };
@@ -25,6 +27,7 @@ export function initInput() {
     keys[e.code] = true;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyJ') { held.key = true; syncAttack(); }
+    if (e.code === 'KeyX' && G.state === 'play') turboDown();
     if (e.repeat) return;
     const s = G.state;
     if (s === 'play') {
@@ -33,6 +36,7 @@ export function initInput() {
       if (e.code === 'KeyR') toggleLock();
       if (e.code === 'KeyQ') useSpecial();
       if (e.code === 'KeyG') useSig();
+      if (e.code === 'KeyZ') throwVial();
       if (e.code === 'KeyE') pressE();
       if (e.code === 'KeyF') toggleScent();
       if (e.code === 'KeyM' || e.code === 'Tab') openMap();
@@ -55,11 +59,13 @@ export function initInput() {
   addEventListener('keyup', e => {
     keys[e.code] = false;
     if (e.code === 'KeyJ') { held.key = false; syncAttack(); }
+    if (e.code === 'KeyX') turboUp();
     if (e.code === 'KeyE') { P.chewing = false; P.chewT = 0; }
   });
   addEventListener('blur', () => {
     for (const k in keys) keys[k] = false;
     held.mouse = held.key = false;
+    G.turboHeld = G.turboKey = false;
     syncAttack();
     if (G.state === 'play') pause(true);
   });

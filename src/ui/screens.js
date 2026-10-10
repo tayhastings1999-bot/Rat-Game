@@ -13,6 +13,9 @@ import { epitaph } from '../game/personality.js';
 import { runScore, shareCard } from '../game/score.js';
 import { drawMap } from './hud.js';
 import { SIGS } from '../game/signature.js';
+import { BLASTS } from '../game/turbo.js';
+import { STAT_KEYS, STAT_NAMES } from '../game/stats.js';
+import { TUNE } from '../tuning.js';
 
 const ov = $('overlay');
 export function show(h) { ov.innerHTML = h; ov.classList.remove('hide'); ov.scrollTop = 0; }
@@ -32,9 +35,11 @@ function skinsHTML() {
 }
 
 export const HOWTO = `<div class="howto">
-      <div><h3 class="px">How to play</h3><p>You aim and attack yourself. Smash every nest in the zone to wake its boss, kill the boss and take the exit. Eat to stay alive. Wind-ups glow <b style="color:#ff5a3a">red</b> for bites, <b style="color:#c070ff">purple</b> for shots and <b style="color:#ffc030">yellow</b> for area blasts: dodge through them, and dodge at the last moment for a counter bonus. Hit a mob right after it lunges for extra damage.</p></div>
-      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> or <kbd>J</kbd> attack (hold to repeat) · <kbd>Shift</kbd> dodge · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Q</kbd> special · <kbd>G</kbd> signature · <kbd>R</kbd> lock on · <kbd>E</kbd> use, hold to gnaw · <kbd>C</kbd> squeeze · <kbd>F</kbd> sniff · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</p></div>
-      <div><h3 class="px">Touch</h3><p>Left stick to move. Attack aims at the nearest enemy in front of you. Jump, Dodge, Special, Signature and Use sit on the right.</p></div>
+      <div><h3 class="px">How to play</h3><p>You aim and attack yourself. Smash every nest in the zone to wake its boss, kill the boss and take the exit. Wind-ups glow <b style="color:#ff5a3a">red</b> for bites, <b style="color:#c070ff">purple</b> for shots and <b style="color:#ffc030">yellow</b> for area blasts: dodge through them, and dodge at the last moment for a counter bonus. Hit a mob right after it lunges for extra damage.</p>
+        <p>Hitting things fills your <b style="color:#f2b233">turbo</b> meter (three segments). Tap <kbd>X</kbd> for your class turbo blast, which spends every full segment. Hold <kbd>X</kbd> and press <kbd>Q</kbd> or <kbd>G</kbd> for a turbo special or signature (one segment, no cooldown). <b style="color:#9be06a">Rot Vials</b> (<kbd>Z</kbd>, carry up to 9) burst around you and hurt everything nearby, nests included.</p>
+        <p>Each rat has four stats: <b>Strength</b> (attack damage), <b>Speed</b> (movement and attack rate), <b>Armor</b> (damage taken) and <b>Magic</b> (specials, turbo and vials).</p></div>
+      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> or <kbd>J</kbd> attack (hold to repeat) · <kbd>Shift</kbd> dodge · <kbd>Space</kbd> jump, hold on a wall to climb · <kbd>Q</kbd> special · <kbd>G</kbd> signature · <kbd>X</kbd> turbo (tap: blast, hold + Q/G: turbo move) · <kbd>Z</kbd> Rot Vial · <kbd>R</kbd> lock on · <kbd>E</kbd> use, hold to gnaw · <kbd>C</kbd> squeeze · <kbd>F</kbd> sniff · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</p></div>
+      <div><h3 class="px">Touch</h3><p>Left stick to move. Attack aims at the nearest enemy in front of you. Jump, Dodge, Special, Sig and Use sit on the right. Tap Turbo for your blast; hold Turbo, let go, then tap Special or Sig for the turbo version. Vial throws a Rot Vial.</p></div>
     </div>`;
 
 export function renderMenu() {
@@ -47,7 +52,9 @@ export function renderMenu() {
     <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => `<button class="card" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="">
         <b>${C.name}</b><span class="d">${C.blurb}</span>
-        <span class="s">${C.hp} HP · ${PRIM[C.prim].name}<br>Q: ${SPECIALS[C.special].name}<br>G: ${SIGS[k] ? SIGS[k].name : ''}</span></button>`).join('')}</div>${skinsHTML()}
+        <span class="s">${TUNE.classes[k].hp} HP · ${PRIM[C.prim].name}</span>
+        <span class="stats">${STAT_KEYS.map(sk => `<i title="${STAT_NAMES[sk]} ${TUNE.classes[k][sk]}/10"><em>${sk.toUpperCase()}</em><u><s style="width:${TUNE.classes[k][sk] * 10}%"></s></u></i>`).join('')}</span>
+        <span class="s">Q: ${SPECIALS[C.special].name}<br>G: ${SIGS[k] ? SIGS[k].name : ''}<br>X: ${BLASTS[k] ? BLASTS[k].name : ''}</span></button>`).join('')}</div>${skinsHTML()}
     <p class="px" style="font-size:12px">${best.time ? `Longest run: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}</p></div>`);
   G.mode = 'survival';
   ov.querySelectorAll('.card').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
@@ -71,6 +78,7 @@ export function pause(on) {
   G.state = 'paused';
   show(`<div class="panel narrow frame"><div class="kick px">${fmt(run.time)} · Lv ${run.level} · ${dName()}</div><h2>Paused</h2>
     ${run.mods.map(m => `<p><span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span> ${MODS[m].desc}</p>`).join('')}
+    <details class="jwrap"><summary class="px">Controls</summary>${HOWTO}</details>
     <details class="jwrap"><summary class="px">Story · ${storyTitle()}</summary>${journalHTML()}</details>
     <div class="sets px">
       <label>Screen shake<input type="range" id="sSh" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
