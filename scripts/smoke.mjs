@@ -160,6 +160,7 @@ await step('nests raise their family, secrets, lairs, melee kit', async () => {
   await S(() => { __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
   await wait(600);
   // Stand near a nest: it raises its family's member for its tier, and the new type gets a banner.
+  const home = await S(() => ({ x: __scurry.P.x, z: __scurry.P.z, y: __scurry.P.y }));
   const nest = await S(() => { const s = __scurry, n = s.W.enemies.find(e => e.type === 'nest'); n.tag = 'probe'; s.P.x = n.x + 5; s.P.z = n.z; s.P.y = 0; n.spawnT = 0; return { fam: n.fam, tier: n.tier }; });
   const kid = await until(() => { const n = __scurry.W.enemies.find(e => e.tag === 'probe'); return n && n.kids && n.kids.length && n.kids[0].type; }, 8000);
   if (!kid) throw new Error('nest raised nothing');
@@ -168,6 +169,9 @@ await step('nests raise their family, secrets, lairs, melee kit', async () => {
   const seen = await S(() => Object.keys(__scurry.run.seenMobs || {}));
   if (!seen.includes(kid)) throw new Error('no intro for ' + kid);
   console.log('     nest:', JSON.stringify({ ...nest, kid }));
+  // Back to the start: the path-finding field (and the secret-wall search below) follows the rat.
+  await S(h => { const P = __scurry.P; P.x = h.x; P.z = h.z; P.y = h.y; P.vx = P.vz = P.vy = 0; __scurry.G.flowT = 0; }, home);
+  await wait(600);
   // Secret wall: gnaw it open.
   const sec = await S(() => { const { M } = __scurry; for (let k = 0; k < M.W * M.H; k++) if (M.secret[k] === 1 && M.grid[k] === 3) { const gx = k % M.W, gz = (k / M.W) | 0; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = M.grid[(gz + dz) * M.W + gx + dx]; if ((n === 1 || n === 10 || n === 9) && M.flow[(gz + dz) * M.W + gx + dx] >= 0) return { k, gx, gz, dx, dz }; } } return null; });
   if (!sec) throw new Error('no reachable secret wall in the city');
