@@ -42,7 +42,7 @@ const START = {
     puff(s.x, gy + 0.5, s.z, 0x8a7a6a, 30, 6);
     sfx('boom');
     addChest(s.x, gy, s.z);
-    for (let i = 0; i < 3; i++) dropFood(s.x + rand(-2, 2), gy, s.z + rand(-2, 2));
+    for (let i = 0; i < 3; i++) dropFood(s.x + rand(-2, 2), gy, s.z + rand(-2, 2), 'wedge');
     for (let i = 0; i < 16; i++) scrapDrop(s.x + rand(-2, 2), gy, s.z + rand(-2, 2));
     for (let i = 0; i < 18; i++) scrapDrop(s.x + rand(-3, 3), gy, s.z + rand(-3, 3));
     G.evMarker = { x: s.x, z: s.z, col: '#ffb040' };

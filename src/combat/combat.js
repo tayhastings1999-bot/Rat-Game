@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { rand } from '../core/util.js';
 import { G, P, W, run, st, meta, settings } from '../core/state.js';
 import { world, bury, dropCreature } from '../render/renderer.js';
-import { Cy } from '../render/models.js';
 import { flameTex } from '../render/textures.js';
 import { blood, spark, puff, boom, decal, gore, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -29,6 +28,9 @@ import { die } from '../ui/screens.js';
 import { tryParry } from '../game/signature.js';
 import { turboGain } from '../game/turbo.js';
 import { dropVial } from '../game/vials.js';
+import { dropFood, breakFoodAt } from '../game/food.js';
+import { lowHealth } from '../game/announcer.js';
+export { dropFood };
 
 // ---------- queries ----------
 /** Enemies within R of a point. `up`: how far above it still counts (melee swats reach flyers higher). */
@@ -112,8 +114,10 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   else maybeFlee(e);
 }
 
+const FOOD_BREAKERS = new Set(['primary', 'special']);
 export function aoe(x, y, z, R, dm, kb, src, slow, itemFx) {
   const m = 1 + 0.05 * (run.level - 1);
+  if (FOOD_BREAKERS.has(src)) breakFoodAt(x, z, R, y); // your attacks smash food too
   for (const e of near(x, y, z, R)) {
     hit(e, dm * m, Math.atan2(e.x - x, e.z - z), kb, src, false, itemFx);
     if (slow) e.slow = slow;
@@ -145,7 +149,7 @@ export function hurtP(d, from, raw) {
   }
   blood(P.x, P.y + 0.5, P.z, 0xa01010, null, raw ? 2 : 6);
   if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); comboBreak(); }
-  if (run.hp < st.maxHp * 0.3 && !run.lowWarned) { run.lowWarned = true; banner('Rat needs cheese, badly!', 'Press F to sniff out a food cache'); }
+  lowHealth();
   if (run.hp <= 0) die();
 }
 
@@ -194,7 +198,7 @@ export function kill(e) {
     run.nests--;
     addXP(e.xp || 20);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
-    if (Math.random() < 0.6) dropFood(e.x, e.y, e.z);
+    if (Math.random() < 0.6) dropFood(e.x, e.y, e.z, 'wedge');
     dnum(e.x, e.y + 2, e.z, 'Nest destroyed', 'info');
     G.shake = 0.35;
     return;
@@ -203,14 +207,14 @@ export function kill(e) {
   if (e.pred) {
     dropCreature(e.mesh);
     for (let i = 0; i < 15; i++) scrapDrop(e.x, e.y, e.z);
-    dropFood(e.x, e.y, e.z);
+    dropFood(e.x, e.y, e.z, 'cache');
     dnum(e.x, e.y + 2, e.z, 'Predator slain', 'info');
     return;
   }
   if (e.xp) addXP(e.xp * (e.mut ? 1.5 : 1));
   if (Math.random() < (e.mut ? 0.55 : 0.3)) scrapDrop(e.x, e.y, e.z);
   // Food turns up more often when you're hurting.
-  if (Math.random() < (run.hp < st.maxHp * 0.35 ? 0.05 : 0.012)) dropFood(e.x, e.y, e.z);
+  if (Math.random() < (run.hp < st.maxHp * 0.35 ? TUNE.food.killOddsLow : TUNE.food.killOdds)) dropFood(e.x, e.y, e.z);
 }
 
 function corruptDeath(e) {
@@ -226,13 +230,6 @@ function corruptDeath(e) {
 
 export function scrapDrop(x, y, z) {
   if (W.scraps.length < 290) W.scraps.push({ x: x + rand(-0.6, 0.6), y, z: z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
-}
-const foodMat = new THREE.MeshLambertMaterial({ color: 0xe8b84a, emissive: 0x4a3000, flatShading: true });
-export function dropFood(x, y, z) {
-  const m = new THREE.Mesh(Cy(0.35, 0.35, 0.25, 10), foodMat);
-  m.castShadow = true;
-  world.add(m);
-  W.foods.push({ x, y, z, m });
 }
 const keyMat = new THREE.MeshBasicMaterial({ color: 0xffd040 });
 export function dropKey(x, y, z) {

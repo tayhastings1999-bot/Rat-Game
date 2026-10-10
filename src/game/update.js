@@ -30,6 +30,7 @@ import { tickRoles } from '../entities/roles.js';
 import { tickSig } from './signature.js';
 import { tickTurbo } from './turbo.js';
 import { tickVials } from './vials.js';
+import { tickFood, breakFoodAt } from './food.js';
 import { tickSetPieces } from '../world/setpieces.js';
 
 let seenT = 0;
@@ -219,6 +220,8 @@ function updateProjectiles(dt) {
       p.bounce--; p.hs.clear(); p.life = Math.max(p.life, 0.8);
       spark(p.x, p.y, p.z, 1, p.col); sfx('clank');
     } else if (p.y < floorY(p.x, p.z) - 0.1 || solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.7, p.col); continue; }
+    // Your shots smash food they touch (and stop there).
+    if (W.foods.length && breakFoodAt(p.x, p.z, 0.2, p.y)) { p.life = 0; continue; }
     for (const e of W.enemies) {
       if (e.dead || p.hs.has(e) || e.hidden) continue;
       const dx = e.x - p.x, dz = e.z - p.z, rr = e.r + 0.22 * p.size;
@@ -307,30 +310,6 @@ function updatePickups(dt) {
     }
     return true;
   });
-  keep(W.foods, f => {
-    f.m.position.set(f.x, f.y + 0.4 + Math.sin(G.time * 3) * 0.1, f.z);
-    f.m.rotation.y += dt * 2;
-    if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) {
-      bury(f.m);
-      const h = Math.round(st.maxHp * 0.3 * st.foodMul * st.healMul);
-      run.hp = Math.min(st.maxHp, run.hp + h);
-      dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
-      return false;
-    }
-    return true;
-  });
-  for (const c of W.caches) {
-    if (c.taken) continue;
-    c.g.rotation.y += dt;
-    if (Math.hypot(P.x - c.x, P.z - c.z) < 1.2 && Math.abs(P.y - c.y) < 1.3) {
-      c.taken = true;
-      bury(c.g);
-      const h = Math.round(st.maxHp * 0.4 * st.foodMul * st.healMul);
-      run.hp = Math.min(st.maxHp, run.hp + h);
-      for (let i = 0; i < 8; i++) W.scraps.push({ x: c.x + rand(-0.6, 0.6), y: c.y, z: c.z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
-      dnum(P.x, P.y + 1.6, P.z, 'Cheese cache +' + h, 'heal');
-    }
-  }
 }
 
 export function update(dt) {
@@ -342,7 +321,6 @@ export function update(dt) {
   P.throwT = Math.max(0, (P.throwT || 0) - dt);
   run.specT = Math.max(0, run.specT - dt);
   run.hp = Math.min(st.maxHp, run.hp + st.regen * st.healMul * dt);
-  if (run.hp > st.maxHp * 0.5) run.lowWarned = false;
   tickDucts(dt);
   updateZones(dt);
   stepPlayer(dt / 2);
@@ -387,6 +365,7 @@ export function update(dt) {
   tickVials(dt);
   tickSetPieces(dt);
   updatePickups(dt);
+  tickFood(dt);
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   const ex = exits.find(ex => Math.hypot(P.x - ex.x, P.z - ex.z) < 1.8 && Math.abs(P.y - floorY(ex.x, ex.z)) < 0.8);
   if (ex) {

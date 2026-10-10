@@ -84,12 +84,14 @@ export function pause(on) {
       <label>Screen shake<input type="range" id="sSh" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
       <label>Music<input type="range" id="sMu" min="0" max="1" step="0.05" value="${settings.music}"></label>
       <label>Effects<input type="range" id="sFx" min="0" max="1" step="0.05" value="${settings.sfx}"></label>
+      <label>Announcer voice<input type="checkbox" id="sVo" ${settings.voice ? 'checked' : ''}></label>
     </div>
     <div class="btns"><button class="btn" id="resumeBtn">Resume</button><button class="btn ghost" id="quit">Abandon run</button></div></div>`);
   $('resumeBtn').onclick = resume;
   $('sSh').oninput = e => { settings.shake = +e.target.value; saveSettings(); };
   $('sMu').oninput = e => { settings.music = +e.target.value; applyVolumes(); saveSettings(); };
   $('sFx').oninput = e => { settings.sfx = +e.target.value; applyVolumes(); saveSettings(); };
+  $('sVo').onchange = e => { settings.voice = e.target.checked; saveSettings(); };
   $('quit').onclick = () => { G.state = 'play'; run.hp = 0; die(); };
 }
 

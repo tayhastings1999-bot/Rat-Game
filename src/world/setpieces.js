@@ -105,7 +105,7 @@ function buildInterior(I) {
     const [bx, bz] = at(1);
     staticBox(bx, bz, 1.4, 1.2, 1.2, steel);
     glowSprite(0xff7020, 1.6, world, bx, 1.3, bz, 0.7);
-    for (let i = 0; i < 2; i++) { const [fx, fz] = at(2 + i); dropFood(fx, 0, fz); }
+    for (let i = 0; i < 2; i++) { const [fx, fz] = at(2 + i); dropFood(fx, 0, fz, 'wedge'); }
     const [qx, qz] = at(4); addCache(qx, 0, qz);
   } else if (I.kind === 'workshop') {
     const [ax, az] = at(0); staticBox(ax, az, 2.2, 1.1, 1.07, wood); // a dead workbench, just furniture now
@@ -277,7 +277,7 @@ function robStall(u, lamp) {
   u.done = true;
   lamp.visible = false;
   for (let i = 0; i < 7; i++) scrapDrop(u.x + rr(-1, 1), 0, u.z + rr(-1, 1));
-  dropFood(u.x, 0, u.z);
+  dropFood(u.x, 0, u.z, 'wedge');
   if (Math.random() < 0.3) dropLoot(u.x + 1, 0, u.z);
   sfx('screech');
   banner('Stop, thief!', 'The whole market heard that');
@@ -395,7 +395,7 @@ function buildGarden(lot) {
     staticBox(cx, cz, 2.6, 1.6, 0.5, plank);
     mkMesh(Bx(2.4, 0.08, 1.4), soil, cx, 0.52, cz);
     for (let i = 0; i < 4; i++) mkMesh(Sp(0.22, 6, 4), lam([0x5aa040, 0x7ac050, 0xd04030][i % 3]), cx - 0.9 + i * 0.6, 0.72, cz + rr(-0.3, 0.3));
-    if (rng.next() < 0.5) dropFood(cx, 0.6, cz);
+    if (rng.next() < 0.5) dropFood(cx, 0.6, cz, 'wedge');
   }
   // A gnome keeps watch.
   const gx = toW(lot.x), gz = toW(lot.y), gn = new THREE.Group();

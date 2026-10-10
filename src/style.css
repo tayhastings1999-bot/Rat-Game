@@ -77,6 +77,8 @@ a{color:var(--gold)}a:hover{color:#ffd070}
 .ebar i{display:block;height:100%;background:#d8342c}
 #banner{position:fixed;left:50%;top:26vh;transform:translate(-50%,8px);text-align:center;pointer-events:none;opacity:0;transition:opacity .35s,transform .5s;width:90vw}
 #banner.on{opacity:1;transform:translate(-50%,0)}
+#bark{position:fixed;left:50%;bottom:22vh;transform:translate(-50%,8px);text-align:center;pointer-events:none;opacity:0;transition:opacity .3s,transform .4s;width:90vw;font-size:clamp(28px,3.6vw,48px);color:#ffd0a0;text-shadow:0 3px 0 #000,0 0 18px rgba(255,60,30,.6)}
+#bark.on{opacity:1;transform:translate(-50%,0)}
 #banner b{display:block;font-family:'Pirata One';font-weight:400;font-size:clamp(44px,6vw,84px);line-height:1;color:var(--ink);text-shadow:0 4px 0 #000,0 0 24px rgba(255,80,30,.45)}
 #banner span{display:block;margin-top:8px;font-size:18px}
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .16s}

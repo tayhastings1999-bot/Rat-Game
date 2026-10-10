@@ -48,7 +48,7 @@ const STORY = [
   'Every street you take back is another nest that sleeps safe tonight.',
 ];
 export const storyBeat = () => STORY[Math.min(STORY.length - 1, run.tier || 0)]; // used once the story (story.js) is finished
-export const epitaph = () => pick(['The streets remember your name.', 'Somewhere, a nest-mate is still running.', 'Scab will tell everyone he did it.', 'The Rat King laughs, for now.', 'Rats always come back.']);
+export const epitaph = () => run.starved ? pick(['Starved with cheese two streets away.', 'The hunger got there before the horde did.', 'Should have stopped for that crumb.']) : pick(['The streets remember your name.', 'Somewhere, a nest-mate is still running.', 'Scab will tell everyone he did it.', 'The Rat King laughs, for now.', 'Rats always come back.']);
 
 // ---------- Scab, the rival ----------
 /** Scab turns up about half a minute into most districts, heading for a chest. */

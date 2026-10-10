@@ -80,6 +80,20 @@ export const TUNE = {
     poison: 4, // seconds of rot on everything hit
     chestOdds: 0.3, binOdds: 0.08, eliteOdds: 0.1, // chance to drop one (premium chests always do)
   },
+  food: {
+    // Health drains all the time; food is the only way back.
+    drainBase: 0.5, drainPerZone: 0.1, // HP per second = drainBase + drainPerZone × zone (zone 0 first)
+    crumb: 25, wedge: 60, cache: 120, // HP each size restores
+    mold: 0.12, moldSewer: 0.25, // chance a drop is moldy (surface, sewer)
+    moldPoison: 5, // seconds of poison from eating moldy food
+    dropGrace: 0.4, // seconds a fresh drop can't be destroyed by your attacks
+    killOdds: 0.012, killOddsLow: 0.05, // crumb chance per kill (healthy / below 35% HP)
+  },
+  announcer: {
+    low: 0.3, crit: 0.12, // bark below these fractions of max HP
+    rearm: 0.5, // re-arm once health is back above this
+    showSecs: 2.6,
+  },
   sneak: {
     backstab: 1.8, // Shiv damage × from behind
     smokeVuln: 1.3, // enemies in the Smoke Bomb take this × damage

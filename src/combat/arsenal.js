@@ -8,6 +8,7 @@ import { sfx } from '../audio/audio.js';
 import { solidFor, tileAt, topAt, toG } from '../world/grid.js';
 import { near, hit, aoe } from './combat.js';
 import { TUNE } from '../tuning.js';
+import { breakFoodAt } from '../game/food.js';
 
 /** Melee step-in: close most of the gap to a target just outside reach. */
 function stepIn(t, R) {
@@ -125,6 +126,7 @@ export const PRIM = {
       for (let k = 0; k < n; k++) {
         const A = a + (k - (n - 1) / 2) * 0.6;
         swipeFx(A, R, 0xffe8d0);
+        breakFoodAt(P.x + Math.sin(A) * R * 0.55, P.z + Math.cos(A) * R * 0.55, R * 0.55, P.y);
         for (const e of near(P.x, P.y, P.z, R + 0.3, TUNE.combat.meleeFlyReach)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.3) hit(e, 22, A, 4, 'primary', false, true);
       }
     },
@@ -137,6 +139,7 @@ export const PRIM = {
       for (let k = 0; k < n; k++) {
         const A = a + (k - (n - 1) / 2) * 0.7;
         swipeFx(A, R, 0xffc090, true);
+        breakFoodAt(P.x + Math.sin(A) * R * 0.55, P.z + Math.cos(A) * R * 0.55, R * 0.55, P.y);
         for (const e of near(P.x, P.y, P.z, R + 0.3, TUNE.combat.meleeFlyReach)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.3) hit(e, 30, A, 10, 'primary', false, true);
       }
       G.shake = Math.max(G.shake, 0.06);
@@ -152,6 +155,7 @@ export const PRIM = {
       for (let k = 0; k < n; k++) {
         const A = a + (k - (n - 1) / 2) * 0.5;
         swipeFx(A, R, 0xd8f0e0);
+        breakFoodAt(P.x + Math.sin(A) * R * 0.55, P.z + Math.cos(A) * R * 0.55, R * 0.55, P.y);
         for (const e of near(P.x, P.y, P.z, R + 0.3, TUNE.combat.meleeFlyReach)) {
           if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) > 0.9) continue;
           const back = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.ang || 0)) > 2.1, m = back ? TUNE.sneak.backstab : 1;

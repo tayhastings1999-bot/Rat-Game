@@ -69,7 +69,7 @@ export function debugApi(state) {
     /** Fire a district event on the next tick. */
     forceEvent(k) { state.run.forceEv = k; state.run.evT = 0; state.run.events.length = 0; },
     need,
-    god(on = true) { state.st.taken = on ? 0 : 1; },
+    god(on = true) { state.st.taken = on ? 0 : 1; state.G.god = on; },
     hurtBoss(f = 0.35) { const b = state.G.boss; if (b) b.hp -= b.maxHp * f; },
     /** Real hits (through poise and exposure), totalling a share of the boss's max HP. */
     hitBoss(f = 0.07) { const b = state.G.boss; if (b) for (let i = 0; i < 5; i++) hit(b, b.maxHp * f / 5, 0, 0, 'primary', true); },
