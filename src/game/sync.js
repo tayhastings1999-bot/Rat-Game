@@ -10,6 +10,7 @@ import { animTick, writePose, rigTime } from '../render/rig.js';
 import { tickAmbient } from '../fx/ambient.js';
 import { M, G as GRAV, toW, floorY, forPlatsNear } from '../world/grid.js';
 import { fadeU } from '../render/fade.js';
+import { syncTurboFx } from './turbo.js';
 import { TUNE } from '../tuning.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
@@ -409,6 +410,7 @@ export function animate(dt) {
   camera.position.copy(G.camPos).add(shakeV.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(G.shake * 0.45 * settings.shake));
   camera.lookAt(camLook);
   syncFade();
+  syncTurboFx(dt);
   sun.position.set(P.x + 10, P.y + 26, P.z + 8);
   sun.target.position.set(P.x, P.y, P.z);
   lantern.position.set(P.x, P.y + 2.4, P.z);

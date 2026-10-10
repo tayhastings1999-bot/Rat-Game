@@ -3,9 +3,13 @@
 // version of your special or signature: one segment, no cooldown, double
 // damage and a wider radius for a moment. Tap X on its own for your class
 // turbo blast, which spends every full segment and grows with how many.
+import * as THREE from 'three';
 import { rand, TAU } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
-import { boom, fx, puff, spark, bolt, dnum } from '../fx/fx.js';
+import { boom, fx, puff, spark, bolt, dnum, decal, PART_CAP } from '../fx/fx.js';
+import { scene } from '../render/renderer.js';
+import { flameTex } from '../render/textures.js';
+import { CLASSES } from '../data/classes.js';
 import { sfx } from '../audio/audio.js';
 import { floorY, tileAt, solidFor } from '../world/grid.js';
 import { near, hit, sorted } from '../combat/combat.js';
@@ -58,7 +62,8 @@ export function tryTurboMove(kind, fire) {
   const ok = fire();
   if (ok === false) { run.turbo += cost; return true; } // nothing in reach: refund
   dnum(P.x, P.y + 1.9, P.z, 'TURBO', 'crit');
-  fx('ring', P.x, P.y, P.z, 3, 0xffd040, 0.35);
+  fx('ring', P.x, P.y, P.z, 3, col(), 0.35);
+  turboFlair(false);
   sfx('perfect');
   run.turbos = (run.turbos || 0) + 1;
   return true;
@@ -78,6 +83,74 @@ export function tickTurbo(dt) {
   }
   // Blinded by smoke: the mark wears off.
   for (const e of W.enemies) if (e.smokeT > 0) e.smokeT -= dt;
+}
+
+// ---------- how turbo looks ----------
+// While a turbo move is boosted the rat burns in its class colour (an aura and a
+// turning ground ring); armed turbo glows faintly gold. Every turbo move and blast
+// rears the rat up and throws a flourish of its own, and the screen flashes gold.
+const auraMat = new THREE.SpriteMaterial({ map: flameTex, color: 0xffd040, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
+const aura = new THREE.Sprite(auraMat);
+aura.scale.setScalar(2.6);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd040, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+const ring0 = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 28).rotateX(-Math.PI / 2), ringMat);
+const domeMat = new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0, depthWrite: false, wireframe: true });
+const dome = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), domeMat);
+scene.add(aura, ring0, dome);
+let domeT = 0;
+const col = () => new THREE.Color((CLASSES[run.cls] && CLASSES[run.cls].rc) || '#ffd040').getHex();
+/** Called every frame from sync.js once the rat is placed. */
+export function syncTurboFx(dt) {
+  const boosted = P.turboT > 0 && G.state !== 'menu', armed = !!G.turboHeld && G.state === 'play';
+  const want = boosted ? 0.85 : armed ? 0.35 + 0.15 * Math.sin(G.time * 10) : 0;
+  auraMat.opacity += (want - auraMat.opacity) * Math.min(1, dt * 12);
+  auraMat.color.setHex(boosted ? col() : 0xffd040);
+  aura.position.set(P.x, P.y + 0.6, P.z);
+  aura.scale.setScalar(2.4 + 0.25 * Math.sin(G.time * 14));
+  aura.visible = auraMat.opacity > 0.02;
+  ringMat.opacity += ((boosted ? 0.7 : 0) - ringMat.opacity) * Math.min(1, dt * 10);
+  ringMat.color.setHex(col());
+  ring0.position.set(P.x, floorY(P.x, P.z) + 0.06, P.z);
+  ring0.rotation.y += dt * 4;
+  ring0.scale.setScalar(1 + 0.15 * Math.sin(G.time * 9));
+  ring0.visible = ringMat.opacity > 0.02;
+  if (domeT > 0) { domeT -= dt; const u = 1 - domeT / 0.45; dome.position.set(P.x, P.y + 0.5, P.z); dome.scale.setScalar(1 + u * 4); domeMat.opacity = 0.5 * (1 - u); dome.visible = true; } else dome.visible = false;
+}
+const part = p => { if (W.parts.length >= PART_CAP) W.parts.shift(); W.parts.push(p); };
+/** Each class's turbo flourish, at the rat. `big` for blasts. */
+const FLOURISH = {
+  brawler(big) { // the street cracks under it
+    const y = floorY(P.x, P.z);
+    for (let i = 0; i < (big ? 9 : 5); i++) { const a = i / (big ? 9 : 5) * TAU + rand(-0.2, 0.2), r = rand(1.2, big ? 4 : 2.6); decal(P.x + Math.sin(a) * r, y + 0.02, P.z + Math.cos(a) * r, rand(0.5, 1.1), 0x1a1410); }
+    for (let i = 0; i < (big ? 24 : 12); i++) { const a = rand(0, TAU), v = rand(3, 7); part({ x: P.x, y: y + 0.2, z: P.z, vx: Math.sin(a) * v, vy: rand(4, 8), vz: Math.cos(a) * v, life: 0.9, c: 0x8a7a6a, s: rand(0.8, 1.4), b: true }); }
+    G.shake = Math.max(G.shake, big ? 0.9 : 0.45);
+  },
+  plague(big) { // a column of rot
+    for (let i = 0; i < (big ? 50 : 26); i++) { const a = rand(0, TAU), r = rand(0, 1.4); part({ x: P.x + Math.sin(a) * r, y: P.y + 0.2, z: P.z + Math.cos(a) * r, vx: Math.sin(a) * 0.6, vy: rand(3, big ? 9 : 6), vz: Math.cos(a) * 0.6, life: rand(0.8, 1.4), c: i % 3 ? 0x9be06a : 0x4a8a2a, s: rand(1, 1.8), ng: true }); }
+  },
+  slinger(big) { // a spiralling halo of stones
+    const n = big ? 24 : 14;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, r = 1.2; part({ x: P.x + Math.sin(a) * r, y: P.y + 0.8, z: P.z + Math.cos(a) * r, vx: Math.cos(a) * 6 + Math.sin(a) * 2, vy: 0.5, vz: -Math.sin(a) * 6 + Math.cos(a) * 2, life: 0.6, c: 0xf2d090, s: 1.1, ng: true }); }
+  },
+  warlock(big) { // runes underfoot and lightning from above
+    fx('ring', P.x, P.y, P.z, 2.2, 0xb46cff, 0.6, G.time);
+    fx('ring', P.x, P.y, P.z, 3.4, 0xc080ff, 0.8, -G.time);
+    for (let i = 0; i < (big ? 4 : 2); i++) { const a = rand(0, TAU), r = rand(1, 3); bolt([[P.x + Math.sin(a) * r, P.y + 9, P.z + Math.cos(a) * r], [P.x + Math.sin(a) * r * 0.5, P.y + 4, P.z + Math.cos(a) * r * 0.5], [P.x, P.y + 0.6, P.z]]); }
+  },
+  tank() { domeT = 0.45; }, // a shell of light bursts outward
+  sneak(big) { // afterimages trail behind
+    for (let i = 1; i <= (big ? 6 : 4); i++) { const x = P.x - Math.sin(P.facing) * i * 0.6, z = P.z - Math.cos(P.facing) * i * 0.6; puff(x, P.y + 0.5, z, 0x1a2a22, 5, 1); spark(x, P.y + 0.7, z, 0.6, 0x5ad0a0); }
+  },
+  roof(big) { // feathers spiral up
+    for (let i = 0; i < (big ? 36 : 20); i++) { const a = i * 0.55, r = 0.6 + i * 0.04; part({ x: P.x + Math.sin(a) * r, y: P.y + 0.2 + i * 0.05, z: P.z + Math.cos(a) * r, vx: Math.cos(a) * 2.5, vy: rand(3, 6), vz: -Math.sin(a) * 2.5, life: 1, c: i % 2 ? 0x9ad8ff : 0xe8f4ff, s: 0.9, ng: true }); }
+  },
+};
+/** The shared turbo moment: pose, flourish, flash. */
+export function turboFlair(big) {
+  if (!P.sig) P.sig = { kind: 'turbo', t: 0.35, dur: 0.35 }; // a signature's own pose wins
+  const f = FLOURISH[run.cls];
+  if (f) f(big);
+  G.flashGold = Math.max(G.flashGold || 0, big ? 0.9 : 0.5);
 }
 
 // ---------- the class turbo blasts (X) ----------
@@ -170,6 +243,8 @@ export function turboBlast() {
   if (n < T.blastMin) { dnum(P.x, P.y + 1.6, P.z, 'Turbo meter empty', 'info'); return; }
   run.turbo -= n;
   const m = T.blastBase + T.blastPerSeg * (n - 1);
+  P.sig = null;
+  turboFlair(true);
   B.use(m, n);
   dnum(P.x, P.y + 2, P.z, `${B.name.toUpperCase()} ×${n}`, 'crit');
   sfx('boss');

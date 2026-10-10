@@ -256,6 +256,7 @@ export function sigPose(rat) {
     case 'cast': rat.body.rotation.x = -0.4 * env; L[1].rotation.x = -2.2 * env; L[0].rotation.x = -1.2 * env; rat.head.rotation.x = -0.3 * env; break;
     case 'brace': rat.body.position.y -= 0.12 * env; rat.head.position.y -= 0.12 * env; rat.head.rotation.x = 0.35 * env; L[0].rotation.x = L[1].rotation.x = 0.5 * env; break;
     case 'step': rat.g.scale.multiplyScalar(0.6 + 0.4 * Math.abs(u * 2 - 1)); break;
+    case 'turbo': rat.body.rotation.x = -0.6 * env; rat.head.rotation.x = -0.5 * env; L[0].rotation.x = L[1].rotation.x = -2 * env; rat.jaw.rotation.x = 0.22 + 0.7 * env; break; // rear up and roar
     case 'leap': rat.body.rotation.x = -0.4 * env; L[2].rotation.x = L[3].rotation.x = 0.9 * env; break;
     case 'dive': rat.body.rotation.x = 1.0; rat.head.rotation.x = 0.4; L[0].rotation.x = L[1].rotation.x = -1.5; L[2].rotation.x = L[3].rotation.x = 1.2; break;
   }
