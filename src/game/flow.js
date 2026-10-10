@@ -22,6 +22,7 @@ import { storyBeat } from './personality.js';
 import { onRunStart, onDistrict, forcedObjective, storyGoal } from './story.js';
 import { districtStart } from './score.js';
 import { placeRoles } from '../entities/roles.js';
+import { TUNE } from '../tuning.js';
 
 export function freshStats(C) {
   const melee = C.prim === 'rake' || C.prim === 'gnash';
@@ -98,7 +99,7 @@ export function startRun(k) {
   run.seed = seed;
   setRat(C);
   G.state = 'play';
-  G.camYaw = Math.PI; G.camPitch = 0.9; G.camDist = 13;
+  G.camYaw = Math.PI; G.camPitch = TUNE.camera.pitch; G.camDist = TUNE.camera.dist;
   G.camOff.set(0, 0, 0);
   P.scent = false; P.carry = null; P.inv = 1;
   hideOverlay();

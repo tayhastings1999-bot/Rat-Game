@@ -9,6 +9,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, rng, shuffleR, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { world, cutPlane, bury } from '../render/renderer.js';
+import { applyFade } from '../render/fade.js';
 import { Bx, Co, Cy } from '../render/models.js';
 import { metalTex, furTex, flameTex } from '../render/textures.js';
 import { spark, bolt, dnum, puff } from '../fx/fx.js';
@@ -183,10 +184,11 @@ export function applyCutaway() {
   if (cap) { cap.visible = false; cap.userData.floor = true; world.add(cap); }
   capI = geos.length ? new THREE.Mesh(mergeGeometries(geos.map(g => g.clone().translate(0, INT_CUT_Y - CUT_Y, 0))), new THREE.MeshBasicMaterial({ color: 0x0c0a10 })) : null;
   if (capI) { capI.visible = false; capI.userData.floor = true; world.add(capI); }
-  // Every building, prop and lamp in the district gets sliced by the cut plane; floors and water don't.
+  // Every building, prop and lamp in the district gets sliced by the cut plane and opens the
+  // see-through hole around the rat (render/fade.js); floors and water do neither.
   const mats = new Set();
   world.traverse(o => { if (o.material && !o.userData.floor) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); });
-  for (const m of mats) { m.clippingPlanes = [cutPlane]; m.needsUpdate = true; }
+  for (const m of mats) { m.clippingPlanes = [cutPlane]; applyFade(m); m.needsUpdate = true; }
 }
 
 // ---------- runtime ----------

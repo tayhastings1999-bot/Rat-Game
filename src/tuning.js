@@ -17,6 +17,19 @@ export const TUNE = {
     elitePerThreat: 0.008,
     eliteMax: 0.2,
   },
+  camera: {
+    // Fixed-angle follow camera. Walls between it and the rat get a dithered see-through hole.
+    pitch: 0.9, // radians above the horizon
+    dist: 13, // starting distance; the mouse wheel zooms between minDist and maxDist
+    minDist: 8,
+    maxDist: 20,
+    fov: 55,
+    lead: 0.16, // look ahead of the rat by this × its velocity
+    cutPitch: 1.32, // steeper look-down inside ducts and buildings (the cutaway)
+    fade: true, // the see-through hole
+    fadeRadius: 2.6, // hole radius around the rat, world units
+    fadeOpacity: 0.92, // how open the hole's centre is (1 = fully clear)
+  },
   player: {
     rollCd: 1.2, // seconds between dodges
     rollTime: 0.3, // dodge duration

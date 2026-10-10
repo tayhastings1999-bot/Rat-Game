@@ -3,12 +3,14 @@
 import * as THREE from 'three';
 import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
-import { camera, sun, lantern, lampL, post } from '../render/renderer.js';
+import { camera, sun, lantern, lampL, post, renderer } from '../render/renderer.js';
 import { IMB, IMG, MOB_CAP, shadowIM, scrapIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
 import { animTick, writePose, rigTime } from '../render/rig.js';
 import { tickAmbient } from '../fx/ambient.js';
-import { M, G as GRAV, toW, floorY, segBlocked, forPlatsNear } from '../world/grid.js';
+import { M, G as GRAV, toW, floorY, forPlatsNear } from '../world/grid.js';
+import { fadeU } from '../render/fade.js';
+import { TUNE } from '../tuning.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
 import { blob, ratExtras } from '../entities/rat.js';
@@ -388,32 +390,25 @@ export function animate(dt) {
   blob.position.set(P.x, gy + 0.03, P.z);
   blob.scale.setScalar(clamp(1 - (P.y - gy) * 0.08, 0.4, 1));
 
-  // Camera: orbit the rat; if a building would hide it, lift the camera and then pull it in.
-  // Look a little ahead of where the rat is running; widen the lens at a sprint or a dive.
-  const play = G.state === 'play';
-  lead.x += ((play ? P.vx * 0.16 : 0) - lead.x) * Math.min(1, dt * 3);
-  lead.z += ((play ? P.vz * 0.16 : 0) - lead.z) * Math.min(1, dt * 3);
-  const fov = 55 + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
+  // Camera: a fixed angle that follows the rat. Walls in the way get a dithered see-through
+  // hole (render/fade.js) instead of moving the camera. Inside a duct or a building the
+  // camera tips further over to look down into the cutaway.
+  const C = TUNE.camera, play = G.state === 'play';
+  lead.x += ((play ? P.vx * C.lead : 0) - lead.x) * Math.min(1, dt * 3);
+  lead.z += ((play ? P.vz * C.lead : 0) - lead.z) * Math.min(1, dt * 3);
+  const fov = C.fov + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
   tgt.set(P.x + G.camOff.x + (P.inDuct || P.inBldg ? 0 : lead.x), P.y + 1, P.z + G.camOff.z + (P.inDuct || P.inBldg ? 0 : lead.z));
-  const place = (pitch, dist) => want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
-  let fix = 0;
-  if (P.inDuct || P.inBldg) fix = 0.55; // cutaway: look down on the maze (or into the room)
-  else if (G.state === 'play' || G.state === 'menu') {
-    for (let s = 0; s <= 10; s++) {
-      const f = s / 10;
-      place(G.camPitch + (1.38 - G.camPitch) * Math.min(1, f * 1.6), G.camDist * (1 - Math.max(0, f - 0.6) * 1.5));
-      if (!segBlocked(tgt.x, tgt.y, tgt.z, want.x, want.y, want.z)) { fix = f; break; }
-      fix = f;
-    }
-  }
-  camFix += (fix - camFix) * Math.min(1, (fix > camFix ? 8 : 2.5) * dt);
-  place(G.camPitch + (1.38 - G.camPitch) * Math.min(1, camFix * 1.6), G.camDist * (1 - Math.max(0, camFix - 0.6) * 1.5));
+  const cut = (P.inDuct || P.inBldg) ? 1 : 0;
+  camFix += (cut - camFix) * Math.min(1, (cut > camFix ? 8 : 2.5) * dt);
+  const base = G.state === 'menu' ? G.camPitch : C.pitch, pitch = base + (C.cutPitch - base) * camFix, dist = G.camDist;
+  want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   G.camPos.lerp(want, 1 - Math.exp(-10 * dt));
   camLook.lerp(tgt, 1 - Math.exp(-14 * dt));
   G.shake = Math.max(0, G.shake - dt * 1.6);
   camera.position.copy(G.camPos).add(shakeV.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(G.shake * 0.45 * settings.shake));
   camera.lookAt(camLook);
+  syncFade();
   sun.position.set(P.x + 10, P.y + 26, P.z + 8);
   sun.target.position.set(P.x, P.y, P.z);
   lantern.position.set(P.x, P.y + 2.4, P.z);
@@ -426,4 +421,20 @@ export function animate(dt) {
   U.moon.value += ((run.moon && G.state !== 'menu' ? 1 : 0) - U.moon.value) * Math.min(1, 2 * dt);
   U.dark.value = G.darkness;
   U.toxic.value += ((isSewer() && G.state !== 'menu' ? 1 : 0) - U.toxic.value) * Math.min(1, 2 * dt);
+}
+
+/** Point the see-through hole at the rat: its screen position and a radius sized in world units. */
+const _fv = new THREE.Vector3(), _sz = new THREE.Vector2();
+function syncFade() {
+  const C = TUNE.camera, on = C.fade && (G.state === 'play' || G.state === 'paused' || G.state === 'map') && !(P.inDuct || P.inBldg);
+  fadeU.fadeAmt.value += ((on ? C.fadeOpacity : 0) - fadeU.fadeAmt.value) * 0.25;
+  if (fadeU.fadeAmt.value < 0.01) { fadeU.fadeAmt.value = 0; return; }
+  camera.updateMatrixWorld();
+  fadeU.fadeRat.value.set(P.x, P.y + 0.6, P.z);
+  fadeU.fadeCam.value.copy(camera.position);
+  renderer.getSize(_sz);
+  _fv.copy(fadeU.fadeRat.value).project(camera);
+  const dist = camera.position.distanceTo(fadeU.fadeRat.value);
+  const rPx = C.fadeRadius / (dist * Math.tan(camera.fov * Math.PI / 360)) * (_sz.y / 2);
+  fadeU.fadeScr.value.set((_fv.x * 0.5 + 0.5) * _sz.x, (_fv.y * 0.5 + 0.5) * _sz.y, rPx);
 }

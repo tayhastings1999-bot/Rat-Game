@@ -11,6 +11,7 @@ import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
 import { pause, resume, openMap } from '../ui/screens.js';
 import { useSig } from './signature.js';
+import { TUNE } from '../tuning.js';
 
 /** Attack is held while the mouse button, J or the touch button is down. */
 const held = { mouse: false, key: false };
@@ -71,7 +72,7 @@ export function initInput() {
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', () => { held.mouse = false; syncAttack(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
-  canvas.addEventListener('wheel', e => { e.preventDefault(); G.camDist = clamp(G.camDist + e.deltaY * 0.012, 6, 28); }, { passive: false });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); G.camDist = clamp(G.camDist + e.deltaY * 0.012, TUNE.camera.minDist, TUNE.camera.maxDist); }, { passive: false });
   addEventListener('pointerdown', audioInit);
   addEventListener('mousemove', e => {
     if (G.touch) return;
