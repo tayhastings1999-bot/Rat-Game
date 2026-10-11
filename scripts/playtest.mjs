@@ -88,24 +88,22 @@ const r1 = v => Math.round(v * 10) / 10;
 // ---------------------------------------------------------------- static level checks
 if (want('static')) {
   log('static level checks');
-  const runs = QUICK ? 3 : 10, out = [];
-  for (let r = 0; r < runs; r++) {
-    await S(() => { const s = __scurry; s.qa.stop(); s.startRun('brawler'); });
-    for (let d = 0; d < 4; d++) {
-      await sleep(200);
-      const res = await S(() => { const s = __scurry; return { name: s.M.kind + ' ' + document.getElementById('zoneName').textContent, seed: s.run.seed, district: s.run.district, ...s.qa.staticChecks() }; });
-      out.push(res);
-      await settle();
-      await S(() => __scurry.exitRoad());
-      await sleep(600);
-      await settle();
-    }
-    await settle();
-    await S(() => __scurry.enterSewer());
-    await sleep(600);
-    await settle();
-    out.push(await S(() => { const s = __scurry; return { name: 'sewer ' + document.getElementById('zoneName').textContent, seed: s.run.seed, ...s.qa.staticChecks() }; }));
+  // Every level has a fixed seed now, so one pass over all of them covers the game.
+  const out = [];
+  await S(() => { const s = __scurry; s.qa.stop(); s.startRun('brawler'); });
+  await settle();
+  const lv = await S(() => ({ c: __scurry.LEVELS.CITY_LEVELS.length, s: __scurry.LEVELS.SEWER_LEVELS.length, x: Object.keys(__scurry.LEVELS.SECRET_LEVELS) }));
+  const all = [...Array.from({ length: lv.c }, (_, i) => ['surface', i, null]), ...Array.from({ length: lv.s }, (_, i) => ['sewer', i, null]), ...lv.x.map(k => [k === 'garden' ? 'sewer' : 'surface', 0, k])];
+  for (const [layer, i, secret] of all) {
+    out.push(await S(([layer, i, secret]) => {
+      const s = __scurry, r = s.run;
+      r.layer = layer; r.secret = secret; if (layer === 'sewer') r.sewerIdx = i; else r.district = i; r.tier = i; r.nests = 0;
+      r.seed = s.levelSeed(); s.setupWorld(r.seed);
+      return { name: s.M.kind + ' ' + s.dName(), seed: r.seed, district: i, ...s.qa.staticChecks() };
+    }, [layer, i, secret]));
+    await sleep(60);
   }
+  await S(() => { __scurry.run.secret = null; });
   const issues = out.flatMap(o => o.issues.map(i => ({ ...i, where: o.name, seed: o.seed })));
   report.playability.static = {
     districts: out.length, errors: issues.filter(i => i.sev === 'error'), warnings: issues.filter(i => i.sev === 'warn'),

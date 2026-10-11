@@ -98,6 +98,7 @@ const domeMat = new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true
 const dome = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), domeMat);
 scene.add(aura, ring0, dome);
 let domeT = 0;
+export const turboAuraOpacity = () => auraMat.opacity;
 const col = () => new THREE.Color((CLASSES[run.cls] && CLASSES[run.cls].rc) || '#ffd040').getHex();
 /** Called every frame from sync.js once the rat is placed. */
 export function syncTurboFx(dt) {

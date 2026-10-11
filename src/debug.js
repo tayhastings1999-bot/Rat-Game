@@ -41,7 +41,7 @@ import { staticChecks } from './qa/checks.js';
 import { spawnReaper } from './game/reaper.js';
 import { throwVial, dropVial } from './game/vials.js';
 import { tickThieves, robberAI } from './game/thieves.js';
-import { turboBlast, turboGain } from './game/turbo.js';
+import { turboBlast, turboGain, turboAuraOpacity } from './game/turbo.js';
 import { breakFoodAt, drainRate } from './game/food.js';
 import { tickNest, tierHp } from './game/nests.js';
 import { fadeU } from './render/fade.js';
@@ -53,7 +53,7 @@ export function debugApi(state) {
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, dropKey, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, die, pause, dropKey, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {

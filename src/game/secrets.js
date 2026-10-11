@@ -48,8 +48,8 @@ export function placeSecretDrain(hidden, kind) {
 export function setupSecret(info) {
   const D = curD(), S = TUNE.secrets;
   run.secretOpen = false;
-  run.scabSeen = true; // Scab doesn't follow you down here
   if (!D.secret) return;
+  run.scabSeen = true; // Scab doesn't follow you down here
   run.secretsSeen = (run.secretsSeen || 0) + 1;
   const rooms = (info.byDist || []).slice(), at = i => { const r = rooms[i % Math.max(1, rooms.length)]; return r ? [toW(r.cx), toW(r.cy)] : [P.x + rand(-8, 8), P.z + rand(-8, 8)]; };
   if (D.secret === 'vault') {

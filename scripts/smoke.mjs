@@ -316,7 +316,9 @@ await step('squeeze network: crawl in, cutaway, mobs locked out, rival nests', a
   await S(() => { for (const e of __scurry.W.enemies) if (e.tag) __scurry.kill(e); });
 });
 await step('perfect dodge, district events', async () => {
-  await S(() => { const { W, G } = __scurry; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; __scurry.P.rollCd = 0; });
+  // Back out on the street at the start (the last step may have left the rat in a crawlspace), so events have room to spawn.
+  await S(() => { const { W, G, P, M } = __scurry, r = G.startRoom, toW = g => (g - M.W / 2 + 0.5) * 4; P.x = toW(r.cx); P.z = toW(r.cy); P.y = 0; P.vx = P.vz = P.vy = 0; G.flowT = 0; for (const e of W.enemies) if (!e.boss && e.type !== 'nest' && !e.rival) __scurry.kill(e); G.testNoBusy = true; P.rollCd = 0; });
+  await wait(500);
   // Roll, and get "hit" in the opening of the roll.
   await page.keyboard.press('ShiftLeft');
   const pd = await rawUntil(() => { const { P } = __scurry; if (P.roll > 0.1) { __scurry.hurtP(10, null); return { t: P.perfectT, slow: __scurry.G.slowMo }; } return null; }, 3000);

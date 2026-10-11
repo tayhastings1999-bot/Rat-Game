@@ -4,7 +4,7 @@ import { rand, pick, $ } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { gi, inG, toG, toW, tAt, floorY, bfs, OPEN, N8 } from '../world/grid.js';
+import { M, gi, inG, toG, toW, tAt, floorY, bfs, OPEN, N8 } from '../world/grid.js';
 import { scrapDrop } from '../combat/combat.js';
 import { spawnEnemy, moveBody } from '../entities/mobs.js';
 import { thiefAI } from './objectives.js';
@@ -56,14 +56,18 @@ function spawnScab() {
   const mode = scabMode();
   if (mode === 'gone') return;
   if (mode === 'ally') { scabGift(); return; }
-  const chests = W.chests.filter(c => !c.open && !c.cursed && c.y < 0.5 && Math.hypot(c.x - P.x, c.z - P.z) > 15);
+  // A chest he can get to (on the rat's path network), far enough away to be a race.
+  const reach = c => { const k = inG(toG(c.x), toG(c.z)) ? M.flow[gi(toG(c.x), toG(c.z))] : -1; return k >= 0 || !M.flow; };
+  const chests = W.chests.filter(c => !c.open && !c.cursed && c.y < 0.5 && Math.hypot(c.x - P.x, c.z - P.z) > 15 && reach(c));
   if (!chests.length) return;
-  const c = chests[(Math.random() * chests.length) | 0];
-  // Start him a little way from the chest, on open ground.
-  let e = null;
-  for (let i = 0; i < 20 && !e; i++) {
-    const a = rand(0, 6.3), r = rand(8, 14), x = c.x + Math.sin(a) * r, z = c.z + Math.cos(a) * r, t = tAt(toG(x), toG(z));
-    if (t === 1 || t === 9 || t === 10) e = spawnEnemy('mawling', x, z, { plain: true, sc: 1.25, hpMul: (8 + run.tier * 3) * Math.pow(1.5, run.scabLosses || 0), force: true, name: 'Scab' });
+  // Start him a little way from a chest, on open ground; if one chest is boxed in, try the next.
+  let e = null, c = null;
+  for (const cand of chests.sort(() => Math.random() - 0.5)) {
+    for (let i = 0; i < 16 && !e; i++) {
+      const a = rand(0, 6.3), r = rand(8, 14), x = cand.x + Math.sin(a) * r, z = cand.z + Math.cos(a) * r, t = tAt(toG(x), toG(z));
+      if (t === 1 || t === 9 || t === 10) e = spawnEnemy('mawling', x, z, { plain: true, sc: 1.25, hpMul: (8 + run.tier * 3) * Math.pow(1.5, run.scabLosses || 0), force: true, name: 'Scab' });
+    }
+    if (e) { c = cand; break; }
   }
   if (!e) return;
   const gx = toG(c.x), gz = toG(c.z);

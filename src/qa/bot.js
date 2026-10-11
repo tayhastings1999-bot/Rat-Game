@@ -40,6 +40,7 @@ export function parseGoal(text = '') {
   const t = text.toLowerCase();
   if (/break|glitch|out of bounds|clip/.test(t)) return 'break';
   if (/die|fail|lose/.test(t)) return 'die';
+  if (/secret|hidden/.test(t)) return 'secret';
   if (/manhole|sewer|descend/.test(t)) return 'manhole';
   if (/nest/.test(t)) return 'nests';
   if (/boss/.test(t)) return 'boss';
@@ -187,6 +188,7 @@ function chooseTarget() {
   if (B.goal === 'break') return breakTarget();
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };
+  if (B.goal === 'secret' && G.secretExit) return { x: G.secretExit.x, z: G.secretExit.z, kind: 'secret' }; // best effort: it may sit behind a cracked wall
   if (B.goal === 'interior') {
     for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1 && !B.banned.has((k % M.W) + ',' + ((k / M.W) | 0))) return { x: toW(k % M.W), z: toW((k / M.W) | 0), kind: 'interior' };
   }
@@ -511,6 +513,7 @@ function lastHurt() {
 function goalMet() {
   switch (B.goal) {
     case 'manhole': return run.layer === 'sewer';
+    case 'secret': return !!run.secret;
     case 'boss': return run.bossDone;
     case 'nests': return !W.enemies.some(e => e.type === 'nest' && !e.dead);
     case 'interior': return !!P.inBldg;

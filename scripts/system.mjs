@@ -273,6 +273,89 @@ await check('thieves steal a vial and give it back when caught', async () => {
   assert(r.back >= 1, 'vial not dropped when caught');
   return 'stolen and recovered';
 });
+await check('22 levels with fixed seeds, remixes and boss variants', async () => {
+  await fresh();
+  const r = await S(() => {
+    const s = __scurry, L = s.LEVELS, run = s.run, n = L.CITY_LEVELS.length + L.SEWER_LEVELS.length + Object.keys(L.SECRET_LEVELS).length;
+    const hash = () => { let h = 0; for (let k = 0; k < s.M.grid.length; k++) h = (h * 31 + s.M.grid[k]) | 0; return h; };
+    run.district = 4; run.tier = 4; s.setupWorld(s.levelSeed()); const a = hash(), D = s.curD(), name = s.dName();
+    s.setupWorld(s.levelSeed()); const b = hash();
+    run.district = 0; run.tier = 0; s.setupWorld(s.levelSeed()); const c = hash();
+    return { n, same: a === b, differs: a !== c, name, bossV: D.bossV, night: D.night };
+  });
+  assert(r.n === 22, `${r.n} levels`);
+  assert(r.same, 'the same level built twice came out different');
+  assert(r.differs, 'a remix has the same layout as its original');
+  assert(r.night && r.bossV && /After Dark/.test(r.name), 'remix not set up: ' + JSON.stringify(r));
+  return `22 levels · ${r.name} · boss variant ${r.bossV}`;
+});
+await check('a secret drain leads to a secret zone and on to the next level', async () => {
+  await fresh();
+  const d = await S(() => { const s = __scurry; s.run.district = 3; s.run.tier = 3; s.setupWorld(s.levelSeed()); const e = s.G.secretExit; return e && { x: e.x, z: e.z, y: e.y, kind: e.kind }; });
+  assert(d && d.kind === 'vault', 'no drain in Hollow Heights');
+  await S(d => { const P = __scurry.P; P.x = d.x; P.z = d.z; P.y = d.y; P.vx = P.vz = 0; }, d);
+  let sec = null;
+  for (let i = 0; i < 40 && !sec; i++) { await sleep(100); sec = await S(() => __scurry.G.state === 'play' && __scurry.run.secret); }
+  assert(sec === 'vault', 'did not reach the vault');
+  let ex = null;
+  for (let i = 0; i < 40 && !ex; i++) { await sleep(100); ex = await S(() => { const e = __scurry.G.exitD; return e && { x: e.x, z: e.z }; }); }
+  assert(ex, 'the vault has no open exit');
+  await S(e => { const P = __scurry.P; P.x = e.x; P.z = e.z; P.y = 0; }, ex);
+  let after = null;
+  for (let i = 0; i < 40; i++) { await sleep(100); after = await S(() => ({ st: __scurry.G.state, secret: __scurry.run.secret, d: __scurry.run.district })); if (after.st === 'play' && !after.secret) break; }
+  assert(!after.secret && after.d === 4, 'did not come out at the next level: ' + JSON.stringify(after));
+  return 'Hollow Heights → The Cheese Vault → level 5';
+});
+await check('the first zone is gentler: slower drain, no Warrens before zone 2', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry, T = s.TUNE; const rate = s.drainRate(); let w = 0; for (const z of [0, 1]) { s.run.tier = z; s.run.district = z; s.setupWorld(s.levelSeed()); w += s.W.enemies.filter(e => e.type === 'nest' && e.tier === 3).length; } return { rate, want: T.food.drainZone0, w }; });
+  assert(r.rate === r.want, `zone 0 drains ${r.rate}`);
+  assert(r.w === 0, `${r.w} Warrens in zones 0–1`);
+  return `${r.rate} HP/s · 0 Warrens`;
+});
+await check('thieves grab a key first', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry; s.run.keys = 1; s.run.vials = 1; s.run.robT = 0; s.run.robber = null; s.tickThieves(0.05); const e = s.run.robber; if (!e) return null; e.x = s.P.x + 0.4; e.z = s.P.z; e.y = s.P.y; s.robberAI(e, 0.02); const took = e.loot && e.loot.key; s.kill(e); return { took, keys: s.run.keys, vials: s.run.vials, back: s.W.keys.length }; });
+  assert(r, 'no thief');
+  assert(r.took && r.keys === 0 && r.vials === 1, 'thief did not take the key: ' + JSON.stringify(r));
+  assert(r.back >= 1, 'key not dropped when the thief was caught');
+  return 'key stolen and recovered';
+});
+await check('a grave wakes the Reaper when you come close', async () => {
+  await fresh();
+  const g = await S(() => { const s = __scurry; s.run.district = 3; s.run.tier = 3; s.setupWorld(s.levelSeed()); const g = s.G.grave; return g && { x: g.x, z: g.z }; });
+  assert(g, 'no grave in Hollow Heights');
+  await S(g => { const P = __scurry.P; P.x = g.x + 9; P.z = g.z; P.y = 0; }, g);
+  let up = false;
+  for (let i = 0; i < 30 && !up; i++) { await sleep(100); up = await S(() => !!(__scurry.run.reaper && __scurry.run.reaper.fromGrave)); }
+  assert(up, 'the Reaper stayed in its grave');
+  return 'risen';
+});
+await check('sleeping packs wake together', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry; s.setupWorld(s.levelSeed()); const sl = s.W.enemies.filter(e => e.sleep); return { n: sl.length, packs: new Set(sl.map(e => e.sleep)).size, first: sl[0] && { x: sl[0].x, z: sl[0].z, id: sl[0].sleep } }; });
+  assert(r.n > 0 && r.packs >= 4, `packs: ${JSON.stringify(r)}`);
+  await S(f => { const s = __scurry; const e = s.W.enemies.find(e => e.sleep === f.id); s.hit(e, 1, 0, 0, 'event', true); }, r.first);
+  let left = 99;
+  for (let i = 0; i < 20 && left; i++) { await sleep(100); left = await S(id => __scurry.W.enemies.filter(e => e.sleep === id).length, r.first.id); }
+  assert(left === 0, `${left} of the pack still asleep after one was hit`);
+  return `${r.packs} packs · ${r.n} mobs`;
+});
+await check('food in your line of fire flashes red', async () => {
+  await fresh('slinger');
+  const r = await S(async () => { const s = __scurry, P = s.P; const f = s.dropFood(P.x, P.y, P.z + 5, 'wedge', { mold: false, exact: true }); f.safe = 99; const off = s.dropFood(P.x + 6, P.y, P.z - 6, 'wedge', { mold: false, exact: true }); off.safe = 99; s.run.foodWarned = 0; s.G.aimAt = { x: P.x, z: P.z + 9 }; s.G.attack = true; let seen = false; for (let i = 0; i < 20 && !seen; i++) { await new Promise(r => setTimeout(r, 50)); seen = f.ws.visible; } s.G.attack = false; s.G.aimAt = null; return { seen, warned: s.run.foodWarned, offLit: off.ws.visible }; });
+  assert(r.seen && r.warned > 0, 'food in the shot line never flashed');
+  return 'warned';
+});
+await check('a turbo move lights the turbo aura', async () => {
+  await fresh();
+  await S(() => { __scurry.run.turbo = 2; __scurry.run.specT = 9; });
+  await page.keyboard.down('KeyX'); await page.keyboard.press('KeyQ'); await page.keyboard.up('KeyX');
+  let lit = false;
+  for (let i = 0; i < 20 && !lit; i++) { await sleep(60); lit = await S(() => __scurry.P.turboT > 0 && __scurry.turboAuraOpacity() > 0.2); }
+  assert(lit, 'no aura during the turbo window');
+  return 'aura on';
+});
 await check('walls between the camera and the rat open a see-through hole', async () => {
   await fresh();
   await sleep(300);

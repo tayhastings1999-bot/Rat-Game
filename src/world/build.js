@@ -446,6 +446,7 @@ function cars(spots, start) {
 function dumpsters(spots) {
   const mat = lam(0x2e5a3a, { map: metalTex });
   for (const s of spots) {
+    if (!DRY(tAt(s.gx, s.gy))) continue; // the spot was walled over later in generation
     const x = toW(s.gx), z = toW(s.gy), alongX = s.along === 'x';
     staticBox(x, z, alongX ? 2.4 : 1.4, alongX ? 1.4 : 2.4, 1.4, mat);
     const lid = mkMesh(new THREE.BoxGeometry(alongX ? 2.5 : 1.5, 0.1, alongX ? 1.5 : 2.5), lam(0x1e3a26), x, 1.45, z);
@@ -568,7 +569,14 @@ function clutter(city) {
   const sr = G.startRoom;
   for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !(sr && Math.abs(k % M.W - sr.cx) <= 2 && Math.abs(((k / M.W) | 0) - sr.cy) <= 2)) open.push(k);
   shuffleR(open);
-  const place = (n, fn) => { for (let i = 0; i < n && open.length; i++) { const k = open.pop(); fn(toW(k % M.W) + rr(-1.4, 1.4), toW((k / M.W) | 0) + rr(-1.4, 1.4)); } };
+  // Clutter goes on open floor, clear of walls and of props already placed (no buried bins).
+  const clear = (x, z) => DRY(tAt(Math.floor(x / T + M.W / 2), Math.floor(z / T + M.H / 2))) && !W.plats.some(p => Math.abs(p.x - x) < p.w / 2 + 0.9 && Math.abs(p.z - z) < p.d / 2 + 0.9 && p.y - p.th < 0.5);
+  const place = (n, fn) => {
+    for (let i = 0; i < n && open.length; i++) {
+      const k = open.pop();
+      for (let t = 0; t < 4; t++) { const x = toW(k % M.W) + rr(-1.4, 1.4), z = toW((k / M.W) | 0) + rr(-1.4, 1.4); if (clear(x, z)) { fn(x, z); break; } }
+    }
+  };
   if (city) {
     const red = lam(0xc0302a, { map: metalTex }), cone = lam(0xff7a2a), blue = lam(0x2a4a8a, { map: metalTex }), wood = lam(0x6a4a2e, { map: stoneTex });
     place(14, (x, z) => { staticBox(x, z, 0.5, 0.5, 0.75, red); mkMesh(Sp(0.28, 6, 4), red, x, 0.8, z); });
@@ -864,7 +872,7 @@ export function populate(info) {
 function unbury() {
   const inside = (x, z, own) => W.plats.some(p => !p.thin && Math.hypot(p.x - own.x, p.z - own.z) > 0.35 && Math.abs(p.x - x) < p.w / 2 + 0.6 && Math.abs(p.z - z) < p.d / 2 + 0.6 && p.y > 0.6 && p.y - p.th < 0.5);
   const free = (x, z, o) => DRY(tAt(Math.floor(x / T + M.W / 2), Math.floor(z / T + M.H / 2))) && !inside(x, z, o);
-  const items = [...W.chests.filter(c => c.y < 0.6), ...W.caches.filter(c => c.y < 0.6), ...W.enemies.filter(e => e.type === 'nest')];
+  const items = [...W.chests.filter(c => c.y < 0.6), ...W.caches.filter(c => c.y < 0.6), ...W.fungi.filter(f => (f.y || 0) < 0.6), ...W.enemies.filter(e => e.type === 'nest')];
   for (const o of items) {
     if (!inside(o.x, o.z, o)) continue;
     let spot = null;
