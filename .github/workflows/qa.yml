@@ -1,11 +1,11 @@
 # The QA pipeline on every push and pull request, cheapest checks first:
 #   1. boot gate       build, launch the production bundle, menu, start a run
 #   2. system          scripted smoke test + UI sweep, math checks and fuzzing
-#   3/4. playtest      bots: level checks, goals, critical path, a short
-#                      adversarial run, horde stress, synergy and balance sweep
-# Each stage only runs if the one before passed. The long stages (hours of
-# adversarial exploration, the full balance sweep and the soak) run nightly
-# in nightly.yml.
+#   3. feature lab     every new feature, level, mob or idea scored out of 100:
+#                      T1 Works (gate) · T2 Holds up · T3 Plays well, with
+#                      A/B ideas played against the control (scripts/lab.mjs)
+# Each stage only runs if the one before passed. There is no nightly or soak
+# run: bots only play when they are testing something new.
 name: QA
 
 on:
@@ -48,8 +48,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with: { name: system-results, path: scripts/out/system/ }
 
-  playtest:
-    name: 3/4 · Playtest bots (quick)
+  lab:
+    name: 3 · Feature lab (tiered scores)
     needs: system
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -59,7 +59,9 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright-core install --with-deps chromium
-      - run: npm run playtest -- --quick
+      - run: npm run lab -- --quick
+      - if: always()
+        run: cat scripts/out/lab/SCORES.md >> "$GITHUB_STEP_SUMMARY"
       - if: always()
         uses: actions/upload-artifact@v4
-        with: { name: playtest-report, path: scripts/out/playtest/ }
+        with: { name: lab-report, path: scripts/out/lab/ }

@@ -184,27 +184,33 @@ WASD move · mouse aims on the ground · left click or J attacks (hold to repeat
 
 ## QA pipeline
 
-Five stages, cheapest first. Anything a script can check deterministically is a script; bots are used only where play is dynamic (exploration, balance, long sessions).
+Three stages, cheapest first. Stages 1 and 2 are deterministic regression checks; stage 3 is where bots play, and they only play to test something new.
 
 | Stage | Command | Kind | Time | What it checks | Runs |
 |---|---|---|---|---|---|
 | 1 · Boot gate | `npm run build && npm run test:boot` | Deterministic | ~15s | Production bundle loads, menu and every class card render, a run starts from the real button, the loop advances and draws, pause and resume, no console errors. | Every push |
-| 2 · System, UI, fuzz | `npm run smoke && npm run test:system` | Deterministic + fuzz | ~2 min | Every button on every screen from fresh state. Damage, armour and i-frames; HP and XP bars; XP auto level-up; food healing and cap; kills and drops; dodge cooldown; held attack toward the aim point; save round-trip. Random input, random teleports and random clicks with crash/NaN/out-of-bounds checks. | Every push |
-| 3 · Exploration | `npm run playtest -- --hours=2` | Bots | hours | Static level checks over all 22 levels, plain-language goals, the critical path, and an adversarial bot that tries to break out of the map: wall-hugging, edge and climb exploits, prop jumps, corner traps. | Quick version every push, full nightly |
-| 4 · Combat + synergy | part of `npm run playtest` | Bots + statistics | ~20 min | Every class at three skill levels (bots aim and attack manually with profile-based aim error, eat, sniff out mold, throw vials and use turbo) and a class kit sweep in which each class hunts the zone's nests. Flags kits that trivialise combat (>3× median damage) or do nothing, and damage spikes that take a third of HP in 5s. | Quick every push, full nightly |
-| 5 · Soak | `npm run soak -- --hours=24` | Script driving bots | 24h+ | Back-to-back runs through the real menus with page reloads. Heap, geometry, texture and scene-object trends per hour, logic cost as mobs scale, and save integrity (every key parses, lifetime totals never go down, the run counter goes up by exactly one). | Nightly (5.5h hosted) |
+| 2 · System, UI, fuzz | `npm run smoke && npm run test:system` | Deterministic + fuzz | ~10 min | The whole loop end to end, every button on every screen, combat and economy math, every action's key / touch button / How to Play text, save round-trip, and random input with crash/NaN/out-of-bounds checks. | Every push |
+| 3 · Feature lab | `npm run lab -- --quick` | Checks + bots, scored | ~10 min | One trial per new feature, level, mob or idea, scored out of 100 in three tiers (below). | Every push |
+
+**Tiered scoring.** Each trial in `scripts/lab/trials.mjs` is scored:
+
+| Tier | Points | Question | How |
+|---|---|---|---|
+| T1 Works | 40, gate | Does the feature exist and do its job? | Deterministic checks. One failure scores the trial 0 and fails the run. |
+| T2 Holds up | 30 | Does it survive every level, class and edge case? | Robustness checks scored 0–1: all 22 levels (secret zones included), enemies and props around it, bot play with no stuck spots, falls out of the world or page errors. |
+| T3 Plays well | 30 | Do its numbers land where the design wants them? | Bots (aiming and attacking manually, eating, using vials and turbo) play with the feature on; each metric scores 1 inside its target band and falls to 0 one band-width outside. Pure fixes with nothing to tune count T3 as full. |
+
+A trial can carry an **A/B idea**: the bots play the same fixed-seed levels with the control tuning and with the idea's tuning, and the report names the winner (a gap under 3 points means "keep the control"). A trial passes at 60; CI fails on any T1 gate or a score under the floor, and posts the score table (`scripts/out/lab/SCORES.md`) to the run summary.
 
 ```mermaid
 flowchart LR
-  A[1 Boot gate] --> B[2 System + fuzz] --> C[3/4 Quick playtest]
-  N[Nightly] --> D[3 Exploration, hours] & E[4 Full balance sweep] & F[5 Soak]
+  A[1 Boot gate] --> B[2 Smoke + system + fuzz] --> C[3 Feature lab]
+  C --> T1[T1 Works · gate] --> T2[T2 Holds up] --> T3[T3 Plays well] --> AB[A/B idea vs control]
 ```
 
-`.github/workflows/qa.yml` runs stages 1, 2 and the quick 3/4 on every push and pull request; each stage only starts if the previous one passed, and failures show as annotations on the run. `.github/workflows/nightly.yml` runs the long stages. GitHub-hosted jobs stop at 6 hours, so the hosted soak runs 5.5h; for 24 hours, pick a self-hosted runner when dispatching it, or run it locally. Reports land in `scripts/out/{system,playtest,soak}/`.
+`.github/workflows/qa.yml` runs all three on every push and pull request; each stage only starts if the previous one passed. There is no nightly run, soak or open-ended exploration any more: when nothing new is being tested, no bots run. `npm run baseline` still captures the per-phase comparison.
 
-The bots (`src/qa/bot.js`, only loaded with `?debug`) play through the same inputs a player uses. *Novice* reacts in about 0.65s and dodges 15% of attacks; *average* in 0.3s and half; *expert* in 0.12s and 90%, keeping range. Each aims with its own error (1.6, 0.7 and 0.15 units) and holds attack like a player. They take goals such as "kill the boss", "go inside a building", "loot every chest", "reach the manhole", "fail the run" or "break the level". Fast-forward steps the logic without drawing, roughly 25–100× real time. "Balancing" here is heuristic bots plus statistics, not trained models.
-
-The game is single-player with no server, so the horde stress test stands in for online load. The bots measure stability, pacing and numbers. They can't tell whether movement feels good, the UI is clear or a story beat lands. That still needs people.
+The bots (`src/qa/bot.js`, only loaded with `?debug`) play through the same inputs a player uses. *Novice* reacts in about 0.65s and dodges 15% of attacks; *average* in 0.3s and half; *expert* in 0.12s and 90%, keeping range. Fast-forward steps the logic without drawing, roughly 25–100× real time. They measure stability and numbers; they can't tell whether movement feels good or a story beat lands.
 
 ## Performance
 
@@ -234,8 +240,8 @@ src/
   ui/                HUD, screens (menu, pause, map, death, endings), debugPanel.js, icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
 scripts/smoke.mjs    headless end-to-end test
-scripts/soak.mjs     stage 5 long soak: leaks, degradation, save integrity
-scripts/playtest.mjs bot playtests: performance, playability, balance (src/qa/ holds the bots and level checks)
+scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs (src/qa/ holds the bots and level checks)
+scripts/baseline.mjs per-phase baseline capture; pace.mjs leveling-pace tool
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
 

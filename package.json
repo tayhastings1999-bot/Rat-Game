@@ -12,10 +12,9 @@
     "test:boot": "node scripts/boot.mjs",
     "test:system": "node scripts/system.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "playtest": "node scripts/playtest.mjs",
+    "lab": "node scripts/lab.mjs",
     "pace": "node scripts/pace.mjs",
     "baseline": "node scripts/baseline.mjs",
-    "soak": "node scripts/soak.mjs",
     "artifact": "vite build && node scripts/artifact.mjs"
   },
   "dependencies": {
