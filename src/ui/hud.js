@@ -61,7 +61,7 @@ function objective() {
 /**
  * Top HUD (art bible §8, hud_mockup.png): one system of four chrome panels, one per player
  * slot. Name in Bungee, numbers in Silkscreen, the player's colour on the stripe and frame.
- * Combo lives in the panel (the old DAMAGE/KILLS/COMBO cluster is gone). Empty slots read
+ * The thin second bar is turbo; it pulses while a hit streak boosts turbo gain. Empty slots read
  * PRESS START; in co-op they show the shared cheese tokens.
  */
 function playerPanels() {
@@ -70,12 +70,12 @@ function playerPanels() {
     const p = coop.on ? coop.players.find(q => q.i === i) : i === 0 ? { i: 0 } : null, col = css(TUNE.coop.colors[i]);
     if (!p) { out.push(`<div class="pp off" style="--pc:${col}"><b class="nm">PRESS START</b><span class="sub px">${coop.on ? `insert cheese · tokens ${tok}` : 'insert cheese'}</span></div>`); continue; }
     const cur = !coop.on || p.i === coop.active, q = cur ? P : p.P, r = cur ? run : p.run, s = cur ? st : p.st, C = CLASSES[r.cls];
-    const name = C.name.split(' ').pop().toUpperCase(), combo = Math.max(0, Math.min(100, r.combo || 0));
+    const name = C.name.split(' ').pop().toUpperCase(), tb = Math.max(0, Math.min(100, (r.turbo || 0) / TUNE.turbo.segments * 100)), hot = (r.streak || 0) > TUNE.turbo.streak.minHits;
     const state = q.out ? 'OUT' : q.downed ? `DOWN ${Math.max(0, Math.ceil(TUNE.coop.downTime - (q.downT || 0)))}s` : '';
     out.push(`<div class="pp on${q.downed || q.out ? ' down' : ''}" style="--pc:${col}"><b class="nm">P${i + 1} ${name}</b>` +
       `<span class="hpn px">${state || Math.ceil(Math.max(0, r.hp))}</span>` +
       `<span class="meta px"><em>GOLD ${String(Math.floor(run.scrap)).padStart(4, '0')}</em><br>KEY x${run.keys || 0}  VIAL x${r.vials || 0}</span>` +
-      `<i class="hpb"><s style="width:${Math.max(0, r.hp) / (s.maxHp || 1) * 100}%"></s></i><i class="cmb${combo >= 100 ? ' ready' : ''}"><s style="width:${combo}%"></s></i></div>`);
+      `<i class="hpb"><s style="width:${Math.max(0, r.hp) / (s.maxHp || 1) * 100}%"></s></i><i class="cmb${hot ? ' ready' : ''}" title="turbo${hot ? ' · streak bonus' : ''}"><s style="width:${tb}%"></s></i></div>`);
   }
   return out.join('');
 }

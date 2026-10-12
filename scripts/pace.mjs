@@ -12,7 +12,7 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', a
 const p = await b.newPage();
 await p.goto(`http://localhost:${PORT}/?debug`); await p.waitForFunction(() => window.__scurry);
 for (const [prof, cls] of combos) {
-  await p.evaluate(c => { const s = __scurry; s.qa.stop(); s.G.mode = 'survival'; s.meta.startAt = 'row'; s.startRun(c); }, cls);
+  await p.evaluate(c => { const s = __scurry; s.qa.stop(); s.startRun(c); }, cls);
   await p.waitForTimeout(400);
   await p.evaluate(pr => __scurry.qa.start({ profile: pr, goal: 'survive' }), prof);
   const rows = []; let next = 60, end = 'alive';

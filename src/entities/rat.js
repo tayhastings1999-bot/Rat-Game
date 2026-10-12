@@ -1,4 +1,4 @@
-// The player rat model (per class and fur skin), familiars, trial ghosts and
+// The player rat model (per class and fur skin), player rings and glyphs, and
 // the pre-rendered menu/HUD portraits.
 import * as THREE from 'three';
 import { TUNE } from '../tuning.js';

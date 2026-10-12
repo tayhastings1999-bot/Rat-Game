@@ -112,6 +112,9 @@ export const TUNE = {
     blastMin: 1, // segments needed for a blast (it spends every full one)
     blastBase: 1, blastPerSeg: 0.75, // blast power × (base + perSeg·(segments − 1))
     tapTime: 0.35, // X released within this many seconds without Q/G = blast
+    // Hit streak (replaces the combo meter): hits within `window` s of each other count;
+    // past minHits each hit adds perHit to turbo gain, capped at +max. A hit taken resets it.
+    streak: { window: 2.5, minHits: 5, perHit: 0.02, max: 0.2, killHits: 2, perfectHits: 4 },
     armTime: 1.5, // held longer and let go: turbo stays armed this long for the next Q or G
   },
   vials: {
@@ -166,6 +169,19 @@ export const TUNE = {
     speed: 6.5, // climbing speed
     topPush: 4.5, // the hand-up onto the roof at the top of a pipe
     hopUp: 2.2, // a roof this much higher than the one you're on is still reachable by a hop
+  },
+  balance: {
+    // Power vs challenge (DESIGN_DECISIONS: "strong, never safe"). Stats past `softAt` grow at a
+    // diminishing rate (half value at softAt + softR, asymptote softAt + softR). The total
+    // damage-taken multiplier from Armor stops at armFloor and the full stack (Armor × Iron Hide × buffs) at minTaken, and the
+    // player-side outgoing damage multiplier soft-caps past outAt. Enemies scale with the rat's
+    // actual power: HP × (offense / start)^hpFollow, damage × (effective HP / start)^dmgFollow,
+    // so growth always shows (exponents < 1) but never makes the game safe.
+    softAt: 10, softR: 8,
+    armFloor: 0.4, // Armor alone never cuts damage taken below this
+    minTaken: 0.25, // Armor × Iron Hide × buffs never below this
+    outAt: 2.5, outR: 2,
+    hpFollow: 0.35, dmgFollow: 0.35,
   },
   growth: {
     // Stat growth on level-up (game/stats.js growStats): points split by the class's own stats.

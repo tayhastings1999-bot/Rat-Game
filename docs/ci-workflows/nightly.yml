@@ -1,0 +1,59 @@
+# Nightly: full scripted smoke test plus the full bot balance lab (not --quick).
+# Results are uploaded as artifacts and written to the run summary. When a run
+# fails, one open "nightly" issue is created (or commented on) with the link.
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # 03:00 New York (EDT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  nightly:
+    name: Smoke + balance lab
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run build
+      - name: Smoke test
+        id: smoke
+        continue-on-error: true
+        run: npm run smoke
+      - name: Balance lab (full)
+        id: lab
+        continue-on-error: true
+        run: npm run lab
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Nightly $(date -u +%F)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Smoke: ${{ steps.smoke.outcome }} · Lab: ${{ steps.lab.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          [ -f scripts/out/lab/SCORES.md ] && cat scripts/out/lab/SCORES.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-${{ github.run_number }}
+          path: scripts/out/
+          retention-days: 14
+      - name: Report failure as an issue
+        if: steps.smoke.outcome == 'failure' || steps.lab.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="Nightly failed on $(date -u +%F) (smoke: ${{ steps.smoke.outcome }}, lab: ${{ steps.lab.outcome }}). Run and artifacts: $URL"
+          gh label create nightly --color B60205 --description "Nightly smoke/lab failures" 2>/dev/null || true
+          n=$(gh issue list --label nightly --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "$body"; else gh issue create --title "Nightly smoke/lab failing" --label nightly --body "$body"; fi
+      - name: Fail the run
+        if: steps.smoke.outcome == 'failure' || steps.lab.outcome == 'failure'
+        run: exit 1

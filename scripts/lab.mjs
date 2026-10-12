@@ -92,7 +92,7 @@ const L = {
       status = await S(c => __scurry.qa.sim(c), chunk);
       left -= chunk;
       if (status === 'dead' || status === 'goal') break;
-      if (status === 'trans' || status === 'district') { await sleep(1200); await S(() => { const s = __scurry; if (s.G.state === 'levelup') s.G.state = 'play'; }); }
+      if (status === 'trans' || status === 'district') await sleep(1200);
       else if (status !== 'ok') await sleep(150);
     }
     const out = await S(() => {

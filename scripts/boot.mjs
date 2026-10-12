@@ -23,30 +23,28 @@ const check = async (name, fn) => {
   catch (e) { checks.push([name, 'FAIL ' + e.message, Date.now() - t0]); console.log(`FAIL ${name}: ${e.message}`); if (process.env.GITHUB_ACTIONS) console.log(`::error title=Boot gate::${name}: ${e.message.replace(/\n/g, ' ')}`); }
 };
 const S = fn => page.evaluate(fn);
-// Slow CI runners (software GL) can level up or stall mid-check, so tests wait on game
+// Slow CI runners (software GL) can stall mid-check, so tests wait on game
 // state, never on wall-clock sleeps alone.
 const SLOW = 2; // timeout multiplier for CI
 const T = ms => ms * SLOW;
-/** Back to 'play' from levelup/paused, polling the state. */
+/** Back to 'play' (from paused), polling the state. */
 async function toPlay(ms = T(20000)) {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     const st = await S(() => __scurry.G.state);
     if (st === 'play') return;
-    if (st === 'levelup') await page.keyboard.press('Digit1');
-    else if (st === 'paused') await page.click('#resumeBtn').catch(() => {});
+    if (st === 'paused') await page.click('#resumeBtn').catch(() => {});
     await page.waitForTimeout(150);
   }
   throw new Error('never returned to play: ' + await S(() => __scurry.G.state));
 }
-/** Poll fn in the page until true, picking level-up cards so the sim keeps running. */
+/** Poll fn in the page until true, resuming if something paused the game. */
 async function until(fn, ms = T(20000)) {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (await page.evaluate(fn)) return;
     const st = await S(() => __scurry.G.state);
-    if (st === 'levelup') await page.keyboard.press('Digit1');
-    else if (st === 'paused') await page.click('#resumeBtn').catch(() => {});
+    if (st === 'paused') await page.click('#resumeBtn').catch(() => {});
     await page.waitForTimeout(200);
   }
   throw new Error('timed out waiting for ' + String(fn).slice(0, 80));
@@ -102,7 +100,7 @@ await check('every class card is present', async () => {
 });
 await check('start a run from the menu', async () => {
   await page.click('.card[data-k="brawler"]');
-  await page.waitForFunction(() => __scurry.G.state === 'play' || __scurry.G.state === 'levelup', null, { timeout: T(15000) });
+  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
   if ((await S(() => __scurry.M.kind)) !== 'city') throw new Error('not in the city');
   const u = await S(() => ({ hp: __scurry.st.maxHp, base: __scurry.TUNE.classes.brawler.hp, add: __scurry.TUNE.shop.hpPer, vials: __scurry.run.vials, v0: __scurry.TUNE.vials.start }));
   if (u.hp !== u.base + u.add) throw new Error(`max HP ${u.hp}, wanted ${u.base + u.add}`);
@@ -182,7 +180,7 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
   await S(() => { __scurry.fakePads[0] = { axes: [0, 0, 0, 0], buttons: [] }; });
   await page.click('.card[data-k="brawler"]');
-  await page.waitForFunction(() => __scurry.G.state === 'play' || __scurry.G.state === 'levelup', null, { timeout: T(15000) });
+  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
   await toPlay();
   const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: 1 + __scurry.TUNE.coop.perPlayer.bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
   if (!s0.on || s0.n !== 2 || s0.rp !== 2) throw new Error('co-op not on ' + JSON.stringify(s0));

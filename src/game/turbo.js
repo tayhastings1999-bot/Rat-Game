@@ -15,6 +15,7 @@ import { floorY, tileAt, solidFor } from '../world/grid.js';
 import { near, hit, sorted } from '../combat/combat.js';
 import { shoot } from '../combat/arsenal.js';
 import { TUNE } from '../tuning.js';
+import { streakMul } from './swarm.js';
 
 export const segs = () => Math.floor(run.turbo || 0);
 
@@ -22,7 +23,7 @@ export const segs = () => Math.floor(run.turbo || 0);
 export function turboGain(d) {
   if (G.state !== 'play' || !(d > 0)) return;
   const T = TUNE.turbo, was = segs();
-  run.turbo = Math.min(T.segments, (run.turbo || 0) + d * T.gainPerDmg * (st.turboGain || 1));
+  run.turbo = Math.min(T.segments, (run.turbo || 0) + d * T.gainPerDmg * (st.turboGain || 1) * streakMul());
   if (segs() > was) { sfx('pickup'); G.turboFlash = 0.6; }
 }
 function spend(n) {

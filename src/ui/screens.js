@@ -136,7 +136,6 @@ export function renderMenu() {
         <span class="s">Q: ${SPECIALS[C.special].name}<br>G: ${SIGS[k] ? SIGS[k].name : ''}<br>X: ${BLASTS[k] ? BLASTS[k].name : ''}</span></button>`).join('')}</div>${skinsHTML()}
     <p class="px" style="font-size:12px">${best.time ? `Longest run: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}</p>
     <div class="btns"><button class="btn ghost" id="slotsBtn">Change burrow</button></div></div>`);
-  G.mode = 'survival';
   $('slotsBtn').onclick = renderSlotSelect;
   bindCoop();
   ov.querySelectorAll('[data-diff]').forEach(b => { b.onclick = () => { meta.difficulty = b.dataset.diff; saveMeta(); const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; }; });

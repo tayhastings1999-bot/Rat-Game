@@ -12,7 +12,7 @@ import { die, pause, HOWTO, pickSlot, renderMenu } from './ui/screens.js';
 import { buy, rank, price, sellPrice, useFlask, cycleFlask, selFlask } from './game/shop.js';
 import { coop, fakePads, asPlayer } from './game/coop.js';
 import { save, loadSlot, readSlot } from './core/state.js';
-import { dropKey, kill, hit, hurtP } from './combat/combat.js';
+import { dropKey, kill, hit, hurtP, zoneScaling, powerScaling } from './combat/combat.js';
 import { setupObjective, objDone, openCage } from './game/objectives.js';
 import { M, T, tAt, topAt, toW, DRY, N4, freeSpot } from './world/grid.js';
 import { audioReady, music, musicLevel } from './audio/audio.js';
@@ -24,7 +24,7 @@ import { pingFinds } from './game/finds.js';
 import { tallyCalc, tallyContinue } from './ui/tally.js';
 import { growStats } from './game/stats.js';
 import { chewTarget, useTarget, grabTarget, dropCarry, pressE, unlockGate, pipeNear } from './entities/player.js';
-import { comboGain } from './game/swarm.js';
+import { streakHit, streakMul } from './game/swarm.js';
 import { storyApi } from './game/story.js';
 import { TUNE, tuneEntries, setTune } from './tuning.js';
 import { initDebugPanel } from './ui/debugPanel.js';
@@ -62,7 +62,7 @@ export function debugApi(state) {
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, pickSlot, renderMenu, save, loadSlot, readSlot, shop: { buy, rank, price, sellPrice, useFlask, cycleFlask, selFlask }, coop, fakePads, asPlayer, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, die, pause, pickSlot, renderMenu, save, loadSlot, readSlot, shop: { buy, rank, price, sellPrice, useFlask, cycleFlask, selFlask }, coop, fakePads, asPlayer, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, streakHit, streakMul, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A marked drainpipe (the only climbable wall): stand point, outward normal, top. */
     climbSpot(minTop = 0) {
       const c = state.W.climbs.find(c => c.top >= minTop && c.gx > 3 && c.gz > 3 && c.gx < M.W - 4 && c.gz < M.H - 4);
@@ -87,7 +87,7 @@ export function debugApi(state) {
       return null;
     },
     cutY: () => cutPlane.constant,
-    hurtP, objDone, openCage,
+    hurtP, zoneScaling, powerScaling, objDone, openCage,
     forceObjective(k) { setupObjective(state.G.objInfo, k); },
     /** Fire a district event on the next tick. */
     forceEvent(k) { state.run.forceEv = k; state.run.evT = 0; state.run.events.length = 0; },

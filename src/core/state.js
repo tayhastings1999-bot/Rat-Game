@@ -5,8 +5,7 @@ import { storage } from './storage.js';
 
 /** Scalars and single references that change during play. */
 export const G = {
-  state: 'menu',        // menu | play | paused | map | bench | levelup | trans | dead | done | nest
-  mode: 'survival',     // survival | trial
+  state: 'menu',        // menu | play | paused | map | bench | trans | dead | done | nest
   time: 0,
   last: performance.now(),
   shake: 0,

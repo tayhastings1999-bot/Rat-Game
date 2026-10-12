@@ -1,16 +1,18 @@
 // Art-pass screenshots + frame-cost probe on the production build.
 // Usage: npm run build && OUT=/path/ LABEL=before node scripts/shots.mjs
+// Writes <OUT><LABEL>-NN-scene.png and <OUT><LABEL>-perf.json (read by scripts/perf-compare.mjs).
 // Captures title, Nest, city and sewer gameplay, a 2-player co-op frame and a
 // 150-enemy horde, then prints draw calls, triangles and ms/frame (SwiftShader:
 // compare runs against each other, not against real hardware).
 import { chromium } from 'playwright-core';
 import { preview } from 'vite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 
 const OUT = process.env.OUT || new URL('./out/shots/', import.meta.url).pathname, L = process.env.LABEL || 'shot';
 mkdirSync(OUT, { recursive: true });
 const server = await preview({ preview: { port: 5191, strictPort: true }, logLevel: 'error' });
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const exe = process.env.CHROMIUM || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
+const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
@@ -67,6 +69,9 @@ await horde(140);
 await page.waitForTimeout(2500);
 await shot('06-horde');
 const hordeP = await perf();
-console.log(JSON.stringify({ label: L, city, horde: hordeP, errors }, null, 1));
+const result = { label: L, city, horde: hordeP, errors };
+writeFileSync(`${OUT}${L}-perf.json`, JSON.stringify(result, null, 1));
+console.log(JSON.stringify(result, null, 1));
+if (errors.length) process.exitCode = 1;
 await browser.close();
 await new Promise(r => server.httpServer.close(r));

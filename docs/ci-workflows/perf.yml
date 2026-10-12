@@ -1,0 +1,41 @@
+# Perf baseline comparison on every PR: the same probe (scripts/shots.mjs: city
+# start + a 288-enemy co-op horde) runs on the PR's base and head, and
+# scripts/perf-compare.mjs flags regressions. Draw calls / triangles gate (>20%);
+# frame times only warn (software GL on shared runners is noisy).
+name: Perf
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  perf:
+    name: Perf vs base
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - name: Head
+        run: |
+          npm run build
+          OUT=$RUNNER_TEMP/perf/ LABEL=head node scripts/shots.mjs
+      - name: Base
+        run: |
+          git worktree add ../base ${{ github.event.pull_request.base.sha }}
+          cp scripts/shots.mjs ../base/scripts/shots.mjs # same probe on both sides
+          cd ../base && npm ci && npm run build
+          OUT=$RUNNER_TEMP/perf/ LABEL=base node scripts/shots.mjs || echo "base probe failed (older debug API?)"
+      - name: Compare
+        run: |
+          if [ ! -f "$RUNNER_TEMP/perf/base-perf.json" ]; then echo "No base probe (the probe could not run on the base); skipping." | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          node scripts/perf-compare.mjs "$RUNNER_TEMP/perf/base-perf.json" "$RUNNER_TEMP/perf/head-perf.json" "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: perf, path: '${{ runner.temp }}/perf/*.json' }

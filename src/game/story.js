@@ -303,7 +303,7 @@ function pipDistrict() {
   else setTimeout(() => G.state === 'play' && banner('Pip is still caged', 'Free the caged rats · Pip is in one of them'), 2600);
 }
 /** setupWorld asks which objective to force: the rescue that holds Pip. */
-export const forcedObjective = () => ((S().ch === 2 || S().ch === 3) && (run.tier || 0) >= 1 && G.mode !== 'trial' ? 'rescue' : null);
+export const forcedObjective = () => ((S().ch === 2 || S().ch === 3) && (run.tier || 0) >= 1 ? 'rescue' : null);
 /** A cage gnawed open. Freeing rats is going back for them: a bond. The last cage in Pip's district holds Pip. */
 export function onCage(o) {
   bond();

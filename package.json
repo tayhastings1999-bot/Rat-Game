@@ -15,7 +15,10 @@
     "lab": "node scripts/lab.mjs",
     "pace": "node scripts/pace.mjs",
     "baseline": "node scripts/baseline.mjs",
-    "artifact": "vite build && node scripts/artifact.mjs"
+    "artifact": "vite build && node scripts/artifact.mjs",
+    "shots": "node scripts/shots.mjs",
+    "perf:compare": "node scripts/perf-compare.mjs",
+    "balance": "node scripts/balance.mjs"
   },
   "dependencies": {
     "@fontsource/alegreya-sans": "^5.3.0",
