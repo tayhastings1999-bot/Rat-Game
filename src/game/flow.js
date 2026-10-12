@@ -111,7 +111,7 @@ export function startRun(k) {
   run.seed = seed;
   setRat(C);
   G.state = 'play';
-  G.camYaw = Math.PI; G.camPitch = TUNE.camera.pitch; G.camDist = TUNE.camera.dist;
+  G.camYaw = Math.PI; G.camPitch = TUNE.camera.pitch; G.camWidth = TUNE.camera.width;
   G.camOff.set(0, 0, 0);
   P.scent = false; P.carry = null; P.inv = 1;
   hideOverlay();

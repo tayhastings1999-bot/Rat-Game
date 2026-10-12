@@ -1,6 +1,8 @@
 // Turns a generated tile map into meshes and fills it with props, loot,
 // nests, predators, hazards and exits — for both the city and the sewer.
 import * as THREE from 'three';
+import { PAL } from '../render/palette.js';
+import { toon } from '../render/toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
 import { G, W, run } from '../core/state.js';
@@ -29,7 +31,7 @@ import { addPred } from '../entities/mobs.js';
 import { buildSetPieces } from './setpieces.js';
 
 export const tileMesh = {};
-const lam = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, ...o });
+const lam = (c, o = {}) => toon({ color: c, flatShading: true, ...o }); // toon-lit props and walls (art bible §3)
 const waterMat = new THREE.MeshLambertMaterial({ map: waterTex, transparent: true, opacity: 0.78, emissive: 0x0a2018 });
 const acidMat = new THREE.MeshBasicMaterial({ map: acidTex, transparent: true, opacity: 0.85 });
 export const pitMat = new THREE.MeshBasicMaterial({ color: 0x030202 });
@@ -1105,22 +1107,18 @@ function unbury() {
 }
 
 export function applyLighting(D, city) {
-  const blackout = run.mods && run.mods.includes('blackout');
-  if (city) {
-    hemi.color.set(0xb0b8e0); hemi.groundColor.set(0x5a4a50); hemi.intensity = blackout ? 0.4 : 1.45;
-    sun.color.set(0xc0ccff); sun.intensity = blackout ? 0.3 : 1.0;
-    scene.fog = new THREE.Fog(D.fog, blackout ? 8 : 34, blackout ? 40 : 88);
-    scene.background = new THREE.Color(D.sky);
-  } else {
-    hemi.color.set(0xfff0dc); hemi.groundColor.set(0x4a3a32); hemi.intensity = blackout ? 0.35 : 1.25;
-    sun.color.set(0xfff0e0); sun.intensity = 1.1;
-    scene.fog = blackout ? new THREE.Fog(0x080608, 6, 30) : new THREE.Fog(D.fog, 26, 60);
-    scene.background = new THREE.Color(D.fog);
-  }
-  // Night remixes: moonlight instead of dusk. The deep sewer: darker and closer.
-  if (D.night) { hemi.color.set(0x8090c8); hemi.intensity *= 0.62; sun.color.set(0x8aa0ff); sun.intensity *= 0.45; scene.fog.near *= 0.8; scene.fog.far *= 0.85; }
-  if (D.deep) { hemi.intensity *= 0.75; scene.fog.near *= 0.8; scene.fog.far *= 0.8; }
-  if (run.rain) { scene.fog.near *= 0.7; scene.fog.far *= 0.8; hemi.intensity *= 0.85; }
+  // Art bible §5: one warm key sun, a cool hemisphere fill, and a linear fog to Void that only
+  // fades the edges (30–70) so the play area stays legible. The zone keeps a hint of its own
+  // fog colour (A.fogTint). Night / deep / blackout darken the light, not the view distance.
+  const blackout = run.mods && run.mods.includes('blackout'), A = TUNE.art;
+  hemi.color.set(A.hemiSky); hemi.groundColor.set(PAL.slate); hemi.intensity = A.hemi * (blackout ? 0.45 : 1) * (city ? 1 : 0.9);
+  sun.color.set(A.sunCol); sun.intensity = A.sun * (blackout ? 0.4 : 1) * (city ? 1 : 0.85);
+  const fc = new THREE.Color(PAL.void).lerp(new THREE.Color(D.fog), A.fogTint);
+  scene.fog = new THREE.Fog(fc, A.fogNear * (blackout ? 0.7 : 1), A.fogFar * (blackout ? 0.8 : 1));
+  scene.background = fc.clone();
+  if (D.night) { hemi.color.set(0x8090c8); hemi.intensity *= 0.75; sun.color.set(0xa8b8ff); sun.intensity *= 0.6; }
+  if (D.deep) { hemi.intensity *= 0.85; }
+  if (run.rain) { hemi.intensity *= 0.9; }
   G.fogNear = scene.fog.near;
   G.fogFar = scene.fog.far;
   lantern.intensity = blackout ? 3.4 : city ? 2.4 : 1.8;

@@ -90,7 +90,7 @@ export function initInput() {
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', () => { held.mouse = false; syncAttack(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
-  canvas.addEventListener('wheel', e => { e.preventDefault(); G.camDist = clamp(G.camDist + e.deltaY * 0.012, TUNE.camera.minDist, TUNE.camera.maxDist); }, { passive: false });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); G.camWidth = clamp((G.camWidth || TUNE.camera.width) + e.deltaY * 0.015, TUNE.camera.minWidth, TUNE.camera.maxWidth); }, { passive: false });
   addEventListener('pointerdown', audioInit);
   addEventListener('mousemove', e => {
     if (G.touch) return;

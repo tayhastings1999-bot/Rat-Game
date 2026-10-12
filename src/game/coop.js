@@ -18,7 +18,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { CLASSES } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
-import { makeRat, blob } from '../entities/rat.js';
+import { makeRat, blob, playerRing } from '../entities/rat.js';
 import { keys, stepPlayer, primary, startRoll, useSpecial, pressE, toggleLock } from '../entities/player.js';
 import { updateEnemies } from '../entities/mobs.js';
 import { tickPlayerTimers, markSafe, updatePlayerStatus, updateProjectiles, updatePickups } from './update.js';
@@ -81,9 +81,11 @@ export function coopStart(freshStats, shopGrowth) {
   if (n < 2) return;
   coop.on = true;
   const p1 = { i: 0, input: coop.setup.input[0], blob, prev: {} };
-  blob.material.color.setHex(TUNE.coop.colors[0]);
-  blob.material.opacity = 0.75;
   coop.players = [p1];
+  // Player 1's model gets its red outer outline layer for co-op (solo rats only have the Void hull).
+  scene.remove(G.rat.g);
+  G.rat = makeRat(CLASSES[run.cls], 0);
+  scene.add(G.rat.g);
   swapOut(p1);
   const base = { ...p1.P }, pr = pick(run, RF);
   for (let i = 1; i < n; i++) {
@@ -94,12 +96,11 @@ export function coopStart(freshStats, shopGrowth) {
     run.hp = st.maxHp;
     const a = i * Math.PI * 0.5;
     fill(P, { ...base, safe: { ...base.safe }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1 });
-    const rat = makeRat(C);
+    const rat = makeRat(C, i);
     scene.add(rat.g);
-    const b = new THREE.Mesh(blob.geometry, blob.material.clone());
+    const b = new THREE.Mesh(blob.geometry, blob.material);
     b.rotation.copy(blob.rotation);
-    b.material.color.setHex(TUNE.coop.colors[i]);
-    b.material.opacity = 0.75;
+    playerRing(b, TUNE.coop.colors[i]);
     scene.add(b);
     const p = { i, input: coop.setup.input[i] || 'pad' + (i - 1), blob: b, prev: {} };
     G.rat = rat;
@@ -116,8 +117,6 @@ export function coopEnd() {
   if (coop.on) {
     if (coop.active !== 0) swapIn(coop.players[0]);
     for (const p of coop.players.slice(1)) { scene.remove(p.G.rat.g); scene.remove(p.blob); }
-    blob.material.color.setHex(0);
-    blob.material.opacity = 0.4;
   }
   coop.on = false;
   coop.players = [];
@@ -389,9 +388,10 @@ export function coopFrame() {
   _c.set(0, 0, 0);
   for (const p of ps) { const q = posOf(p); _c.x += q.x; _c.y += q.y; _c.z += q.z; }
   _c.multiplyScalar(1 / ps.length);
-  let spread = 0;
-  for (const p of ps) { const q = posOf(p); spread = Math.max(spread, Math.hypot(q.x - _c.x, q.z - _c.z)); }
-  return { x: _c.x, y: _c.y, z: _c.z, spread };
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const p of ps) { const q = posOf(p); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z); }
+  _c.set((x0 + x1) / 2, _c.y, (z0 + z1) / 2);
+  return { x: _c.x, y: _c.y, z: _c.z, spanX: x1 - x0, spanZ: z1 - z0 };
 }
 /** HUD strip: one card per rat. */
 export function coopHud() {

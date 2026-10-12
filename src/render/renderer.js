@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { $ } from '../core/util.js';
 import { ps1Snap } from './ps1.js';
+import { PAL } from './palette.js';
+import { TUNE } from '../tuning.js';
 
 export const canvas = $('c');
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
@@ -31,18 +33,28 @@ scene.add(world);
 
 // The scene is drawn at a low, PS1-like resolution into `rt`, then upscaled with nearest filtering.
 const rt = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+// Depth for the post pass's edge outline (art bible §4: environment silhouettes without hulls).
+rt.depthTexture = new THREE.DepthTexture(2, 2);
+rt.depthTexture.type = THREE.UnsignedIntType;
 
 export const post = new THREE.ShaderMaterial({
   uniforms: {
     t: { value: rt.texture }, time: { value: 0 }, res: { value: new THREE.Vector2(2, 2) },
+    dep: { value: rt.depthTexture }, near: { value: 0.1 }, far: { value: 190 }, outCol: { value: new THREE.Color(PAL.void) },
+    grain: { value: TUNE.art.grain }, vig: { value: TUNE.art.vignette }, dith: { value: TUNE.art.dither }, edge: { value: TUNE.art.edge }, edgeD: { value: TUNE.art.edgeDepth },
     hurt: { value: 0 }, low: { value: 0 }, scent: { value: 0 }, moon: { value: 0 }, dark: { value: 0 }, toxic: { value: 0 }, gold: { value: 0 },
   },
   vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
-  fragmentShader: `uniform sampler2D t;uniform float time,hurt,low,scent,moon,dark,toxic,gold;uniform vec2 res;varying vec2 vUv;
+  fragmentShader: `uniform sampler2D t,dep;uniform float time,hurt,low,scent,moon,dark,toxic,gold,near,far,grain,vig,dith,edge,edgeD;uniform vec3 outCol;uniform vec2 res;varying vec2 vUv;
   float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+  float lin(vec2 u){float z=texture2D(dep,u).r*2.-1.;return 2.*near*far/(far+near-z*(far-near));}
   void main(){
     vec2 o=(vUv-.5)*.0016;
     vec3 c=vec3(texture2D(t,vUv+o).r,texture2D(t,vUv).g,texture2D(t,vUv-o).b);
+    // Depth-edge outline: a big relative depth step to a neighbour pixel draws Void (wall tops, roof edges).
+    vec2 px=1./res;float d0=lin(vUv);
+    float dd=max(max(lin(vUv+vec2(px.x,0.))-d0,lin(vUv+vec2(0.,px.y))-d0),max(lin(vUv-vec2(px.x,0.))-d0,lin(vUv-vec2(0.,px.y))-d0));
+    c=mix(c,outCol,edge*step(edgeD,dd/d0)*step(d0,far*.9));
     c=pow(max(c,0.),vec3(1./2.2));
     float l=dot(c,vec3(.3,.59,.11));c=mix(vec3(l),c,1.12);c=(c-.5)*1.06+.52;
     // Scent: the world drains to grey; only saturated, bright 'toxic' marks burn through.
@@ -52,15 +64,15 @@ export const post = new THREE.ShaderMaterial({
     c=mix(c,mix(grey,c*1.3,tox),scent*.92);
     c=mix(c,c*vec3(1.35,.5,.45)+vec3(.05,0.,0.),moon*.7);
     c=mix(c,c*vec3(.75,1.15,.6),toxic*.35);
-    c+=(hash(floor(vUv*res)+fract(time*7.)*vec2(37.,91.))-.5)*.03;
-    vec2 q=vUv-.5;float v=dot(q,q);c*=1.-v*.55;
+    c+=(hash(floor(vUv*res)+fract(time*7.)*vec2(37.,91.))-.5)*grain;
+    vec2 q=vUv-.5;float v=dot(q,q);c*=1.-v*vig;
     c*=1.-dark*clamp(v*5.5+.25,0.,.97);
     c=mix(c,c*vec3(1.25,1.12,.8)+vec3(.1,.08,.0),gold*.6*(1.-v*1.5));
     c=mix(c,vec3(.7,.08,.05),clamp(hurt*.45+low*v*1.8*(.6+.4*sin(time*6.)),0.,.65));
     // PS1 15-bit colour (32 levels per channel) with a 4x4 ordered dither.
     vec2 pp=mod(floor(vUv*res),4.);
     float b=mod(pp.x*4.+pp.y*11.+pp.x*pp.y*7.,16.)/16.-.5;
-    c=floor(clamp(c,0.,1.)*31.+.5+b*.9)/31.;
+    c=floor(clamp(c,0.,1.)*31.+.5+b*dith)/31.;
     gl_FragColor=vec4(c,1.);
   }`,
 });
@@ -73,13 +85,13 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post));
  * it drop towards 216 lines automatically when frames run long, then climb
  * back when there is headroom. Upscaled with nearest filtering.
  */
-export const res = { lines: 300, max: 300, min: 216, slowT: 0, fastT: 0 };
+export const res = { lines: 360, max: 360, min: 270, slowT: 0, fastT: 0 };
 export function resize() {
-  const h = Math.max(180, Math.min(Math.round(innerHeight * 0.6), res.lines)), w = Math.max(240, Math.round(h * innerWidth / Math.max(1, innerHeight)));
+  const h = Math.max(180, Math.min(Math.round(innerHeight * 0.75), res.lines)), w = Math.max(240, Math.round(h * innerWidth / Math.max(1, innerHeight)));
   renderer.setSize(w, h, false);
   rt.setSize(w, h);
   post.uniforms.res.value.set(w, h);
-  ps1Snap.value.set(w * 0.5, h * 0.5);
+  ps1Snap.value.set(w * 0.75, h * 0.75); // ~480×270 at 360 lines: a subtle wobble, not a swim
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
@@ -112,6 +124,7 @@ scene.add(hemi, sun, sun.target, lantern);
 export function renderFrame() {
   renderer.setRenderTarget(rt);
   renderer.render(scene, camera);
+  post.uniforms.near.value = camera.near; post.uniforms.far.value = camera.far;
   renderer.setRenderTarget(null);
   renderer.render(postScene, postCam);
 }
