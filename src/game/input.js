@@ -11,6 +11,7 @@ import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
 import { pause, resume, openMap, pickSlot } from '../ui/screens.js';
 import { useFlask, cycleFlask } from './shop.js';
+import { coop, P2_CODES } from './coop.js';
 import { renderSlots } from '../ui/hud.js';
 import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
@@ -34,6 +35,8 @@ export function initInput() {
     if (e.repeat) return;
     const s = G.state;
     if (s === 'play') {
+      if (e.code === 'Escape' || e.code === 'KeyP') { pause(true); return; }
+      if (P.downed || (coop.on && P2_CODES.has(e.code))) return; // co-op: downed, or another player's key
       if (e.code === 'Space') P.buffer = 0.13;
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') startRoll();
       if (e.code === 'KeyR') toggleLock();

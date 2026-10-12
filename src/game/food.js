@@ -120,6 +120,15 @@ function warnFood(f, z, holder) {
 }
 
 /** Pickups, mold that shows while sniffing, the line-of-fire warning, and the drain. */
+/** Eat any food the active rat is standing on (co-op steps this for every rat). */
+export function eatNearby() {
+  for (let i = W.foods.length - 1; i >= 0; i--) {
+    const f = W.foods[i];
+    if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) { bury(f.m); W.foods.splice(i, 1); eat(f.kind, f.mold, f.x, f.y, f.z); }
+  }
+}
+export { drain as drainHealth };
+
 export function tickFood(dt) {
   const zone = aimZone();
   for (let i = W.foods.length - 1; i >= 0; i--) {

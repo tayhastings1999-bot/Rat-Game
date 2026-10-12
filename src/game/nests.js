@@ -13,6 +13,7 @@ import { toW } from '../world/grid.js';
 import { INTRO, spawnEnemy } from '../entities/mobs.js';
 import { banner } from '../ui/hud.js';
 import { TUNE } from '../tuning.js';
+import { enemyTotal } from './coop.js';
 
 const N = () => TUNE.nests;
 const scale = () => (1 + (run.tier || 0) * 0.5) * (isSewer() ? 1.5 : 1);
@@ -59,7 +60,7 @@ export function tickNest(e, dt) {
   if (e.spawnT > 0 || Math.hypot(e.x - P.x, e.z - P.z) > N().range) return;
   e.spawnT = N()['every' + e.tier] / (1 + (run.T || 0) * 0.04) * (run.moon ? 0.6 : 1) / (run.spawnM || 1);
   e.kids = e.kids.filter(k => !k.dead);
-  if (e.kids.length >= N()['kids' + e.tier] || W.enemies.length >= TUNE.enemies.cap) return;
+  if (e.kids.length >= Math.round(N()['kids' + e.tier] * (run.kidsM || 1)) || enemyTotal() >= TUNE.enemies.cap) return;
   const F = FAMILIES[e.fam] || FAMILIES.vermin;
   const ti = Math.max(0, e.tier - 1 - (Math.random() < N().lowerOdds ? 1 : 0));
   const type = F.types[ti], a = rand(0, Math.PI * 2);

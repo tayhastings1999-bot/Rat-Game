@@ -17,6 +17,18 @@ export const TUNE = {
     elitePerThreat: 0.008,
     eliteMax: 0.2,
   },
+  coop: {
+    // Local co-op (game/coop.js): 2–4 rats on one screen. Friendly fire is off.
+    // Party scaling, Gauntlet-style: each rat beyond the first adds these fractions on top of zone + difficulty
+    // (so 4 rats = 1 + 3 × value). zoneScaling() in combat.js applies them.
+    perPlayer: { hp: 0.5, dmg: 0.12, spawn: 0.3, elite: 0.25, bossHp: 0.7, nestKids: 0.25 },
+    reviveR: 1.8, // a standing rat this close revives a downed one…
+    reviveTime: 2.5, // …over this many seconds (the bar drains at half speed when nobody helps)
+    reviveHp: 0.4, // back up with this fraction of max HP
+    leash: 26, // a rat farther than this from the lead is pulled back beside it
+    camBase: 13, camPerSpread: 0.9, camMax: 24, // camera distance = max(zoom, base + spread × perSpread), capped
+    deadzone: 0.35, // gamepad stick deadzone
+  },
   difficulty: {
     // Casual / Normal / Insane, picked in the Nest and saved per slot (meta.difficulty).
     // Multipliers on top of zone scaling (and player-count scaling in co-op). zoneScaling() in combat.js applies them.

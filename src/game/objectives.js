@@ -188,7 +188,7 @@ export function tickObjective(dt) {
   if (!o || o.done) return;
   if (o.kind === 'heist') {
     if (!o.carried) {
-      o.g.rotation.y += dt * 0.6;
+      if (o.g) o.g.rotation.y += dt * 0.6; // a harness can hand over a heist whose model is not built yet
       if (Math.hypot(P.x - o.x, P.z - o.z) < 1.8 && Math.abs(P.y - floorY(o.x, o.z)) < 1.5) {
         o.carried = true;
         o.hg.visible = true;
