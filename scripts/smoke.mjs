@@ -209,9 +209,10 @@ await step('nests raise their family, secrets, lairs, melee kit', async () => {
   if ((await S(() => __scurry.W.chests.length)) <= chests0) throw new Error('mini-boss left no hoard');
   // Melee kit: kills stack bloodlust.
   await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 1.5, P.z + 0.5, { plain: true }); if (e) e.hp = 1; } });
-  await wait(1500);
-  await shot('03c-swipe');
+  // Bloodlust decays 2.5s after a kill, so poll for it (slow CI runners) instead of reading it once later.
+  await page.waitForFunction(() => (__scurry.run.blood || 0) > 0, null, { timeout: 20000, polling: 50 }).catch(() => {});
   if (!((await S(() => __scurry.run.blood || 0)) > 0)) throw new Error('bloodlust did not stack');
+  await shot('03c-swipe');
 });
 await step('foraging', async () => {
   await S(() => { __scurry.G.testFreeze = true; __scurry.W.zones.length = 0; }); // hold any boss still, and no vents shoving the rat, through the scripted steps
