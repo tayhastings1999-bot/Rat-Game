@@ -642,8 +642,10 @@ export const TRIALS = [
       } },
       { name: 'growth starts fresh each run', async run(L) {
         await L.fresh({ cls: 'roof', god: true });
-        const g = await L.S(() => __scurry.run.growth || null);
-        return { ok: g == null, detail: g ? 'carried over' : 'fresh' };
+        // Since the Nest shop, a run starts with exactly its shop ranks as growth (no level growth carried).
+        const r = await L.S(() => { const s = __scurry, g = s.run.growth || {}, sh = s.meta.shop || {}, T = s.TUNE.shop; const want = { str: (sh.str || 0) * T.statPer, spd: (sh.spd || 0) * T.statPer, arm: (sh.arm || 0) * T.statPer, mag: (sh.mag || 0) * T.statPer, hp: (sh.hide || 0) * T.hpPer }; return { g, want, lvl: s.run.level }; });
+        const same = Object.keys(r.want).every(k => Math.abs((r.g[k] || 0) - r.want[k]) < 1e-6);
+        return { ok: same && r.lvl === 1, detail: same ? 'fresh (shop ranks only)' : 'carried over ' + JSON.stringify(r) };
       } },
     ],
     t2: [
