@@ -21,7 +21,14 @@ export const TUNE = {
     // Local co-op (game/coop.js): 2–4 rats on one screen. Friendly fire is off.
     // Party scaling, Gauntlet-style: each rat beyond the first adds these fractions on top of zone + difficulty
     // (so 4 rats = 1 + 3 × value). zoneScaling() in combat.js applies them.
-    perPlayer: { hp: 0.5, dmg: 0.12, spawn: 0.3, elite: 0.25, bossHp: 0.7, nestKids: 0.25 },
+    // HP and spawn pressure rise with the party, damage does not (uneven damage scaling is the top complaint in co-op reviews).
+    perPlayer: { hp: 0.6, dmg: 0, spawn: 0.35, elite: 0.1, bossHp: 0.75, nestKids: 0.3 },
+    // Downed rats: a teammate can revive them inside the window; when it runs out the party spends a shared
+    // cheese token (a continue) to bring them back beside the lead, or they sit out until the next level.
+    // Per difficulty: tokens per run and teammate revives per rat per level (-1 = unlimited).
+    downTime: 15, // seconds a downed rat waits before a token is spent (or it sits out)
+    tokenHp: 0.6, // HP fraction when a token brings a rat back
+    rules: { casual: { tokens: -1, revives: -1 }, normal: { tokens: 3, revives: 2 }, insane: { tokens: 2, revives: 0 } },
     reviveR: 1.8, // a standing rat this close revives a downed one…
     reviveTime: 2.5, // …over this many seconds (the bar drains at half speed when nobody helps)
     reviveHp: 0.4, // back up with this fraction of max HP
@@ -254,11 +261,14 @@ export const TUNE = {
   },
   shop: {
     // The Nest shop (game/shop.js): permanent upgrades bought with banked gold, kept per save slot.
-    // cost of rank r (0-based) = round(base × grow^r). Stat ranks feed run.growth at run start.
+    // Price = round(item.x × goldPerLevel), × grow^rank for Thick Fur and Packrat (stats stay flat, GDL-style).
+    // Stat ranks feed run.growth at run start.
+    goldPerLevel: 250, // ESTIMATE of average gold banked per level on Normal; measure with the lab bots and update
+    sellBack: 0.75, // packed supplies and flasks sell back for this share of the price
     statPer: 0.5, // stat points per rank of Sharp Teeth / Quick Feet / Scarred Hide / Rot Lore
     hpPer: 10, // max HP per rank of Thick Hide
     goldPer: 0.1, // gold pickup +10% per rank of Packrat
-    grow: 1.8, // upgrade price × this per rank owned
+    grow: 1.5, // Thick Fur / Packrat price × this per rank owned
     cheeseAt: 0.25, cheeseHeal: 0.4, // packed cheese: eaten below 25% HP, heals 40%
   },
 };

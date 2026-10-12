@@ -1,6 +1,7 @@
 // Shared mutable game state. Objects are exported as singletons and mutated in
 // place (never reassigned) so every module sees the same live data.
 import { loadJSON, saveJSON } from './util.js';
+import { storage } from './storage.js';
 
 /** Scalars and single references that change during play. */
 export const G = {
@@ -89,7 +90,7 @@ export const readSlot = i => migrate(loadJSON(slotKey(i), null));
   saveJSON(slotKey(1), migrate({ v: 1, meta: m, best: loadJSON('scurry.best', BEST0()), at: Date.now() }));
   saveJSON('scurry.activeSlot', 1);
 })();
-try { for (const k of Object.keys(localStorage)) if (/^scurry4\.|^scurry\.daily\./.test(k)) localStorage.removeItem(k); } catch (_) { /* storage blocked */ }
+for (const k of storage.keys()) if (/^scurry4\.|^scurry\.daily\./.test(k)) storage.remove(k);
 
 /** Persistent meta progression for the active slot (story, skins, gold, shop). */
 export const meta = META0();
@@ -112,7 +113,7 @@ export function loadSlot(i) {
   writeSlot();
 }
 export function deleteSlot(i) {
-  try { localStorage.removeItem(slotKey(i)); } catch (_) { /* storage blocked */ }
+  storage.remove(slotKey(i));
   if (save.slot === i) { save.slot = 0; reset(meta, META0()); reset(best, BEST0()); }
   if (loadJSON('scurry.activeSlot', 0) === i) saveJSON('scurry.activeSlot', 0);
 }

@@ -14,7 +14,7 @@
 // each enemy is updated during the pass of the rat nearest to it.
 // Friendly fire is off: player attacks only ever hit enemies.
 import * as THREE from 'three';
-import { G, P, W, run, st } from '../core/state.js';
+import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { CLASSES } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
@@ -43,7 +43,7 @@ export const coop = {
 export const INPUTS = { kb1: 'Keyboard + mouse', kb2: 'Keyboard (arrows + numpad)', pad0: 'Gamepad 1', pad1: 'Gamepad 2', pad2: 'Gamepad 3', pad3: 'Gamepad 4' };
 
 // Per-rat fields kept on run (everything else on run is shared by the party: gold, keys, XP, level, kills).
-const RF = ['critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'cheese', 'tails', 'specT', 'primT', 'growth', 'combo', 'comboT', 'lowWarned', 'blood', 'bloodT'];
+const RF = ['critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'flaskT', 'flaskOn', 'cheese', 'tails', 'specT', 'primT', 'growth', 'combo', 'comboT', 'lowWarned', 'blood', 'bloodT'];
 // Per-rat fields kept on G (turbo input state, lock-on, aim and attack input).
 const GF = ['turboHeld', 'turboKey', 'turboArmT', 'turboFlash', 'lockOn', 'attack', 'aimAt', 'touch', 'rat'];
 const pick = (o, ks) => { const r = {}; for (const k of ks) r[k] = o[k]; return r; };
@@ -88,7 +88,7 @@ export function coopStart(freshStats, shopGrowth) {
   const base = { ...p1.P }, pr = pick(run, RF);
   for (let i = 1; i < n; i++) {
     const cls = CLASSES[coop.setup.cls[i]] ? coop.setup.cls[i] : 'brawler', C = CLASSES[cls];
-    Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, cheese: 0, tails: 0, specT: 0, primT: 0, growth: shopGrowth(), combo: 0, comboT: 0, lowWarned: false, blood: 0, bloodT: 0 });
+    Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, flaskT: {}, flaskOn: null, cheese: 0, tails: 0, specT: 0, primT: 0, growth: shopGrowth(), combo: 0, comboT: 0, lowWarned: false, blood: 0, bloodT: 0 });
     fill(st, freshStats(cls));
     st.salvage = p1.st.salvage; // gold upgrades and difficulty are party-wide
     run.hp = st.maxHp;
@@ -109,6 +109,7 @@ export function coopStart(freshStats, shopGrowth) {
   }
   swapIn(p1);
   coop.seed = run.seed;
+  run.tokens = coopRules().tokens;
 }
 /** Back to one rat (menu, death). */
 export function coopEnd() {
@@ -264,16 +265,39 @@ function stepOther(dt) {
   drainHealth(dt);
 }
 
-/** Downed: a standing rat close by fills the revive bar (TUNE.coop.revive*). */
-function tickRevive(p, dt) {
-  const q = p.P, C = TUNE.coop;
-  const helper = alive().some(o => { const r = posOf(o); return Math.hypot(r.x - q.x, r.z - q.z) < C.reviveR; });
+/** The co-op rules for the slot's difficulty (TUNE.coop.rules). */
+export const coopRules = () => TUNE.coop.rules[meta.difficulty] || TUNE.coop.rules.normal;
+const standUp = (p, hp) => { const q = p.P; q.downed = false; q.out = false; q.reviveT = 0; q.downT = 0; q.inv = 2; p.run.hp = p.st.maxHp * hp; };
+
+/**
+ * Downed: a standing rat close by fills the revive bar (if this rat has revives left this
+ * level). When the window runs out, a shared cheese token brings it back beside the lead;
+ * with no tokens left it sits out until the next level.
+ */
+function tickRevive(p, dt, lead) {
+  const q = p.P, C = TUNE.coop, R = coopRules();
+  if (q.out) return;
+  q.downT = (q.downT || 0) + dt;
+  const canRevive = R.revives < 0 || (q.revUsed || 0) < R.revives;
+  const helper = canRevive && alive().some(o => { const r = posOf(o); return Math.hypot(r.x - q.x, r.z - q.z) < C.reviveR; });
   q.reviveT = helper ? (q.reviveT || 0) + dt : Math.max(0, (q.reviveT || 0) - dt * 0.5);
   if (q.reviveT >= C.reviveTime) {
-    q.downed = false; q.reviveT = 0; q.inv = 2;
-    p.run.hp = p.st.maxHp * C.reviveHp;
+    q.revUsed = (q.revUsed || 0) + 1;
+    standUp(p, C.reviveHp);
     dnum(q.x, q.y + 1.8, q.z, 'Back up!', 'heal');
     bark(`P${p.i + 1} is back on their feet!`);
+    return;
+  }
+  if (q.downT < C.downTime) return;
+  if (run.tokens !== 0) {
+    if (run.tokens > 0) run.tokens--;
+    const L = posOf(lead);
+    Object.assign(q, { x: L.x + 1, y: L.y + 0.2, z: L.z, vx: 0, vy: 0, vz: 0 });
+    standUp(p, C.tokenHp);
+    bark(`P${p.i + 1} spends a cheese token!${run.tokens > 0 ? ` ${run.tokens} left.` : run.tokens === 0 ? ' That was the last one.' : ''}`);
+  } else {
+    q.out = true;
+    bark(`P${p.i + 1} is out until the next level.`);
   }
 }
 
@@ -281,6 +305,7 @@ function tickRevive(p, dt) {
 function leash(lead) {
   const L = posOf(lead), newMap = coop.seed !== run.seed;
   coop.seed = run.seed;
+  if (newMap) for (const p of coop.players) { const q = posOf(p); q.revUsed = 0; if (q.downed && p !== lead) standUp(p, 0.5); }
   for (const p of coop.players) {
     if (p === lead) continue;
     const q = posOf(p);
@@ -321,7 +346,7 @@ export function coopUpdate(dt, solo) {
   }
   swapOut(lead);
   lead = coop.players.find(p => !p.P.downed) || lead;
-  for (const p of coop.players) if (p.P.downed) tickRevive(p, dt);
+  for (const p of coop.players) if (p.P.downed) tickRevive(p, dt, lead);
   leash(lead);
   swapIn(p1);
   fill(keys, raw);
@@ -334,6 +359,7 @@ export function coopDown() {
   if (!others.length) return false;
   P.downed = true;
   P.reviveT = 0;
+  P.downT = 0;
   run.hp = 0;
   P.vx = P.vz = 0;
   dnum(P.x, P.y + 1.8, P.z, 'Down! Stand next to them to revive', 'crit');
@@ -370,11 +396,12 @@ export function coopFrame() {
 /** HUD strip: one card per rat. */
 export function coopHud() {
   if (!coop.on) return '';
-  return coop.players.map(p => {
+  const tok = run.tokens < 0 ? '∞' : run.tokens;
+  return `<div class="cp tok"><b class="px">Cheese tokens</b><span class="px">${tok}</span></div>` + coop.players.map(p => {
     const cur = p.i === coop.active, q = cur ? P : p.P, r = cur ? run : p.run, s = cur ? st : p.st, C = CLASSES[r.cls];
     const hp = Math.max(0, r.hp) / (s.maxHp || 1);
     return `<div class="cp${q.downed ? ' down' : ''}" style="--rc:#${TUNE.coop.colors[p.i].toString(16).padStart(6, '0')}"><b class="px">P${p.i + 1} · ${C.name}</b>
       <u><s style="width:${hp * 100}%"></s></u><i style="width:${Math.min(100, (r.turbo || 0) / 3 * 100)}%"></i>
-      <span class="px">${q.downed ? `DOWN ${Math.round((q.reviveT || 0) / TUNE.coop.reviveTime * 100)}%` : `${Math.ceil(r.hp)} HP`}${Object.values(r.flasks || {}).reduce((a, b) => a + b, 0) ? ` · ${Object.values(r.flasks).reduce((a, b) => a + b, 0)} flask` : ''}</span></div>`;
+      <span class="px">${q.out ? 'OUT · next level' : q.downed ? `DOWN ${Math.max(0, Math.ceil(TUNE.coop.downTime - (q.downT || 0)))}s · revive ${Math.round((q.reviveT || 0) / TUNE.coop.reviveTime * 100)}%` : `${Math.ceil(r.hp)} HP`}${Object.values(r.flasks || {}).reduce((a, b) => a + b, 0) ? ` · ${Object.values(r.flasks).reduce((a, b) => a + b, 0)} flask` : ''}</span></div>`;
   }).join('');
 }

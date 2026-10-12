@@ -13,8 +13,22 @@ export const rank = id => ((perm(id) ? meta.shop : meta.pack) || {})[id] || 0;
 export const price = id => {
   const S = SHOP[id], r = rank(id);
   if (r >= S.max) return null;
-  return perm(id) ? Math.round(S.base * TUNE.shop.grow ** r) : S.base;
+  const T = TUNE.shop, g = S.kind === 'hp' || S.kind === 'gold' ? T.grow ** r : 1;
+  return Math.round(S.x * T.goldPerLevel * g / 5) * 5;
 };
+/** What one packed supply or flask sells back for (null for permanent upgrades or nothing packed). */
+export const sellPrice = id => {
+  if (perm(id) || !rank(id)) return null;
+  return Math.floor(Math.round(SHOP[id].x * TUNE.shop.goldPerLevel / 5) * 5 * TUNE.shop.sellBack);
+};
+export function sell(id) {
+  const c = sellPrice(id);
+  if (c == null) return false;
+  meta.pack[id]--;
+  meta.salvage = (meta.salvage || 0) + c;
+  saveMeta();
+  return true;
+}
 /** The effect at rank r, in display units (stat points, HP, gold fraction). */
 export function amount(id, r = rank(id)) {
   const k = SHOP[id].kind, T = TUNE.shop;
@@ -52,6 +66,8 @@ export function applyShop() {
   run.flasks = {}; // power-up key → count held
   for (const id of Object.keys(SHOP)) if (SHOP[id].kind === 'flask' && p[id]) run.flasks[SHOP[id].pu] = (run.flasks[SHOP[id].pu] || 0) + p[id];
   run.flaskSel = 0;
+  run.flaskT = {};
+  run.flaskOn = null;
   meta.pack = {};
   saveMeta();
 }
@@ -74,7 +90,7 @@ export function cheatDeath() {
 // Bound to V (use) and B (cycle) on the keyboard and the Flask / Swap touch buttons.
 // useFlask and cycleFlask take no arguments, so a gamepad binding can call them directly.
 /** Flask types held, in a stable order. */
-export const heldFlasks = () => Object.keys(run.flasks || {}).filter(k => run.flasks[k] > 0);
+export const heldFlasks = () => Object.keys(run.flasks || {}).filter(k => run.flasks[k] > 0 || (run.flaskT && run.flaskT[k] > 0) || (run.flaskOn === k));
 /** The selected flask's power-up key, or null when none are held. */
 export function selFlask() {
   const h = heldFlasks();
@@ -87,12 +103,21 @@ export function cycleFlask() {
   if (h.length > 1) run.flaskSel = ((run.flaskSel || 0) + 1) % h.length;
   return selFlask();
 }
-/** Uncork the selected flask. Returns its power-up key, or null. */
+/**
+ * V on the selected flask, GDL-style toggle: uncork a fresh one, cork an open one (its
+ * remaining time is saved in run.flaskT), or uncork a corked one where it left off.
+ * Returns 'open' | 'cork' | 'resume' | null.
+ */
 export function useFlask() {
   const k = selFlask();
   if (!k || G.state !== 'play') return null;
+  const T = run.flaskT || (run.flaskT = {}), pu = run.pu || (run.pu = {});
+  if (run.flaskOn === k && pu[k] > 0) { T[k] = pu[k]; pu[k] = 0; run.flaskOn = null; return 'cork'; }
+  if (T[k] > 0) { grantPowerup(k); pu[k] = T[k]; T[k] = 0; run.flaskOn = k; return 'resume'; }
+  if (!(run.flasks[k] > 0)) return null;
   run.flasks[k]--;
   grantPowerup(k);
+  run.flaskOn = k;
   selFlask();
-  return k;
+  return 'open';
 }

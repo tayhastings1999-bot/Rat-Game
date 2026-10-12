@@ -1,4 +1,5 @@
 // Small math, formatting and RNG helpers shared by every module.
+import { storage } from './storage.js';
 export const TAU = Math.PI * 2;
 export const PI2 = Math.PI / 2;
 
@@ -69,14 +70,13 @@ export const shuffleR = a => {
 };
 
 
+/** Read a JSON blob through the storage layer (core/storage.js). */
 export const loadJSON = (key, fallback) => {
   try {
-    const v = localStorage.getItem(key);
+    const v = storage.get(key);
     return v == null ? fallback : JSON.parse(v);
   } catch (_) {
     return fallback;
   }
 };
-export const saveJSON = (key, v) => {
-  try { localStorage.setItem(key, JSON.stringify(v)); } catch (_) { /* storage full or blocked */ }
-};
+export const saveJSON = (key, v) => storage.set(key, JSON.stringify(v));
