@@ -17,6 +17,7 @@ import { addXP } from './progress.js';
 import { bark } from './announcer.js';
 import { TUNE } from '../tuning.js';
 import { die } from '../ui/screens.js';
+import { onLowHp } from './shop.js';
 
 function reaperMesh() {
   const g = new THREE.Group(), robe = new THREE.MeshLambertMaterial({ color: 0x141018, emissive: 0x0a0610, flatShading: true });
@@ -121,6 +122,7 @@ export function reaperAI(e, dt) {
     G.flash = Math.max(G.flash, 0.3);
     if (Math.random() < dt * 6) dnum(P.x, P.y + 1.4, P.z, '-' + Math.ceil(k * 6), 'heal');
     if (G.qa) G.qa.hurt(k, e, true);
+    onLowHp(); // packed cheese covers the Reaper's drain too
     if (run.hp <= 0) { run.hp = 0; die(); return; }
   }
   if (e.drained >= R.drainCap) leave(e, 'The Reaper has fed, and fades away');
