@@ -18,7 +18,7 @@ await page.goto('http://localhost:5197/?debug');
 await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
 await page.waitForTimeout(1200);
 await page.screenshot({ path: OUT + 'menu.png' });
-const classes = (process.env.CLS || 'brawler,plague,slinger,warlock,tank,sneak,roof').split(',');
+const classes = (process.env.CLS || 'tank,slinger,warlock,sneak').split(',');
 for (const k of classes) {
   await S(k => __scurry.startRun(k), k);
   await page.waitForTimeout(800);

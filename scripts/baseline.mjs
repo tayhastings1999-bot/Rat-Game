@@ -9,13 +9,13 @@
 //   - scene census: unique geometries, meshes, shadow casters, lights, sprites
 // Frame times come from a software renderer (SwiftShader) here, so they're
 // recorded but not comparable to a real GPU; CPU costs and counts are.
-// Usage: node scripts/baseline.mjs [--minutes=10] [--profiles=expert,average] [--cls=brawler] [--label=phase0]
+// Usage: node scripts/baseline.mjs [--minutes=10] [--profiles=expert,average] [--cls=tank] [--label=phase0]
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 
 const arg = (k, d) => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('=')[1] || d;
-const MIN = +arg('minutes', 10), PROFILES = arg('profiles', 'expert,average').split(','), CLS = arg('cls', 'brawler'), LABEL = arg('label', 'baseline');
+const MIN = +arg('minutes', 10), PROFILES = arg('profiles', 'expert,average').split(','), CLS = arg('cls', 'tank'), LABEL = arg('label', 'baseline');
 const OUT = new URL('./out/baseline/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
 const exe = process.env.CHROMIUM || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);

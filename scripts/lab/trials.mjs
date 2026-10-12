@@ -60,7 +60,7 @@ export const TRIALS = [
       { name: 'run starts and level changes never drop the rat below the floor', async run(L) {
         let worst = 9;
         for (let i = 0; i < 4; i++) {
-          await L.fresh({ cls: ['brawler', 'roof', 'sneak', 'slinger'][i], god: true });
+          await L.fresh({ cls: ['tank', 'warlock', 'sneak', 'slinger'][i], god: true });
           worst = Math.min(worst, await L.S(async () => { const s = __scurry; let m = 9; s.exitRoad(); for (let f = 0; f < 90; f++) { await new Promise(r => requestAnimationFrame(r)); if (s.G.state === 'play') m = Math.min(m, s.P.y); } return m; }));
         }
         return { ok: worst > -0.4, detail: `lowest y ${worst.toFixed(2)}` };
@@ -71,7 +71,7 @@ export const TRIALS = [
       } },
       { name: 'bots play three levels without stuck spots, falling out, or ending up inside walls', async run(L) {
         const bad = [];
-        for (const [lv, cls] of [[CITY(1), 'slinger'], [CITY(4), 'brawler'], [SEWER(2), 'plague']]) {
+        for (const [lv, cls] of [[CITY(1), 'slinger'], [CITY(4), 'tank'], [SEWER(2), 'warlock']]) {
           await L.fresh({ cls, level: lv, quiet: false });
           const r = await L.play(L.QUICK ? 40 : 80, { profile: 'average', goal: 'nests' });
           bad.push(...r.anomalies.filter(k => /stuck|fell|inside|nan/.test(k)));
@@ -82,7 +82,7 @@ export const TRIALS = [
     t3: {
       // An average bot clears nests at a steady clip and usually lives.
       async run(L) {
-        const m = { nestsPerMin: 0, deathRate: 0 }, runs = [[CITY(0), 'brawler'], [CITY(2), 'roof'], [SEWER(0), 'warlock']];
+        const m = { nestsPerMin: 0, deathRate: 0 }, runs = [[CITY(0), 'tank'], [CITY(2), 'slinger'], [SEWER(0), 'warlock']];
         for (const [lv, cls] of runs) {
           await L.fresh({ cls, level: lv, quiet: false });
           const n0 = await L.S(() => __scurry.W.enemies.filter(e => e.type === 'nest' && !e.dead).length);
@@ -181,7 +181,7 @@ export const TRIALS = [
       async run(L) {
         const runs = L.QUICK ? 2 : 3, m = { dropsPerMin: 0, fallsPerMin: 0, fallShare: 0, pitKillsPerMin: 0 };
         for (let i = 0; i < runs; i++) {
-          await L.fresh({ cls: ['brawler', 'slinger', 'roof'][i % 3], level: RUST_NIGHT, quiet: false });
+          await L.fresh({ cls: ['tank', 'slinger', 'warlock'][i % 3], level: RUST_NIGHT, quiet: false });
           const r = await L.play(L.QUICK ? 60 : 90, { profile: 'average', goal: 'nests' });
           const c = await L.S(() => ({ drops: __scurry.run.crackDrops || 0, falls: __scurry.run.falls || 0, pit: __scurry.run.pitKills || 0, fallDmg: __scurry.run.fallDmg || 0 }));
           const min = Math.max(0.25, r.simTime / 60);
@@ -540,7 +540,7 @@ export const TRIALS = [
       // Bots play a level: keys turn up at a steady rate, enough to open a lock or two.
       async run(L) {
         const m = { keysPerMin: 0 };
-        const runs = [[CITY(1), 'brawler'], [SEWER(1), 'slinger']];
+        const runs = [[CITY(1), 'tank'], [SEWER(1), 'slinger']];
         for (const [lv, cls] of runs) {
           await L.fresh({ cls, level: lv, quiet: false });
           const r = await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
@@ -604,7 +604,7 @@ export const TRIALS = [
         return { ok: !bad.length, detail: bad.slice(0, 3).join('; ') || 'clear' };
       } },
       { name: 'all eight at once through 20 s of bot play: no errors, no stuck states', async run(L) {
-        await L.fresh({ cls: 'brawler', level: CITY(1), quiet: false });
+        await L.fresh({ cls: 'tank', level: CITY(1), quiet: false });
         await L.S(() => { const s = __scurry; for (const k of Object.keys(s.POWERUPS)) s.grantPowerup(k); });
         const r = await L.play(20, { profile: 'average', goal: 'nests' });
         const bad = r.anomalies.filter(k => /stuck|fell|inside|nan/.test(k));
@@ -615,7 +615,7 @@ export const TRIALS = [
       // Bots play with the level's tokens: some get picked up, they're running a fair share of the
       // time, and they make the fight easier without trivialising it.
       async run(L) {
-        const m = { pickupsPerMin: 0, uptime: 0, deathRate: 0 }, runs = [[CITY(0), 'brawler'], [CITY(1), 'slinger'], [SEWER(0), 'warlock']];
+        const m = { pickupsPerMin: 0, uptime: 0, deathRate: 0 }, runs = [[CITY(0), 'tank'], [CITY(1), 'slinger'], [SEWER(0), 'warlock']];
         for (const [lv, cls] of runs) {
           await L.fresh({ cls, level: lv, quiet: false });
           const r = await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
@@ -636,12 +636,12 @@ export const TRIALS = [
     id: 'growth', since: 'P3', title: 'Stats grow with every level, along the class’s strengths',
     t1: [
       { name: 'a level-up grows the class’s strongest stats most, and max HP (healed)', async run(L) {
-        await L.fresh({ cls: 'brawler', level: CINDER, god: true });
-        const r = await L.S(() => { const s = __scurry, hp0 = s.st.maxHp, cur0 = s.run.hp, c = s.TUNE.classes.brawler; s.addXP(s.run.need + 1); const g = s.run.growth, top = ['str', 'spd', 'arm', 'mag'].sort((a, b) => c[b] - c[a])[0]; return { lvl: s.run.level, hpGain: s.st.maxHp - hp0, healed: s.run.hp - cur0, top, topGain: g[top], minGain: Math.min(g.str, g.spd, g.arm, g.mag) }; });
+        await L.fresh({ cls: 'tank', level: CINDER, god: true });
+        const r = await L.S(() => { const s = __scurry, hp0 = s.st.maxHp, cur0 = s.run.hp, c = s.TUNE.classes.tank; s.addXP(s.run.need + 1); const g = s.run.growth, top = ['str', 'spd', 'arm', 'mag'].sort((a, b) => c[b] - c[a])[0]; return { lvl: s.run.level, hpGain: s.st.maxHp - hp0, healed: s.run.hp - cur0, top, topGain: g[top], minGain: Math.min(g.str, g.spd, g.arm, g.mag) }; });
         return { ok: r.lvl === 2 && r.hpGain > 0 && r.healed > 0 && r.topGain > r.minGain, detail: JSON.stringify(r) };
       } },
       { name: 'growth starts fresh each run', async run(L) {
-        await L.fresh({ cls: 'roof', god: true });
+        await L.fresh({ cls: 'slinger', god: true });
         // Since the Nest shop, a run starts with exactly its shop ranks as growth (no level growth carried).
         const r = await L.S(() => { const s = __scurry, g = s.run.growth || {}, sh = s.meta.shop || {}, T = s.TUNE.shop; const want = { str: (sh.str || 0) * T.statPer, spd: (sh.spd || 0) * T.statPer, arm: (sh.arm || 0) * T.statPer, mag: (sh.mag || 0) * T.statPer, hp: (sh.hide || 0) * T.hpPer }; return { g, want, lvl: s.run.level }; });
         const same = Object.keys(r.want).every(k => Math.abs((r.g[k] || 0) - r.want[k]) < 1e-6);
@@ -658,7 +658,7 @@ export const TRIALS = [
     t3: {
       // An average bot over a few minutes: it levels, keeps killing at a good clip, and usually lives.
       async run(L) {
-        const m = { levelsPerMin: 0, killsPerMin: 0, deathRate: 0 }, runs = [[CITY(0), 'brawler'], [CITY(1), 'roof'], [SEWER(0), 'sneak']];
+        const m = { levelsPerMin: 0, killsPerMin: 0, deathRate: 0 }, runs = [[CITY(0), 'tank'], [CITY(1), 'slinger'], [SEWER(0), 'sneak']];
         for (const [lv, cls] of runs) {
           await L.fresh({ cls, level: lv, quiet: false });
           const r = await L.play(L.QUICK ? 120 : 200, { profile: 'average', goal: 'nests' });
@@ -730,7 +730,7 @@ export const TRIALS = [
       // Average bots on three levels: grades should spread across the middle, not pile up at S or D.
       async run(L) {
         const scores = [];
-        for (const [lv, cls] of [[CITY(0), 'brawler'], [CITY(2), 'slinger'], [SEWER(0), 'plague']]) {
+        for (const [lv, cls] of [[CITY(0), 'tank'], [CITY(2), 'slinger'], [SEWER(0), 'warlock']]) {
           await L.fresh({ cls, level: lv, quiet: false });
           await L.play(L.QUICK ? 90 : 160, { profile: 'average', goal: 'nests' });
           scores.push(await L.S(() => __scurry.tallyCalc().score));

@@ -17,7 +17,7 @@ export function soft(v, at = TUNE.balance.softAt, R = TUNE.balance.softR) {
 
 /** The class-driven part of `st` for class `k`, including what the current run's levels have grown. */
 export function derive(k) {
-  const S = TUNE.stats, c0 = TUNE.classes[k] || TUNE.classes.brawler, g = run.cls === k && run.growth ? run.growth : null;
+  const S = TUNE.stats, c0 = TUNE.classes[k] || TUNE.classes.tank, g = run.cls === k && run.growth ? run.growth : null;
   const c = g ? { ...c0, str: soft(c0.str + g.str), spd: soft(c0.spd + g.spd), arm: soft(c0.arm + g.arm), mag: soft(c0.mag + g.mag) } : c0;
   return {
     maxHp: c0.hp + (g ? g.hp : 0),
@@ -41,7 +41,7 @@ export const marks = { heal: 1, speed: 1, dmg: 0, taken: 1 };
  * Returns the stats that grew most this level, for the banner.
  */
 export function growStats() {
-  const G2 = TUNE.growth, c = TUNE.classes[run.cls] || TUNE.classes.brawler, sum = STAT_KEYS.reduce((a, s) => a + c[s], 0) || 1;
+  const G2 = TUNE.growth, c = TUNE.classes[run.cls] || TUNE.classes.tank, sum = STAT_KEYS.reduce((a, s) => a + c[s], 0) || 1;
   const g = run.growth || (run.growth = { str: 0, spd: 0, arm: 0, mag: 0, hp: 0 });
   for (const s of STAT_KEYS) g[s] += G2.perLevel * c[s] / sum;
   g.hp += G2.hp;
@@ -53,7 +53,7 @@ export function growStats() {
 }
 /** Level growth for another co-op rat (no banner). */
 function growOne() {
-  const G2 = TUNE.growth, c = TUNE.classes[run.cls] || TUNE.classes.brawler, sum = STAT_KEYS.reduce((a, s) => a + c[s], 0) || 1;
+  const G2 = TUNE.growth, c = TUNE.classes[run.cls] || TUNE.classes.tank, sum = STAT_KEYS.reduce((a, s) => a + c[s], 0) || 1;
   const g = run.growth || (run.growth = { str: 0, spd: 0, arm: 0, mag: 0, hp: 0 });
   for (const s of STAT_KEYS) g[s] += G2.perLevel * c[s] / sum;
   g.hp += G2.hp;

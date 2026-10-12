@@ -96,13 +96,14 @@ await check('difficulty is picked in the Nest and saved per slot', async () => {
 });
 await check('every class card is present', async () => {
   const n = await page.locator('.card[data-k]').count();
-  if (n < 7) throw new Error(`${n} class cards`);
+  const ks = await page.$$eval('.card[data-k]', els => els.map(e => e.dataset.k).join(','));
+  if (n !== 4 || ks !== 'tank,slinger,warlock,sneak') throw new Error(`${n} class cards: ${ks}`);
 });
 await check('start a run from the menu', async () => {
-  await page.click('.card[data-k="brawler"]');
+  await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
   if ((await S(() => __scurry.M.kind)) !== 'city') throw new Error('not in the city');
-  const u = await S(() => ({ hp: __scurry.st.maxHp, base: __scurry.TUNE.classes.brawler.hp, add: __scurry.TUNE.shop.hpPer, vials: __scurry.run.vials, v0: __scurry.TUNE.vials.start }));
+  const u = await S(() => ({ hp: __scurry.st.maxHp, base: __scurry.TUNE.classes.tank.hp, add: __scurry.TUNE.shop.hpPer, vials: __scurry.run.vials, v0: __scurry.TUNE.vials.start }));
   if (u.hp !== u.base + u.add) throw new Error(`max HP ${u.hp}, wanted ${u.base + u.add}`);
   if (u.vials !== u.v0 + 1) throw new Error(`vials ${u.vials}`);
   if (Object.keys(await S(() => __scurry.readSlot(1).meta.pack)).length) throw new Error('supplies were not used up');
@@ -186,7 +187,7 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
   await S(() => { __scurry.fakePads[0] = { axes: [0, 0, 0, 0], buttons: [] }; });
-  await page.click('.card[data-k="brawler"]');
+  await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
   await toPlay();
   const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: 1 + __scurry.TUNE.coop.perPlayer.bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
@@ -234,10 +235,15 @@ await check('old single-slot saves move into slot 1', async () => {
   await p2.goto('http://localhost:5190/?debug', { waitUntil: 'domcontentloaded', timeout: T(30000) });
   await p2.waitForSelector('[data-slot="1"]', { timeout: T(20000) });
   const d = await p2.evaluate(() => JSON.parse(localStorage.getItem('scurry.slot1')));
-  if (!d || d.v !== 2 || d.meta.salvage !== 321 || d.best.time !== 90 || d.meta.nest) throw new Error('slot1 ' + JSON.stringify(d));
+  if (!d || d.v !== 3 || d.meta.salvage !== 321 || d.best.time !== 90 || d.meta.nest) throw new Error('slot1 ' + JSON.stringify(d));
   await p2.click('[data-slot="1"]');
   await p2.waitForSelector('#hubGold');
   if (!/321 gold/.test(await p2.textContent('#hubGold'))) throw new Error('hub gold wrong');
+  // v2 → v3: cut classes move to their heirs (Brawler → Sewer Rat, Plaguebearer → Warlock, Roof Rat → Slinger).
+  const m2 = await p2.evaluate(() => { localStorage.setItem('scurry.slot2', JSON.stringify({ v: 2, meta: { salvage: 50, cls: 'brawler', coopCls: ['plague', 'roof', 'tank', 'brawler'], furs: { roof: 3, slinger: 1, plague: 2 }, u_plague: 1, shop: {} }, best: { time: 1, kills: 1, district: 0 } })); return __scurry.readSlot(2).meta; });
+  if (m2.cls !== 'tank' || m2.coopCls.join() !== 'warlock,slinger,tank,tank' || m2.furs.slinger !== 1 || m2.furs.warlock !== 2 || 'roof' in m2.furs || m2.u_plague) throw new Error('slot2 migration ' + JSON.stringify(m2));
+  const ran = await p2.evaluate(() => { __scurry.startRun('roof'); const k = __scurry.run.cls; __scurry.menu(); return k; });
+  if (ran !== 'slinger') throw new Error('startRun(roof) ran ' + ran);
   // Deleting the slot must not bring the old save back on the next load (one-time migration).
   await p2.evaluate(() => localStorage.removeItem('scurry.slot1'));
   await p2.reload({ waitUntil: 'domcontentloaded' });

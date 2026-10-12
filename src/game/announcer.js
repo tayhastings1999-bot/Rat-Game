@@ -13,16 +13,16 @@ const LOW = ['{rat} needs food. Now.', '{rat} is running on empty!', 'Find some 
 const CRIT = ['{rat} is about to drop!', '{rat} is one bite from the gutter!', 'Eat or die, {rat}!'];
 
 let barkT;
-/** Show (and optionally speak) one line. */
-export function bark(text) {
+/** Show (and optionally speak) one line for `secs` seconds (default TUNE.announcer.showSecs). */
+export function bark(text, secs = TUNE.announcer.showSecs) {
   const el = $('bark');
   if (el) {
     el.textContent = text;
     el.classList.add('on');
     clearTimeout(barkT);
-    barkT = setTimeout(() => el.classList.remove('on'), TUNE.announcer.showSecs * 1000);
+    barkT = setTimeout(() => el.classList.remove('on'), secs * 1000);
   }
-  sfx('bell');
+  if (secs === TUNE.announcer.showSecs) sfx('bell'); // boss intro barks bring their own sting
   if (settings.voice && typeof speechSynthesis !== 'undefined') {
     try {
       speechSynthesis.cancel();
@@ -33,7 +33,7 @@ export function bark(text) {
   }
   run.barks = (run.barks || 0) + 1;
 }
-/** The active rat's name; in co-op it says which player (P2's Gutter Brawler). */
+/** The active rat's name; in co-op it says which player (P2's Sewer Slinger). */
 export const ratName = () => { const n = CLASSES[run.cls] ? CLASSES[run.cls].name : 'Rat'; return coop.on ? `P${coop.active + 1}'s ${n}` : n; };
 const line = list => pick(list).replace('{rat}', ratName());
 

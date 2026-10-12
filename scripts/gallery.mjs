@@ -19,7 +19,7 @@ const S = (fn, a) => page.evaluate(fn, a);
 await page.goto('http://localhost:5198/?debug');
 await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
 await page.waitForTimeout(800);
-await page.click(`.card[data-k="${process.env.CLS || 'brawler'}"]`);
+await page.click(`.card[data-k="${process.env.CLS || 'tank'}"]`);
 await page.waitForTimeout(1500);
 await S(() => { const s = __scurry; s.god(true); s.run.expoCd = 1e9; s.run.evT = 1e9; s.run.scabSeen = true; s.run.spawnT = 1e9; s.run.surgeT = 1e9; s.W.enemies.length = 0; s.G.camYaw = 0.6; });
 const types = (process.env.TYPES || 'mawling,roach,tick,ghoul,bloat,bat,brute,cat,crow,moth,wasp,shade').split(',');

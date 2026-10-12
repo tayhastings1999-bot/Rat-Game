@@ -72,8 +72,6 @@ export function glob(x, y, z, vx, vy, vz, dmg, col = 0xff4a2a, slow = false) {
 }
 
 export const SPECIALS = {
-  slam: { name: 'Leap Slam', cd: 5, use() { P.vy = 15; P.jumping = false; P.cut = true; const s = st.speed * 1.2; P.vx = Math.sin(P.facing) * s; P.vz = Math.cos(P.facing) * s; P.slam = true; P.onGround = false; P.lock = 0.5; } },
-  nova: { name: 'Plague Nova', cd: 7, use() { const R = 6 * st.area; aoe(P.x, P.y, P.z, R, 45, 14, 'special', 2.5, true); if (P.turboT > 0) for (const e of near(P.x, P.y, P.z, R)) { e.pT = Math.max(e.pT || 0, 5); e.pD = Math.max(e.pD || 0, 6); } boom(P.x, P.y + 0.4, P.z, R * 1.4, 0xa9e06a); fx('ring', P.x, P.y, P.z, R, 0xa9e06a, 0.5); G.shake = 0.3; } },
   volley: { name: 'Stone Volley', cd: 4.5, use() { const ring = o => { for (let i = 0; i < 20; i++) { const a = (i + o) / 20 * TAU; shoot(P.x, P.y + 0.7, P.z, Math.sin(a), 0, Math.cos(a), 22, 18, 2, 'special', { col: 0xf2d090 }); } }; ring(0); if (P.turboT > 0) setTimeout(() => { if (G.state === 'play') ring(0.5); }, 150); } },
   blink: {
     name: 'Blink', cd: 3.5,
@@ -109,31 +107,9 @@ export const SPECIALS = {
       sfx('roll');
     },
   },
-  updraft: {
-    name: 'Updraft', cd: 6,
-    use() {
-      aoe(P.x, P.y, P.z, 3 * st.area, 25, 12, 'special');
-      for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; shoot(P.x, P.y + 0.3, P.z, Math.sin(a), -0.05, Math.cos(a), 14, 10, 1, 'special', { col: 0x9ad8ff, life: 0.5 }); }
-      puff(P.x, P.y + 0.2, P.z, 0xc8e8ff, 14, 4);
-      P.vy = P.turboT > 0 ? 24 : 19; P.onGround = false; P.jumping = false; P.cut = true;
-    },
-  },
 };
 
 export const PRIM = {
-  rake: {
-    name: 'Claw Rake', range: 4.8, cd: 0.38, melee: true,
-    fire(dx, dz, t) {
-      const a = Math.atan2(dx, dz), R = 2.8 * st.area, n = 1 + st.multi;
-      stepIn(t, R);
-      for (let k = 0; k < n; k++) {
-        const A = a + (k - (n - 1) / 2) * 0.6;
-        swipeFx(A, R, 0xffe8d0);
-        breakFoodAt(P.x + Math.sin(A) * R * 0.55, P.z + Math.cos(A) * R * 0.55, R * 0.55, P.y);
-        for (const e of near(P.x, P.y, P.z, R + 0.3, TUNE.combat.meleeFlyReach)) if (Math.abs(angD(Math.atan2(e.x - P.x, e.z - P.z), A)) < 1.3) hit(e, 22, A, 4, 'primary', false, true);
-      }
-    },
-  },
   gnash: {
     name: 'Gnash', range: 4, cd: 0.6, melee: true,
     fire(dx, dz, t) {
@@ -169,32 +145,20 @@ export const PRIM = {
       }
     },
   },
-  blight: {
-    name: 'Blight Lob', range: 11, cd: 0.8,
-    fire(dx, dz, t) {
-      const n = 1 + st.multi, D = t ? Math.hypot(t.x - P.x, t.z - P.z) : Math.min(11 * st.range, P.aimDist || 6.5); // lands where you aim
-      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.3; lob(P.x + Math.sin(A) * D, t ? t.y : P.y, P.z + Math.cos(A) * D, 1.9 * st.area, 17, 'primary'); }
-    },
-  },
   stone: {
-    name: 'Sling Stone', range: 13, cd: 0.3,
+    // Half Strength, half Magic: a slinger's stones get luckier as it levels (fixes the late-game
+    // fall-off when only Strength scaled it while enemies followed Strength and Magic).
+    name: 'Sling Stone', range: 13, cd: 0.3, mag: 0.5,
     fire(dx, dz, t) {
       const n = 1 + st.multi, dy = t ? (t.y + t.h * 0.5 - (P.y + 0.7)) / Math.max(1, Math.hypot(t.x - P.x, t.z - P.z)) : 0;
-      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.16; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 20 * st.shotSpd, 10, 1, 'primary', { col: 0xf4efe6, arc: true }); }
-    },
-  },
-  darts: {
-    name: 'Needle Darts', range: 12, cd: 0.34,
-    fire(dx, dz, t) {
-      const n = 3 + st.multi * 2, dy = t ? (t.y + t.h * 0.5 - (P.y + 0.7)) / Math.max(1, Math.hypot(t.x - P.x, t.z - P.z)) : 0;
-      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.13; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 26 * st.shotSpd, 4.5, 0, 'primary', { col: 0x9ad8ff, life: 0.6 }); }
+      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.16; shoot(P.x, P.y + 0.7, P.z, Math.sin(A), dy, Math.cos(A), 20 * st.shotSpd, 11, 1, 'primary', { col: 0xf4efe6, arc: true }); }
     },
   },
   hex: {
-    name: 'Hex Bolt', range: 13, cd: 0.5,
+    name: 'Hex Bolt', range: 13, cd: 0.5, mag: 1, // a spell: scales with Magic, not Strength
     fire(dx, dz) {
       const n = 1 + st.multi;
-      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.3; shoot(P.x, P.y + 0.9, P.z, Math.sin(A), 0, Math.cos(A), 12 * st.shotSpd, 11, 0, 'primary', { homing: true, col: 0xb46cff, life: 1.5 }); }
+      for (let k = 0; k < n; k++) { const A = Math.atan2(dx, dz) + (k - (n - 1) / 2) * 0.3; shoot(P.x, P.y + 0.9, P.z, Math.sin(A), 0, Math.cos(A), 12 * st.shotSpd, 13, 0, 'primary', { homing: true, col: 0xb46cff, life: 1.5 }); }
     },
   },
 };

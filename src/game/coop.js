@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
-import { CLASSES } from '../data/classes.js';
+import { CLASSES, liveClass } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
 import { powerScaling } from '../combat/combat.js';
 import { makeRat, blob, playerRing, addGlyph } from '../entities/rat.js';
@@ -37,7 +37,7 @@ import { bark, ratName } from './announcer.js';
 /** Co-op state. setup is chosen in the Nest; players exist only during a co-op run. */
 export const coop = {
   on: false,
-  setup: { n: 1, cls: ['brawler', 'brawler', 'brawler', 'brawler'], input: ['kb1', 'kb2', 'pad0', 'pad1'] },
+  setup: { n: 1, cls: ['tank', 'slinger', 'warlock', 'sneak'], input: ['kb1', 'kb2', 'pad0', 'pad1'] },
   players: [],
   active: 0,
 };
@@ -92,7 +92,7 @@ export function coopStart(freshStats, shopGrowth) {
   swapOut(p1);
   const base = { ...p1.P }, pr = pick(run, RF);
   for (let i = 1; i < n; i++) {
-    const cls = CLASSES[coop.setup.cls[i]] ? coop.setup.cls[i] : 'brawler', C = CLASSES[cls];
+    const cls = liveClass(coop.setup.cls[i]), C = CLASSES[cls];
     Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, flaskT: {}, flaskOn: null, cheese: 0, tails: 0, specT: 0, primT: 0, growth: shopGrowth(), streak: 0, streakT: 0, lowWarned: false, blood: 0, bloodT: 0 });
     fill(st, freshStats(cls));
     st.salvage = p1.st.salvage; // gold upgrades and difficulty are party-wide

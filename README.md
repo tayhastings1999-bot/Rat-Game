@@ -134,27 +134,26 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
 - *Catch the Thief.* A gold rat runs off with your gold. Catch it three times to get it back with interest.
 
 **Characters, ranks and sharing.**
-- *Boss intro cards* with a title, a line and a beat of slow-mo.
+- *Boss intro barks*: a boss arrives with one quick announcer line (~2.5s, its name, title and a taunt). No card, no slow-mo, no scene: the game never pauses for an intro.
 - *Scab*, your rival, shows up about half a minute into each district and runs for an unopened chest. Beat him three times and he gives up a stash of supplies.
 - *Level grades* from the exit tally, a *run score*, and a **Share run card** PNG on the death screen.
 
-**Classes and stats.** Seven rats, all open from the start. Each has four stats from 1 to 10 (`TUNE.classes`), shown on its menu card: **Strength** scales primary attack damage, **Speed** sets move speed and attack and cooldown rate, **Armor** cuts damage taken (5.5% per point), and **Magic** scales specials, signatures, turbo and vials and fills the turbo meter faster.
+**Classes and stats.** Four rats, all open from the start. Each has four stats from 1 to 10 (`TUNE.classes`), shown on its menu card: **Strength** scales primary attack damage (Sling Stone is half Strength, half Magic; Hex Bolt is all Magic), **Speed** sets move speed and attack and cooldown rate, **Armor** cuts damage taken (5.5% per point), and **Magic** scales specials, signatures, turbo and vials and fills the turbo meter faster.
 
 | Rat | HP | STR | SPD | ARM | MAG | Kit |
 |---|---|---|---|---|---|---|
-| Gutter Brawler | 170 | 8 | 5 | 6 | 3 | Claw Rake, Leap Slam, Grab & Hurl, life-steal 0.3/hit, Bloodlust |
-| Plaguebearer | 120 | 4 | 4 | 4 | 8 | Blight Lob, Plague Nova, Blight Burst |
-| Sewer Slinger | 120 | 5 | 8 | 4 | 4 | Sling Stone, Stone Volley, Ricochet |
-| Rat Warlock | 100 | 3 | 5 | 2 | 10 | Hex Bolt, Blink, Hex Marks |
-| Sewer Rat | 215 | 6 | 3 | 9 | 4 | Gnash, Bulwark, Shield Parry, life-steal 0.6/hit, Bloodlust |
-| Sewer Sneak | 90 | 6 | 9 | 2 | 5 | Shiv (1.8× from behind), Smoke Bomb, Shadowstep |
-| Roof Rat | 95 | 4 | 9 | 2 | 7 | Needle Darts, Updraft, Dive Bomb, double jump |
+| Sewer Rat | 195 | 6 | 3 | 8 | 4 | Gnash, Bulwark, Shield Parry, life-steal 0.5/hit, Bloodlust |
+| Sewer Slinger | 115 | 4 | 8 | 3 | 7 | Sling Stone (½ STR, ½ MAG), Stone Volley, Ricochet |
+| Rat Warlock | 110 | 3 | 5 | 2 | 10 | Hex Bolt (MAG), Blink, Hex Marks |
+| Sewer Sneak | 90 | 6 | 9 | 2 | 5 | Shiv (1.8× from behind), Smoke Bomb, Shadowstep, Bloodlust |
+
+Player colours and markers come from the player slot (P1 red triangle, and so on), never from the class. Gutter Brawler, Plaguebearer and Roof Rat were cut (Oct 2026); old saves that picked one start on Sewer Rat, Rat Warlock and Sewer Slinger respectively.
 
 The Sewer Sneak no longer relies on stealth: its Smoke Bomb blinds the horde inside (they take 1.3× damage and are slowed) instead of hiding you from predators, and it has the standard scent gauge and squeeze.
 
-**Turbo (X).** Damage you deal fills a three-segment turbo meter under your health (Magic fills it faster). **Tap X** for your class **turbo blast**, which spends every full segment and grows with how many (×1, ×1.75, ×2.5): Knuckle Quake (Brawler), Plague Tide, Stone Storm, Hex Storm, Iron Wall (Sewer Rat), Thousand Cuts (Sneak) and Sky Rain (Roof Rat). **Hold X and press Q or G** for the turbo version of your special or signature: one segment, ignores the cooldown, double damage and a 1.5× radius, plus a twist (a second ring of stones, a poisoning nova, a burning smoke cloud, a longer Bulwark, a longer Blink). Hold X and let go without pressing anything and turbo stays armed for 1.5s, which is how touch players use it.
+**Turbo (X).** Damage you deal fills a three-segment turbo meter under your health (Magic fills it faster). **Tap X** for your class **turbo blast**, which spends every full segment and grows with how many (×1, ×1.75, ×2.5): Iron Wall (Sewer Rat), Stone Storm (Slinger), Hex Storm (Warlock) and Thousand Cuts (Sneak). **Hold X and press Q or G** for the turbo version of your special or signature: one segment, ignores the cooldown, double damage and a 1.5× radius, plus a twist (a second ring of stones, a burning smoke cloud, a longer Bulwark, a longer Blink). Hold X and let go without pressing anything and turbo stays armed for 1.5s, which is how touch players use it.
 
-Turbo has its own look per class. While a turbo move is boosted the rat burns in its class colour (an aura and a turning ground ring), and armed turbo glows faintly gold. Every turbo move and blast rears the rat up with a class flourish: the street cracks (Brawler), a column of rot rises (Plaguebearer), stones spiral out (Slinger), runes and lightning (Warlock), a shell of light (Sewer Rat), afterimages (Sneak) or a feather spiral (Roof Rat). The screen flashes gold.
+Turbo has its own look per class. While a turbo move is boosted the rat burns in its class colour (an aura and a turning ground ring), and armed turbo glows faintly gold. Every turbo move and blast rears the rat up with a class flourish: a shell of light (Sewer Rat), stones spiral out (Slinger), runes and lightning (Warlock) or afterimages (Sneak). The screen flashes gold.
 
 **Rot Vials (Z).** Carry up to 9 (you start with 1). Throwing one bursts rot around you: heavy damage to everything within 11 units, nests and bosses included, plus poison. Vials turn up in chests (30%, premium always), bins and on corrupted elites, and lie on the floor as green flasks.
 
@@ -164,7 +163,7 @@ Turbo has its own look per class. While a turbo move is boosted the rat burns in
 
 **Thieves.** About every 80 seconds a gold-tinted thief sprints at you, snatches your **key** if you carry one (else a Rot Vial, else a fifth of your gold) and flees along the streets. It's gone for good after 12 seconds. Catch it to get everything back, plus a tip.
 
-**Signature moves (G).** Grab & Hurl (Brawler), Blight Burst (Plaguebearer), Ricochet (Slinger), Hex Marks (Warlock), Shield Parry (Sewer Rat), Shadowstep (Sneak: reappear behind the nearest mob, facing its back) and Dive Bomb (Roof Rat).
+**Signature moves (G).** Shield Parry (Sewer Rat), Ricochet (Slinger), Hex Marks (Warlock) and Shadowstep (Sneak: reappear behind the nearest mob, facing its back).
 
 **Camera.** A fixed-angle follow camera (`TUNE.camera`; the wheel zooms). It never moves to dodge buildings: anything between the camera and the rat gets a dithered see-through hole around the rat instead, so you're never hidden. Inside crawlspaces and buildings the camera tips over to look down into the cutaway.
 

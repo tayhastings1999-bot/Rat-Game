@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { rand, TAU } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
-import { boom, fx, puff, spark, bolt, dnum, decal, PART_CAP } from '../fx/fx.js';
+import { boom, fx, puff, spark, bolt, dnum, PART_CAP } from '../fx/fx.js';
 import { scene } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
 import { CLASSES } from '../data/classes.js';
@@ -114,15 +114,6 @@ export function syncTurboFx(dt) {
 const part = p => { if (W.parts.length >= PART_CAP) W.parts.shift(); W.parts.push(p); };
 /** Each class's turbo flourish, at the rat. `big` for blasts. */
 const FLOURISH = {
-  brawler(big) { // the street cracks under it
-    const y = floorY(P.x, P.z);
-    for (let i = 0; i < (big ? 9 : 5); i++) { const a = i / (big ? 9 : 5) * TAU + rand(-0.2, 0.2), r = rand(1.2, big ? 4 : 2.6); decal(P.x + Math.sin(a) * r, y + 0.02, P.z + Math.cos(a) * r, rand(0.5, 1.1), 0x1a1410); }
-    for (let i = 0; i < (big ? 24 : 12); i++) { const a = rand(0, TAU), v = rand(3, 7); part({ x: P.x, y: y + 0.2, z: P.z, vx: Math.sin(a) * v, vy: rand(4, 8), vz: Math.cos(a) * v, life: 0.9, c: 0x8a7a6a, s: rand(0.8, 1.4), b: true }); }
-    G.shake = Math.max(G.shake, big ? 0.9 : 0.45);
-  },
-  plague(big) { // a column of rot
-    for (let i = 0; i < (big ? 50 : 26); i++) { const a = rand(0, TAU), r = rand(0, 1.4); part({ x: P.x + Math.sin(a) * r, y: P.y + 0.2, z: P.z + Math.cos(a) * r, vx: Math.sin(a) * 0.6, vy: rand(3, big ? 9 : 6), vz: Math.cos(a) * 0.6, life: rand(0.8, 1.4), c: i % 3 ? 0x9be06a : 0x4a8a2a, s: rand(1, 1.8), ng: true }); }
-  },
   slinger(big) { // a spiralling halo of stones
     const n = big ? 24 : 14;
     for (let i = 0; i < n; i++) { const a = i / n * TAU, r = 1.2; part({ x: P.x + Math.sin(a) * r, y: P.y + 0.8, z: P.z + Math.cos(a) * r, vx: Math.cos(a) * 6 + Math.sin(a) * 2, vy: 0.5, vz: -Math.sin(a) * 6 + Math.cos(a) * 2, life: 0.6, c: 0xf2d090, s: 1.1, ng: true }); }
@@ -135,9 +126,6 @@ const FLOURISH = {
   tank() { domeT = 0.45; }, // a shell of light bursts outward
   sneak(big) { // afterimages trail behind
     for (let i = 1; i <= (big ? 6 : 4); i++) { const x = P.x - Math.sin(P.facing) * i * 0.6, z = P.z - Math.cos(P.facing) * i * 0.6; puff(x, P.y + 0.5, z, 0x1a2a22, 5, 1); spark(x, P.y + 0.7, z, 0.6, 0x5ad0a0); }
-  },
-  roof(big) { // feathers spiral up
-    for (let i = 0; i < (big ? 36 : 20); i++) { const a = i * 0.55, r = 0.6 + i * 0.04; part({ x: P.x + Math.sin(a) * r, y: P.y + 0.2 + i * 0.05, z: P.z + Math.cos(a) * r, vx: Math.cos(a) * 2.5, vy: rand(3, 6), vz: -Math.sin(a) * 2.5, life: 1, c: i % 2 ? 0x9ad8ff : 0xe8f4ff, s: 0.9, ng: true }); }
   },
 };
 /** The shared turbo moment: pose, flourish, flash. */
@@ -154,25 +142,6 @@ const ring = (R, col) => { fx('ring', P.x, P.y, P.z, R, col, 0.5); boom(P.x, P.y
 const foes = R => sorted(R).filter(e => !e.disguise && e.type !== 'nest');
 
 export const BLASTS = {
-  brawler: {
-    name: 'Knuckle Quake', desc: 'Slam the street: a shockwave that flattens and stuns everything around you.',
-    use(m) {
-      const R = 6.5 * st.area;
-      for (const e of near(P.x, P.y, P.z, R)) { hit(e, 70 * m, Math.atan2(e.x - P.x, e.z - P.z), 22, 'turbo'); e.stun = Math.max(e.stun || 0, e.boss ? 0.4 : 1.2); }
-      ring(R, 0xff9a5a); later(120, () => fx('ring', P.x, P.y, P.z, R * 1.3, 0xffd040, 0.4));
-      G.shake = 0.8;
-    },
-  },
-  plague: {
-    name: 'Plague Tide', desc: 'A rolling wave of blight that poisons everything in a wide circle.',
-    use(m) {
-      const R = 9 * st.area;
-      for (const e of near(P.x, P.y, P.z, R)) { hit(e, 40 * m, Math.atan2(e.x - P.x, e.z - P.z), 8, 'turbo'); e.pT = Math.max(e.pT || 0, 6); e.pD = Math.max(e.pD || 0, 8 * m); }
-      ring(R, 0x9be06a);
-      puff(P.x, P.y + 0.4, P.z, 0x9be06a, 40, 8);
-      G.shake = 0.4;
-    },
-  },
   slinger: {
     name: 'Stone Storm', desc: 'Three rings of piercing stones, one after another.',
     use(m) {
@@ -214,19 +183,6 @@ export const BLASTS = {
         dnum(e.x, e.y + e.h + 0.5, e.z, 'BACKSTAB', 'crit');
       }));
       ring(3, 0x5ad0a0);
-    },
-  },
-  roof: {
-    name: 'Sky Rain', desc: 'A storm of darts falls on everything around you.',
-    use(m, n) {
-      const ts = foes(10), k = 6 + n * 6;
-      for (let i = 0; i < k; i++) later(i * 55, () => {
-        const t = ts.length ? ts[i % ts.length] : null, x = t && !t.dead ? t.x + rand(-0.8, 0.8) : P.x + rand(-7, 7), z = t && !t.dead ? t.z + rand(-0.8, 0.8) : P.z + rand(-7, 7), y = floorY(x, z);
-        for (const e of near(x, y, z, 1.8)) hit(e, 30 * m, null, 4, 'turbo', true);
-        boom(x, y + 0.3, z, 1.6, 0x9ad8ff);
-        spark(x, y + 2, z, 0.8, 0x9ad8ff);
-      });
-      ring(8, 0x9ad8ff);
     },
   },
 };

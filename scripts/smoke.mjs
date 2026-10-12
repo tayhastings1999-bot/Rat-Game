@@ -60,13 +60,13 @@ await step('load menu', async () => {
   await page.goto('http://localhost:5199/?debug');
   await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
   await page.click('[data-slot="1"]'); // save slot screen comes first
-  await page.waitForSelector('.card[data-k="brawler"]');
+  await page.waitForSelector('.card[data-k="tank"]');
   await S(() => { __scurry.G.testNoRoles = true; }); // placed lurkers and mimics would ambush scripted steps
   await wait(1500);
   await shot('01-menu');
 });
-await step('start brawler run (city)', async () => {
-  await page.click('.card[data-k="brawler"]');
+await step('start Sewer Rat run (city)', async () => {
+  await page.click('.card[data-k="tank"]');
   await wait(1500);
   const s = await S(() => ({ state: __scurry.G.state, kind: __scurry.M.kind, enemies: __scurry.W.enemies.length }));
   if (s.state !== 'play' || s.kind !== 'city') throw new Error(JSON.stringify(s));
@@ -169,7 +169,7 @@ await step('city interactions: chest, boards, climb, power line, key, manhole', 
   await S(() => { __scurry.run.district = 0; });
 });
 await step('nests raise their family, secrets, lairs, melee kit', async () => {
-  await S(() => { __scurry.startRun('brawler'); __scurry.god(true); __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
+  await S(() => { __scurry.startRun('tank'); __scurry.god(true); __scurry.run.evT = 1e9; __scurry.run.scabSeen = true; });
   await wait(600);
   // Stand near a nest: it raises its family's member for its tier, and the new type gets a banner.
   const home = await S(() => ({ x: __scurry.P.x, z: __scurry.P.z, y: __scurry.P.y }));
@@ -414,7 +414,8 @@ await step('surface boss: three phases, death, exits', async () => {
   await S(() => { const { G, P } = __scurry; const b = G.boss; b.x = P.x + 8; b.z = P.z; });
   await wait(2500);
   if (!(await S(() => __scurry.G.boss.revealed))) throw new Error('boss not revealed in arena');
-  if (!(await S(() => document.getElementById('introCard').textContent.length > 5))) throw new Error('no boss intro card');
+  { const bi = await S(() => ({ n: __scurry.run.bossIntros || 0, bark: document.getElementById('bark').textContent, name: __scurry.G.boss.name, st: __scurry.G.state, slow: __scurry.G.slowMo || 0, card: !!document.getElementById('introCard') }));
+    if (!bi.n || !bi.bark.includes(bi.name) || bi.st !== 'play' || bi.slow > 0 || bi.card) throw new Error('boss intro should be a bark only ' + JSON.stringify(bi)); }
   // The brain has been watching; a burst of real hits breaks its poise.
   await S(() => { __scurry.G.boss.stun = 0; __scurry.G.boss.invuln = 0; });
   const br = await S(() => { const b = __scurry.G.boss.brain; return b && { range: b.range, budget: b.budget }; });
@@ -539,7 +540,7 @@ await step('death banks gold', async () => {
   await shot('09-dead');
 });
 await step('new classes play', async () => {
-  for (const k of ['tank', 'roof']) {
+  for (const k of ['tank', 'sneak']) {
     await S(k => { __scurry.startRun(k); __scurry.god(true); }, k);
     await wait(600);
     await page.keyboard.press('KeyQ');
@@ -572,7 +573,7 @@ await step('sewer sneak: no stealth, smoke bomb blinds, backstab shiv', async ()
   await wait(600);
 });
 await step('mob roles: guard, priest, mimic, lurker, flee, rivalry, pack rage', async () => {
-  await S(() => { const s = __scurry; s.G.testNoRoles = false; s.startRun('brawler'); s.G.testNoRoles = true; s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); });
+  await S(() => { const s = __scurry; s.G.testNoRoles = false; s.startRun('tank'); s.G.testNoRoles = true; s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); });
   await wait(600);
   const placed = await S(() => ({ lurk: __scurry.W.enemies.filter(e => e.type === 'lurker' && e.hidden).length, mimic: __scurry.W.enemies.filter(e => e.type === 'mimic' && e.disguise).length }));
   if (!placed.lurk || !placed.mimic) throw new Error('roles not placed ' + JSON.stringify(placed));
@@ -645,17 +646,16 @@ await step('mob roles: guard, priest, mimic, lurker, flee, rivalry, pack rage', 
 });
 await step('class signature moves', async () => {
   const res = {};
-  for (const k of ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof']) {
+  for (const k of ['tank', 'slinger', 'warlock', 'sneak']) {
     await S(k => { const s = __scurry; s.startRun(k); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); }, k);
     await wait(500);
     await S(k => {
       const s = __scurry, P = s.P;
       s.W.enemies.length = 0;
-      const d = k === 'sneak' ? 6 : k === 'roof' ? 3 : k === 'warlock' ? 5 : 1.6;
+      const d = k === 'sneak' ? 6  : k === 'warlock' ? 5 : 1.6;
       const e = s.spawnEnemy('mawling', P.x + Math.sin(P.facing) * d, P.z + Math.cos(P.facing) * d, { plain: true, force: true, hpMul: 30 });
       if (!e) throw new Error('no space for target');
       e.spd = 0; e.cd = 99; e.tag = 'sig'; e.fled = true;
-      if (k === 'plague') { e.pT = 3; e.pD = 6; }
       s.run.sigT = 0;
     }, k);
     await page.keyboard.press('KeyG');
@@ -675,7 +675,7 @@ await step('class signature moves', async () => {
   await wait(400);
 });
 await step('set pieces: interior cutaway, back door, tram, crane, stall, washer', async () => {
-  await S(() => { const s = __scurry; s.startRun('brawler'); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
+  await S(() => { const s = __scurry; s.startRun('tank'); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
   await wait(600);
   const tp = (x, z) => S(([x, z]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = 0; P.vx = P.vz = P.vy = 0; }, [x, z]);
   // Interiors: step in and the walls are cut away.
@@ -722,7 +722,7 @@ await step('set pieces: interior cutaway, back door, tram, crane, stall, washer'
 await step('story: prologue, Scab\'s choice, chapters, locked ending, journal', async () => {
   const st = () => S(() => __scurry.G.state);
   const through = async () => { for (let i = 0; i < 40 && (await st()) === 'story'; i++) { await page.keyboard.press('Space'); await rawWait(60); } };
-  await S(() => { const s = __scurry; s.G.testStory = true; s.story.resetStory(); s.startRun('brawler'); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
+  await S(() => { const s = __scurry; s.G.testStory = true; s.story.resetStory(); s.startRun('tank'); s.god(true); Object.assign(s.run, { evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9 }); });
   if (!(await rawUntil(() => __scurry.G.state === 'story', 6000))) throw new Error('no prologue');
   await shot('12a-prologue');
   await through();
@@ -783,8 +783,8 @@ await page.close(); // stop the desktop session's game loop competing for CPU
     await tp.tap('[data-slot="1"]');
     await tp.waitForTimeout(1200);
     await tp.screenshot({ path: OUT + '12-phone-menu.png' });
-    await tp.locator('.card[data-k="brawler"]').scrollIntoViewIfNeeded();
-    await tp.tap('.card[data-k="brawler"]');
+    await tp.locator('.card[data-k="tank"]').scrollIntoViewIfNeeded();
+    await tp.tap('.card[data-k="tank"]');
     await tp.waitForTimeout(1200);
     await tp.evaluate(() => { __scurry.run.need = 1e9; __scurry.run.evT = 1e9; });
     const s = await tp.evaluate(() => ({ state: __scurry.G.state, touch: document.body.classList.contains('touch'), vis: getComputedStyle(document.getElementById('touch')).display }));

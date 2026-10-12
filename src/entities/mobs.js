@@ -551,7 +551,7 @@ let lodTick = 0;
 export function updateEnemies(dt0, cap) {
   lodTick = (lodTick + 1) % 3;
   for (const e of W.enemies) {
-    if (e.dead || e.held) continue; // held: in the Brawler's paws
+    if (e.dead) continue;
     if (e.reaper) { reaperAI(e, dt0); continue; }
     // A sleeping pack: still until you come close or hurt one of it, then they all wake.
     if (e.sleep) {

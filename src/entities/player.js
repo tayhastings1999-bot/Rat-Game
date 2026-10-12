@@ -11,7 +11,7 @@ import { tileMesh, syncObj, addObj } from '../world/build.js';
 import { curD, isSewer } from '../data/world.js';
 import { CLASSES } from '../data/classes.js';
 import { PRIM, SPECIALS } from '../combat/arsenal.js';
-import { nearest, near, aoe, hit, hurtP, scrapDrop } from '../combat/combat.js';
+import { nearest, near, hit, hurtP, scrapDrop } from '../combat/combat.js';
 import { giveChest, rummage } from '../game/loot.js';
 import { enterSewer } from '../game/flow.js';
 import { buffOn } from '../game/forage.js';
@@ -19,7 +19,6 @@ import { springTrap, trapTarget, wireIntoWater } from '../game/traps.js';
 import { cageTarget, openCage, carryingWheel } from '../game/objectives.js';
 import { banner } from '../ui/hud.js';
 import { TUNE } from '../tuning.js';
-import { diveLand } from '../game/signature.js';
 import { boltTarget } from '../world/setpieces.js';
 import { tryTurboMove } from '../game/turbo.js';
 import { puOn } from '../game/powerups.js';
@@ -107,16 +106,6 @@ export function stepPlayer(dt) {
     P.jumping = false;
     if (!was) {
       puff(P.x, P.y, P.z, 0x9a8a7a, P.fallV > 12 ? 10 : 4, 1.6);
-      if (P.slam === 'dive') { P.slam = false; P.lock = 0; diveLand(); } else if (P.slam) {
-        P.slam = false;
-        P.lock = 0;
-        const R = 4.2 * st.area;
-        aoe(P.x, P.y, P.z, R, 60, 12, 'special', 0, true);
-        boom(P.x, P.y + 0.5, P.z, R * 1.6, 0xff9a5a);
-        fx('ring', P.x, P.y, P.z, R, 0xff6a3a, 0.45);
-        G.shake = 0.6;
-        puff(P.x, P.y + 0.2, P.z, 0x9a8a7a, 20, 5);
-      }
     }
   }
   // Sewer water is toxic.

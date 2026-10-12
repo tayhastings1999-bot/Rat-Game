@@ -18,7 +18,7 @@ await page.goto('http://localhost:5194/?debug');
 await page.waitForFunction(() => window.__scurry && document.querySelector('[data-slot]'), null, { timeout: 60000 });
 const rows = [];
 for (const diff of ['normal', 'insane']) for (const profile of ['expert', 'average', 'novice']) for (let t = 0; t < TRIALS; t++) {
-  await S(([d, SHOPMAX]) => { const s = __scurry; s.qa.stop(); s.meta.difficulty = d; s.meta.shop = SHOPMAX ? { str: 3, arm: 3, spd: 3, mag: 3, hide: 5 } : {}; s.meta.pack = SHOPMAX ? { cheese: 2, fIron: 2, fSplit: 2, vial: 3 } : {}; s.startRun('brawler'); s.god(false); s.run.scabSeen = true; s.G.testNoTally = true; }, [diff, !!process.env.SHOPMAX]);
+  await S(([d, SHOPMAX]) => { const s = __scurry; s.qa.stop(); s.meta.difficulty = d; s.meta.shop = SHOPMAX ? { str: 3, arm: 3, spd: 3, mag: 3, hide: 5 } : {}; s.meta.pack = SHOPMAX ? { cheese: 2, fIron: 2, fSplit: 2, vial: 3 } : {}; s.startRun('tank'); s.god(false); s.run.scabSeen = true; s.G.testNoTally = true; }, [diff, !!process.env.SHOPMAX]);
   for (let i = 0; i < 80; i++) { if (await S(() => __scurry.G.state === 'play')) break; await sleep(80); }
   await S(([p, g]) => __scurry.qa.start({ profile: p, goal: g }), [profile, GOAL]);
   let left = SECS, status = 'ok';
@@ -37,7 +37,7 @@ for (const diff of ['normal', 'insane']) for (const profile of ['expert', 'avera
 }
 const sum = {};
 for (const r of rows) { const k = r.diff + '/' + r.profile; (sum[k] ||= { clears: 0, n: 0, dmg: 0, time: 0 }); sum[k].n++; sum[k].dmg += r.dmgTaken; sum[k].time += r.simTime; if (r.result === 'CLEAR') sum[k].clears++; }
-const md = ['# Insane check', '', `${TRIALS} trial(s) each, first zone, goal = kill the boss, up to ${SECS}s sim time. Class: brawler, no shop.`, '', '| difficulty / bot | clears | avg dmg taken | avg sim s |', '|---|---|---|---|',
+const md = ['# Insane check', '', `${TRIALS} trial(s) each, first zone, goal = kill the boss, up to ${SECS}s sim time. Class: tank (Sewer Rat), no shop.`, '', '| difficulty / bot | clears | avg dmg taken | avg sim s |', '|---|---|---|---|',
   ...Object.entries(sum).map(([k, v]) => `| ${k} | ${v.clears}/${v.n} | ${Math.round(v.dmg / v.n)} | ${Math.round(v.time / v.n)} |`)].join('\n');
 writeFileSync(OUT + 'insane.md', md); writeFileSync(OUT + 'insane.json', JSON.stringify(rows, null, 1));
 console.log(md);
