@@ -504,9 +504,15 @@ await step('music engine running', async () => {
   console.log('     music:', JSON.stringify(m));
 });
 await step('pause + map', async () => {
+  // After the boss marathon the game may be mid-transition or showing a story card: let it settle first.
+  const pre = await S(() => __scurry.G.state);
+  if (pre === 'story') await S(() => __scurry.story && __scurry.story.skip && __scurry.story.skip());
+  if (!(await until(() => __scurry.G.state === 'play', 4000))) throw new Error('game not in play before pausing: ' + (await S(() => __scurry.G.state + ' hp=' + Math.round(__scurry.run.hp))) + ' (was ' + pre + ')');
+  if (pre !== 'play') console.log('     pause: game was in', pre, 'first');
   await page.keyboard.press('Escape');
   await wait(300);
-  if ((await S(() => __scurry.G.state)) !== 'paused') throw new Error('not paused');
+  const st = await S(() => __scurry.G.state);
+  if (st !== 'paused') throw new Error('not paused (state ' + st + ')');
   await shot('07-pause');
   await page.keyboard.press('Escape');
   await wait(200);
