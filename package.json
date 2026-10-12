@@ -18,7 +18,8 @@
     "artifact": "vite build && node scripts/artifact.mjs",
     "shots": "node scripts/shots.mjs",
     "perf:compare": "node scripts/perf-compare.mjs",
-    "balance": "node scripts/balance.mjs"
+    "balance": "node scripts/balance.mjs",
+    "insane": "node scripts/insane.mjs"
   },
   "dependencies": {
     "@fontsource/alegreya-sans": "^5.3.0",

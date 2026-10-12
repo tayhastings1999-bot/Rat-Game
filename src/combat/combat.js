@@ -282,9 +282,12 @@ export function zoneScaling() {
   run.spawnM = D.spawn * (1 + xp * PP.spawn); // nest spawn rate
   run.eliteM = D.elite * (1 + xp * PP.elite);
   run.bossHpM = D.bossHp * (1 + xp * PP.bossHp);
+  run.bossDmgM = D.bossDmg || 1; // boss hits relative to the difficulty's dmg (Insane keeps bosses beatable)
   run.kidsM = 1 + xp * PP.nestKids; // children each nest keeps alive
   run.drainM = D.drain;
   run.foodM = D.food;
+  run.atkM *= D.atk || 1;
+  run.spdM *= D.spd || 1;
   powerScaling();
 }
 /**
