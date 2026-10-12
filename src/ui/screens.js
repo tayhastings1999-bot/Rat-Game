@@ -42,7 +42,7 @@ export const HOWTO = `<div class="howto">
         <p>Hitting things fills your <b style="color:#f2b233">turbo</b> meter (three segments). Tap <kbd>X</kbd> for your class turbo blast, which spends every full segment. Hold <kbd>X</kbd> and press <kbd>Q</kbd> or <kbd>G</kbd> for a turbo special or signature (one segment, no cooldown). <b style="color:#9be06a">Rot Vials</b> (<kbd>Z</kbd>, carry up to 9) burst around you and hurt everything nearby, nests included.</p>
         <p>Each rat has four stats: <b>Strength</b> (attack damage), <b>Speed</b> (movement and attack rate), <b>Armor</b> (damage taken) and <b>Magic</b> (specials, turbo and vials). Every level-up grows them, most where your class is strongest.</p>
         <p>Every level hides 3–6 <b style="color:#c080ff">secrets</b> (cracked walls, squeeze rooms, rooftop caches up the yellow-banded pipes); the HUD counts them and sniffing (<kbd>F</kbd>) pings the ones nearby. <b style="color:#ffd040">Keys</b> stack: spend one at a locked gate, a padlocked chest or the manhole. Glowing tokens are 25-second <b>power-ups</b>. Leaving a level shows a tally and a grade.</p></div>
-      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> or <kbd>J</kbd> attack (hold to repeat) · <kbd>Shift</kbd> dodge · <kbd>Space</kbd> jump, hold at a marked (yellow-banded) pipe to climb · <kbd>Q</kbd> special · <kbd>G</kbd> signature · <kbd>X</kbd> turbo (tap: blast, hold + Q/G: turbo move) · <kbd>Z</kbd> Rot Vial · <kbd>R</kbd> lock on · <kbd>E</kbd> use, hold to gnaw · <kbd>C</kbd> squeeze · <kbd>F</kbd> sniff · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</p></div>
+      <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> or <kbd>J</kbd> attack (hold to repeat) · <kbd>Shift</kbd> dodge · <kbd>Space</kbd> jump, hold at a marked (yellow-banded) pipe to climb · <kbd>Q</kbd> special · <kbd>G</kbd> signature · <kbd>X</kbd> turbo (tap: blast, hold + Q/G: turbo move) · <kbd>Z</kbd> Rot Vial · <kbd>V</kbd> uncork flask · <kbd>B</kbd> switch flask · <kbd>R</kbd> lock on · <kbd>E</kbd> use, hold to gnaw · <kbd>C</kbd> squeeze · <kbd>F</kbd> sniff · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</p></div>
       <div><h3 class="px">Touch</h3><p>Left stick to move. Attack aims at the nearest enemy in front of you. Jump, Dodge, Special, Sig and Use sit on the right; hold Jump at a marked pipe to climb it. Tap Turbo for your blast; hold Turbo, let go, then tap Special or Sig for the turbo version. Vial throws a Rot Vial.</p></div>
     </div>`;
 
@@ -104,6 +104,7 @@ export function renderMenu() {
     <details class="jwrap"><summary class="px">How to play</summary>${HOWTO}</details>
     <div class="kick px" id="hubGold">The Nest shop · ${commas(meta.salvage || 0)} gold banked</div>
     ${shopHTML()}
+    <div class="btns" id="diffBtns"><span class="px" style="font-size:12px">Difficulty</span>${Object.keys(TUNE.difficulty).map(d => `<button class="btn ${(meta.difficulty || 'normal') === d ? 'on' : 'ghost'}" data-diff="${d}" style="font-size:11px;padding:8px 12px">${d[0].toUpperCase() + d.slice(1)} · gold ×${TUNE.difficulty[d].gold}</button>`).join('')}</div>
     <div class="kick px">Pick a rat to start</div>
     <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => `<button class="card" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="">
@@ -115,6 +116,7 @@ export function renderMenu() {
     <div class="btns"><button class="btn ghost" id="slotsBtn">Change burrow</button></div></div>`);
   G.mode = 'survival';
   $('slotsBtn').onclick = renderSlotSelect;
+  ov.querySelectorAll('[data-diff]').forEach(b => { b.onclick = () => { meta.difficulty = b.dataset.diff; saveMeta(); const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; }; });
   ov.querySelectorAll('[data-buy]').forEach(b => { b.onclick = () => { if (buy(b.dataset.buy)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
   ov.querySelectorAll('.card[data-k]').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
   ov.querySelectorAll('[data-s]').forEach(b => {

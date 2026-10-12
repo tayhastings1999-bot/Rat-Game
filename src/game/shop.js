@@ -4,6 +4,7 @@ import { G, P, meta, run, st, saveMeta } from '../core/state.js';
 import { SHOP } from '../data/shop.js';
 import { POWERUPS, grantPowerup } from './powerups.js';
 import { TUNE } from '../tuning.js';
+import { diffMods } from '../combat/combat.js';
 
 const perm = id => SHOP[id].kind === 'stat' || SHOP[id].kind === 'hp' || SHOP[id].kind === 'gold';
 /** Owned ranks (upgrades) or packed count (supplies, flasks). */
@@ -42,13 +43,15 @@ export function shopGrowth() {
 
 /** Called by startRun after run and st are reset: upgrades apply, the pack is unpacked. */
 export function applyShop() {
-  st.salvage *= 1 + amount('pack');
+  st.salvage *= (1 + amount('pack')) * diffMods().gold;
   const p = meta.pack || {};
   run.vials = Math.min(TUNE.vials.max, run.vials + (p.vial || 0));
   run.keys += p.key || 0;
   run.cheese = p.cheese || 0;
   run.tails = p.tail || 0;
-  run.flasks = Object.keys(SHOP).filter(id => SHOP[id].kind === 'flask' && p[id]).map(id => SHOP[id].pu);
+  run.flasks = {}; // power-up key → count held
+  for (const id of Object.keys(SHOP)) if (SHOP[id].kind === 'flask' && p[id]) run.flasks[SHOP[id].pu] = (run.flasks[SHOP[id].pu] || 0) + p[id];
+  run.flaskSel = 0;
   meta.pack = {};
   saveMeta();
 }
@@ -67,9 +70,29 @@ export function cheatDeath() {
   P.inv = 1.5;
   return true;
 }
-/** Boss hook: uncork every packed flask. */
-export function onBossWake() {
-  if (!run.flasks || !run.flasks.length || !G.boss) return;
-  for (const k of run.flasks) grantPowerup(k);
-  run.flasks = [];
+// ---------- held flasks ----------
+// Bound to V (use) and B (cycle) on the keyboard and the Flask / Swap touch buttons.
+// useFlask and cycleFlask take no arguments, so a gamepad binding can call them directly.
+/** Flask types held, in a stable order. */
+export const heldFlasks = () => Object.keys(run.flasks || {}).filter(k => run.flasks[k] > 0);
+/** The selected flask's power-up key, or null when none are held. */
+export function selFlask() {
+  const h = heldFlasks();
+  if (!h.length) return null;
+  run.flaskSel = ((run.flaskSel || 0) % h.length + h.length) % h.length;
+  return h[run.flaskSel];
+}
+export function cycleFlask() {
+  const h = heldFlasks();
+  if (h.length > 1) run.flaskSel = ((run.flaskSel || 0) + 1) % h.length;
+  return selFlask();
+}
+/** Uncork the selected flask. Returns its power-up key, or null. */
+export function useFlask() {
+  const k = selFlask();
+  if (!k || G.state !== 'play') return null;
+  run.flasks[k]--;
+  grantPowerup(k);
+  selFlask();
+  return k;
 }

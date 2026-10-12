@@ -271,4 +271,15 @@ export function zoneScaling() {
   run.dmgM = 1 + T * Z.dmgPerThreat;
   run.spdM = 1 + Math.min(0.55, T * Z.spdPerThreat);
   run.atkM = 1 + Math.min(1.4, T * Z.atkPerThreat);
+  // Difficulty mode (TUNE.difficulty), on top of the zone.
+  const D = diffMods();
+  run.hpM *= D.hp;
+  run.dmgM *= D.dmg;
+  run.spawnM = D.spawn; // nest spawn rate
+  run.eliteM = D.elite;
+  run.bossHpM = D.bossHp;
+  run.drainM = D.drain;
+  run.foodM = D.food;
 }
+/** The active difficulty's multipliers (Normal when unset or unknown). */
+export const diffMods = () => TUNE.difficulty[meta.difficulty] || TUNE.difficulty.normal;

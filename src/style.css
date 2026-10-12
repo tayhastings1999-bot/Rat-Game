@@ -258,3 +258,7 @@ body.combat #contracts{opacity:.25}
 .shop .card{padding:10px 12px;gap:4px}
 .slotw{display:flex;flex-direction:column;gap:6px}
 .card.slot.on{box-shadow:0 0 0 2px var(--gold)}
+#slots .slot.flask{border-color:var(--fc)}
+#slots .slot.flask b{color:var(--fc);font-size:14px}
+#slots .slot.flask .kinds{position:absolute;top:-14px;left:0;font-size:9px;color:var(--dim);white-space:nowrap}
+#slots .slot.flask .cd{background:color-mix(in srgb,var(--fc) 35%,transparent)}

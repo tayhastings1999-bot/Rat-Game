@@ -13,6 +13,8 @@ import { toggleScent } from '../game/scent.js';
 import { useSig } from '../game/signature.js';
 import { turboDown, turboUp } from '../game/turbo.js';
 import { throwVial } from '../game/vials.js';
+import { useFlask, cycleFlask } from '../game/shop.js';
+import { renderSlots } from './hud.js';
 
 const STICK_R = 52;
 
@@ -26,6 +28,8 @@ export function initTouch() {
       <button class="tb sm" data-b="lock" aria-label="Lock on">Lock</button>
       <button class="tb sm" data-b="scent" aria-label="Scent trails">Sniff</button>
       <button class="tb sm vial" data-b="vial" aria-label="Throw a Rot Vial">Vial</button>
+      <button class="tb sm flask" data-b="flask" aria-label="Uncork the selected flask">Flask</button>
+      <button class="tb sm flask" data-b="swap" aria-label="Switch flask">Swap</button>
       <button class="tb" data-b="spec" aria-label="Special">Special</button>
       <button class="tb sig" data-b="sig" aria-label="Signature move">Sig</button>
       <button class="tb turbo" data-b="turbo" aria-label="Turbo: tap for your turbo blast; hold, then Special or Sig for a turbo move">Turbo</button>
@@ -111,6 +115,8 @@ function press(k) {
     case 'sig': useSig(); break;
     case 'turbo': turboDown(); break;
     case 'vial': throwVial(); break;
+    case 'flask': useFlask(); renderSlots(); break;
+    case 'swap': cycleFlask(); renderSlots(); break;
   }
 }
 function release(k) {

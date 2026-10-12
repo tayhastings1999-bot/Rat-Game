@@ -84,7 +84,7 @@ export function spawnEnemy(type, x, z, o = {}) {
   const gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
-  const Z = TUNE.zone, eliteP = run.time - (run.dStart || 0) < 60 ? 0 : Math.min(Z.eliteMax, Z.eliteBase + (run.T || 0) * Z.elitePerThreat + (sewer ? 0.05 : 0));
+  const Z = TUNE.zone, eliteP = run.time - (run.dStart || 0) < 60 ? 0 : Math.min(Z.eliteMax * (run.eliteM || 1), (Z.eliteBase + (run.T || 0) * Z.elitePerThreat + (sewer ? 0.05 : 0)) * (run.eliteM || 1));
   const el = !o.plain && (!!o.elite || Math.random() < eliteP);
   const mut = sewer && G.mode !== 'trial';
   const hpm = (run.hpM || 1) * (el ? 2 : 1) * (mut ? 1.5 : 1), sc = (D.sc || 1) * (el ? 1.3 : 1) * (o.sc || 1);

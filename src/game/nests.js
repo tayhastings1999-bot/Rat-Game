@@ -57,7 +57,7 @@ export function tickNest(e, dt) {
   e.core.scale.setScalar(1 + Math.sin(G.time * 5 + e.x) * 0.15 + (e.flash > 0 ? 0.4 : 0));
   e.spawnT -= dt;
   if (e.spawnT > 0 || Math.hypot(e.x - P.x, e.z - P.z) > N().range) return;
-  e.spawnT = N()['every' + e.tier] / (1 + (run.T || 0) * 0.04) * (run.moon ? 0.6 : 1);
+  e.spawnT = N()['every' + e.tier] / (1 + (run.T || 0) * 0.04) * (run.moon ? 0.6 : 1) / (run.spawnM || 1);
   e.kids = e.kids.filter(k => !k.dead);
   if (e.kids.length >= N()['kids' + e.tier] || W.enemies.length >= TUNE.enemies.cap) return;
   const F = FAMILIES[e.fam] || FAMILIES.vermin;

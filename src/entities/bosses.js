@@ -5,7 +5,6 @@ import { onBossDeath as storyBossDown } from '../game/story.js';
 import * as THREE from 'three';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
-import { onBossWake } from '../game/shop.js';
 import { scene, dropCreature } from '../render/renderer.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -40,7 +39,7 @@ const ROMAN = ['I', 'II', 'III'];
 
 export function spawnBoss() {
   const D = curD(), kind = D.boss, B = BOSSES[kind], V = D.bossV && BOSS_VARIANTS[D.bossV], BV = TUNE.bossVariants;
-  const hp = Math.round(B.hp * (1 + 0.7 * run.tier) * (1 + (run.T || 0) * 0.06) * (V ? BV.remixHp * (D.bossV === 'armored' ? BV.armoredHp : 1) : 1));
+  const hp = Math.round(B.hp * (1 + 0.7 * run.tier) * (1 + (run.T || 0) * 0.06) * (V ? BV.remixHp * (D.bossV === 'armored' ? BV.armoredHp : 1) : 1) * (run.bossHpM || 1));
   // Wake as far from the rat as the horde can walk.
   let k = -1, bd = -1;
   for (const t of M.spawnTiles) if (M.flow[t] > bd) { bd = M.flow[t]; k = t; }
@@ -76,7 +75,6 @@ export function spawnBoss() {
   }
   W.enemies.push(b);
   G.boss = b;
-  onBossWake();
   if (b.variant === 'brood') callBrood(b);
   b.label = `${b.name.toUpperCase()} · I`;
   $('bossLabel').textContent = b.label;

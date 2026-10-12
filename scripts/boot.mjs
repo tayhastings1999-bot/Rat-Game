@@ -50,6 +50,13 @@ await check('buying an upgrade spends gold and is saved to the slot', async () =
   if (r.rank !== 1 || r.saved !== 1) throw new Error('rank ' + JSON.stringify(r));
   if (r.gold !== 1000 - cost) throw new Error('gold ' + r.gold);
   await page.click('[data-buy="vial"]');
+  await page.click('[data-buy="fSplit"]');
+  await page.click('[data-buy="fIron"]');
+});
+await check('difficulty is picked in the Nest and saved per slot', async () => {
+  await page.click('[data-diff="insane"]');
+  if ((await S(() => __scurry.readSlot(1).meta.difficulty)) !== 'insane') throw new Error('not saved');
+  await page.click('[data-diff="normal"]');
 });
 await check('every class card is present', async () => {
   const n = await page.locator('.card[data-k]').count();
@@ -81,6 +88,18 @@ await check('pause and resume', async () => {
   await page.waitForFunction(() => __scurry.G.state === 'paused', null, { timeout: 5000 });
   await page.click('#resumeBtn');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: 5000 });
+});
+await check('held flasks show on the HUD, cycle with B and uncork with V', async () => {
+  for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) !== 'play'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(150); }
+  if (!(await page.locator('#slots .slot.flask').count())) throw new Error('no flask slot on the HUD');
+  const a = await S(() => __scurry.shop.selFlask());
+  await page.keyboard.press('KeyB');
+  const b = await S(() => __scurry.shop.selFlask());
+  if (!a || !b || a === b) throw new Error(`cycle ${a} -> ${b}`);
+  await page.keyboard.press('KeyV');
+  const r = await page.evaluate(k => ({ on: __scurry.puOn(k), left: __scurry.run.flasks[k] }), b);
+  if (!r.on || r.left !== 0) throw new Error('use ' + JSON.stringify(r));
+  if ((await S(() => __scurry.shop.selFlask())) !== a) throw new Error('selection did not move to the remaining flask');
 });
 await check('a Second Tail cheats death once', async () => {
   await S(() => { __scurry.run.tails = 1; __scurry.run.hp = 0; __scurry.die(); });

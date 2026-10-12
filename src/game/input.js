@@ -10,6 +10,8 @@ import { keys, startRoll, toggleLock, useSpecial, pressE } from '../entities/pla
 import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
 import { pause, resume, openMap, pickSlot } from '../ui/screens.js';
+import { useFlask, cycleFlask } from './shop.js';
+import { renderSlots } from '../ui/hud.js';
 import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
 import { turboDown, turboUp } from './turbo.js';
@@ -38,6 +40,8 @@ export function initInput() {
       if (e.code === 'KeyQ') useSpecial();
       if (e.code === 'KeyG') useSig();
       if (e.code === 'KeyZ') throwVial();
+      if (e.code === 'KeyV') { useFlask(); renderSlots(); }
+      if (e.code === 'KeyB') { cycleFlask(); renderSlots(); }
       if (e.code === 'KeyE') pressE();
       if (e.code === 'KeyF') toggleScent();
       if (e.code === 'KeyM' || e.code === 'Tab') openMap();

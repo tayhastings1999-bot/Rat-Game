@@ -66,7 +66,7 @@ export const saveSettings = () => saveJSON('scurry.settings', settings);
 export const SAVE_VERSION = 2;
 export const SLOTS = 3;
 const slotKey = i => 'scurry.slot' + i;
-const META0 = () => ({ kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0, shop: {} });
+const META0 = () => ({ kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0, shop: {}, difficulty: 'normal' });
 const BEST0 = () => ({ time: 0, kills: 0, district: 0 });
 
 /** Bring any stored slot up to SAVE_VERSION. */
