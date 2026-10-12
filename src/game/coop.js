@@ -345,6 +345,9 @@ export function coopUpdate(dt, solo) {
     // The lead may have gone down during its own pass: the next frame picks a new one.
   }
   swapOut(lead);
+  // Every rat's state is now in its own context: point posOf/alive at the stored copies so
+  // tickRevive and leash write to p.P (writes to the singletons would be lost by swapIn(p1)).
+  coop.active = -1;
   lead = coop.players.find(p => !p.P.downed) || lead;
   for (const p of coop.players) if (p.P.downed) tickRevive(p, dt, lead);
   leash(lead);

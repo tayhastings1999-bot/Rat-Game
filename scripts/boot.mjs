@@ -168,6 +168,13 @@ await check('a Second Tail cheats death once', async () => {
   const r = await S(() => ({ st: __scurry.G.state, hp: __scurry.run.hp, tails: __scurry.run.tails }));
   if (r.st === 'dead' || !(r.hp > 0) || r.tails !== 0) throw new Error(JSON.stringify(r));
 });
+await check('packed cheese is eaten when the drain takes HP under the threshold', async () => {
+  await toPlay();
+  const r = await S(() => { const s = __scurry; s.run.cheese = 1; s.run.hp = s.st.maxHp * s.TUNE.shop.cheeseAt * 0.9; return s.run.hp; });
+  await page.waitForFunction(() => __scurry.run.cheese === 0 || __scurry.G.state !== 'play', null, { timeout: T(8000) });
+  const after = await S(() => ({ cheese: __scurry.run.cheese, hp: __scurry.run.hp }));
+  if (after.cheese !== 0 || !(after.hp > r)) throw new Error('cheese ' + JSON.stringify(after));
+});
 await check('death returns to the Nest with gold banked', async () => {
   await S(() => { __scurry.run.scrap = 77; });
   const g0 = await S(() => __scurry.meta.salvage);
@@ -228,6 +235,11 @@ await check('old single-slot saves move into slot 1', async () => {
   await p2.click('[data-slot="1"]');
   await p2.waitForSelector('#hubGold');
   if (!/321 gold/.test(await p2.textContent('#hubGold'))) throw new Error('hub gold wrong');
+  // Deleting the slot must not bring the old save back on the next load (one-time migration).
+  await p2.evaluate(() => localStorage.removeItem('scurry.slot1'));
+  await p2.reload({ waitUntil: 'domcontentloaded' });
+  await p2.waitForSelector('[data-slot="1"]', { timeout: T(20000) });
+  if (await p2.evaluate(() => localStorage.getItem('scurry.slot1'))) throw new Error('deleted slot came back from the legacy save');
   await ctx.close();
 });
 await check('no errors during boot', async () => { if (errors.length) throw new Error(errors.slice(0, 3).join(' | ')); });
