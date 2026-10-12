@@ -114,7 +114,7 @@ export function reaperAI(e, dt) {
   if (Math.random() < dt * 12) puff(e.x + rand(-0.5, 0.5), e.y + 0.2, e.z + rand(-0.5, 0.5), 0x1a1020, 1, 0.8);
   // Its touch drains you (ignores dodges and armor).
   if (d < R.reach && Math.abs(P.y - e.y) < 2.5 && G.state === 'play') {
-    const k = R.dps * dt;
+    const k = G.god ? 0 : R.dps * dt;
     run.hp -= k;
     e.drained += k;
     P.slowT = Math.max(P.slowT || 0, 0.3);

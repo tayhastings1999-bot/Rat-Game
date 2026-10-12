@@ -460,6 +460,8 @@ await step('sewer boss + ladder up', async () => {
   if (s.layer !== 'surface' || s.district !== 1 || s.kind !== 'city') throw new Error(JSON.stringify(s));
   await shot('06-district2');
 });
+// A boss death can open a story scene (chapter beats); scripted boss kills dismiss it so the game keeps running.
+const settleStory = async () => { for (let i = 0; i < 3; i++) { if ((await S(() => __scurry.G.state)) !== 'story') return; await S(() => __scurry.story.skip()); await wait(300); } };
 await step('every boss type', async () => {
   for (const d of [1, 2, 3]) {
     await S(d => { __scurry.run.district = d; __scurry.spawnBoss(); }, d);
@@ -470,6 +472,7 @@ await step('every boss type', async () => {
     await wait(1500);
     await S(() => __scurry.killBoss());
     await wait(300);
+    await settleStory();
   }
   for (const s of [1, 2, 5]) {
     await S(s => { __scurry.run.layer = 'sewer'; __scurry.run.sewerIdx = s; __scurry.spawnBoss(); }, s);
@@ -480,6 +483,7 @@ await step('every boss type', async () => {
     await wait(1800);
     await S(() => __scurry.killBoss());
     await wait(300);
+    await settleStory();
   }
   await S(() => { __scurry.run.layer = 'surface'; });
 });
@@ -495,6 +499,7 @@ await step('boss marathon: each boss in phase 3 for a while', async () => {
     if (!b || b.phase !== 3) throw new Error('boss state ' + JSON.stringify(b) + ' game ' + (await S(() => __scurry.G.state + ' hp=' + __scurry.run.hp)));
     await S(() => __scurry.killBoss());
     await wait(300);
+    await settleStory();
   }
   await S(() => { __scurry.run.layer = 'surface'; __scurry.run.district = 1; });
 });
