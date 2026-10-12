@@ -203,6 +203,11 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   if (!s1.ok) throw new Error('player 1 position broke');
   if ((await page.locator("#coopHud .cp:not(.tok)").count()) !== 2) throw new Error('co-op HUD missing');
 });
+await check('co-op: the lead rat revive count resets on a new map', async () => {
+  await toPlay();
+  await S(() => { __scurry.P.revUsed = 2; __scurry.run.seed = __scurry.run.seed + '-test'; }); // a seed change = a new map for leash()
+  await page.waitForFunction(() => !__scurry.P.revUsed, null, { timeout: T(5000) });
+});
 await check('co-op: a downed rat is revived by a partner, and the run ends only when all are down', async () => {
   await S(() => { __scurry.god(false); __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); });
   const d = await S(() => ({ st: __scurry.G.state, down: __scurry.asPlayer(1, () => !!__scurry.P.downed) }));
