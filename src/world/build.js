@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
 import { G, W, run } from '../core/state.js';
+import { TUNE } from '../tuning.js';
 import { scene, world, hemi, sun, lantern, lampL, buried } from '../render/renderer.js';
 import {
   furTex, stoneTex, flameTex, metalTex, dryTex, plywoodTex, waterTex, acidTex, crackTex, arrowTex, texFor,
@@ -12,7 +13,7 @@ import {
 import { Sp, Bx, Cy, Co } from '../render/models.js';
 import { clearDecals, ringGeo, discGeo } from '../fx/fx.js';
 import { flasks } from '../combat/arsenal.js';
-import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
+import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, waterFloor, waterSurface, freeSpot, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
 import { populateDucts, applyCutaway } from './ducts.js';
 import * as TEX from '../render/textures.js';
 const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
@@ -113,8 +114,8 @@ export function buildWorld() {
     if (t === 10) road.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
     if (t === 9) grass.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -0.5, cz));
     if (t === 2 || t === 4) {
-      bed.push(new THREE.BoxGeometry(T, 1, T).translate(cx, -1.4, cz));
-      (t === 2 ? wat : acd).push(new THREE.PlaneGeometry(T, T).rotateX(-PI2).translate(cx, -0.35, cz));
+      bed.push(new THREE.BoxGeometry(T, 1, T).translate(cx, waterFloor() - 0.5, cz));
+      (t === 2 ? wat : acd).push(new THREE.PlaneGeometry(T, T).rotateX(-PI2).translate(cx, waterSurface(), cz));
     }
     if (t === 0 || t === 6) {
       // Only faces that can be seen: a neighbour must be lower than this top.
@@ -447,7 +448,11 @@ function dumpsters(spots) {
   const mat = lam(0x2e5a3a, { map: metalTex });
   for (const s of spots) {
     if (!DRY(tAt(s.gx, s.gy))) continue; // the spot was walled over later in generation
-    const x = toW(s.gx), z = toW(s.gy), alongX = s.along === 'x';
+    let x = toW(s.gx), z = toW(s.gy);
+    const alongX = s.along === 'x';
+    // Pushed against a wall when there is one, so the alley beside it stays wide enough for a cat.
+    const side = [-1, 1].find(d => !OPEN(alongX ? tAt(s.gx, s.gy + d) : tAt(s.gx + d, s.gy)));
+    if (side) { if (alongX) z += side * (T / 2 - 0.8); else x += side * (T / 2 - 0.8); }
     staticBox(x, z, alongX ? 2.4 : 1.4, alongX ? 1.4 : 2.4, 1.4, mat);
     const lid = mkMesh(new THREE.BoxGeometry(alongX ? 2.5 : 1.5, 0.1, alongX ? 1.5 : 2.5), lam(0x1e3a26), x, 1.45, z);
     W.bins.push({ x, z, y: 0, r: 1.3, kind: 'dumpster', lid, done: false });
@@ -797,9 +802,18 @@ export function populate(info) {
   const pr = shuffleR(rooms.filter(r => wallAdj(r).length)).slice(0, 6);
   for (let i = 0; i + 1 < pr.length; i += 2) { const a = wallAdj(pr[i]), b = wallAdj(pr[i + 1]); const p = addPipe(a[ri(0, a.length - 1)]), q = addPipe(b[ri(0, b.length - 1)]); p.link = q; q.link = p; }
   // A grave for the Reaper in levels that have one: mid-distance from the start.
-  if (D.grave && byDist.length) { const r = byDist[Math.floor(byDist.length * 0.45)], tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addGrave(toW(x), toW(y)); } }
+  if (D.grave && byDist.length) { const r = byDist[Math.floor(byDist.length * 0.45)], tl = shuffleR(roomTiles(r).slice()), t = tl.find(([x, y]) => freeSpot(toW(x), toW(y) + 0.6, 1.5)) || tl[0]; if (t) addGrave(toW(t[0]), toW(t[1])); }
   // Nests go in the far rooms: count, tier and family per zone (game/nests.js, TUNE.nests).
-  byDist.slice(0, Math.max(10, nestCount())).slice(0, nestCount()).forEach((r, i) => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)], n = rollNest(i); addNest(toW(x), toW(y), n.tier, n.fam); } });
+  // Each one sits on clear floor: never in a wall, a car, a crate or a bin, and
+  // never on top of a chest or another nest. A room with no such spot is skipped.
+  const nests = [], away = (x, z) => !nests.some(([a, b]) => Math.hypot(a - x, b - z) < 7) && ![...W.chests, ...(W.caches || []), ...W.bins].some(o => Math.hypot(o.x - x, o.z - z) < 2.6);
+  for (let j = 0, i = 0, want = nestCount(); i < want && j < byDist.length; j++) {
+    const spot = shuffleR(roomTiles(byDist[j]).slice()).map(([x, y]) => [toW(x), toW(y)]).find(([x, z]) => away(x, z) && freeSpot(x, z, 1.7));
+    if (!spot) continue;
+    const n = rollNest(i++);
+    addNest(spot[0], spot[1], n.tier, n.fam);
+    nests.push(spot);
+  }
   if (city) {
     const cand = byDist.slice(Math.floor(byDist.length * 0.3), Math.floor(byDist.length * 0.75)).filter(r => r.kind === 'cross');
     const r = cand[ri(0, Math.max(0, cand.length - 1))] || byDist[Math.floor(byDist.length / 2)];
@@ -847,14 +861,34 @@ export function populate(info) {
     W.baits.push({ x, z, m: g, gone: false });
   }
   if (run.mods.includes('collapse')) {
-    const fl = [];
-    for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && dist[k] > 3) fl.push(k);
-    shuffleR(fl).slice(0, Math.floor(fl.length * 0.1)).forEach(k => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(T * 0.96, T * 0.96).rotateX(-PI2), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, depthWrite: false }));
-      m.position.set(toW(k % M.W), 0.02, toW((k / M.W) | 0));
+    // Cracked floor (TUNE.hazards): only in open floor with a way around on every side,
+    // never two side by side, and never by the start, a room's middle (where the exit
+    // opens), a nest, a chest or a grave. Stepping on one drops it a moment later (update.js).
+    const fl = [], keep = [...W.enemies.filter(e => e.type === 'nest'), ...W.chests, ...(W.caches || []), ...(G.grave ? [G.grave] : []), ...(G.secretExit ? [G.secretExit] : [])];
+    const mids = new Set(W.rooms.map(r => gi(r.cx, r.cy)));
+    for (let k = 0; k < M.W * M.H; k++) {
+      const gx = k % M.W, gz = (k / M.W) | 0, x = toW(gx), z = toW(gz);
+      if (!DRY(M.grid[k]) || dist[k] <= 4 || M.inside[k] || mids.has(k) || N4.some(([dx, dy]) => !DRY(tAt(gx + dx, gz + dy)))) continue;
+      if (keep.some(o => Math.hypot(o.x - x, o.z - z) < T * 1.6)) continue;
+      fl.push(k);
+    }
+    const want = Math.floor(fl.length * TUNE.hazards.collapseFrac);
+    for (const k of shuffleR(fl)) {
+      if (W.cracks.size >= want) break;
+      const gx = k % M.W, gz = (k / M.W) | 0;
+      let near = false;
+      for (let dz = -1; dz <= 1 && !near; dz++) for (let dx = -1; dx <= 1; dx++) if (W.cracks.has(gi(gx + dx, gz + dz))) { near = true; break; }
+      if (near) continue;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(T * 0.96, T * 0.96).rotateX(-PI2), new THREE.MeshBasicMaterial({ map: crackTex, color: 0xffffff, transparent: true, depthWrite: false }));
+      m.position.set(toW(gx), 0.02, toW(gz));
+      // The warning: a red glow under the cracks while the tile is about to drop.
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(T * 0.9, T * 0.9).rotateX(-PI2), new THREE.MeshBasicMaterial({ color: 0xff3020, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.position.y = -0.01;
+      glow.visible = false;
+      m.add(glow);
       world.add(m);
-      W.cracks.set(k, { t: -1, m });
-    });
+      W.cracks.set(k, { t: -1, open: 0, rearm: 0, orig: M.grid[k], m, cm: m.material, glow });
+    }
   }
   unbury();
   indexPlats();

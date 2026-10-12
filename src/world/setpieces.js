@@ -21,7 +21,7 @@ import { G, P, W, run } from '../core/state.js';
 import { world, scene, camera, bury } from '../render/renderer.js';
 import { Bx, Cy, Co, Sp } from '../render/models.js';
 import { stoneTex, metalTex, plywoodTex, furTex, roofTex } from '../render/textures.js';
-import { M, T, gi, inG, tAt, toW, toG, floorY, DRY, N4, OPEN } from './grid.js';
+import { M, T, gi, inG, tAt, toW, toG, floorY, DRY, N4, OPEN, freeSpot } from './grid.js';
 import { curD } from '../data/world.js';
 import { fx, puff, spark, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -53,13 +53,13 @@ function sign(text, col, x, y, z, dx, dz, w = 3.2) {
   glowSprite(new THREE.Color(col).getHex(), w * 0.9, world, x + dx * 0.4, y, z + dz * 0.4, 0.35);
   return m;
 }
-/** A use-point for E (see player.js useTarget). */
 /** Somewhere a new prop must not go: a crawlspace mouth, or on top of a chest, cache, nest, bench or bin already placed. */
 function blocked(x, z, r = 2.2) {
   if (nearMouth(x, z)) return true;
   const hit = o => Math.hypot(o.x - x, o.z - z) < r;
   return W.chests.some(hit) || (W.caches || []).some(hit) || W.bins.some(hit) || W.enemies.some(e => e.type === 'nest' && hit(e));
 }
+/** A use-point for E (see player.js useTarget). */
 const usePoint = (x, z, r, label, act, y = 0) => { const u = { x, z, y, r, cr: 0.3, label, act, done: false }; W.uses.push(u); return u; };
 
 // ---------- interiors ----------
@@ -465,7 +465,8 @@ const ARENA = {
       for (let i = 0; i < 4; i++) mkMesh(Bx(1.6, 0.04, 0.12), lam(0x101014), vx, 0.11, vz - 0.6 + i * 0.4);
       W.arenaVents.push({ x: vx, z: vz, sp: glowSprite(0x9be06a, 2, world, vx, 0.6, vz, 0.2), t: rand(2, 6) });
     }
-    for (let i = 0; i < 6; i++) staticBox(x + rr(-9, 9), z + rr(-9, 9), 1.4, 1.4, 1.4, lam(0xb04a30, { map: metalTex }));
+    // Gas drums on open floor (never half inside a wall).
+    for (let i = 0; i < 6; i++) for (let t = 0; t < 4; t++) { const dx = x + rr(-9, 9), dz = z + rr(-9, 9); if (freeSpot(dx, dz, 0.9)) { staticBox(dx, dz, 1.4, 1.4, 1.4, lam(0xb04a30, { map: metalTex })); break; } }
   },
   maw(x, z) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; const r = mkMesh(new THREE.TorusGeometry(2.4, 0.18, 4, 10, Math.PI), lam(0xd8d0b8), x + Math.sin(a) * 6, 0, z + Math.cos(a) * 6); r.rotation.y = a; }

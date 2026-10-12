@@ -13,7 +13,7 @@ import { Bx, Cy } from '../render/models.js';
 import { metalTex, flameTex } from '../render/textures.js';
 import { boom, puff, fx, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { M, gi, inG, toG, toW, tAt, floorY, roomTiles, OPEN, N8 } from '../world/grid.js';
+import { M, gi, inG, toG, toW, tAt, floorY, roomTiles, OPEN, N8, freeSpot, nearFree } from '../world/grid.js';
 import { isSewer } from '../data/world.js';
 import { scrapDrop } from '../combat/combat.js';
 import { spawnEnemy, moveBody } from '../entities/mobs.js';
@@ -37,7 +37,15 @@ function glow(col, s, par, y) {
   par.add(g);
   return g;
 }
-const spot = r => { const tl = roomTiles(r); const [x, z] = tl.length ? tl[(Math.random() * tl.length) | 0] : [r.cx, r.cy]; return { x: toW(x), z: toW(z) }; };
+/** A clear spot in a room for an objective item: never inside a car, a crate or a wall. */
+const spot = r => {
+  const tl = roomTiles(r).map(([x, z]) => [toW(x), toW(z)]);
+  for (let i = tl.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [tl[i], tl[j]] = [tl[j], tl[i]]; }
+  const ok = tl.find(([x, z]) => freeSpot(x, z, 1.3));
+  if (ok) return { x: ok[0], z: ok[1] };
+  const [x, z] = tl[0] || [toW(r.cx), toW(r.cy)], f = nearFree(x, z, 1, 6) || [x, z];
+  return { x: f[0], z: f[1] };
+};
 
 /** Roll this district's job (called at the end of world setup). */
 export function setupObjective(info, force) {

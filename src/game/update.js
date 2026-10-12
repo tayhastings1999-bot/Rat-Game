@@ -35,6 +35,7 @@ import { tickFood, breakFoodAt } from './food.js';
 import { tickReaperSpawn } from './reaper.js';
 import { tickThieves } from './thieves.js';
 import { tickSetPieces } from '../world/setpieces.js';
+import { TUNE } from '../tuning.js';
 
 let seenT = 0;
 
@@ -137,13 +138,58 @@ function updateMods(dt) {
       if (Math.abs(e.x - b.x) < 0.7 && Math.abs(e.z - b.z) < 0.7) { b.gone = true; bury(b.m); e.pT = 8; e.pD = Math.max(10, e.maxHp * 0.2); puff(b.x, 0.4, b.z, 0x9be06a, 6, 2); break; }
     }
   }
+  tickCracks(dt);
+}
+
+/**
+ * Collapsing floors (TUNE.hazards). A crack you step on shakes and glows red
+ * for collapseWarn seconds, then drops into a hole. The hole stays open for
+ * collapseOpen seconds (anything walking in falls), then the floor knits
+ * back and the crack can drop again after collapseRearm.
+ */
+function tickCracks(dt) {
+  const H = TUNE.hazards, pk = gi(toG(P.x), toG(P.z));
   for (const [k, c] of W.cracks) {
-    if (c.t < 0) {
-      if (P.onGround && P.y > -0.1 && P.y < 0.2 && gi(toG(P.x), toG(P.z)) === k) { c.t = 0.75; G.shake = Math.max(G.shake, 0.15); puff(toW(k % M.W), 0.2, toW((k / M.W) | 0), 0x9a8a7a, 8, 2); }
+    const x = toW(k % M.W), z = toW((k / M.W) | 0);
+    if (c.open > 0) {
+      c.open -= dt;
+      const busy = (pk === k && P.y > -2) || W.enemies.some(e => !e.dead && !e.fly && gi(toG(e.x), toG(e.z)) === k);
+      if (c.open <= 0 && !busy) {
+        M.grid[k] = c.orig;
+        c.m.material = c.cm;
+        c.cm.color.setHex(0xffffff);
+        c.rearm = H.collapseRearm;
+        G.flowT = 0;
+        puff(x, 0.15, z, 0x9a8a7a, 10, 2);
+      } else if (c.open <= 0) c.open = 0.5;
+    } else if (c.t < 0) {
+      c.rearm -= dt;
+      if (c.rearm <= 0 && pk === k && P.onGround && P.y > -0.1 && P.y < 0.2) {
+        c.t = H.collapseWarn;
+        G.shake = Math.max(G.shake, 0.15);
+        puff(x, 0.2, z, 0x9a8a7a, 8, 2);
+        sfx('rattle');
+      }
     } else {
       c.t -= dt;
-      c.m.position.y = 0.02 + Math.sin(G.time * 60) * 0.02;
-      if (c.t <= 0) { M.grid[k] = 7; c.m.material = pitMat; G.flowT = 0; puff(toW(k % M.W), 0.2, toW((k / M.W) | 0), 0x6a5a4a, 20, 4); sfx('boom'); W.cracks.delete(k); }
+      const f = 1 - c.t / H.collapseWarn;
+      c.m.position.y = 0.02 + Math.sin(G.time * 60) * 0.02 * f;
+      c.cm.color.setRGB(1, 1 - 0.75 * f, 1 - 0.8 * f);
+      c.glow.visible = true;
+      c.glow.material.opacity = (0.25 + 0.5 * f) * (0.65 + 0.35 * Math.sin(G.time * 28));
+      if (Math.random() < dt * 14) puff(x + rand(-1.6, 1.6), 0.1, z + rand(-1.6, 1.6), 0x9a8a7a, 1, 1);
+      if (c.t <= 0) {
+        c.t = -1;
+        c.open = H.collapseOpen;
+        M.grid[k] = 7;
+        run.crackDrops = (run.crackDrops || 0) + 1;
+        c.m.material = pitMat;
+        c.m.position.y = 0.02;
+        c.glow.visible = false;
+        G.flowT = 0;
+        puff(x, 0.2, z, 0x6a5a4a, 20, 4);
+        sfx('boom');
+      }
     }
   }
 }
@@ -151,11 +197,15 @@ function updateMods(dt) {
 function updatePlayerStatus(dt) {
   if (P.poisonT > 0) { P.poisonT -= dt; P.pTick -= dt; if (P.pTick <= 0) { P.pTick = 0.5; hurtP(3, null, true); } }
   const tp = tileAt(P.x, P.z);
-  if (tp === 4 && P.y < -0.5) { P.acidT -= dt; if (P.acidT <= 0) { P.acidT = 0.5; hurtP(5, null, true); puff(P.x, P.y + 0.5, P.z, 0xb8f040, 4, 1.5); } }
-  if (P.y < -3) {
+  if (tp === 4 && P.y < -0.15) { P.acidT -= dt; if (P.acidT <= 0) { P.acidT = 0.5; hurtP(5, null, true); puff(P.x, P.y + 0.5, P.z, 0xb8f040, 4, 1.5); } }
+  // Into a hole: back up at once where you last stood safely (no sinking through the floor).
+  if (P.y < -3 || (tp === 7 && P.y < -0.35 && !P.inDuct)) {
     P.x = P.safe.x; P.z = P.safe.z; P.y = floorY(P.x, P.z, true) + 0.1;
     P.vx = P.vz = P.vy = 0;
-    hurtP(12, null, true);
+    const hp0 = run.hp;
+    hurtP(TUNE.hazards.fallDmg, null, true);
+    run.falls = (run.falls || 0) + 1;
+    run.fallDmg = (run.fallDmg || 0) + Math.max(0, hp0 - run.hp);
     P.inv = 1;
     dnum(P.x, P.y + 1.6, P.z, 'Fell', 'info');
   }

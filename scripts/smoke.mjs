@@ -654,7 +654,8 @@ await step('set pieces: interior cutaway, back door, tram, crane, stall, washer'
   await wait(600);
   const tp = (x, z) => S(([x, z]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = 0; P.vx = P.vz = P.vy = 0; }, [x, z]);
   // Interiors: step in and the walls are cut away.
-  const room = await S(() => { const M = __scurry.M; for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1) return { x: (k % M.W - M.W / 2 + 0.5) * 4, z: (((k / M.W) | 0) - M.H / 2 + 0.5) * 4 }; return null; });
+  // (an interior tile clear of shelves and crates, so the rat lands on the floor)
+  const room = await S(() => { const s = __scurry, M = s.M; for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1) { const x = (k % M.W - M.W / 2 + 0.5) * 4, z = (((k / M.W) | 0) - M.H / 2 + 0.5) * 4; if (s.freeSpot(x, z, 0.8)) return { x, z }; } return null; });
   if (!room) throw new Error('no enterable building');
   await tp(room.x, room.z);
   const cut = await until(() => __scurry.P.inBldg && __scurry.cutY() < 4, 3000);

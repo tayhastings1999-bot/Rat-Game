@@ -8,7 +8,7 @@ import { scene } from '../render/renderer.js';
 import { fx, puff, spark, blood, dnum, swipeFx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { banner } from '../ui/hud.js';
-import { M, G as GRAV, toW, tileAt, floorY, solidFor, flowDir, collideBody } from '../world/grid.js';
+import { M, G as GRAV, toW, tileAt, floorY, solidFor, flowDir, collideBody, DRY, freeSpot, nearFree } from '../world/grid.js';
 import { EN, isSewer } from '../data/world.js';
 import { CORRUPT } from '../data/items.js';
 import { glob } from '../combat/arsenal.js';
@@ -77,7 +77,10 @@ export function pickType() {
  */
 export function spawnEnemy(type, x, z, o = {}) {
   if (W.enemies.length >= 220 && !o.force) return null; // story-critical spawns (thief, champion, bounty) ignore the cap
-  const D = EN[type], gy = floorY(x, z);
+  const D = EN[type], r0 = Math.min(1.2, (D.r || 0.5) * (o.sc || 1));
+  // A walker that would appear inside a car, crate or bin on the street steps out to the nearest clear floor.
+  if (!D.fly && !o.roof && DRY(tileAt(x, z)) && !freeSpot(x, z, r0)) { const f = nearFree(x, z, r0, 4); if (f) [x, z] = f; else if (!o.force) return null; }
+  const gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
   const Z = TUNE.zone, eliteP = run.time - (run.dStart || 0) < 60 ? 0 : Math.min(Z.eliteMax, Z.eliteBase + (run.T || 0) * Z.elitePerThreat + (sewer ? 0.05 : 0));
@@ -124,7 +127,7 @@ export function moveBody(e, dt, vx, vz) {
   fallChk(e, g);
   return g;
 }
-const slowMul = e => st.foeSpd * (e.slow > 0 ? 0.5 : 1) * (e.y < G.tideY - 0.2 ? 0.55 : 1) * ((tileAt(e.x, e.z) === 2 && e.y < -0.4) ? 0.65 : 1);
+const slowMul = e => st.foeSpd * (e.slow > 0 ? 0.5 : 1) * (e.y < G.tideY - 0.2 ? 0.55 : 1) * ((tileAt(e.x, e.z) === 2 && e.y < -0.15) ? 0.65 : 1);
 
 // Turn rate (rad/s) and acceleration (1/s) per body type.
 const TURN = { mawling: 7, roach: 16, tick: 12, ghoul: 3.2, bloat: 2.6, brute: 2.8, cat: 8, shade: 6, ratling: 11, shieldrat: 2.1, priest: 4, lurker: 9, mimic: 6, spitter: 5 };
@@ -525,7 +528,7 @@ export function addPred(path, o = {}) {
   mesh.scale.setScalar(o.sc || 1.6);
   mesh.castShadow = true;
   scene.add(mesh);
-  const s = path[0], x = toW(s % M.W), z = toW((s / M.W) | 0), hp = (o.hp || 700) * (1 + run.tier * 0.6) * (run.hpM || 1);
+  const s = path[0], [x, z] = nearFree(toW(s % M.W), toW((s / M.W) | 0), 1, 6) || [toW(s % M.W), toW((s / M.W) | 0)], hp = (o.hp || 700) * (1 + run.tier * 0.6) * (run.hpM || 1);
   const e = { type: 'brute', pred: true, mesh, path, pi: 0, mode: 'patrol', lost: 0, x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp, spd: o.spd || 2.6, dmg: o.dmg || 26, r: o.r || 1.2, h: o.h || 3, sc: 1, col: 0x8a5a30, blood: 0x9a0c0c, heavy: true, bar: true, flash: 0, slow: 0, ang: 0, pT: 0, bT: 0, dT: 0, tT: 0, wind: 0, atkCd: 0, lunge: 0, mass: 4, dog: !!o.dog };
   W.enemies.push(e);
   return e;
@@ -562,7 +565,7 @@ export function updateEnemies(dt0, cap) {
     if (!e.fly && e.y < -3) {
       // Fell into a collapsed pit. Bosses climb back out; everything else is gone.
       if (e.boss) { e.x = P.x + rand(-6, 6); e.z = P.z + rand(-6, 6); e.y = floorY(e.x, e.z) + 6; e.vy = 0; continue; }
-      e.dead = true; run.kills++; addXP(e.xp || 1); continue;
+      e.dead = true; run.kills++; run.pitKills = (run.pitKills || 0) + 1; addXP(e.xp || 1); continue;
     }
     // Poison and burn ticks.
     if (e.pT > 0 || e.bT > 0) {
@@ -612,7 +615,7 @@ export function updateEnemies(dt0, cap) {
       fallChk(e, g);
       if (e.hw && g && P.y > e.y + 0.5 && d < 7) e.vy = Math.sqrt(2 * GRAV * (Math.min(P.y - e.y, 8) + 0.8));
     }
-    if (tileAt(e.x, e.z) === 4 && e.y < -0.5 && !e.fly) {
+    if (tileAt(e.x, e.z) === 4 && e.y < -0.15 && !e.fly) {
       e.acid -= dt;
       if (e.acid <= 0) { e.acid = 0.5; e.hp -= 6 + (e.bonk > 0 ? 30 : 0); blood(e.x, e.y + 0.3, e.z, 0xb8f040, null, 2); if (e.hp <= 0) { kill(e); continue; } }
     }
@@ -687,7 +690,10 @@ function predAI(e, dt, d) {
     const inCone = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.look)) < 0.9;
     if ((d < det && (inCone || d < det * 0.3) && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); if (e.dog) bark(e); return false; }
     const k = e.path[e.pi], tx = toW(k % M.W), tz = toW((k / M.W) | 0), vx = tx - e.x, vz = tz - e.z, l = Math.hypot(vx, vz);
-    if (l < 0.8) e.pi = (e.pi + 1) % e.path.length;
+    // A waypoint it can't get closer to (a car parked on it) is skipped instead of pushed against forever.
+    e.chkT = (e.chkT || 0) + dt;
+    if (e.chkT > 1.2) { const stuck = l > (e.chkL ?? 1e9) - 0.5; e.chkT = 0; e.chkL = stuck ? 1e9 : l; if (stuck) { e.pi = (e.pi + 1) % e.path.length; return true; } }
+    if (l < 0.8) { e.pi = (e.pi + 1) % e.path.length; e.chkL = 1e9; }
     else { e.x += vx / l * e.spd * dt; e.z += vz / l * e.spd * dt; e.ang = Math.atan2(vx, vz); }
     const py = e.y;
     e.vy -= GRAV * dt;

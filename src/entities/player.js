@@ -39,7 +39,7 @@ export function stepPlayer(dt) {
   let wx = f1 * iz + rx * ix, wz = fz * iz + rz * ix;
   const L = Math.hypot(wx, wz);
   if (L) { wx /= L; wz /= L; P.wx = wx; P.wz = wz; }
-  const t = tileAt(P.x, P.z), wet = ((t === 2 || t === 4) && P.y < -0.4) || P.y < G.tideY - 0.2;
+  const t = tileAt(P.x, P.z), wet = ((t === 2 || t === 4) && P.y < -0.15) || P.y < G.tideY - 0.2;
   P.squeeze = !!(keys.KeyC || keys.ControlLeft) && P.onGround && !P.carry;
   if (t === 5 && P.y < topAt(toG(P.x), toG(P.z)) - 0.1) P.squeeze = true;
   if (t === 11 && P.y < DUCT_TOP) P.squeeze = true;

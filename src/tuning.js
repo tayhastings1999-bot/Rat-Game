@@ -108,6 +108,14 @@ export const TUNE = {
     runTime: 45, runGold: 120, runCaches: 3, // The Rat Run: gold piles of 3, and thieves
     gardenNests: 6, gardenChests: 4, // The Bone Garden: all Warrens; premium chests when they fall
   },
+  hazards: {
+    // Collapsing Floors (the 'collapse' hazard): cracked tiles that drop away under you.
+    collapseFrac: 0.035, // share of open floor tiles that are cracked (only tiles with open floor on all four sides)
+    collapseWarn: 0.9, // seconds a crack shakes and glows red after you step on it before it drops
+    collapseOpen: 8, // seconds the hole stays open before the floor knits back
+    collapseRearm: 6, // seconds before a mended crack can drop again
+    fallDmg: 12, // HP lost when you fall into a hole (you come back up where you last stood safely)
+  },
   reaper: {
     // Rises when you linger in a zone; drains on touch; only vials and turbo blasts hurt it.
     minZone: 1, // first zone it can appear in (0 = the first zone)

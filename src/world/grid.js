@@ -51,11 +51,14 @@ export const DRY = t => t === 1 || t === 9 || t === 10;
 export const CLIMB = t => t === 0 || t === 3 || t === 8;
 export const solidFor = (t, isP) => t === 0 || t === 6 || t === 3 || t === 8 || (t === 5 && !(isP && P.squeeze)) || (t === 11 && !(isP && P.squeeze && P.y < DUCT_TOP));
 
-/** Height of whatever you would stand on at (x, z). */
+/** Water and acid depth: city puddles are ankle-deep; sewer channels come up to the rat's belly. */
+export const waterFloor = () => (M.kind === 'city' ? -0.3 : -0.6);
+export const waterSurface = () => (M.kind === 'city' ? -0.12 : -0.28);
+/** Ground height under a point (pits are bottomless; water stands lower than the street). */
 export function floorY(x, z, isP) {
   const gx = toG(x), gz = toG(z), t = tAt(gx, gz);
   if (t === 7) return -9;
-  if (t === 2 || t === 4) return -0.9;
+  if (t === 2 || t === 4) return waterFloor();
   if (solidFor(t, isP)) return topAt(gx, gz);
   return 0;
 }
@@ -173,6 +176,28 @@ export function forPlatsNear(x, z, R, fn) {
     for (const p of l) { if (p._s === s) continue; p._s = s; fn(p); }
   }
   for (const o of W.objs) fn(o);
+}
+
+/**
+ * True when a body of radius r can stand at (x, z) on the street: the floor
+ * there is dry, no wall is within r, and no solid prop (crate, car, bin...)
+ * overlaps it. Overhead things (power lines, tree crowns, car cabs above a
+ * body's head) don't count. Used to keep nests and spawns out of props.
+ */
+export function freeSpot(x, z, r = 0.6) {
+  if (!inG(toG(x), toG(z)) || !DRY(tAt(toG(x), toG(z)))) return false;
+  for (const [ox, oz] of [[r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) if (!OPEN(tAt(toG(x + ox), toG(z + oz)))) return false;
+  for (const p of W.plats) if (!p.thin && !p.pole && p.y - p.th < 1.2 && Math.abs(p.x - x) < p.w / 2 + r && Math.abs(p.z - z) < p.d / 2 + r) return false;
+  return true;
+}
+/** The nearest free spot to (x, z) within `reach`, searching outward in rings; null if there is none. */
+export function nearFree(x, z, r = 0.6, reach = 4) {
+  if (freeSpot(x, z, r)) return [x, z];
+  for (let d = 0.75; d <= reach; d += 0.75) {
+    const n = Math.max(6, Math.round(d * 5)), a0 = (x * 7.3 + z * 3.1) % 6.283;
+    for (let i = 0; i < n; i++) { const a = a0 + i / n * 6.283, px = x + Math.sin(a) * d, pz = z + Math.cos(a) * d; if (freeSpot(px, pz, r)) return [px, pz]; }
+  }
+  return null;
 }
 
 // ---------- collision ----------

@@ -11,7 +11,7 @@ import { rummage } from './game/loot.js';
 import { die, pause, HOWTO } from './ui/screens.js';
 import { dropKey, kill, hit, hurtP } from './combat/combat.js';
 import { setupObjective, objDone, openCage } from './game/objectives.js';
-import { M, T, tAt, topAt, toW, DRY, N4 } from './world/grid.js';
+import { M, T, tAt, topAt, toW, DRY, N4, freeSpot } from './world/grid.js';
 import { audioReady, music, musicLevel } from './audio/audio.js';
 import { renderer, scene, cutPlane, world } from './render/renderer.js';
 import { update } from './game/update.js';
@@ -53,7 +53,7 @@ export function debugApi(state) {
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, dropKey, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, die, pause, dropKey, freeSpot, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {

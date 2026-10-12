@@ -72,6 +72,22 @@ export function staticChecks() {
     const inProp = W.plats.some(p => !p.thin && Math.hypot(p.x - o.x, p.z - o.z) > 0.35 && Math.abs(p.x - o.x) < p.w / 2 - 0.3 && Math.abs(p.z - o.z) < p.d / 2 - 0.3 && p.y > y + 0.6 && p.y - p.th < y + 0.3);
     if (inWall || inProp) add(kind === 'fungus' || kind === 'bin' ? 'warn' : 'error', 'buried-' + kind, o.x, o.z, { inWall, inProp });
   }
+  // Nests, the grave, the secret drain and every walking enemy stand clear of
+  // walls and solid props (a nest half inside a car, a pack spawned in a crate).
+  const solidAt = (x, z, r) => W.plats.find(p => !p.thin && !p.pole && p.y > 0.3 && p.y - p.th < 1.2 && Math.abs(p.x - x) < p.w / 2 + r && Math.abs(p.z - z) < p.d / 2 + r);
+  const wallAt = (x, z, r) => [[r, 0], [-r, 0], [0, r], [0, -r]].some(([ox, oz]) => !walk(tAt(toG(x + ox), toG(z + oz))) && tAt(toG(x + ox), toG(z + oz)) !== 5 && tAt(toG(x + ox), toG(z + oz)) !== 11);
+  for (const e of W.enemies) {
+    if (e.dead || e.fly || (e.y ?? 0) > 0.6) continue;
+    const nest = e.type === 'nest', r = nest ? 1.1 : 0.15, p = solidAt(e.x, e.z, nest ? r : -0.15);
+    if (p) add('error', (nest ? 'nest' : 'enemy') + '-in-prop', e.x, e.z, { type: e.type, prop: [+p.w.toFixed(1), +p.d.toFixed(1), +p.y.toFixed(1)] });
+    else if (nest && wallAt(e.x, e.z, r)) add('error', 'nest-in-wall', e.x, e.z);
+  }
+  for (const [kind, o] of [['grave', G.grave], ['drain', G.secretExit]]) if (o && (solidAt(o.x, o.z, 0.6) || wallAt(o.x, o.z, 0.6))) add('error', kind + '-in-prop', o.x, o.z);
+  // Cracked floor never cuts a path: it needs open floor on all four sides.
+  for (const k of W.cracks.keys()) {
+    const x = k % M.W, y = (k / M.W) | 0;
+    if (N4.some(([dx, dz]) => !walk(tAt(x + dx, y + dz)))) add('warn', 'crack-in-corridor', toW(x), toW(y));
+  }
   // The boss lair and every interior must be walkable to.
   if (G.arena && !near(G.arena.x, G.arena.z)) add('error', 'unreachable-lair', G.arena.x, G.arena.z);
   const rooms = new Map();
