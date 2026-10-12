@@ -38,7 +38,7 @@ import { tickSetPieces } from '../world/setpieces.js';
 import { TUNE } from '../tuning.js';
 import { tickPowerups, puOn } from './powerups.js';
 import { tickFinds } from './finds.js';
-import { coop, coopUpdate, coopSplit } from './coop.js';
+import { coop, coopUpdate, coopSplit, padSolo } from './coop.js';
 
 let seenT = 0;
 
@@ -377,6 +377,7 @@ export function updatePickups(dt) {
  *  lead player, with the other rats stepped around it by coopUpdate. */
 export function update(dt) {
   if (coop.on) { coopUpdate(dt, updateSolo); return; }
+  padSolo();
   updateSolo(dt);
 }
 

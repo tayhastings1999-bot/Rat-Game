@@ -7,6 +7,7 @@ import { G, run, st, settings } from '../core/state.js';
 import { CLASSES } from '../data/classes.js';
 import { sfx } from '../audio/audio.js';
 import { TUNE } from '../tuning.js';
+import { coop } from './coop.js';
 
 const LOW = ['{rat} needs food. Now.', '{rat} is running on empty!', 'Find some cheese, {rat}!', '{rat} is fading. Eat something!', 'Your belly is talking, {rat}.'];
 const CRIT = ['{rat} is about to drop!', '{rat} is one bite from the gutter!', 'Eat or die, {rat}!'];
@@ -32,7 +33,9 @@ export function bark(text) {
   }
   run.barks = (run.barks || 0) + 1;
 }
-const line = list => pick(list).replace('{rat}', CLASSES[run.cls] ? CLASSES[run.cls].name : 'Rat');
+/** The active rat's name; in co-op it says which player (P2's Gutter Brawler). */
+export const ratName = () => { const n = CLASSES[run.cls] ? CLASSES[run.cls].name : 'Rat'; return coop.on ? `P${coop.active + 1}'s ${n}` : n; };
+const line = list => pick(list).replace('{rat}', ratName());
 
 /** Called every step: bark once when health dips under each threshold; re-arm when it recovers. */
 export function lowHealth() {

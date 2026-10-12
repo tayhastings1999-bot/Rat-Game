@@ -1,4 +1,5 @@
 // Small math, formatting and RNG helpers shared by every module.
+import { storage } from './storage.js';
 export const TAU = Math.PI * 2;
 export const PI2 = Math.PI / 2;
 
@@ -19,7 +20,6 @@ export const hexs = h => '#' + h.toString(16).padStart(6, '0');
 export const rgb = h => [(h >> 16) & 255, (h >> 8) & 255, h & 255];
 
 export const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-export const fmtT = s => fmt(s) + '.' + Math.floor((s % 1) * 10);
 export const commas = n => Math.round(n).toLocaleString('en-US');
 
 /** In-place filter: keeps the array identity so other modules' references stay valid. */
@@ -69,20 +69,14 @@ export const shuffleR = a => {
   return a;
 };
 
-export function weekSeed() {
-  const d = new Date(), y = d.getUTCFullYear(), o = Date.UTC(y, 0, 1);
-  const w = Math.ceil(((d - o) / 864e5 + new Date(o).getUTCDay() + 1) / 7);
-  return `TRIAL-${y}-W${w}`;
-}
 
+/** Read a JSON blob through the storage layer (core/storage.js). */
 export const loadJSON = (key, fallback) => {
   try {
-    const v = localStorage.getItem(key);
+    const v = storage.get(key);
     return v == null ? fallback : JSON.parse(v);
   } catch (_) {
     return fallback;
   }
 };
-export const saveJSON = (key, v) => {
-  try { localStorage.setItem(key, JSON.stringify(v)); } catch (_) { /* storage full or blocked */ }
-};
+export const saveJSON = (key, v) => storage.set(key, JSON.stringify(v));

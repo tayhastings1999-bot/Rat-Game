@@ -223,12 +223,6 @@ export function catHunt(e, dt, d) {
   }, { x: m.x, z: m.z });
   return true;
 }
-/** The shriek scatters birds and bats for a few seconds. */
-export function scatterBirds() {
-  let n = 0;
-  for (const e of W.enemies) if (!e.dead && (e.type === 'crow' || e.type === 'bat') && Math.hypot(e.x - P.x, e.z - P.z) < 18) { e.scatterT = 4; e.st = 'move'; e.act = null; n++; }
-  return n;
-}
 
 // ---------- placement ----------
 /** A floor tile next to a wall, some distance from the rat; returns a point tucked against the wall. */

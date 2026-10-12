@@ -1,9 +1,9 @@
 // Overlay screens: save slots, the Nest (hub and shop), pause, map and death.
 import { journalHTML, CHAPTERS, chapter } from '../game/story.js';
-import { fmt, commas, $ } from '../core/util.js';
+import { fmt, commas, $, loadJSON } from '../core/util.js';
 import { G, run, meta, best, settings, saveMeta, saveSettings, saveBest, save, SLOTS, readSlot, loadSlot, deleteSlot } from '../core/state.js';
 import { SHOP } from '../data/shop.js';
-import { rank, price, buy, effectText, isPerm, cheatDeath } from '../game/shop.js';
+import { rank, price, buy, effectText, isPerm, cheatDeath, sellPrice, sell } from '../game/shop.js';
 import { SHOP_TABS } from '../data/shop.js';
 import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
 import { CLASSES, SKINS, skinOk } from '../data/classes.js';
@@ -50,7 +50,7 @@ export const HOWTO = `<div class="howto">
 // ---------- save slots ----------
 export function renderSlotSelect() {
   G.state = 'slots';
-  const last = (() => { try { return JSON.parse(localStorage.getItem('scurry.activeSlot')) || 0; } catch (_) { return 0; } })();
+  const last = loadJSON('scurry.activeSlot', 0) || 0;
   const slot = i => {
     const d = readSlot(i);
     if (!d) return `<button class="card slot" data-slot="${i}"><div class="row"><span class="key px">${i}</span><span class="role">Empty</span></div><b>New rat</b><span class="d">Start fresh in this burrow.</span></button>`;
@@ -91,8 +91,10 @@ function shopHTML() {
       <div class="row"><b>${S.name}</b><span class="role">${perm ? `${r}/${S.max}` : `packed ${r}/${S.max}`}</span></div>
       <span class="d">${info}</span><span class="s">${c == null ? (perm ? 'Maxed' : 'Pack full') : commas(c) + ' gold'}</span></button>`;
   };
+  const sells = t => Object.entries(SHOP).filter(([id, S]) => S.tab === t && sellPrice(id) != null)
+    .map(([id, S]) => `<button class="btn ghost" data-sell="${id}" style="font-size:11px;padding:6px 10px">Sell ${S.name} +${commas(sellPrice(id))}</button>`).join('');
   return Object.entries(SHOP_TABS).map(([t, label]) => `<div class="kick px" style="font-size:11px">${label}</div>
-    <div class="shop">${Object.entries(SHOP).filter(([, S]) => S.tab === t).map(item).join('')}</div>`).join('');
+    <div class="shop">${Object.entries(SHOP).filter(([, S]) => S.tab === t).map(item).join('')}</div>${sells(t) ? `<div class="btns">${sells(t)}</div>` : ''}`).join('');
 }
 
 // ---------- local co-op setup ----------
@@ -138,6 +140,7 @@ export function renderMenu() {
   $('slotsBtn').onclick = renderSlotSelect;
   bindCoop();
   ov.querySelectorAll('[data-diff]').forEach(b => { b.onclick = () => { meta.difficulty = b.dataset.diff; saveMeta(); const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; }; });
+  ov.querySelectorAll('[data-sell]').forEach(b => { b.onclick = () => { if (sell(b.dataset.sell)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
   ov.querySelectorAll('[data-buy]').forEach(b => { b.onclick = () => { if (buy(b.dataset.buy)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
   ov.querySelectorAll('.card[data-k]').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
   ov.querySelectorAll('[data-s]').forEach(b => {

@@ -31,7 +31,7 @@ function flaskSlot() {
   const k = selFlask(), kinds = heldFlasks().length;
   if (!k) return '';
   const D = POWERUPS[k], col = '#' + D.col.toString(16).padStart(6, '0');
-  return `<div class="slot flask" style="--fc:${col}" title="V · Flask of ${D.name}: ${D.desc}${kinds > 1 ? ' · B to switch' : ''}"><b class="px">${D.name.split(' ').map(w => w[0]).join('')}</b><em>V</em><span class="cnt" id="flaskN">${run.flasks[k]}</span>${kinds > 1 ? `<span class="kinds px">${run.flaskSel + 1}/${kinds} B</span>` : ''}<i class="cd" id="flaskT"></i></div>`;
+  return `<div class="slot flask" style="--fc:${col}" title="V · Flask of ${D.name}: ${D.desc}${kinds > 1 ? ' · B to switch' : ''}"><b class="px">${D.name.split(' ').map(w => w[0]).join('')}</b><em>V</em><span class="cnt" id="flaskN">${run.flasks[k] || 0}${run.flaskT && run.flaskT[k] > 0 ? '+' : ''}</span>${kinds > 1 ? `<span class="kinds px">${run.flaskSel + 1}/${kinds} B</span>` : ''}<i class="cd" id="flaskT"></i></div>`;
 }
 
 export function renderSlots() {
@@ -67,7 +67,7 @@ export function hud() {
   if (sc && SG) sc.style.height = Math.max(0, run.sigT / (SG.cd * st.cd) * 100) + '%';
   $('xpFill').style.width = Math.min(100, run.xp / run.need * 100) + '%';
   { const vn = $('vialN'); if (vn) vn.textContent = run.vials || 0; }
-  { const ft = $('flaskT'), k = selFlask(); if (ft && k) ft.style.height = (puT(k) / TUNE.powerups.dur * 100) + '%'; }
+  { const ft = $('flaskT'), k = selFlask(); if (ft && k) { const corked = run.flaskT && run.flaskT[k] > 0; ft.style.height = ((corked ? run.flaskT[k] : puT(k)) / TUNE.powerups.dur * 100) + '%'; ft.style.opacity = corked ? 0.45 : 1; } }
   // Turbo: three segments; full ones glow, and the bar flashes when one fills.
   const tb = $('turbo'), tv = run.turbo || 0;
   tb.classList.toggle('flash', (G.turboFlash || 0) > 0);

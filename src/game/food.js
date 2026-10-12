@@ -30,7 +30,6 @@ const GEO = {
   wedge: new THREE.CylinderGeometry(0.42, 0.42, 0.28, 8, 1, false, 0, Math.PI * 0.6),
   cache: Cy(0.42, 0.42, 0.34, 12),
 };
-export const FOOD_KINDS = ['crumb', 'wedge', 'cache'];
 const heal = kind => TUNE.food[kind] || TUNE.food.crumb;
 
 /** Drop food. `kind` is crumb, wedge or cache (default crumb). */

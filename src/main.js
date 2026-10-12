@@ -13,6 +13,8 @@ import { menu } from './game/flow.js';
 import { initInput } from './game/input.js';
 import { hud, drawMap, initHudIcons } from './ui/hud.js';
 import { initTouch } from './ui/touch.js';
+import { padStart } from './game/coop.js';
+import { pause, resume } from './ui/screens.js';
 
 initHudIcons();
 refreshPortraits();
@@ -34,6 +36,7 @@ function loop(now) {
   let sdt = dt;
   if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; }
   else if (G.slowMo > 0) { G.slowMo -= dt; sdt = dt * 0.3; } // perfect dodge
+  if (padStart()) { if (G.state === 'play') pause(true); else if (G.state === 'paused') resume(); }
   const t0 = performance.now();
   if (G.state === 'play' && !G.qaHold) { // qaHold: the QA bot is stepping the simulation itself
     update(sdt);

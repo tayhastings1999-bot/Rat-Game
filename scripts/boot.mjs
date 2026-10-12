@@ -39,6 +39,18 @@ async function toPlay(ms = T(20000)) {
   }
   throw new Error('never returned to play: ' + await S(() => __scurry.G.state));
 }
+/** Poll fn in the page until true, picking level-up cards so the sim keeps running. */
+async function until(fn, ms = T(20000)) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (await page.evaluate(fn)) return;
+    const st = await S(() => __scurry.G.state);
+    if (st === 'levelup') await page.keyboard.press('Digit1');
+    else if (st === 'paused') await page.click('#resumeBtn').catch(() => {});
+    await page.waitForTimeout(200);
+  }
+  throw new Error('timed out waiting for ' + String(fn).slice(0, 80));
+}
 /** Wait until the game has simulated at least dt more seconds of run time. */
 async function simFor(dt, ms = T(20000)) {
   const t0 = await S(() => __scurry.run.time);
@@ -70,6 +82,11 @@ await check('buying an upgrade spends gold and is saved to the slot', async () =
   const r = await S(() => ({ rank: __scurry.shop.rank('hide'), gold: __scurry.meta.salvage, saved: __scurry.readSlot(1).meta.shop.hide }));
   if (r.rank !== 1 || r.saved !== 1) throw new Error('rank ' + JSON.stringify(r));
   if (r.gold !== 1000 - cost) throw new Error('gold ' + r.gold);
+  await page.click('[data-buy="cheese"]');
+  const g1 = await S(() => __scurry.meta.salvage), back = await S(() => __scurry.shop.sellPrice('cheese')), paid = await S(() => Math.round(__scurry.TUNE.shop.goldPerLevel * 0.15 / 5) * 5);
+  if (back !== Math.floor(paid * 0.75)) throw new Error(`sell price ${back} for ${paid}`);
+  await page.click('[data-sell="cheese"]');
+  if ((await S(() => __scurry.meta.salvage)) !== g1 + back || (await S(() => __scurry.shop.rank('cheese'))) !== 0) throw new Error('sell-back failed');
   await page.click('[data-buy="vial"]');
   await page.click('[data-buy="fSplit"]');
   await page.click('[data-buy="fIron"]');
@@ -110,17 +127,41 @@ await check('pause and resume', async () => {
   await page.click('#resumeBtn');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(5000) });
 });
+await check('single player: a gamepad moves the rat and Start pauses', async () => {
+  await toPlay();
+  const p0 = await S(() => ({ x: __scurry.P.x, z: __scurry.P.z }));
+  await S(() => { __scurry.fakePads[0] = { axes: [0, -1, 0, 0], buttons: [] }; });
+  await until(`Math.hypot(__scurry.P.x - ${p0.x}, __scurry.P.z - ${p0.z}) >= 0.5`, T(15000));
+  await S(() => { __scurry.fakePads[0].axes = [0, 0, 0, 0]; });
+  await toPlay();
+  // Hold Start until the game sees it (a slow frame can miss a short tap), then release.
+  await S(() => { __scurry.fakePads[0].buttons = []; __scurry.fakePads[0].buttons[9] = { pressed: true }; });
+  await page.waitForFunction(() => __scurry.G.state === 'paused', null, { timeout: T(10000) });
+  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; });
+  await page.waitForTimeout(300); // let the menu poll the release edge
+  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: true }; });
+  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(10000) });
+  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; delete __scurry.fakePads[0]; });
+});
 await check('held flasks show on the HUD, cycle with B and uncork with V', async () => {
   await toPlay();
   if (!(await page.locator('#slots .slot.flask').count())) throw new Error('no flask slot on the HUD');
+  const held = await S(() => Object.keys(__scurry.run.flasks).filter(k => __scurry.run.flasks[k] > 0));
+  if (held.length < 2) throw new Error('need two flask types held, have ' + held);
+  await toPlay(); // B only works in play
   const a = await S(() => __scurry.shop.selFlask());
   await page.keyboard.press('KeyB');
+  await page.waitForFunction(a => __scurry.shop.selFlask() !== a, a, { timeout: T(3000) }).catch(() => {});
   const b = await S(() => __scurry.shop.selFlask());
   if (!a || !b || a === b) throw new Error(`cycle ${a} -> ${b}`);
-  await page.keyboard.press('KeyV');
+  await toPlay(); await page.keyboard.press('KeyV');
   const r = await page.evaluate(k => ({ on: __scurry.puOn(k), left: __scurry.run.flasks[k] }), b);
   if (!r.on || r.left !== 0) throw new Error('use ' + JSON.stringify(r));
-  if ((await S(() => __scurry.shop.selFlask())) !== a) throw new Error('selection did not move to the remaining flask');
+  await toPlay(); await page.keyboard.press('KeyV'); // cork it: the rest of the timer is saved
+  const c = await page.evaluate(k => ({ on: __scurry.puOn(k), left: __scurry.run.flaskT[k] }), b);
+  if (c.on || !(c.left > 0)) throw new Error('cork ' + JSON.stringify(c));
+  await toPlay(); await page.keyboard.press('KeyV'); // uncork where it left off
+  if (!(await page.evaluate(k => __scurry.puOn(k), b))) throw new Error('resume failed');
 });
 await check('a Second Tail cheats death once', async () => {
   await S(() => { __scurry.run.tails = 1; __scurry.run.hp = 0; __scurry.die(); });
@@ -160,7 +201,12 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   const s1 = await S(() => ({ x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), ok: Number.isFinite(__scurry.P.x) }));
   if (Math.hypot(s1.x - s0.x, s1.z - s0.z) < 0.5) throw new Error('player 2 did not move');
   if (!s1.ok) throw new Error('player 1 position broke');
-  if ((await page.locator('#coopHud .cp').count()) !== 2) throw new Error('co-op HUD missing');
+  if ((await page.locator("#coopHud .cp:not(.tok)").count()) !== 2) throw new Error('co-op HUD missing');
+});
+await check('co-op: the lead rat revive count resets on a new map', async () => {
+  await toPlay();
+  await S(() => { __scurry.P.revUsed = 2; __scurry.run.seed = __scurry.run.seed + '-test'; }); // a seed change = a new map for leash()
+  await page.waitForFunction(() => !__scurry.P.revUsed, null, { timeout: T(5000) });
 });
 await check('co-op: a downed rat is revived by a partner, and the run ends only when all are down', async () => {
   await S(() => { __scurry.god(false); __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); });
@@ -168,8 +214,11 @@ await check('co-op: a downed rat is revived by a partner, and the run ends only 
   if (d.st !== 'play' || !d.down) throw new Error('not downed ' + JSON.stringify(d));
   await S(() => { const s = __scurry, x = s.P.x + 0.6, z = s.P.z; s.asPlayer(1, () => { s.P.x = x; s.P.z = z; }); });
   // Keep the partner parked next to the downed rat (enemies can shove it) until revived.
-  await toPlay();
-  await page.waitForFunction(() => { const s = __scurry; if (s.G.state === 'levelup') return false; const x = s.P.x + 0.6, z = s.P.z; return !s.asPlayer(1, () => { if (s.P.downed) { s.P.x = x; s.P.z = z; } return s.P.downed; }); }, null, { timeout: T(30000), polling: 200 });
+  await until(() => { const s = __scurry; const x = s.P.x + 0.6, z = s.P.z; return !s.asPlayer(1, () => { if (s.P.downed) { s.P.x = x; s.P.z = z; } return s.P.downed; }); }, T(30000));
+  const t0 = await S(() => __scurry.run.tokens);
+  await S(() => { const s = __scurry; s.asPlayer(1, () => { s.run.hp = 0; s.die(); s.P.x += 40; s.P.downT = s.TUNE.coop.downTime - 0.2; }); });
+  await until(() => !__scurry.asPlayer(1, () => __scurry.P.downed), T(20000));
+  if ((await S(() => __scurry.run.tokens)) !== t0 - 1) throw new Error('no cheese token spent');
   await S(() => { __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); __scurry.run.hp = 0; __scurry.die(); });
   if ((await S(() => __scurry.G.state)) !== 'dead') throw new Error('run did not end');
   if (await S(() => __scurry.coop.on)) throw new Error('co-op still on after the run');
