@@ -89,7 +89,7 @@ function eat(kind, mold, x, y, z) {
     run.moldEaten = (run.moldEaten || 0) + 1;
     return;
   }
-  const h = Math.round(heal(kind) * st.foodMul * st.healMul);
+  const h = Math.round(heal(kind) * st.foodMul * st.healMul * (run.foodM || 1));
   run.hp = Math.min(st.maxHp, run.hp + h);
   run.eaten = (run.eaten || 0) + 1;
   dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
@@ -150,7 +150,7 @@ export function tickFood(dt) {
 }
 
 /** Health drains all the time: drainZone0 in the first zone, then drainBase + drainPerZone × zone, in HP per second. */
-export const drainRate = () => (run.tier || 0) === 0 ? TUNE.food.drainZone0 : TUNE.food.drainBase + TUNE.food.drainPerZone * (run.tier || 0);
+export const drainRate = () => ((run.tier || 0) === 0 ? TUNE.food.drainZone0 : TUNE.food.drainBase + TUNE.food.drainPerZone * (run.tier || 0)) * (run.drainM || 1);
 function drain(dt) {
   if (G.god || G.state !== 'play') return;
   run.hp -= drainRate() * dt;

@@ -31,6 +31,33 @@ await check('page loads and the menu renders', async () => {
   if (!/Scurry/i.test(title)) throw new Error('menu title is ' + title);
   await page.waitForFunction(() => window.__scurry, null, { timeout: 15000 });
 });
+await check('save slot screen lists every slot', async () => {
+  const n = await page.locator('[data-slot]').count();
+  if (n !== 3) throw new Error(`${n} slots`);
+  if ((await S(() => __scurry.G.state)) !== 'slots') throw new Error('not on the slot screen');
+});
+await check('picking a slot opens the Nest with its shop', async () => {
+  await page.click('[data-slot="1"]');
+  await page.waitForSelector('.card[data-k]', { timeout: 5000 });
+  if ((await page.locator('[data-buy]').count()) < 5) throw new Error('shop is missing');
+  if ((await S(() => __scurry.save.slot)) !== 1) throw new Error('slot 1 not active');
+});
+await check('buying an upgrade spends gold and is saved to the slot', async () => {
+  await S(() => { __scurry.meta.salvage = 1000; __scurry.renderMenu(); });
+  const cost = await S(() => __scurry.shop.price('hide'));
+  await page.click('[data-buy="hide"]');
+  const r = await S(() => ({ rank: __scurry.shop.rank('hide'), gold: __scurry.meta.salvage, saved: __scurry.readSlot(1).meta.shop.hide }));
+  if (r.rank !== 1 || r.saved !== 1) throw new Error('rank ' + JSON.stringify(r));
+  if (r.gold !== 1000 - cost) throw new Error('gold ' + r.gold);
+  await page.click('[data-buy="vial"]');
+  await page.click('[data-buy="fSplit"]');
+  await page.click('[data-buy="fIron"]');
+});
+await check('difficulty is picked in the Nest and saved per slot', async () => {
+  await page.click('[data-diff="insane"]');
+  if ((await S(() => __scurry.readSlot(1).meta.difficulty)) !== 'insane') throw new Error('not saved');
+  await page.click('[data-diff="normal"]');
+});
 await check('every class card is present', async () => {
   const n = await page.locator('.card[data-k]').count();
   if (n < 7) throw new Error(`${n} class cards`);
@@ -39,6 +66,10 @@ await check('start a run from the menu', async () => {
   await page.click('.card[data-k="brawler"]');
   await page.waitForFunction(() => __scurry.G.state === 'play' || __scurry.G.state === 'levelup', null, { timeout: 15000 });
   if ((await S(() => __scurry.M.kind)) !== 'city') throw new Error('not in the city');
+  const u = await S(() => ({ hp: __scurry.st.maxHp, base: __scurry.TUNE.classes.brawler.hp, add: __scurry.TUNE.shop.hpPer, vials: __scurry.run.vials, v0: __scurry.TUNE.vials.start }));
+  if (u.hp !== u.base + u.add) throw new Error(`max HP ${u.hp}, wanted ${u.base + u.add}`);
+  if (u.vials !== u.v0 + 1) throw new Error(`vials ${u.vials}`);
+  if (Object.keys(await S(() => __scurry.readSlot(1).meta.pack)).length) throw new Error('supplies were not used up');
 });
 await check('the game loop advances and draws', async () => {
   const t0 = await S(() => __scurry.run.time);
@@ -57,6 +88,46 @@ await check('pause and resume', async () => {
   await page.waitForFunction(() => __scurry.G.state === 'paused', null, { timeout: 5000 });
   await page.click('#resumeBtn');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: 5000 });
+});
+await check('held flasks show on the HUD, cycle with B and uncork with V', async () => {
+  for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) !== 'play'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(150); }
+  if (!(await page.locator('#slots .slot.flask').count())) throw new Error('no flask slot on the HUD');
+  const a = await S(() => __scurry.shop.selFlask());
+  await page.keyboard.press('KeyB');
+  const b = await S(() => __scurry.shop.selFlask());
+  if (!a || !b || a === b) throw new Error(`cycle ${a} -> ${b}`);
+  await page.keyboard.press('KeyV');
+  const r = await page.evaluate(k => ({ on: __scurry.puOn(k), left: __scurry.run.flasks[k] }), b);
+  if (!r.on || r.left !== 0) throw new Error('use ' + JSON.stringify(r));
+  if ((await S(() => __scurry.shop.selFlask())) !== a) throw new Error('selection did not move to the remaining flask');
+});
+await check('a Second Tail cheats death once', async () => {
+  await S(() => { __scurry.run.tails = 1; __scurry.run.hp = 0; __scurry.die(); });
+  const r = await S(() => ({ st: __scurry.G.state, hp: __scurry.run.hp, tails: __scurry.run.tails }));
+  if (r.st === 'dead' || !(r.hp > 0) || r.tails !== 0) throw new Error(JSON.stringify(r));
+});
+await check('death returns to the Nest with gold banked', async () => {
+  await S(() => { __scurry.run.scrap = 77; });
+  const g0 = await S(() => __scurry.meta.salvage);
+  await S(() => { __scurry.run.hp = 0; __scurry.die(); });
+  await page.click('#again');
+  await page.waitForFunction(() => __scurry.G.state === 'menu' && document.querySelector('[data-buy]'), null, { timeout: 8000 });
+  const g = await S(() => __scurry.readSlot(1).meta.salvage);
+  if (g !== g0 + 77) throw new Error(`banked ${g}, wanted ${g0 + 77}`);
+});
+await check('old single-slot saves move into slot 1', async () => {
+  const ctx = await browser.newContext();
+  const p2 = await ctx.newPage();
+  p2.on('pageerror', e => errors.push('pageerror (migrate): ' + e.message));
+  await p2.addInitScript(() => { if (!localStorage.getItem('mig')) { localStorage.setItem('mig', 1); localStorage.setItem('scurry.meta', JSON.stringify({ salvage: 321, runs: 4, nest: { x: 1 } })); localStorage.setItem('scurry.best', JSON.stringify({ time: 90, kills: 12, district: 1 })); } });
+  await p2.goto('http://localhost:5190/?debug', { waitUntil: 'load', timeout: 30000 });
+  await p2.waitForSelector('[data-slot="1"]', { timeout: 20000 });
+  const d = await p2.evaluate(() => JSON.parse(localStorage.getItem('scurry.slot1')));
+  if (!d || d.v !== 2 || d.meta.salvage !== 321 || d.best.time !== 90 || d.meta.nest) throw new Error('slot1 ' + JSON.stringify(d));
+  await p2.click('[data-slot="1"]');
+  await p2.waitForSelector('#hubGold');
+  if (!/321 gold/.test(await p2.textContent('#hubGold'))) throw new Error('hub gold wrong');
+  await ctx.close();
 });
 await check('no errors during boot', async () => { if (errors.length) throw new Error(errors.slice(0, 3).join(' | ')); });
 

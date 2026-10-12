@@ -9,7 +9,9 @@ import { CLASSES } from '../data/classes.js';
 import { keys, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
-import { pause, resume, openMap } from '../ui/screens.js';
+import { pause, resume, openMap, pickSlot } from '../ui/screens.js';
+import { useFlask, cycleFlask } from './shop.js';
+import { renderSlots } from '../ui/hud.js';
 import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
 import { turboDown, turboUp } from './turbo.js';
@@ -38,6 +40,8 @@ export function initInput() {
       if (e.code === 'KeyQ') useSpecial();
       if (e.code === 'KeyG') useSig();
       if (e.code === 'KeyZ') throwVial();
+      if (e.code === 'KeyV') { useFlask(); renderSlots(); }
+      if (e.code === 'KeyB') { cycleFlask(); renderSlots(); }
       if (e.code === 'KeyE') pressE();
       if (e.code === 'KeyF') toggleScent();
       if (e.code === 'KeyM' || e.code === 'Tab') openMap();
@@ -48,6 +52,9 @@ export function initInput() {
       const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'].indexOf(e.code);
       const k = Object.keys(CLASSES)[i];
       if (i >= 0 && k) startRun(k);
+    } else if (s === 'slots') {
+      const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
+      if (i >= 0) pickSlot(i + 1);
     } else if (s === 'tally') {
       if (['Space', 'Enter', 'KeyE'].includes(e.code)) tallyContinue();
     } else if (s === 'dead') {

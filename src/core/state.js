@@ -58,17 +58,61 @@ export const settings = Object.assign(
 if (settings.vol != null && settings.sfx == null) settings.sfx = settings.vol;
 export const saveSettings = () => saveJSON('scurry.settings', settings);
 
-/** Persistent meta progression (the Nest). */
-export const meta = Object.assign(
-  { kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0 },
-  loadJSON('scurry.meta', loadJSON('scurry5.meta', {})),
-);
-// Cut systems leave nothing behind in the save: Nest perks, shortcuts, bought classes,
-// dominance, class unlock flags, and the Daily Run / Ghost Trial boards and ghosts.
-for (const k of ['nest', 'bought', 'startAt', 'dominance', 'domTotal']) delete meta[k];
-for (const k of Object.keys(meta)) if (k.startsWith('u_')) delete meta[k];
-try { for (const k of Object.keys(localStorage)) if (/^scurry4\.|^scurry\.daily\./.test(k)) localStorage.removeItem(k); } catch (_) { /* storage blocked */ }
-export const saveMeta = () => saveJSON('scurry.meta', meta);
+// ---------- save slots ----------
+// Progress lives in three slots, `scurry.slot1..3`, each { v, meta, best, at }.
+// `scurry.activeSlot` remembers the last one played. Settings stay global.
+// Saves from before slots (`scurry.meta`, `scurry.best`, or the v5 keys) move
+// into slot 1 the first time this build loads; the old keys are left in place.
+export const SAVE_VERSION = 2;
+export const SLOTS = 3;
+const slotKey = i => 'scurry.slot' + i;
+const META0 = () => ({ kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0, shop: {}, difficulty: 'normal' });
+const BEST0 = () => ({ time: 0, kills: 0, district: 0 });
 
-export const best = loadJSON('scurry.best', { time: 0, kills: 0, district: 0 });
-export const saveBest = () => saveJSON('scurry.best', best);
+/** Bring any stored slot up to SAVE_VERSION. */
+function migrate(d) {
+  if (!d || typeof d !== 'object') return null;
+  if (!d.v) d = { v: 1, meta: d, best: BEST0() }; // a bare meta object
+  if (d.v < 2) { d.meta = { ...d.meta, shop: d.meta.shop || {} }; d.v = 2; }
+  // Cut systems leave nothing behind in the save: Nest perks, shortcuts, bought classes,
+  // dominance, class unlock flags, and the Daily Run / Ghost Trial boards and ghosts.
+  for (const k of ['nest', 'bought', 'startAt', 'dominance', 'domTotal']) delete d.meta[k];
+  for (const k of Object.keys(d.meta)) if (k.startsWith('u_')) delete d.meta[k];
+  return d;
+}
+export const readSlot = i => migrate(loadJSON(slotKey(i), null));
+
+(function migrateLegacy() {
+  for (let i = 1; i <= SLOTS; i++) if (loadJSON(slotKey(i), null)) return;
+  const m = loadJSON('scurry.meta', loadJSON('scurry5.meta', null));
+  if (!m) return;
+  saveJSON(slotKey(1), migrate({ v: 1, meta: m, best: loadJSON('scurry.best', BEST0()), at: Date.now() }));
+  saveJSON('scurry.activeSlot', 1);
+})();
+try { for (const k of Object.keys(localStorage)) if (/^scurry4\.|^scurry\.daily\./.test(k)) localStorage.removeItem(k); } catch (_) { /* storage blocked */ }
+
+/** Persistent meta progression for the active slot (story, skins, gold, shop). */
+export const meta = META0();
+export const best = BEST0();
+/** The slot being played (1..SLOTS), or 0 before one is picked: nothing is saved then. */
+export const save = { slot: 0 };
+
+const reset = (o, v) => { for (const k of Object.keys(o)) delete o[k]; Object.assign(o, v); };
+const writeSlot = () => { if (save.slot) saveJSON(slotKey(save.slot), { v: SAVE_VERSION, meta, best, at: Date.now() }); };
+export const saveMeta = writeSlot;
+export const saveBest = writeSlot;
+
+/** Make slot i active, creating it if empty. */
+export function loadSlot(i) {
+  const d = readSlot(i);
+  reset(meta, { ...META0(), ...(d ? d.meta : {}) });
+  reset(best, { ...BEST0(), ...(d ? d.best : {}) });
+  save.slot = i;
+  saveJSON('scurry.activeSlot', i);
+  writeSlot();
+}
+export function deleteSlot(i) {
+  try { localStorage.removeItem(slotKey(i)); } catch (_) { /* storage blocked */ }
+  if (save.slot === i) { save.slot = 0; reset(meta, META0()); reset(best, BEST0()); }
+  if (loadJSON('scurry.activeSlot', 0) === i) saveJSON('scurry.activeSlot', 0);
+}

@@ -17,6 +17,13 @@ export const TUNE = {
     elitePerThreat: 0.008,
     eliteMax: 0.2,
   },
+  difficulty: {
+    // Casual / Normal / Insane, picked in the Nest and saved per slot (meta.difficulty).
+    // Multipliers on top of zone scaling (and player-count scaling in co-op). zoneScaling() in combat.js applies them.
+    casual: { hp: 0.75, dmg: 0.65, spawn: 0.8, elite: 0.6, bossHp: 0.8, drain: 0.7, food: 1.25, gold: 0.75 },
+    normal: { hp: 1, dmg: 1, spawn: 1, elite: 1, bossHp: 1, drain: 1, food: 1, gold: 1 },
+    insane: { hp: 1.5, dmg: 1.6, spawn: 1.35, elite: 2, bossHp: 1.6, drain: 1.4, food: 0.8, gold: 1.75 },
+  },
   camera: {
     // Fixed-angle follow camera. Walls between it and the rat get a dithered see-through hole.
     pitch: 0.9, // radians above the horizon
@@ -231,6 +238,15 @@ export const TUNE = {
     // XP to the next level: base + lin·(L−1) + mul·(L−1)^exp
     base: 12, lin: 9, mul: 2.2, exp: 1.7,
     maxLevel: 99,
+  },
+  shop: {
+    // The Nest shop (game/shop.js): permanent upgrades bought with banked gold, kept per save slot.
+    // cost of rank r (0-based) = round(base × grow^r). Stat ranks feed run.growth at run start.
+    statPer: 0.5, // stat points per rank of Sharp Teeth / Quick Feet / Scarred Hide / Rot Lore
+    hpPer: 10, // max HP per rank of Thick Hide
+    goldPer: 0.1, // gold pickup +10% per rank of Packrat
+    grow: 1.8, // upgrade price × this per rank owned
+    cheeseAt: 0.25, cheeseHeal: 0.4, // packed cheese: eaten below 25% HP, heals 40%
   },
 };
 

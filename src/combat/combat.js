@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { rand } from '../core/util.js';
 import { G, P, W, run, st, meta, settings } from '../core/state.js';
+import { onLowHp } from '../game/shop.js';
 import { world, bury, dropCreature } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
 import { blood, spark, puff, boom, decal, gore, dnum } from '../fx/fx.js';
@@ -155,6 +156,7 @@ export function hurtP(d, from, raw) {
   }
   blood(P.x, P.y + 0.5, P.z, 0xa01010, null, raw ? 2 : 6);
   if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); comboBreak(); }
+  onLowHp();
   lowHealth();
   if (run.hp <= 0) die();
 }
@@ -269,4 +271,15 @@ export function zoneScaling() {
   run.dmgM = 1 + T * Z.dmgPerThreat;
   run.spdM = 1 + Math.min(0.55, T * Z.spdPerThreat);
   run.atkM = 1 + Math.min(1.4, T * Z.atkPerThreat);
+  // Difficulty mode (TUNE.difficulty), on top of the zone.
+  const D = diffMods();
+  run.hpM *= D.hp;
+  run.dmgM *= D.dmg;
+  run.spawnM = D.spawn; // nest spawn rate
+  run.eliteM = D.elite;
+  run.bossHpM = D.bossHp;
+  run.drainM = D.drain;
+  run.foodM = D.food;
 }
+/** The active difficulty's multipliers (Normal when unset or unknown). */
+export const diffMods = () => TUNE.difficulty[meta.difficulty] || TUNE.difficulty.normal;

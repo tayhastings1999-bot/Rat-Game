@@ -17,13 +17,22 @@ import { BLASTS } from '../game/turbo.js';
 import { secretText } from '../game/secrets.js';
 import { TUNE } from '../tuning.js';
 import { findsText } from '../game/finds.js';
-import { puList } from '../game/powerups.js';
+import { puList, puT, POWERUPS } from '../game/powerups.js';
+import { selFlask, heldFlasks } from '../game/shop.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
 }
 
 /** The class kit on the plate: primary, special (Q), signature (G). */
+/** HUD slot for held flasks: the selected one, how many, how many kinds, and its timer when active. */
+function flaskSlot() {
+  const k = selFlask(), kinds = heldFlasks().length;
+  if (!k) return '';
+  const D = POWERUPS[k], col = '#' + D.col.toString(16).padStart(6, '0');
+  return `<div class="slot flask" style="--fc:${col}" title="V · Flask of ${D.name}: ${D.desc}${kinds > 1 ? ' · B to switch' : ''}"><b class="px">${D.name.split(' ').map(w => w[0]).join('')}</b><em>V</em><span class="cnt" id="flaskN">${run.flasks[k]}</span>${kinds > 1 ? `<span class="kinds px">${run.flaskSel + 1}/${kinds} B</span>` : ''}<i class="cd" id="flaskT"></i></div>`;
+}
+
 export function renderSlots() {
   if (!run.cls) return;
   const C = CLASSES[run.cls];
@@ -32,6 +41,7 @@ export function renderSlots() {
     `<div class="slot spec" title="Q · ${SPECIALS[C.special].name}">${ICON[C.special]}<i class="cd" id="specCd"></i><em>Q</em></div>` +
     (SIGS[run.cls] ? `<div class="slot sig" title="G · ${SIGS[run.cls].name}: ${SIGS[run.cls].desc}">${ICON.sig}<i class="cd" id="sigCd"></i><em>G</em></div>` : '') +
     `<div class="slot vial" title="Z · Rot Vial: burst of rot around you (max ${TUNE.vials.max})">${ICON.vial}<em>Z</em><span class="cnt" id="vialN">${run.vials || 0}</span></div>` +
+    flaskSlot() +
     (BLASTS[run.cls] ? `<div class="slot turbo" title="X · ${BLASTS[run.cls].name}: ${BLASTS[run.cls].desc} Hold X with Q or G for a turbo special or signature.">${ICON.turbo}<em>X</em></div>` : '');
   $('items').innerHTML = '';
 }
@@ -55,6 +65,7 @@ export function hud() {
   if (sc && SG) sc.style.height = Math.max(0, run.sigT / (SG.cd * st.cd) * 100) + '%';
   $('xpFill').style.width = Math.min(100, run.xp / run.need * 100) + '%';
   { const vn = $('vialN'); if (vn) vn.textContent = run.vials || 0; }
+  { const ft = $('flaskT'), k = selFlask(); if (ft && k) ft.style.height = (puT(k) / TUNE.powerups.dur * 100) + '%'; }
   // Turbo: three segments; full ones glow, and the bar flashes when one fills.
   const tb = $('turbo'), tv = run.turbo || 0;
   tb.classList.toggle('flash', (G.turboFlash || 0) > 0);
