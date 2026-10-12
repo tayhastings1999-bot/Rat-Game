@@ -84,11 +84,15 @@ function migrate(d) {
 export const readSlot = i => migrate(loadJSON(slotKey(i), null));
 
 (function migrateLegacy() {
-  for (let i = 1; i <= SLOTS; i++) if (loadJSON(slotKey(i), null)) return;
+  // Once only: the old keys are left in place, so without this flag deleting every slot
+  // would bring the pre-slot save back into slot 1 on the next load.
+  if (loadJSON('scurry.migrated', 0)) return;
+  for (let i = 1; i <= SLOTS; i++) if (loadJSON(slotKey(i), null)) { saveJSON('scurry.migrated', 1); return; }
   const m = loadJSON('scurry.meta', loadJSON('scurry5.meta', null));
   if (!m) return;
   saveJSON(slotKey(1), migrate({ v: 1, meta: m, best: loadJSON('scurry.best', BEST0()), at: Date.now() }));
   saveJSON('scurry.activeSlot', 1);
+  saveJSON('scurry.migrated', 1);
 })();
 for (const k of storage.keys()) if (/^scurry4\.|^scurry\.daily\./.test(k)) storage.remove(k);
 

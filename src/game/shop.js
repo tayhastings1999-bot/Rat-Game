@@ -90,7 +90,7 @@ export function cheatDeath() {
 // Bound to V (use) and B (cycle) on the keyboard and the Flask / Swap touch buttons.
 // useFlask and cycleFlask take no arguments, so a gamepad binding can call them directly.
 /** Flask types held, in a stable order. */
-export const heldFlasks = () => Object.keys(run.flasks || {}).filter(k => run.flasks[k] > 0 || (run.flaskT && run.flaskT[k] > 0) || (run.flaskOn === k));
+export const heldFlasks = () => Object.keys(run.flasks || {}).filter(k => run.flasks[k] > 0 || (run.flaskT && run.flaskT[k] > 0) || (run.flaskOn === k && run.pu && run.pu[k] > 0)); // a flask that wore off is no longer held
 /** The selected flask's power-up key, or null when none are held. */
 export function selFlask() {
   const h = heldFlasks();
@@ -113,6 +113,7 @@ export function useFlask() {
   if (!k || G.state !== 'play') return null;
   const T = run.flaskT || (run.flaskT = {}), pu = run.pu || (run.pu = {});
   if (run.flaskOn === k && pu[k] > 0) { T[k] = pu[k]; pu[k] = 0; run.flaskOn = null; return 'cork'; }
+  if (run.flaskOn === k) run.flaskOn = null; // it wore off on its own
   if (T[k] > 0) { grantPowerup(k); pu[k] = T[k]; T[k] = 0; run.flaskOn = k; return 'resume'; }
   if (!(run.flasks[k] > 0)) return null;
   run.flasks[k]--;
