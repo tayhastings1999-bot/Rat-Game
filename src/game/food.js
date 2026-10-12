@@ -12,6 +12,7 @@ import { flameTex } from '../render/textures.js';
 import { puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { isSewer } from '../data/world.js';
+import { onLowHp } from './shop.js';
 import { TUNE } from '../tuning.js';
 import { lowHealth } from './announcer.js';
 import { die } from '../ui/screens.js';
@@ -164,6 +165,7 @@ function drain(dt) {
   if (G.god || G.state !== 'play') return;
   run.hp -= drainRate() * dt;
   run.drained = (run.drained || 0) + drainRate() * dt;
+  onLowHp(); // packed cheese also saves you from the drain, not only from hits
   lowHealth();
   if (run.hp <= 0) { run.hp = 0; run.starved = true; die(); }
 }
