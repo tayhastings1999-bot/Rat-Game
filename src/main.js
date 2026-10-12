@@ -23,7 +23,10 @@ menu();
 let hudT = 0, mapT = 0;
 function loop(now) {
   requestAnimationFrame(loop);
-  const raw = (now - G.last) / 1000, dt = Math.min(0.05, raw);
+  // Never negative: G.last is reset with performance.now() after a slow step (a run starting, a level
+  // loading, a resume), and the next frame's timestamp can be earlier than that. A negative step ran
+  // the physics backwards and sank the rat through the floor for a moment.
+  const raw = Math.max(0, (now - G.last) / 1000), dt = Math.min(0.05, raw);
   if (G.state === 'play') adaptResolution(raw);
   document.body.classList.toggle('playing', G.state === 'play');
   G.last = now;
