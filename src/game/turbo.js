@@ -86,17 +86,16 @@ export function tickTurbo(dt) {
 }
 
 // ---------- how turbo looks ----------
-// While a turbo move is boosted the rat burns in its class colour (an aura and a
-// turning ground ring); armed turbo glows faintly gold. Every turbo move and blast
+// While a turbo move is boosted the rat burns in its class colour (an aura); armed turbo glows faintly gold. Every turbo move and blast
 // rears the rat up and throws a flourish of its own, and the screen flashes gold.
 const auraMat = new THREE.SpriteMaterial({ map: flameTex, color: 0xffd040, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
 const aura = new THREE.Sprite(auraMat);
 aura.scale.setScalar(2.6);
-const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd040, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
-const ring0 = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 28).rotateX(-Math.PI / 2), ringMat);
 const domeMat = new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0, depthWrite: false, wireframe: true });
 const dome = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), domeMat);
-scene.add(aura, ring0, dome);
+// The class-coloured turning ground ring was removed: it read as a red disc under the hero and
+// hid the player ring (review #4). The aura still shows turbo.
+scene.add(aura, dome);
 let domeT = 0;
 export const turboAuraOpacity = () => auraMat.opacity;
 const col = () => new THREE.Color((CLASSES[run.cls] && CLASSES[run.cls].rc) || '#ffd040').getHex();
@@ -109,12 +108,6 @@ export function syncTurboFx(dt) {
   aura.position.set(P.x, P.y + 0.6, P.z);
   aura.scale.setScalar(2.4 + 0.25 * Math.sin(G.time * 14));
   aura.visible = auraMat.opacity > 0.02;
-  ringMat.opacity += ((boosted ? 0.7 : 0) - ringMat.opacity) * Math.min(1, dt * 10);
-  ringMat.color.setHex(col());
-  ring0.position.set(P.x, floorY(P.x, P.z) + 0.06, P.z);
-  ring0.rotation.y += dt * 4;
-  ring0.scale.setScalar(1 + 0.15 * Math.sin(G.time * 9));
-  ring0.visible = ringMat.opacity > 0.02;
   if (domeT > 0) { domeT -= dt; const u = 1 - domeT / 0.45; dome.position.set(P.x, P.y + 0.5, P.z); dome.scale.setScalar(1 + u * 4); domeMat.opacity = 0.5 * (1 - u); dome.visible = true; } else dome.visible = false;
 }
 const part = p => { if (W.parts.length >= PART_CAP) W.parts.shift(); W.parts.push(p); };

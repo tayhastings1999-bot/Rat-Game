@@ -53,3 +53,21 @@ export function addOutline(obj, w, outer = null, ow = 0.02, minR = 0.1) {
   }
   return obj;
 }
+
+/**
+ * Hero rim light (review #4): a bright fresnel rim in the player's colour so heroes pop off
+ * the dark enemy mass. Chains after any existing onBeforeCompile (ps1 snap).
+ */
+export function heroRim(m, color, k = 0.9) {
+  const prev = m.onBeforeCompile, col = new THREE.Color(color);
+  m.onBeforeCompile = (sh, r) => {
+    if (prev) prev(sh, r);
+    sh.uniforms.rimCol = { value: col };
+    sh.uniforms.rimK = { value: k };
+    sh.fragmentShader = 'uniform vec3 rimCol;\nuniform float rimK;\n' + sh.fragmentShader.replace('#include <opaque_fragment>',
+      'float rimF = pow(1.0 - clamp(abs(dot(normalize(normal), normalize(vViewPosition))), 0.0, 1.0), 2.2);\noutgoingLight += rimCol * rimF * rimK + rimCol * 0.08;\n#include <opaque_fragment>');
+  };
+  const key = m.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : () => '';
+  m.customProgramCacheKey = () => key() + '|rim';
+  return m;
+}

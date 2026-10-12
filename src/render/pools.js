@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { PI2 } from '../core/util.js';
 import { scene } from './renderer.js';
 import { GEO, MOB_GEOS, bodyMat, Bx } from './models.js';
+import { gradeBody, gradeGlow } from './enemyGrade.js';
 import { atlasTex } from './textures.js';
 import { rigGeo, rigMat, rigPool } from './rig.js';
 import { outlineMat } from './toon.js';
@@ -24,7 +25,7 @@ export function mkIM(geo, mat, cap, col = true) {
 }
 
 export const IMB = {}, IMG = {}, IMO = {};
-for (const k in GEO) { rigGeo(GEO[k].body, k); rigGeo(GEO[k].glow, k); }
+for (const k in GEO) { gradeBody(GEO[k].body); gradeGlow(GEO[k].glow); rigGeo(GEO[k].body, k); rigGeo(GEO[k].glow, k); }
 for (const k of MOB_GEOS) {
   IMB[k] = mkIM(GEO[k].body.clone(), rigMat(bodyMat(), k), MOB_CAP); // no real-time shadows: mobs get PS1-style blob shadows
   IMG[k] = mkIM(GEO[k].glow.clone(), rigMat(new THREE.MeshBasicMaterial({ vertexColors: true }), k), MOB_CAP, false);

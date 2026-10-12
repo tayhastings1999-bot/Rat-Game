@@ -61,7 +61,7 @@ const START = {
         if (!e) continue;
         e.stampede = true;
         chargeStart(e, 1.1, 18, 2.6, () => head);
-        fx('warn', x, floorY(x, z), z, 1.6, 0xff2a1a, 1.1, 0, 0.45);
+        fx('warn', x, floorY(x, z), z, 1.6, 0xff7a1a, 1.1, 0, 0.45);
         n++;
       }
       if (!n) continue;

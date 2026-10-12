@@ -1,6 +1,7 @@
 // Procedural canvas textures: pixel-art surfaces for the sewer, the city and FX.
 import * as THREE from 'three';
 import { rand, randi, rgb, TAU } from '../core/util.js';
+import { PAL } from './palette.js';
 
 export function ctex(size, draw, { rep = [1, 1], srgb = true } = {}) {
   const cv = document.createElement('canvas');
@@ -48,12 +49,12 @@ export function tiles(col, grout, T = 16, crack = true) {
     x.fillStyle = grout;
     x.fillRect(0, 0, s, s);
     for (let j = 0; j < s / T; j++) for (let i = 0; i < s / T; i++) {
-      x.fillStyle = shade(r, g, b, rand(0.85, 1.12));
+      x.fillStyle = shade(r, g, b, rand(0.94, 1.06)); // P11: tile-to-tile contrast within ~12%
       x.fillRect(i * T + 1, j * T + 1, T - 2, T - 2);
     }
-    specks(x, s, 300, 0.04, 0.18);
+    specks(x, s, 300, 0.02, 0.09);
     if (crack) {
-      x.strokeStyle = 'rgba(0,0,0,.3)';
+      x.strokeStyle = 'rgba(0,0,0,.15)';
       for (let n = 0; n < 3; n++) {
         x.beginPath();
         let px = rand(0, s), py = rand(0, s);
@@ -84,14 +85,23 @@ export function mkBrick(col) {
 
 const texCache = {};
 /** Floor ('f') or wall ('b') texture for a district, cached by name. */
+/** Sewer floor base: dark teal-grey (no yellow-green). */
+export const FLOOR_SEWER = 0x2b3a3c;
 export function texFor(kind, D) {
   const id = kind + D.name;
-  if (!texCache[id]) texCache[id] = kind === 'f' ? tiles(D.floor, D.grout) : mkBrick(D.brick);
+  if (!texCache[id]) {
+    if (kind === 'f') {
+      // P11: floors sit in the bible's dark band. City = Concrete, sewer = dark teal-grey;
+      // the zone's own floor colour only tints them (12%) so actors stay the brightest thing.
+      const base = new THREE.Color(D.kind === 'sewer' ? FLOOR_SEWER : PAL.concrete).lerp(new THREE.Color(D.floor), 0.12);
+      texCache[id] = tiles(base.getHex(), '#' + base.clone().multiplyScalar(0.6).getHexString());
+    } else texCache[id] = mkBrick(D.brick);
+  }
   return texCache[id];
 }
 
 export const crackTex = ctex(64, x => {
-  x.strokeStyle = 'rgba(20,14,10,.9)';
+  x.strokeStyle = 'rgba(20,14,10,.45)'; // P11: crack decal contrast halved
   x.lineWidth = 2;
   for (let n = 0; n < 7; n++) {
     x.beginPath();
@@ -155,9 +165,9 @@ export const acidTex = ctex(64, (x, s) => {
 
 // ---------- city ----------
 export const asphaltTex = ctex(64, (x, s) => {
-  x.fillStyle = '#4c4a50'; x.fillRect(0, 0, s, s);
-  noise(x, s, 520, 55, 105, 1, 1);
-  x.strokeStyle = 'rgba(10,10,12,.55)';
+  x.fillStyle = '#2a2e3a'; x.fillRect(0, 0, s, s); // P11: Slate/Concrete band
+  noise(x, s, 520, 36, 54, 1, 1);
+  x.strokeStyle = 'rgba(10,10,12,.28)';
   for (let n = 0; n < 4; n++) {
     x.beginPath();
     let px = rand(0, s), py = rand(0, s);
@@ -165,10 +175,10 @@ export const asphaltTex = ctex(64, (x, s) => {
     for (let q = 0; q < 5; q++) { px += rand(-8, 8); py += rand(-8, 8); x.lineTo(px, py); }
     x.stroke();
   }
-  x.fillStyle = 'rgba(20,16,30,.35)';
+  x.fillStyle = 'rgba(20,16,30,.18)';
   x.beginPath(); x.ellipse(rand(10, 54), rand(10, 54), rand(5, 10), rand(3, 7), rand(0, 3), 0, TAU); x.fill();
 });
-export const sidewalkTex = tiles(0x8e8a84, '#4a4744', 32, true);
+export const sidewalkTex = tiles(PAL.concrete, '#23283a', 32, true);
 export const grassTex = ctex(64, (x, s) => {
   x.fillStyle = '#3e5a2c'; x.fillRect(0, 0, s, s);
   for (let i = 0; i < 700; i++) {

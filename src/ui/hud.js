@@ -1,5 +1,5 @@
 // In-play HUD: bars, slots, keys, objective, prompts, minimap, banners.
-import { clamp, fmt, commas, hexs, $ } from '../core/util.js';
+import { clamp, fmt, hexs, $ } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { M, T, gi, inG, toG, tileAt } from '../world/grid.js';
 import { CLASSES } from '../data/classes.js';
@@ -19,7 +19,8 @@ import { TUNE } from '../tuning.js';
 import { findsText } from '../game/finds.js';
 import { puList, puT, POWERUPS } from '../game/powerups.js';
 import { selFlask, heldFlasks } from '../game/shop.js';
-import { coop, coopHud } from '../game/coop.js';
+import { coop } from '../game/coop.js';
+import { css } from '../render/palette.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
@@ -57,8 +58,30 @@ function objective() {
   return `Smash the nests · ${run.nests} left · clearing them wakes the boss${key}`;
 }
 
+/**
+ * Top HUD (art bible §8, hud_mockup.png): one system of four chrome panels, one per player
+ * slot. Name in Bungee, numbers in Silkscreen, the player's colour on the stripe and frame.
+ * Combo lives in the panel (the old DAMAGE/KILLS/COMBO cluster is gone). Empty slots read
+ * PRESS START; in co-op they show the shared cheese tokens.
+ */
+function playerPanels() {
+  const tok = run.tokens < 0 ? '∞' : run.tokens ?? 0, out = [];
+  for (let i = 0; i < 4; i++) {
+    const p = coop.on ? coop.players.find(q => q.i === i) : i === 0 ? { i: 0 } : null, col = css(TUNE.coop.colors[i]);
+    if (!p) { out.push(`<div class="pp off" style="--pc:${col}"><b class="nm">PRESS START</b><span class="sub px">${coop.on ? `insert cheese · tokens ${tok}` : 'insert cheese'}</span></div>`); continue; }
+    const cur = !coop.on || p.i === coop.active, q = cur ? P : p.P, r = cur ? run : p.run, s = cur ? st : p.st, C = CLASSES[r.cls];
+    const name = C.name.split(' ').pop().toUpperCase(), combo = Math.max(0, Math.min(100, r.combo || 0));
+    const state = q.out ? 'OUT' : q.downed ? `DOWN ${Math.max(0, Math.ceil(TUNE.coop.downTime - (q.downT || 0)))}s` : '';
+    out.push(`<div class="pp on${q.downed || q.out ? ' down' : ''}" style="--pc:${col}"><b class="nm">P${i + 1} ${name}</b>` +
+      `<span class="hpn px">${state || Math.ceil(Math.max(0, r.hp))}</span>` +
+      `<span class="meta px"><em>GOLD ${String(Math.floor(run.scrap)).padStart(4, '0')}</em><br>KEY x${run.keys || 0}  VIAL x${r.vials || 0}</span>` +
+      `<i class="hpb"><s style="width:${Math.max(0, r.hp) / (s.maxHp || 1) * 100}%"></s></i><i class="cmb${combo >= 100 ? ' ready' : ''}"><s style="width:${combo}%"></s></i></div>`);
+  }
+  return out.join('');
+}
+
 export function hud() {
-  { let c = $('coopHud'); if (coop.on) { if (!c) { c = document.createElement('div'); c.id = 'coopHud'; $('hud').appendChild(c); } c.innerHTML = coopHud(); } else if (c) c.remove(); }
+  $('pbar').innerHTML = playerPanels();
   $('hpFill').style.width = clamp(run.hp / st.maxHp * 100, 0, 100) + '%';
   $('hpTxt').textContent = Math.ceil(Math.max(0, run.hp)) + ' / ' + st.maxHp;
   const S = SPECIALS[CLASSES[run.cls].special], cd = $('specCd');
@@ -73,7 +96,7 @@ export function hud() {
   tb.classList.toggle('flash', (G.turboFlash || 0) > 0);
   tb.classList.toggle('held', !!G.turboHeld);
   [...tb.children].forEach((el, i) => { const f = Math.max(0, Math.min(1, tv - i)); el.firstChild.style.width = f * 100 + '%'; el.classList.toggle('full', f >= 1); });
-  $('lvlBig').textContent = String(run.level).padStart(2, '0');
+  $('lvTag').textContent = 'LV ' + String(run.level).padStart(2, '0');
   $('res').innerHTML =
     `<div class="r">${IC_SCRAP}<span>${Math.floor(run.scrap)}</span>${run.keys ? `<span class="keyc">${IC_KEY}<span>${run.keys}</span></span>` : ''}</div>` +
     (findsText() ? `<span class="chip secrets">${findsText()}</span>` : '') +
@@ -85,8 +108,6 @@ export function hud() {
     activeBuffs().map(b => `<span class="chip" style="--cc:${hexs(b.col)}">${b.name} ${Math.ceil(b.t)}s</span>`).join('') +
     (P.perfectT > 0 ? '<span class="chip" style="--cc:#9af0ff">PERFECT · GUARANTEED CRITS</span>' : '') +
     puList().map(p => `<span class="pu px" style="--cc:${hexs(p.col)}">${p.name} ${Math.ceil(p.t)}s<i style="width:${Math.round(p.f * 100)}%"></i></span>`).join('');
-  $('dmgTotal').textContent = commas(run.dmg);
-  $('kills').textContent = run.kills;
   $('clock').textContent = fmt(run.time);
   $('obj').textContent = objective();
   // Boss UI stays hidden until you enter its arena (or hit it).
@@ -94,8 +115,6 @@ export function hud() {
   if (b && !b.revealed && (Math.hypot(b.x - P.x, b.z - P.z) < 24 || b.hp < b.maxHp)) { b.revealed = true; run.bossHit = false; bossIntro(b); }
   $('bossWrap').style.display = b && b.revealed ? 'flex' : 'none';
   if (b) { $('bossFill').style.width = Math.max(0, b.hp / b.maxHp * 100) + '%'; $('bossLabel').textContent = (b.label || '') + bossStatus(b); }
-  $('comboFill').style.width = (run.combo || 0) + '%';
-  $('comboTxt').textContent = 'COMBO';
   const tip = $('tip');
   let lab = null, prog = null;
   if (P.carry) lab = 'E · Drop ' + OBJ[P.carry.kind].name;

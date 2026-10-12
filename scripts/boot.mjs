@@ -194,7 +194,7 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   const s1 = await S(() => ({ x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), ok: Number.isFinite(__scurry.P.x) }));
   if (Math.hypot(s1.x - s0.x, s1.z - s0.z) < 0.5) throw new Error('player 2 did not move');
   if (!s1.ok) throw new Error('player 1 position broke');
-  if ((await page.locator("#coopHud .cp:not(.tok)").count()) !== 2) throw new Error('co-op HUD missing');
+  if ((await page.locator("#pbar .pp.on").count()) !== 2) throw new Error('co-op HUD missing');
 });
 await check('co-op: a downed rat is revived by a partner, and the run ends only when all are down', async () => {
   await S(() => { __scurry.god(false); __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); });

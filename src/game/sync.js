@@ -42,20 +42,21 @@ for (let i = 0; i < BAR_N; i++) {
 const corruptCol = {};
 for (const k in CORRUPT) corruptCol[k] = new THREE.Color(CORRUPT[k].col);
 
-const TK_RGB = { melee: [2.6, 0.55, 0.42], shot: [1.8, 0.65, 2.7], area: [2.7, 2.1, 0.4], heal: [0.6, 2.4, 0.5] };
+// Telegraph tints stay on the enemy hues (orange/purple/lime), never player red/blue/yellow/green.
+const TK_RGB = { melee: [2.6, 1.15, 0.3], shot: [1.6, 0.8, 2.8], area: [2.6, 1.5, 0.25], heal: [1.5, 2.3, 0.35] };
 function mobColor(e) {
   const t = G.time;
   if (e.flash > 0) return tmpC.setScalar(3.5);
-  if (e.thief || e.robber) return tmpC.setRGB(2, 1.6, 0.3);
+  if (e.thief || e.robber) return tmpC.setRGB(2.2, 1.2, 0.3);
   if (e.scab) return tmpC.setRGB(1.5, 0.6, 1.8);
-  if (e.disguise) return P.scent ? tmpC.setRGB(2.4, 0.5, 0.4) : tmpC.setScalar(1);
-  if (e.hidden) return tmpC.setRGB(0.6, 2.2, 0.5);
-  if (e.rage > 0) return tmpC.setRGB(1.7, 0.75, 0.6);
+  if (e.disguise) return P.scent ? tmpC.setRGB(2.3, 1.05, 0.3) : tmpC.setScalar(1);
+  if (e.hidden) return tmpC.setRGB(1.4, 0.8, 2.4);
+  if (e.rage > 0) return tmpC.setRGB(1.8, 0.9, 0.35);
   if (e.wind > 0 || e.tel > 0) { const c = TK_RGB[e.tk] || TK_RGB.melee, f = 0.8 + 0.25 * Math.sin(t * 40); return tmpC.setRGB(c[0] * f, c[1] * f, c[2] * f); }
   if (e.recov > 0) return tmpC.setRGB(1.35, 1.5, 1.75); // overextended: open for a punish
-  if (P.scent) return tmpC.setRGB(2.4, 0.5, 0.4);
+  if (P.scent) return tmpC.setRGB(2.3, 1.05, 0.3);
   if (e.bT > 0) return tmpC.setRGB(1.6, 0.8, 0.4);
-  if (e.pT > 0) return tmpC.setRGB(0.7, 1.4, 0.6);
+  if (e.pT > 0) return tmpC.setRGB(1.2, 1.5, 0.4);
   if (e.corrupt) return tmpC.copy(corruptCol[e.corrupt]).multiplyScalar(0.9).addScalar(0.55 + 0.25 * Math.sin(t * 6 + e.ph));
   if (e.ward > 0) return tmpC.setRGB(0.7, 1, 1.6);
   if (e.mut) return tmpC.setRGB(0.95, 1.2, 0.8);
@@ -128,7 +129,7 @@ export function sync(dt) {
       dummy.scale.setScalar(e.r * (e.champion ? 2.6 : 1.8) * (1 + 0.08 * Math.sin(G.time * 8 + e.ph)));
       dummy.updateMatrix();
       ringIM.setMatrixAt(rings, dummy.matrix);
-      ringIM.setColorAt(rings, e.hexT > 0 ? tmpC.setHex(0xc070ff) : e.champion ? tmpC.setHex(0xffd040) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x6ad0ff));
+      ringIM.setColorAt(rings, e.hexT > 0 ? tmpC.setHex(0xc070ff) : e.champion ? tmpC.setHex(0xff7a1a) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x7a3cff));
       rings++;
     }
   }

@@ -47,7 +47,9 @@ export const TUNE = {
     edge: 0.9, edgeDepth: 0.06, // depth-edge outline strength and threshold (relative depth step)
     outline: 0.035, outlineHero: 0.045, outlineBoss: 0.06, outlinePlayer: 0.02, // inverted-hull widths, world units
     ring: 0.7, ringPulse: 0.08, // player ring radius and pulse
-    outlineMaxMobs: 120, // perf guard: mob outlines switch off while more mobs than this are on screen
+    outlineMaxMobs: 120,
+    heroScale: 1.25, heroRim: 0.9, ringW: 0.16, glyph: 0.95, glyphY: 2.3, // hero identity (review #4)
+    enemyTone: 0x4a4656, enemyDark: 0.8, // enemy bodies: one desaturated dark tone, 20% darker (review #4) // perf guard: mob outlines switch off while more mobs than this are on screen
   },
   difficulty: {
     // Casual / Normal / Insane, picked in the Nest and saved per slot (meta.difficulty).

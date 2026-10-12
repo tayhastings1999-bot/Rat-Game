@@ -18,7 +18,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { CLASSES } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
-import { makeRat, blob, playerRing } from '../entities/rat.js';
+import { makeRat, blob, playerRing, addGlyph } from '../entities/rat.js';
 import { keys, stepPlayer, primary, startRoll, useSpecial, pressE, toggleLock } from '../entities/player.js';
 import { updateEnemies } from '../entities/mobs.js';
 import { tickPlayerTimers, markSafe, updatePlayerStatus, updateProjectiles, updatePickups } from './update.js';
@@ -85,6 +85,7 @@ export function coopStart(freshStats, shopGrowth) {
   // Player 1's model gets its red outer outline layer for co-op (solo rats only have the Void hull).
   scene.remove(G.rat.g);
   G.rat = makeRat(CLASSES[run.cls], 0);
+  addGlyph(G.rat, 0);
   scene.add(G.rat.g);
   swapOut(p1);
   const base = { ...p1.P }, pr = pick(run, RF);
@@ -97,6 +98,7 @@ export function coopStart(freshStats, shopGrowth) {
     const a = i * Math.PI * 0.5;
     fill(P, { ...base, safe: { ...base.safe }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1 });
     const rat = makeRat(C, i);
+    addGlyph(rat, i);
     scene.add(rat.g);
     const b = new THREE.Mesh(blob.geometry, blob.material);
     b.rotation.copy(blob.rotation);
@@ -392,16 +394,4 @@ export function coopFrame() {
   for (const p of ps) { const q = posOf(p); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z); }
   _c.set((x0 + x1) / 2, _c.y, (z0 + z1) / 2);
   return { x: _c.x, y: _c.y, z: _c.z, spanX: x1 - x0, spanZ: z1 - z0 };
-}
-/** HUD strip: one card per rat. */
-export function coopHud() {
-  if (!coop.on) return '';
-  const tok = run.tokens < 0 ? '∞' : run.tokens;
-  return `<div class="cp tok"><b class="px">Cheese tokens</b><span class="px">${tok}</span></div>` + coop.players.map(p => {
-    const cur = p.i === coop.active, q = cur ? P : p.P, r = cur ? run : p.run, s = cur ? st : p.st, C = CLASSES[r.cls];
-    const hp = Math.max(0, r.hp) / (s.maxHp || 1);
-    return `<div class="cp${q.downed ? ' down' : ''}" style="--rc:#${TUNE.coop.colors[p.i].toString(16).padStart(6, '0')}"><b class="px">P${p.i + 1} · ${C.name}</b>
-      <u><s style="width:${hp * 100}%"></s></u><i style="width:${Math.min(100, (r.turbo || 0) / 3 * 100)}%"></i>
-      <span class="px">${q.out ? 'OUT · next level' : q.downed ? `DOWN ${Math.max(0, Math.ceil(TUNE.coop.downTime - (q.downT || 0)))}s · revive ${Math.round((q.reviveT || 0) / TUNE.coop.reviveTime * 100)}%` : `${Math.ceil(r.hp)} HP`}${Object.values(r.flasks || {}).reduce((a, b) => a + b, 0) ? ` · ${Object.values(r.flasks).reduce((a, b) => a + b, 0)} flask` : ''}</span></div>`;
-  }).join('');
 }
