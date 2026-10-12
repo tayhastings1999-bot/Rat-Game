@@ -26,6 +26,8 @@ import { setupSecret } from './secrets.js';
 import { placePacks } from './nests.js';
 import { TUNE } from '../tuning.js';
 import { derive } from './stats.js';
+import { setupFinds } from './finds.js';
+import { showTally } from '../ui/tally.js';
 
 export function freshStats(k) {
   const C = CLASSES[k], melee = C.prim === 'rake' || C.prim === 'gnash';
@@ -56,6 +58,7 @@ export function setupWorld(seed) {
   populate(info);
   setupObjective(info, curD().secret ? 'nests' : forcedObjective()); // no side jobs in a secret zone
   setupSecret(info);
+  setupFinds(info);
   placePacks(info); // seeded, before the RNG is released
   unseedRng();
   clearFx();
@@ -166,25 +169,25 @@ function transition(apply, title) {
 const hazName = () => run.mods.map(m => MODS[m].name).join(' · ');
 
 /** Take the manhole: a harder, claustrophobic sewer layer. */
+/** Leaving a level: the exit tally first (bots and tests skip it), then the transition. */
+const leave = go => { if (G.state === 'play') showTally(go); };
 export function enterSewer() {
-  meta.sewers = (meta.sewers || 0) + 1;
-  transition(() => { run.layer = 'sewer'; run.tier++; }, () => 'Descending · ' + dName());
+  leave(() => { meta.sewers = (meta.sewers || 0) + 1; transition(() => { run.layer = 'sewer'; run.tier++; }, () => 'Descending · ' + dName()); });
 }
 export function exitRoad() {
-  transition(() => { run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : ''));
+  leave(() => transition(() => { run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : '')));
 }
 /** Drop through a hidden drain into a secret zone (the level's boss is skipped). */
 export function enterSecret(kind) {
-  meta.secrets = (meta.secrets || 0) + 1;
-  transition(() => { run.secret = kind; }, () => 'Secret · ' + dName());
+  leave(() => { meta.secrets = (meta.secrets || 0) + 1; transition(() => { run.secret = kind; }, () => 'Secret · ' + dName()); });
 }
 /** Out of a secret zone: on to the level after the one you left. */
 export function exitSecret() {
   const sewer = run.layer === 'sewer';
-  transition(() => { run.secret = null; if (sewer) { run.layer = 'surface'; run.sewerIdx++; } run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : ''));
+  leave(() => transition(() => { run.secret = null; if (sewer) { run.layer = 'surface'; run.sewerIdx++; } run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : '')));
 }
 export function exitLadder() {
-  transition(() => { run.layer = 'surface'; run.district++; run.sewerIdx++; run.tier++; }, () => 'Back on the streets · ' + dName());
+  leave(() => transition(() => { run.layer = 'surface'; run.district++; run.sewerIdx++; run.tier++; }, () => 'Back on the streets · ' + dName()));
 }
 
 /** Fur skins unlocked by milestones. (Every class is open from the start.) */

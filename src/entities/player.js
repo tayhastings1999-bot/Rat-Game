@@ -6,7 +6,7 @@ import { G, P, W, run, st } from '../core/state.js';
 import { puff, spark, boom, fx, bolt, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { bury, camera } from '../render/renderer.js';
-import { M, G as GRAV, DUCT_TOP, gi, toG, toW, tAt, tileAt, topAt, floorY, solidFor, collideBody } from '../world/grid.js';
+import { M, G as GRAV, DUCT_TOP, gi, toG, toW, tAt, tileAt, topAt, floorY, solidFor, collideBody, indexPlats } from '../world/grid.js';
 import { tileMesh, syncObj, addObj } from '../world/build.js';
 import { curD, isSewer } from '../data/world.js';
 import { CLASSES } from '../data/classes.js';
@@ -22,6 +22,7 @@ import { TUNE } from '../tuning.js';
 import { diveLand } from '../game/signature.js';
 import { boltTarget } from '../world/setpieces.js';
 import { tryTurboMove } from '../game/turbo.js';
+import { puOn } from '../game/powerups.js';
 
 export const keys = {};
 /** On-screen joystick (touch). x = right, y = forward, each -1..1. */
@@ -32,6 +33,13 @@ export const camBasis = () => ({ fx: Math.sin(G.camYaw), fz: Math.cos(G.camYaw),
 function moveInput() {
   if (stick.active && Math.hypot(stick.x, stick.y) > 0.18) return [stick.x, stick.y, Math.min(1, Math.hypot(stick.x, stick.y) * 1.25)];
   return [(keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), 1];
+}
+
+/** A marked drainpipe within reach, below its top (W.climbs, TUNE.climb.reach). */
+export function pipeNear() {
+  const R = TUNE.climb.reach + 0.35;
+  for (const c of W.climbs) if (Math.abs(c.x - P.x) < R && Math.abs(c.z - P.z) < R && P.y < c.top + 0.2) return c;
+  return null;
 }
 
 export function stepPlayer(dt) {
@@ -45,7 +53,7 @@ export function stepPlayer(dt) {
   if (t === 11 && P.y < DUCT_TOP) P.squeeze = true;
   // Walking into a crevice squeezes you in automatically (no extra button needed).
   if (L && P.onGround && !P.carry) { const ax = P.x + wx * 0.7, az = P.z + wz * 0.7, ta = tileAt(ax, az); if ((ta === 5 && P.y < topAt(toG(ax), toG(az)) - 0.1) || (ta === 11 && P.y < DUCT_TOP)) P.squeeze = true; }
-  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1) * (carryingWheel() ? 0.78 : 1);
+  const spd = mag * st.speed * (1 + 0.03 * (run.blood || 0)) * (buffOn('puffcap') ? 1.35 : 1) * (wet ? 0.62 : 1) * (P.squeeze ? 0.55 * st.squeezeMul : 1) * (P.carry ? 1 - P.carry.mass : 1) * (P.gmul > 1.2 ? 0.85 : 1) * (P.slowT > 0 ? 0.6 : 1) * (carryingWheel() ? 0.78 : 1) * (puOn('quick') ? TUNE.powerups.quickSpd : 1);
   P.rollCd -= dt;
   if (P.roll > 0) {
     P.roll -= dt;
@@ -64,13 +72,18 @@ export function stepPlayer(dt) {
   P.buffer -= dt;
   P.coyote -= dt;
   P.wallT -= dt;
-  const canClimb = P.wallT > 0 && P.wallType !== 6 && !P.carry && P.y < P.wallTop + 0.3;
+  // Only marked drainpipes can be climbed (fire escapes are stairs you hop up).
+  const pipe = P.carry ? null : pipeNear(), canClimb = !!pipe;
   P.climbing = false;
-  // Hold Space against a climbable wall to scale it — from the air, the ground, or a ledge.
-  if (keys.Space && canClimb && (!P.onGround || P.wallTop > P.y + 0.5)) {
-    P.vy = Math.max(P.vy, 6.5);
+  // Hold Space at a pipe to shin up it — from the ground or out of a jump.
+  if (keys.Space && pipe && (!P.onGround || pipe.top > P.y + 0.5)) {
+    P.vy = Math.max(P.vy, TUNE.climb.speed);
     P.climbing = true;
     P.jumping = false;
+    // Hug the pipe on the way up (whatever the stick says); at the top, step over the edge onto the roof.
+    const k = Math.min(1, 12 * dt);
+    if (P.y > pipe.top - 0.35) { P.vx = -pipe.nx * TUNE.climb.topPush; P.vz = -pipe.nz * TUNE.climb.topPush; P.vy = Math.max(P.vy, 3); }
+    else { P.x += (pipe.x - pipe.nx * 0.12 - P.x) * k; P.z += (pipe.z - pipe.nz * 0.12 - P.z) * k; P.vx = P.vz = 0; }
   }
   if (P.buffer > 0 && !P.squeeze) {
     const j = v => { P.vy = v; P.onGround = false; P.coyote = 0; P.buffer = 0; P.cut = false; P.jumping = true; };
@@ -158,7 +171,7 @@ export function primary(dt) {
   dx /= L; dz /= L;
   P.aimDist = Math.min(TUNE.aim.maxRange, L);
   PR.fire(dx, dz, t);
-  run.primT = PR.cd * st.cd * st.tear;
+  run.primT = PR.cd * st.cd * st.tear / (puOn('quick') ? TUNE.powerups.quickRate : 1);
   P.aim = Math.atan2(dx, dz);
   P.aimT = 0.35;
 }
@@ -206,15 +219,16 @@ export function useSpecial() {
 export function useTarget() {
   for (const c of W.chests) {
     if (c.open || Math.hypot(c.x - P.x, c.z - P.z) >= 1.9 || Math.abs(c.y - P.y) >= 1.3) continue;
-    return { kind: 'chest', o: c, label: 'Open chest' };
+    return { kind: 'chest', o: c, label: c.locked ? (run.keys ? `Unlock the chest (uses a key · ${run.keys} held)` : 'Locked chest (needs a key)') : 'Open chest' };
   }
+  for (const g of W.gates) if (!g.open && Math.hypot(g.x - P.x, g.z - P.z) < 2.2 && P.y < 1.5) return { kind: 'gate', o: g, label: run.keys ? `Unlock the gate (uses a key · ${run.keys} held)` : 'Locked gate (needs a key)' };
   for (const p of W.pipes) if (Math.hypot(p.x - P.x, p.z - P.z) < 1.8 && P.y < 1.2) return { kind: 'pipe', o: p, label: 'Squeeze into pipe' };
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < b.r + 1 && P.y < 2) return { kind: 'bin', o: b, label: b.kind === 'dumpster' ? 'Rummage the dumpster' : b.kind === 'bin' ? 'Rummage the trash can' : 'Dig through the junk heap' };
   for (const s of W.uses) if (!s.done && Math.hypot(s.x - P.x, s.z - P.z) < s.r && Math.abs((s.y || 0) - P.y) < 1.6) return { kind: 'set', o: s, label: s.label };
   const bt = boltTarget();
   if (bt) return { kind: 'bolt', o: bt, label: 'Unbolt the back door (a shortcut out)' };
   const mh = G.manhole;
-  if (mh && Math.hypot(mh.x - P.x, mh.z - P.z) < 2 && P.y < 0.6) return { kind: 'manhole', o: mh, label: run.keys ? 'Unlock the manhole — descend into the sewer' : 'Manhole (locked — find a sewer key)' };
+  if (mh && Math.hypot(mh.x - P.x, mh.z - P.z) < 2 && P.y < 0.6) return { kind: 'manhole', o: mh, label: run.keys ? 'Unlock the manhole — descend into the sewer' : 'Manhole (locked — it takes a key)' };
   return null;
 }
 export function grabTarget() {
@@ -290,8 +304,18 @@ export function objBlocked(o, x, z) {
 export function doUse(u) {
   if (u.kind === 'set') { u.o.act(); return; }
   if (u.kind === 'bolt') { openTile(u.o.gx, u.o.gz); sfx('door'); return; }
+  if (u.kind === 'gate') { unlockGate(u.o); return; }
   if (u.kind === 'chest') {
     const c = u.o;
+    if (c.locked) {
+      if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, chests and bosses', 'info'); sfx('clank'); return; }
+      run.keys--;
+      run.unlocked = (run.unlocked || 0) + 1;
+      c.locked = false;
+      c.wasLocked = true;
+      if (c.lockG) c.g.remove(c.lockG);
+      dnum(c.x, c.y + 1.4, c.z, 'Unlocked', 'crit');
+    }
     c.open = true;
     c.lid.rotation.x = -1.9;
     boom(c.x, c.y + 0.8, c.z, 2.4, c.cursed ? 0xff3a3a : 0xffd070);
@@ -317,10 +341,29 @@ export function doUse(u) {
     }, 240);
   }
   if (u.kind === 'manhole') {
-    if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked. Elites and bosses drop sewer keys', 'info'); return; }
+    if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, nests, chests and bosses', 'info'); return; }
     run.keys--;
     enterSewer();
   }
+}
+
+/** Spend a key on a locked gate: the bars swing up and the vault is open. */
+export function unlockGate(g) {
+  if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, chests and bosses', 'info'); sfx('clank'); return false; }
+  run.keys--;
+  run.unlocked = (run.unlocked || 0) + 1;
+  g.open = true;
+  g.g.position.y = 2.6; // up into the lintel
+  g.g.rotation.x = 0.25 * (g.nz || 0);
+  g.g.rotation.z = -0.25 * (g.nx || 0);
+  const i = W.plats.indexOf(g.plat);
+  if (i >= 0) W.plats.splice(i, 1);
+  M.vault[g.k] = 0;
+  indexPlats();
+  puff(g.x, 1.2, g.z, 0x8a8e92, 14, 3);
+  dnum(g.x, 2.4, g.z, 'Gate unlocked', 'crit');
+  sfx('door');
+  return true;
 }
 
 /** Remove a gnawable tile (boards, drywall, a cracked secret wall) and open the way. */

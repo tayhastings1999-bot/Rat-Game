@@ -5,7 +5,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
 import { G, W, run } from '../core/state.js';
 import { TUNE } from '../tuning.js';
-import { scene, world, hemi, sun, lantern, lampL, buried } from '../render/renderer.js';
+import { dropPowerup, PU_KEYS } from '../game/powerups.js';
+import { scene, world, hemi, sun, lantern, lampL, buried, bury } from '../render/renderer.js';
 import {
   furTex, stoneTex, flameTex, metalTex, dryTex, plywoodTex, waterTex, acidTex, crackTex, arrowTex, texFor,
   asphaltTex, sidewalkTex, grassTex, roofTex, facade, glassTex, secretTex, graffitiTex,
@@ -13,7 +14,7 @@ import {
 import { Sp, Bx, Cy, Co } from '../render/models.js';
 import { clearDecals, ringGeo, discGeo } from '../fx/fx.js';
 import { flasks } from '../combat/arsenal.js';
-import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, waterFloor, waterSurface, freeSpot, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
+import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, waterFloor, waterSurface, freeSpot, nearFree, toG, roomTiles, wallAdj, bfs, descend, OPEN, DRY, N4, indexPlats } from './grid.js';
 import { populateDucts, applyCutaway } from './ducts.js';
 import * as TEX from '../render/textures.js';
 const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
@@ -250,7 +251,9 @@ export function addChest(x, y, z, premium = false, cursed = false) {
   g.position.set(x, y, z);
   g.rotation.y = rand(0, TAU);
   world.add(g);
-  W.chests.push({ x, y, z, g, lid, open: false, premium, cursed });
+  const c = { x, y, z, g, lid, open: false, premium, cursed };
+  W.chests.push(c);
+  return c;
 }
 export function addCache(x, y, z) {
   const g = new THREE.Group(), fm = lam(0xe8b84a, { emissive: 0x4a3000 });
@@ -259,7 +262,9 @@ export function addCache(x, y, z) {
   glowSprite(0xffe070, 1.2, g, 0, 0.4, 0, 0.35);
   g.position.set(x, y, z);
   world.add(g);
-  W.caches.push({ x, y, z, g, taken: false });
+  const c = { x, y, z, g, taken: false };
+  W.caches.push(c);
+  return c;
 }
 const wallPos = (w, inset = 0.15) => [toW(w.x) + w.dx * (T / 2 - inset), toW(w.y) + w.dy * (T / 2 - inset)];
 function addPipe(w) {
@@ -374,7 +379,7 @@ export function addExit(x, z, kind = 'drain') {
   world.add(g);
   G.exitD = { x, z, g, beam, kind };
 }
-/** The manhole down into the sewer. Locked until you carry a sewer key. */
+/** The manhole down into the sewer. Locked until you spend a key. */
 function addManhole(x, z) {
   const g = new THREE.Group();
   const lid = mkMesh(Cy(1.5, 1.5, 0.12, 16), lam(0x4a4a50, { map: metalTex }), 0, 0.06, 0, g);
@@ -505,6 +510,101 @@ function roofTiles() {
   return shuffleR(out);
 }
 
+// ---------- climbing: marked drainpipes and roof access ----------
+/** Wall tiles you can get onto a roof from (fire escapes, pipes, crate stacks); reset per district. */
+let roofAccess = [];
+const pipeMat = lam(0x5e646c, { map: metalTex }), bandMat = new THREE.MeshBasicMaterial({ color: 0xffc030 });
+/** A pipe spot: a wall tile, low enough to climb, facing open street with room to stand. */
+function pipeSpots(maxH) {
+  const out = [];
+  for (let gz = 2; gz < M.H - 2; gz++) for (let gx = 2; gx < M.W - 2; gx++) {
+    const k = gi(gx, gz);
+    if (M.grid[k] !== 0 || M.hgt[k] > maxH || M.hgt[k] < 2.5) continue;
+    for (const [dx, dz] of N4) {
+      if (!DRY(tAt(gx + dx, gz + dz)) || M.inside[gi(gx + dx, gz + dz)]) continue;
+      if (pipeRoom(gx, gz, dx, dz)) out.push({ gx, gz, dx, dz, x: toW(gx) + dx * (T / 2 + 0.45), z: toW(gz) + dz * (T / 2 + 0.45), h: M.hgt[k] });
+    }
+  }
+  return out;
+}
+/** Room to stand and climb in front of a wall face: clear street a body-width out from it. */
+const pipeRoom = (gx, gz, dx, dz) => freeSpot(toW(gx) + dx * (T / 2 + 1.1), toW(gz) + dz * (T / 2 + 1.1), 0.7) && !W.plats.some(p => !p.thin && p.y - p.th < 3 && Math.abs(p.x - (toW(gx) + dx * (T / 2 + 0.45))) < p.w / 2 + 0.5 && Math.abs(p.z - (toW(gz) + dz * (T / 2 + 0.45))) < p.d / 2 + 0.5);
+/** A marked drainpipe up a wall face: yellow bands and a paw mark at its foot. The only climbable walls. */
+function addClimb(s) {
+  const px = toW(s.gx) + s.dx * (T / 2 + 0.12), pz = toW(s.gz) + s.dz * (T / 2 + 0.12), parts = [Cy(0.12, 0.12, s.h + 0.3, 6).translate(0, (s.h + 0.3) / 2, 0)], bands = [];
+  for (let y = 0.6; y < s.h; y += 1.1) bands.push(Cy(0.16, 0.16, 0.14, 6).translate(0, y, 0));
+  for (let y = 1.2; y < s.h; y += 2.2) parts.push(Bx(Math.abs(s.dz) * 0.5 + 0.08, 0.08, Math.abs(s.dx) * 0.5 + 0.08).translate(-s.dx * 0.1, y, -s.dz * 0.1));
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(mergeGeometries(parts), pipeMat), new THREE.Mesh(mergeGeometries(bands), bandMat));
+  g.position.set(px, 0, pz);
+  world.add(g);
+  const paw = glowSprite(0xffc030, 1.6, world, s.x, 0.15, s.z, 0.5);
+  const c = { x: s.x, z: s.z, nx: s.dx, nz: s.dz, top: s.h, gx: s.gx, gz: s.gz, g, paw, cache: null };
+  W.climbs.push(c);
+  roofAccess.push(gi(s.gx, s.gz));
+  return c;
+}
+/** Marked pipes (TUNE.climb): spread out, each with a cache waiting at the top. */
+function climbPipes(city) {
+  const C = TUNE.climb, want = city ? C.pipesCity : C.pipesSewer, used = [];
+  for (const s of shuffleR(pipeSpots(city ? C.maxH : 6))) {
+    if (used.length >= want) break;
+    if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < C.spacing) || W.climbs.some(c => Math.hypot(c.x - s.x, c.z - s.z) < C.spacing)) continue;
+    const c = addClimb(s);
+    // The rooftop cache, just over the edge where the pipe tops out.
+    const cx = toW(s.gx) + s.dx * 0.55, cz = toW(s.gz) + s.dz * 0.55;
+    if (!W.plats.some(p => p.y > s.h + 0.2 && Math.abs(p.x - cx) < p.w / 2 + 0.6 && Math.abs(p.z - cz) < p.d / 2 + 0.6)) c.cache = addCache(cx, s.h, cz);
+    used.push(s);
+  }
+}
+/** Which roofs you can reach: flood from the access tiles over roof tops you can step or hop up to. */
+function floodRoofs() {
+  const ok = (M.roofOK = new Uint8Array(M.W * M.H)), q = [];
+  for (let k = 0; k < M.W * M.H; k++) {
+    // Walls low enough to jump onto straight from the street need no help.
+    const t = M.grid[k];
+    if ((t === 0 || t === 6) && M.hgt[k] <= 2.3 && N4.some(([dx, dz]) => DRY(tAt(k % M.W + dx, ((k / M.W) | 0) + dz)))) roofAccess.push(k);
+  }
+  for (const k of roofAccess) if (!ok[k]) { ok[k] = 1; q.push(k); }
+  while (q.length) {
+    const k = q.pop(), x = k % M.W, y = (k / M.W) | 0, h = M.hgt[k];
+    for (const [dx, dz] of N4) {
+      if (!inG(x + dx, y + dz)) continue;
+      const j = gi(x + dx, y + dz), t = M.grid[j];
+      if (ok[j] || (t !== 0 && t !== 6) || M.hgt[j] >= 12 || M.hgt[j] > h + TUNE.climb.hopUp) continue;
+      ok[j] = 1;
+      q.push(j);
+    }
+  }
+}
+/** Rooftop loot on a roof you can't get to: run a marked pipe up that building, or bring it down to the street. */
+function reachRoofLoot() {
+  const onRoof = o => o.y > 1 && !M.roofOK[gi(toG(o.x), toG(o.z))];
+  for (const o of [...W.chests, ...W.caches].filter(onRoof)) {
+    if (!onRoof(o)) continue; // an earlier pipe already opened this roof
+    // Search the building's roof (tiles of about the same height) for a face that can take a pipe.
+    const k0 = gi(toG(o.x), toG(o.z)), h0 = M.hgt[k0], seen = new Set([k0]), q = [k0];
+    let spot = null;
+    while (q.length && !spot) {
+      const k = q.shift(), x = k % M.W, y = (k / M.W) | 0;
+      if (M.hgt[k] <= TUNE.climb.maxH) for (const [dx, dz] of N4) {
+        if (!DRY(tAt(x + dx, y + dz)) || M.inside[gi(x + dx, y + dz)]) continue;
+        if (pipeRoom(x, y, dx, dz)) { spot = { gx: x, gz: y, dx, dz, x: toW(x) + dx * (T / 2 + 0.45), z: toW(y) + dz * (T / 2 + 0.45), h: M.hgt[k] }; break; }
+      }
+      for (const [dx, dz] of N4) {
+        const j = gi(x + dx, y + dz), t = tAt(x + dx, y + dz);
+        if (!seen.has(j) && (t === 0 || t === 6) && Math.abs(M.hgt[j] - h0) <= TUNE.climb.hopUp) { seen.add(j); q.push(j); }
+      }
+    }
+    if (spot) { addClimb(spot); floodRoofs(); continue; }
+    // No face for a pipe: set it down on the street at the foot of the building.
+    const [nx, nz] = nearOpenSpot(o.x, o.z);
+    o.x = nx; o.z = nz; o.y = 0;
+    o.g.position.set(nx, 0, nz);
+  }
+}
+const nearOpenSpot = (x, z) => nearFree(x, z, 0.8, 12) || [x, z];
+
 // ---------- hidden areas & dressing ----------
 /** Secret walls glow faintly, but only while the rat is sniffing (F). */
 function markSecrets() {
@@ -543,6 +643,7 @@ function setupHidden(hidden, premium) {
     } else {
       addChest(cx, 0, cz, premium || rng.next() < 0.5, !premium && rng.next() < 0.3);
       addCache(cx + 2, 0, cz + 1);
+      dropPowerup(cx - 2, 0, cz + 1, PU_KEYS[Math.floor(rng.next() * PU_KEYS.length)]); // a secret's reward
     }
   }
 }
@@ -555,6 +656,7 @@ function fireEscapes(n) {
     for (const [dx, dz] of N4) if (DRY(tAt(gx + dx, gz + dz)) && tAt(gx - dz, gz + dx) === 0 && tAt(gx + dz, gz - dx) === 0) spots.push([gx, gz, dx, dz, M.hgt[k]]);
   }
   for (const [gx, gz, dx, dz, h] of shuffleR(spots).slice(0, n)) {
+    roofAccess.push(gi(gx, gz));
     const fx0 = toW(gx) + dx * (T / 2 + 0.55), fz0 = toW(gz) + dz * (T / 2 + 0.55), px = -dz, pz = dx;
     const steps = Math.floor((h - 0.3) / 1.15);
     for (let i = 1; i <= steps; i++) {
@@ -664,13 +766,72 @@ function fungi(city) {
 }
 /** Dead-end alleys always end in something worth the detour. */
 function deadEndLoot(alleys) {
+  const ends = [];
   for (const a of alleys || []) {
     for (const [x, y] of [[a.x, a.y], [a.x + a.w - 1, a.y + a.h - 1]]) {
       if (!DRY(tAt(x, y))) continue;
-      const exits = N4.filter(([dx, dy]) => OPEN(tAt(x + dx, y + dy))).length;
-      if (exits !== 1) continue;
-      if (rng.next() < 0.5) addCache(toW(x), 0, toW(y)); else addChest(toW(x), 0, toW(y));
+      const exits = N4.filter(([dx, dy]) => OPEN(tAt(x + dx, y + dy)));
+      if (exits.length !== 1) continue;
+      ends.push([x, y, exits[0]]);
     }
+  }
+  // The first few dead ends (seeded) are vaults behind a locked gate; the rest just hold loot.
+  ends.forEach(([x, y, e], i) => { if (i < TUNE.keys.gates && addVault(gi(x, y), e[0], e[1])) return; if (rng.next() < 0.5) addCache(toW(x), 0, toW(y)); else addChest(toW(x), 0, toW(y)); });
+}
+
+// ---------- locks (TUNE.keys): padlocked chests and gated vaults ----------
+const lockMat = new THREE.MeshBasicMaterial({ color: 0xffd040 }), ironMat = lam(0x3a3e44, { map: metalTex });
+/** Put a padlock and iron bands on a chest: a key opens it, and it holds premium loot and a power-up. */
+function lockChest(c) {
+  c.locked = true;
+  c.premium = true;
+  const g = new THREE.Group();
+  mkMesh(Bx(0.26, 0.24, 0.1), lockMat, 0, 0.36, 0.38, g);
+  const sh = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.03, 4, 10, Math.PI), lockMat);
+  sh.position.set(0, 0.48, 0.38);
+  g.add(sh);
+  for (const s of [-0.3, 0.3]) mkMesh(Bx(0.08, 0.64, 0.74), ironMat, s, 0.31, 0, g);
+  c.g.add(g);
+  c.lockG = g;
+}
+/** A barred gate across a dead end's only way in (exit direction dx, dz from tile k), and loot behind it. */
+function addVault(k, dx, dz) {
+  const gx = k % M.W, gz = (k / M.W) | 0, sr = G.startRoom;
+  if (sr && Math.abs(gx - sr.cx) <= 3 && Math.abs(gz - sr.cy) <= 3) return false;
+  const x = toW(gx) + dx * T / 2, z = toW(gz) + dz * T / 2, H = 2.8, g = new THREE.Group(), geo = [];
+  for (let i = -3; i <= 3; i++) geo.push(Cy(0.06, 0.06, H, 4).translate(dz ? i * 0.55 : 0, H / 2, dx ? i * 0.55 : 0));
+  for (const y of [0.4, H - 0.3]) geo.push(Bx(dz ? T : 0.12, 0.12, dx ? T : 0.12).translate(0, y, 0));
+  g.add(new THREE.Mesh(mergeGeometries(geo), ironMat));
+  const lock = new THREE.Mesh(Bx(0.42, 0.42, 0.42), lockMat);
+  lock.position.y = 1.2;
+  g.add(lock);
+  glowSprite(0xffd040, 1.5, g, 0, 1.2, 0, 0.5);
+  g.position.set(x, 0, z);
+  world.add(g);
+  const plat = { x, z, w: dx ? 0.3 : T, d: dx ? T : 0.3, y: H, th: H, gate: true };
+  W.plats.push(plat);
+  M.vault[k] = 1;
+  W.gates.push({ x, z, k, g, plat, nx: dx, nz: dz, open: false });
+  // Behind the bars: a premium chest, a power-up and a cache.
+  const cx = toW(gx) - dx * 0.8, cz = toW(gz) - dz * 0.8;
+  addChest(cx, 0, cz, true);
+  dropPowerup(cx + dz * 1.2, 0, cz + dx * 1.2, PU_KEYS[Math.floor(rng.next() * PU_KEYS.length)]);
+  addCache(cx - dz * 1.2, 0, cz - dx * 1.2);
+  return true;
+}
+/** Padlocks on a few ground chests (seeded), away from vaults. */
+function lockChests() {
+  const cand = W.chests.filter(c => !c.open && !c.cursed && c.y < 0.6 && !M.vault[gi(toG(c.x), toG(c.z))]);
+  shuffleR(cand).slice(0, TUNE.keys.lockedChests).forEach(lockChest);
+}
+/** Power-up tokens on the street (seeded): rooms between the start and the far end. */
+function placePowerups(info) {
+  const rooms = (info.byDist || []).filter(r => r !== info.startRoom), lo = Math.floor(rooms.length * 0.2), hi = Math.max(lo + 1, Math.floor(rooms.length * 0.9));
+  const pool = rooms.slice(lo, hi);
+  for (let i = 0; i < TUNE.powerups.perLevel && pool.length; i++) {
+    const r = pool.splice(Math.floor(rng.next() * pool.length), 1)[0], kind = PU_KEYS[Math.floor(rng.next() * PU_KEYS.length)];
+    const t = shuffleR(roomTiles(r).slice()).find(([x, y]) => freeSpot(toW(x), toW(y), 1));
+    if (t) dropPowerup(toW(t[0]), 0, toW(t[1]), kind);
   }
 }
 
@@ -690,6 +851,7 @@ export function populate(info) {
   const { dist, pockets, byDist, metal, rooms, startRoom } = info;
   const city = M.kind === 'city', D = curD();
   resetLists();
+  roofAccess = [];
   W.rooms = rooms;
   G.startRoom = startRoom;
   const others = rooms.filter(r => r !== startRoom);
@@ -724,6 +886,7 @@ export function populate(info) {
       const wa = wallAdj(r).filter(w => w.t === 0 && w.h <= 6);
       if (!wa.length) continue;
       const w = wa[ri(0, wa.length - 1)], cx = toW(w.x), cz = toW(w.y);
+      if (w.h <= 4.7) roofAccess.push(gi(w.x + w.dx, w.y + w.dy)); // a hop from the top crate reaches the roof
       staticBox(cx + w.dx * 1.1, cz + w.dy * 1.1, 1.6, 1.6, 2.3, crateM);
       staticBox(cx - w.dx * 0.6, cz - w.dy * 0.6, 1.5, 1.5, 1.1, crateM);
     }
@@ -747,7 +910,7 @@ export function populate(info) {
       }
       if (r !== startRoom && !r.metal && rng.next() < 0.6) {
         const bw = wa.filter(w => w.t === 0);
-        if (bw.length) { const w = bw[ri(0, bw.length - 1)], cx = toW(w.x), cz = toW(w.y); staticBox(cx + w.dx * 1.1, cz + w.dy * 1.1, 1.6, 1.6, 2.3, crateM); staticBox(cx - w.dx * 0.6, cz - w.dy * 0.6, 1.5, 1.5, 1.1, crateM); }
+        if (bw.length) { const w = bw[ri(0, bw.length - 1)], cx = toW(w.x), cz = toW(w.y); if (w.h <= 4.7) roofAccess.push(gi(w.x + w.dx, w.y + w.dy)); staticBox(cx + w.dx * 1.1, cz + w.dy * 1.1, 1.6, 1.6, 2.3, crateM); staticBox(cx - w.dx * 0.6, cz - w.dy * 0.6, 1.5, 1.5, 1.1, crateM); }
       }
       if (r !== startRoom) { const tl = roomTiles(r); for (let i = 0; i < ri(1, 2) && tl.length; i++) { const [x, y] = tl[ri(0, tl.length - 1)]; addObj(['cap', 'sponge', 'crate'][ri(0, 2)], toW(x) + rr(-1, 1), toW(y) + rr(-1, 1)); } }
     }
@@ -776,6 +939,15 @@ export function populate(info) {
       }
     }
     pockets.forEach((cells, i) => { const [x, y] = cells[0]; addCache(toW(x), 0, toW(y)); if (i % 2 === 0) { const [a, b] = cells[3]; addChest(toW(a), 0, toW(b), true); } });
+    // One plain (not disguised) pocket becomes the sewer's vault: its drywall door is swapped for a locked gate.
+    const vp = TUNE.keys.gates ? pockets.find(c => !M.secret[gi(...c.door)]) : null;
+    if (vp) {
+      const [ex, ey] = vp.door, k = gi(ex, ey);
+      M.grid[k] = 1; M.hgt[k] = 0;
+      if (tileMesh[k]) { bury(tileMesh[k]); delete tileMesh[k]; }
+      for (const [x, y] of vp) M.vault[gi(x, y)] = 1;
+      addVault(k, ex - vp[0][0], ey - vp[0][1]);
+    }
     shuffleR(others.slice()).slice(0, 3).forEach(r => { const wa = wallAdj(r).filter(w => w.t === 0); if (wa.length) { const w = wa[ri(0, wa.length - 1)]; addChest(toW(w.x + w.dx), w.h, toW(w.y + w.dy), true); } });
     shuffleR(others.slice()).slice(0, 2).forEach(r => { const tl = roomTiles(r); if (tl.length) { const [x, y] = tl[ri(0, tl.length - 1)]; addChest(toW(x), floorY(toW(x), toW(y)), toW(y), true, rng.next() < 0.5); } });
     const dead = [];
@@ -784,7 +956,12 @@ export function populate(info) {
       const x = k % M.W, y = (k / M.W) | 0;
       if (N4.filter(([dx, dy]) => OPEN(tAt(x + dx, y + dy))).length === 1) dead.push(k);
     }
-    shuffleR(dead).slice(0, 3).forEach(k => addCache(toW(k % M.W), 0, toW((k / M.W) | 0)));
+    // The first dead end (seeded) is a vault behind a locked gate; a few more hold a cache.
+    shuffleR(dead).slice(0, 3 + TUNE.keys.gates).forEach((k, i) => {
+      const x = k % M.W, y = (k / M.W) | 0, e = N4.find(([dx, dy]) => OPEN(tAt(x + dx, y + dy)));
+      if (i < TUNE.keys.gates && e && addVault(k, e[0], e[1])) return;
+      if (i < 3) addCache(toW(x), 0, toW(y));
+    });
     shuffleR(others.filter(r => r.w >= 5 && r.h >= 4)).slice(0, 4).forEach(addRope);
     shuffleR(others.slice()).slice(0, 4).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
   }
@@ -796,6 +973,10 @@ export function populate(info) {
   if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
   clutter(city);
   fungi(city);
+  // Marked pipes go up once the street clutter is down, so nothing stands at their foot.
+  climbPipes(city);
+  floodRoofs();
+  reachRoofLoot();
 
   // Shared: pipes, live wires, nests, predators, hazards.
   for (const r of shuffleR(rooms.slice()).slice(0, 5)) { const wa = wallAdj(r); if (wa.length) addWire(wa[ri(0, wa.length - 1)]); }
@@ -806,7 +987,7 @@ export function populate(info) {
   // Nests go in the far rooms: count, tier and family per zone (game/nests.js, TUNE.nests).
   // Each one sits on clear floor: never in a wall, a car, a crate or a bin, and
   // never on top of a chest or another nest. A room with no such spot is skipped.
-  const nests = [], away = (x, z) => !nests.some(([a, b]) => Math.hypot(a - x, b - z) < 7) && ![...W.chests, ...(W.caches || []), ...W.bins].some(o => Math.hypot(o.x - x, o.z - z) < 2.6);
+  const nests = [], away = (x, z) => !nests.some(([a, b]) => Math.hypot(a - x, b - z) < 7) && ![...W.chests, ...(W.caches || []), ...W.bins].some(o => Math.hypot(o.x - x, o.z - z) < 2.6) && !W.climbs.some(c => Math.hypot(c.x - x, c.z - z) < 3.2);
   for (let j = 0, i = 0, want = nestCount(); i < want && j < byDist.length; j++) {
     const spot = shuffleR(roomTiles(byDist[j]).slice()).map(([x, y]) => [toW(x), toW(y)]).find(([x, z]) => away(x, z) && freeSpot(x, z, 1.7));
     if (!spot) continue;
@@ -814,6 +995,8 @@ export function populate(info) {
     addNest(spot[0], spot[1], n.tier, n.fam);
     nests.push(spot);
   }
+  lockChests();
+  placePowerups(info);
   if (city) {
     const cand = byDist.slice(Math.floor(byDist.length * 0.3), Math.floor(byDist.length * 0.75)).filter(r => r.kind === 'cross');
     const r = cand[ri(0, Math.max(0, cand.length - 1))] || byDist[Math.floor(byDist.length / 2)];

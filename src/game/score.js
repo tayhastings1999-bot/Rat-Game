@@ -1,31 +1,19 @@
-// Scoring: a rank for every district you clear (S to D), a run score and a
-// shareable end-of-run card.
-import { fmt, commas, $ } from '../core/util.js';
-import { run, st } from '../core/state.js';
-import { sfx } from '../audio/audio.js';
+// Scoring: a grade for every level you leave (S to D, from the exit tally),
+// a run score and a shareable end-of-run card.
+import { fmt, commas } from '../core/util.js';
+import { run, W } from '../core/state.js';
 import { dName } from '../data/world.js';
 import { CLASSES } from '../data/classes.js';
 import { PORT } from '../entities/rat.js';
 
-// ---------- district ranks ----------
+// ---------- level grades ----------
+// Each level's grade comes from the exit tally (ui/tally.js) and lands in run.ranks.
 const RANK_PTS = { S: 300, A: 200, B: 120, C: 60, D: 20 };
-export function districtStart() { run.dHurt = 0; run.dPerf = run.perfects || 0; }
-/** Called when a district's boss falls. */
-export function rankDistrict() {
-  const t = run.time - run.dStart, hurt = (run.dHurt || 0) / Math.max(1, st.maxHp);
-  const perf = (run.perfects || 0) - (run.dPerf || 0);
-  let s = 100 - Math.max(0, t - 150) / 3 - hurt * 30 + Math.min(20, perf * 4) + (run.obj && run.obj.done ? 10 : 0);
-  s = Math.round(Math.max(0, s));
-  const r = s >= 95 ? 'S' : s >= 80 ? 'A' : s >= 60 ? 'B' : s >= 40 ? 'C' : 'D';
-  (run.ranks || (run.ranks = [])).push({ n: dName(), r, t: Math.round(t) });
-  const el = $('rankStamp');
-  el.innerHTML = `<b class="r${r}">${r}</b><span class="px">${dName()} · ${fmt(t)} · ${Math.round(hurt * 100)}% HP lost${perf ? ` · ${perf} perfect` : ''}</span>`;
-  el.classList.remove('on');
-  void el.offsetWidth;
-  el.classList.add('on');
-  setTimeout(() => el.classList.remove('on'), 3200);
-  if (r === 'S') sfx('level');
-  return r;
+/** Called when a level starts: zero the per-level counters the tally reads. */
+export function districtStart() {
+  run.dHurt = 0;
+  run.dPerf = run.perfects || 0;
+  run.lv0 = { kills: run.kills || 0, scrap: run.scrap || 0, time: run.time || 0, nests: W.enemies.filter(e => e.type === 'nest' && !e.dead).length, food: run.foodLost || 0 };
 }
 
 export function runScore() {

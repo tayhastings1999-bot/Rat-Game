@@ -7,6 +7,7 @@ import { sfx } from '../audio/audio.js';
 import { hit, near, scrapDrop, dropFood } from '../combat/combat.js';
 import { TUNE } from '../tuning.js';
 import { banner } from '../ui/hud.js';
+import { growStats } from './stats.js';
 
 /** XP needed for the next level (see TUNE.xp). */
 export const need = L => { const X = TUNE.xp; return Math.round(X.base + X.lin * (L - 1) + X.mul * Math.pow(L - 1, X.exp)); };
@@ -20,7 +21,8 @@ export function addXP(v) {
     run.level++;
     run.need = need(run.level);
     levelBurst();
-    banner(`Level ${run.level}`, '');
+    const up = growStats();
+    banner(`Level ${run.level}`, `${up.join(' and ')} up · +${TUNE.growth.hp} max HP`);
     sfx('level');
   }
 }

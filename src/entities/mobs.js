@@ -23,6 +23,7 @@ import { creatureMesh } from '../render/pools.js';
 import { tickNest, ambientType, wakePack } from '../game/nests.js';
 import { reaperAI } from '../game/reaper.js';
 import { robberAI } from '../game/thieves.js';
+import { puOn } from '../game/powerups.js';
 
 const CORRUPT_KEYS = Object.keys(CORRUPT);
 
@@ -157,11 +158,15 @@ export function seekPoint(e, dt, tx, tz, sp) {
   if (l < 0.4) return moveBody(e, dt, 0, 0);
   return steer(e, dt, dx / l, dz / l, sp * slowMul(e) * Math.min(1, l / 1.5 + 0.3));
 }
+/** Scent Veil: mobs that aren't right on top of you lose the trail and mill about. */
+const veiled = (e, d) => d > TUNE.powerups.veilR && !e.boss && !e.reaper && !e.pred && puOn('veil');
+const wander = (e, dt) => { e.oa = (e.oa || 0) + (e.ow || 1) * dt * 0.9; return [Math.sin(e.oa), Math.cos(e.oa)]; };
 export function groundChase(e, dt, sp, lat = 0) {
   const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
   const dir = flowDir(e);
   let mx, mz;
-  if (dir && d > 3) { mx = dir[0]; mz = dir[1]; } else { mx = dx / d; mz = dz / d; }
+  if (veiled(e, d)) { [mx, mz] = wander(e, dt); sp *= TUNE.powerups.veilSlow; lat = 0; }
+  else if (dir && d > 3) { mx = dir[0]; mz = dir[1]; } else { mx = dx / d; mz = dz / d; }
   if (lat) {
     const ox = mx;
     mx += lat * mz;
@@ -602,9 +607,10 @@ export function updateEnemies(dt0, cap) {
     if (e.pred && !custom) custom = predAI(e, dt, d);
     if (!custom) {
       // Generic chaser with a telegraphed contact bite (predators on the hunt).
-      const sp = e.spd * slowMul(e) * (e.pred ? 2 : 1) * (e.wind > 0 ? 0.12 : 1), dir = flowDir(e);
+      const vl = veiled(e, d), sp = e.spd * slowMul(e) * (e.pred ? 2 : 1) * (e.wind > 0 ? 0.12 : 1) * (vl ? TUNE.powerups.veilSlow : 1), dir = flowDir(e);
       let mx, mz;
-      if (dir && d > 3) { mx = dir[0]; mz = dir[1]; } else { mx = dx / d; mz = dz / d; }
+      if (vl) [mx, mz] = wander(e, dt);
+      else if (dir && d > 3) { mx = dir[0]; mz = dir[1]; } else { mx = dx / d; mz = dz / d; }
       e.x += (mx * sp + e.kx) * dt;
       e.z += (mz * sp + e.kz) * dt;
       e.ang = Math.atan2(mx, mz);
@@ -690,15 +696,32 @@ function predAI(e, dt, d) {
     const inCone = Math.abs(angD(Math.atan2(P.x - e.x, P.z - e.z), e.look)) < 0.9;
     if ((d < det && (inCone || d < det * 0.3) && Math.abs(P.y - e.y) < 3) || e.hurt) { e.mode = 'hunt'; e.lost = 0; dnum(e.x, e.y + 3.4, e.z, '!', 'crit'); if (e.dog) bark(e); return false; }
     const k = e.path[e.pi], tx = toW(k % M.W), tz = toW((k / M.W) | 0), vx = tx - e.x, vz = tz - e.z, l = Math.hypot(vx, vz);
-    // A waypoint it can't get closer to (a car parked on it) is skipped instead of pushed against forever.
+    // Blocked (a car parked in the way): sidestep around it for a moment, toward the clearer side;
+    // still stuck after a few tries, skip the waypoint instead of pushing against it forever.
     e.chkT = (e.chkT || 0) + dt;
-    if (e.chkT > 1.2) { const stuck = l > (e.chkL ?? 1e9) - 0.5; e.chkT = 0; e.chkL = stuck ? 1e9 : l; if (stuck) { e.pi = (e.pi + 1) % e.path.length; return true; } }
+    if (e.chkT > 1.2) {
+      const stuck = l > (e.chkL ?? 1e9) - 0.5;
+      e.chkT = 0; e.chkL = l;
+      if (stuck) {
+        e.sideT = 1.1;
+        // Step away from whatever is blocking (the nearest solid prop), else toward the clearer side.
+        const px = -vz / l, pz = vx / l;
+        let blk = null, bd = 9;
+        for (const p of W.plats) { if (p.thin || p.y - p.th > 1.5) continue; const d = Math.max(Math.abs(p.x - e.x) - p.w / 2, Math.abs(p.z - e.z) - p.d / 2); if (d < bd) { bd = d; blk = p; } }
+        e.side = blk ? ((e.x - blk.x) * px + (e.z - blk.z) * pz >= 0 ? 1 : -1) : freeSpot(e.x + px * 2.5, e.z + pz * 2.5, 0.9) ? 1 : -1;
+        if ((e.stuckN = (e.stuckN || 0) + 1) > 2) { e.pi = (e.pi + 1) % e.path.length; e.stuckN = 0; }
+      } else e.stuckN = 0;
+    }
     if (l < 0.8) { e.pi = (e.pi + 1) % e.path.length; e.chkL = 1e9; }
-    else { e.x += vx / l * e.spd * dt; e.z += vz / l * e.spd * dt; e.ang = Math.atan2(vx, vz); }
+    else {
+      let mx = vx / l, mz = vz / l;
+      if (e.sideT > 0) { e.sideT -= dt; const px = -mz * e.side, pz = mx * e.side, q = Math.hypot(mx * 0.35 + px, mz * 0.35 + pz); mx = (mx * 0.35 + px) / q; mz = (mz * 0.35 + pz) / q; }
+      e.x += mx * e.spd * dt; e.z += mz * e.spd * dt; e.ang = Math.atan2(mx, mz);
+    }
     const py = e.y;
     e.vy -= GRAV * dt;
     e.y += e.vy * dt;
-    collideBody(e, py, e.r * 0.7, e.h, false);
+    collideBody(e, py, e.r * 0.5, e.h, false); // slimmer on patrol, so it slides past props in an alley
     return true;
   }
   if (d > 18 || P.inDuct) {

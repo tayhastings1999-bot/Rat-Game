@@ -13,6 +13,7 @@ import { M, gi, inG, toG, toW, tAt, floorY, descend, nearOpen } from '../world/g
 import { objTargets } from './objectives.js';
 import { hit } from '../combat/combat.js';
 import { TUNE } from '../tuning.js';
+import { pingFinds } from './finds.js';
 
 export const TOX = { cone: 0xff2ad8, print: 0xc8ff20, gnaw: 0x20ffc8, alert: 0xff3a20 };
 
@@ -22,6 +23,7 @@ export function toggleScent() {
   if (P.scentE < 1) { dnum(P.x, P.y + 1.6, P.z, 'Nose needs a moment', 'info'); return; }
   P.scent = true;
   sfx('sniff');
+  pingFinds();
 }
 
 // ---------- footprints ----------

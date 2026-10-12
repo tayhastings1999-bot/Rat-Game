@@ -186,6 +186,8 @@ function chooseTarget() {
     if (f) return { x: f.x, z: f.z, kind: 'food', o: f };
   }
   if (B.goal === 'break') return breakTarget();
+  // Power-up tokens nearby are worth a detour (as a player would take them).
+  if (Math.random() < pr.loot) { const t = nearestOf((W.pups || []).filter(p => Math.hypot(p.x - P.x, p.z - P.z) < 30 && Math.abs(p.y - P.y) < 1.5)); if (t) return { x: t.x, z: t.z, kind: 'powerup', o: t }; }
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };
   if (B.goal === 'secret' && G.secretExit) return { x: G.secretExit.x, z: G.secretExit.z, kind: 'secret' }; // best effort: it may sit behind a cracked wall
@@ -193,7 +195,7 @@ function chooseTarget() {
     for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1 && !B.banned.has((k % M.W) + ',' + ((k / M.W) | 0))) return { x: toW(k % M.W), z: toW((k / M.W) | 0), kind: 'interior' };
   }
   if (B.goal === 'explore') return exploreTarget();
-  if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed)); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
+  if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.keys > 0))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
   if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestMust(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
@@ -302,7 +304,7 @@ function think(dt) {
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
-    else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food') tg.done = true;
+    else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
   }
   // Kite away from crowds (skilled players don't stand in the middle).
   if (th.crowd >= 3 && Math.random() < pr.kite && B.goal !== 'die') {
@@ -368,7 +370,8 @@ function watchdogs(dt) {
   B.stuckT += dt;
   if (B.stuckT > 3) {
     const moved = Math.hypot(P.x - B.stuckX, P.z - B.stuckZ);
-    if ((B.dir[0] || B.dir[1]) && moved < 0.8 && !P.chewing && G.state === 'play') {
+    // (Only while the bot is driving: raw stepping under a test's own keys must not have them released.)
+    if (B.on && (B.dir[0] || B.dir[1]) && moved < 0.8 && !P.chewing && G.state === 'play') {
       B.unstick++;
       keys.Space = true; P.buffer = 0.13; // hop
       setDir(rand(-1, 1), rand(-1, 1));
@@ -377,7 +380,7 @@ function watchdogs(dt) {
         if (B.target) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
         B.target = null; B.unstick = 0;
       }
-    } else { B.unstick = 0; keys.Space = false; }
+    } else { B.unstick = 0; if (B.on) keys.Space = false; }
     B.stuckT = 0; B.stuckX = P.x; B.stuckZ = P.z;
   }
   // Out of the world / NaN.
@@ -517,7 +520,7 @@ function goalMet() {
     case 'boss': return run.bossDone;
     case 'nests': return !W.enemies.some(e => e.type === 'nest' && !e.dead);
     case 'interior': return !!P.inBldg;
-    case 'loot': return !W.chests.some(c => !c.open && c.y < 0.6 && !c.cursed && reachable(c));
+    case 'loot': return !W.chests.some(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.keys > 0) && reachable(c));
     case 'die': return G.state === 'dead';
     default: return false;
   }

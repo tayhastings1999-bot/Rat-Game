@@ -14,6 +14,7 @@ import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
 import { turboDown, turboUp } from './turbo.js';
 import { throwVial } from './vials.js';
+import { tallyContinue } from '../ui/tally.js';
 
 /** Attack is held while the mouse button, J or the touch button is down. */
 const held = { mouse: false, key: false };
@@ -47,6 +48,8 @@ export function initInput() {
       const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'].indexOf(e.code);
       const k = Object.keys(CLASSES)[i];
       if (i >= 0 && k) startRun(k);
+    } else if (s === 'tally') {
+      if (['Space', 'Enter', 'KeyE'].includes(e.code)) tallyContinue();
     } else if (s === 'dead') {
       if (e.code === 'KeyR' || e.code === 'Enter') menu();
     } else if (s === 'story') {

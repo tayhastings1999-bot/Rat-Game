@@ -103,10 +103,59 @@ export const TUNE = {
     broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
   },
   secrets: {
+    // Secrets in every level (game/finds.js): cracked walls, squeeze rooms, rooftop caches.
+    min: 3, max: 6, // how many a level counts (the HUD's SECRETS n/m)
+    findGold: 12, findXp: 60, // paid out for each one found
+    pingR: 40, // F (sniff) pings secrets within this distance
+    pingT: 6, // seconds their markers stay lit
     // Secret zones (game/secrets.js).
     vaultTime: 60, vaultChests: 8, vaultCaches: 6, vaultVials: 3, // The Cheese Vault
     runTime: 45, runGold: 120, runCaches: 3, // The Rat Run: gold piles of 3, and thieves
     gardenNests: 6, gardenChests: 4, // The Bone Garden: all Warrens; premium chests when they fall
+  },
+  climb: {
+    // Only marked drainpipes (yellow bands, a paw mark at the foot) and fire escapes can be climbed.
+    pipesCity: 10, // marked pipes per city level, each with a rooftop cache at the top
+    pipesSewer: 4, // and per sewer level, up onto the wall tops
+    maxH: 9.5, // tallest wall a pipe goes up
+    spacing: 22, // minimum distance between pipes
+    reach: 0.85, // how close to the pipe you must be to grab it
+    speed: 6.5, // climbing speed
+    topPush: 4.5, // the hand-up onto the roof at the top of a pipe
+    hopUp: 2.2, // a roof this much higher than the one you're on is still reachable by a hop
+  },
+  growth: {
+    // Stat growth on level-up (game/stats.js growStats): points split by the class's own stats.
+    perLevel: 0.45, // stat points per level (Strength + Speed + Armor + Magic)
+    hp: 4, // max HP per level
+  },
+  keys: {
+    // Keys stack (HUD count) and open locks: locked chests, locked gates, the manhole.
+    eliteOdds: 0.3, miniOdds: 0.7, chestOdds: 0.2, binOdds: 0.05, nestOdds: 0.15, // drop chances (bosses always drop one)
+    lockedChests: 2, // chests per level with a padlock (premium loot and a power-up inside)
+    gates: 1, // dead ends per level behind a locked gate (a vault: premium chest, power-up, cache)
+    lockedGold: 1.5, // locked chests hold this × a premium chest's gold
+  },
+  powerups: {
+    // Eight timed power-ups (game/powerups.js).
+    dur: 25, // seconds each one lasts
+    perLevel: 2, // tokens on the street per level (more wait in vaults, secrets and chests)
+    chestOdds: 0.12, premiumOdds: 0.4, // chance a chest (or premium chest) holds one
+    veilR: 5, veilSlow: 0.45, // Scent Veil: mobs farther than this lose your scent and wander at this × speed
+    ironCut: 0.6, // Iron Hide: share of damage it takes away
+    quickSpd: 1.35, quickRate: 1.3, // Quickpaw: move speed ×, attack rate ×
+    splitMelee: 1.8, splitSpread: 0.22, // Splitclaw: melee damage ×; angle between split shots
+    mirrorDmg: 1.5, // Mirror Shell: reflected shots hit for this × their damage
+    emberT: 3, emberDps: 9, // Ember Breath: burn length and damage per second
+    mothDmg: 16, mothEvery: 0.7, mothRange: 9, // Moth Familiar
+  },
+  tally: {
+    // The exit tally (ui/tally.js): points per part (they add up to 100) and grade thresholds.
+    wNests: 30, wBoss: 15, wSide: 10, wSecrets: 20, wHealth: 15, wTime: 10,
+    hurtPar: 2, // taking this many × your max HP scores 0 for health
+    parTime: 240, // seconds: at or under this scores full time points
+    S: 90, A: 75, B: 60, C: 40,
+    goldS: 60, goldA: 40, goldB: 20, goldC: 10, goldD: 0, // grade bonus
   },
   hazards: {
     // Collapsing Floors (the 'collapse' hazard): cracked tiles that drop away under you.

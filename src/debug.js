@@ -16,7 +16,11 @@ import { audioReady, music, musicLevel } from './audio/audio.js';
 import { renderer, scene, cutPlane, world } from './render/renderer.js';
 import { update } from './game/update.js';
 import { sync, animate } from './game/sync.js';
-import { chewTarget, useTarget, grabTarget, dropCarry } from './entities/player.js';
+import { dropPowerup, grantPowerup, puOn, puList, POWERUPS } from './game/powerups.js';
+import { pingFinds } from './game/finds.js';
+import { tallyCalc, tallyContinue } from './ui/tally.js';
+import { growStats } from './game/stats.js';
+import { chewTarget, useTarget, grabTarget, dropCarry, pressE, unlockGate, pipeNear } from './entities/player.js';
 import { comboGain } from './game/swarm.js';
 import { storyApi } from './game/story.js';
 import { TUNE, tuneEntries, setTune } from './tuning.js';
@@ -50,11 +54,18 @@ import { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS } from './data/levels.js';
 
 export function debugApi(state) {
   initDebugPanel();
+  // Browser automation (the test harnesses) skips the exit tally card; a person on ?debug still sees it.
+  if (navigator.webdriver) state.G.testNoTally = true;
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, dropKey, freeSpot, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
-    /** A tall climbable wall face next to open ground: stand point, outward normal, top. */
+    hit, die, pause, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    /** A marked drainpipe (the only climbable wall): stand point, outward normal, top. */
+    climbSpot(minTop = 0) {
+      const c = state.W.climbs.find(c => c.top >= minTop && c.gx > 3 && c.gz > 3 && c.gx < M.W - 4 && c.gz < M.H - 4);
+      return c ? { x: c.x, z: c.z, nx: c.nx, nz: c.nz, top: c.top, cache: !!c.cache } : null;
+    },
+    /** A tall wall face next to open ground: stand point, outward normal, top. */
     wallSpot(minTop = 4, maxTop = 99) {
       for (let k = 0; k < M.W * M.H; k++) {
         if (!DRY(M.grid[k])) continue;

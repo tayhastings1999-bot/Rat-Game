@@ -57,7 +57,7 @@ function sign(text, col, x, y, z, dx, dz, w = 3.2) {
 function blocked(x, z, r = 2.2) {
   if (nearMouth(x, z)) return true;
   const hit = o => Math.hypot(o.x - x, o.z - z) < r;
-  return W.chests.some(hit) || (W.caches || []).some(hit) || W.bins.some(hit) || W.enemies.some(e => e.type === 'nest' && hit(e));
+  return W.chests.some(hit) || (W.caches || []).some(hit) || W.bins.some(hit) || W.climbs.some(hit) || W.enemies.some(e => e.type === 'nest' && hit(e));
 }
 /** A use-point for E (see player.js useTarget). */
 const usePoint = (x, z, r, label, act, y = 0) => { const u = { x, z, y, r, cr: 0.3, label, act, done: false }; W.uses.push(u); return u; };
@@ -466,7 +466,7 @@ const ARENA = {
       W.arenaVents.push({ x: vx, z: vz, sp: glowSprite(0x9be06a, 2, world, vx, 0.6, vz, 0.2), t: rand(2, 6) });
     }
     // Gas drums on open floor (never half inside a wall).
-    for (let i = 0; i < 6; i++) for (let t = 0; t < 4; t++) { const dx = x + rr(-9, 9), dz = z + rr(-9, 9); if (freeSpot(dx, dz, 0.9)) { staticBox(dx, dz, 1.4, 1.4, 1.4, lam(0xb04a30, { map: metalTex })); break; } }
+    for (let i = 0; i < 6; i++) for (let t = 0; t < 4; t++) { const dx = x + rr(-9, 9), dz = z + rr(-9, 9); if (freeSpot(dx, dz, 0.9) && !blocked(dx, dz, 2.6)) { staticBox(dx, dz, 1.4, 1.4, 1.4, lam(0xb04a30, { map: metalTex })); break; } }
   },
   maw(x, z) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; const r = mkMesh(new THREE.TorusGeometry(2.4, 0.18, 4, 10, Math.PI), lam(0xd8d0b8), x + Math.sin(a) * 6, 0, z + Math.cos(a) * 6); r.rotation.y = a; }

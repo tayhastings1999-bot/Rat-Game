@@ -28,6 +28,8 @@ export function allocMap(w, kind) {
   M.seen = new Uint8Array(w * w);
   M.secret = new Uint8Array(w * w); // 1 = gnawable wall disguised as solid brick
   M.inside = new Uint8Array(w * w); // n = floor inside enterable building n-1 (cutaway view)
+  M.vault = new Uint8Array(w * w); // 1 = floor behind a locked gate
+  M.roofOK = null; // roofs you can get onto (set by world/build.js)
   M.flow = new Int16Array(w * w).fill(-1);
   M.spawnTiles = [];
 }
@@ -185,7 +187,7 @@ export function forPlatsNear(x, z, R, fn) {
  * body's head) don't count. Used to keep nests and spawns out of props.
  */
 export function freeSpot(x, z, r = 0.6) {
-  if (!inG(toG(x), toG(z)) || !DRY(tAt(toG(x), toG(z)))) return false;
+  if (!inG(toG(x), toG(z)) || !DRY(tAt(toG(x), toG(z))) || (M.vault && M.vault[gi(toG(x), toG(z))])) return false;
   for (const [ox, oz] of [[r, 0], [-r, 0], [0, r], [0, -r], [r * 0.7, r * 0.7], [-r * 0.7, r * 0.7], [r * 0.7, -r * 0.7], [-r * 0.7, -r * 0.7]]) if (!OPEN(tAt(toG(x + ox), toG(z + oz)))) return false;
   for (const p of W.plats) if (!p.thin && !p.pole && p.y - p.th < 1.2 && Math.abs(p.x - x) < p.w / 2 + r && Math.abs(p.z - z) < p.d / 2 + r) return false;
   return true;

@@ -217,12 +217,15 @@ body.combat #contracts{opacity:.25}
 #introCard h1{font-family:'Pirata One',serif;font-weight:400;margin:4px 0;font-size:clamp(44px,7vw,96px);color:#ff4a3a;text-shadow:0 0 18px rgba(0,0,0,.9),0 4px 0 #000}
 #introCard .kick{color:var(--gold);font-size:13px;letter-spacing:.2em}
 #introCard p{margin:0;font-size:18px;font-style:italic;color:var(--ink);text-shadow:0 2px 6px #000}
-/* District rank stamp */
-#rankStamp{position:absolute;left:7%;top:34%;text-align:center;pointer-events:none;opacity:0;transform:scale(2.2) rotate(-12deg);transition:opacity .25s,transform .35s cubic-bezier(.2,1.6,.4,1);z-index:6}
-#rankStamp.on{opacity:1;transform:scale(1) rotate(-8deg)}
-#rankStamp b{display:block;font:900 120px/1 serif;text-shadow:0 6px 0 #000,0 0 30px rgba(0,0,0,.8)}
-#rankStamp span{font-size:11px;color:var(--ink);text-shadow:0 2px 4px #000}
-#rankStamp .rS{color:#ffd040}#rankStamp .rA{color:#6ad06a}#rankStamp .rB{color:#6ad0ff}#rankStamp .rC{color:#c080ff}#rankStamp .rD{color:#9a96a0}
+/* Exit tally */
+.tallyt{margin:6px auto 10px;border-collapse:collapse;font-size:14px;min-width:min(420px,90%)}
+.tallyt td{padding:4px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+.tallyt td:nth-child(2){color:var(--ink);text-align:center}
+.tallyt td.pts{text-align:right;color:var(--gold)}.tallyt td.pts span{color:var(--dim);font-size:11px}
+/* Secrets counter, power-up timers */
+.chip.secrets{--cc:#c080ff}
+.pu{display:inline-flex;flex-direction:column;gap:2px;margin:2px 4px 0 0;padding:3px 6px;border:1px solid var(--cc);border-radius:3px;background:rgba(0,0,0,.45);font-size:10px;color:var(--cc)}
+.pu i{display:block;height:3px;background:var(--cc);border-radius:2px}
 .ranks{font:900 28px/1 serif;letter-spacing:.2em;color:#ffd040}
 /* Story scenes: a letterboxed dialogue box over the paused game */
 #story{position:fixed;left:0;right:0;bottom:0;top:0;display:none;align-items:flex-end;justify-content:center;padding:0 16px 5vh;z-index:30;background:linear-gradient(180deg,rgba(0,0,0,.55) 0,transparent 14%,transparent 62%,rgba(0,0,0,.7) 100%);cursor:pointer}

@@ -130,6 +130,14 @@ function nz(freq, q, dur, vol, type = 'bandpass', wet, t = AC.currentTime, out =
   s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
 }
 
+/** The secret ping (game/finds.js): two sonar blips, higher the closer the nearest secret is (warm 0..1). */
+export function ping(warm = 0) {
+  if (!audioReady()) return;
+  const f = 420 + 900 * warm, t = AC.currentTime;
+  tone(f, f * 0.97, 0.45, 'sine', 0.09, true, t);
+  tone(f * 1.5, f * 1.46, 0.3, 'sine', 0.05, true, t + 0.16);
+}
+
 const GAP = { bark: 600, bell: 500, clank: 70, rattle: 400, heal: 300, hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
 export function sfx(n) {
   if (!audioReady()) return;

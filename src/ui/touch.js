@@ -31,7 +31,7 @@ export function initTouch() {
       <button class="tb turbo" data-b="turbo" aria-label="Turbo: tap for your turbo blast; hold, then Special or Sig for a turbo move">Turbo</button>
       <button class="tb" data-b="use" aria-label="Use, grab, hold to gnaw">Use</button>
       <button class="tb" data-b="roll" aria-label="Dodge">Dodge</button>
-      <button class="tb jump" data-b="jump" aria-label="Jump, hold to climb">Jump</button>
+      <button class="tb jump" data-b="jump" aria-label="Jump, hold at a marked pipe to climb">Jump</button>
     </div>
     <div id="tTop">
       <button class="tb sm" data-b="map" aria-label="Map">Map</button>

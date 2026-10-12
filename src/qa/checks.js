@@ -26,7 +26,8 @@ export function staticChecks() {
     }
   }
   // Second pass: what the rat can reach with its abilities (gnaw boards, squeeze
-  // cracks and crawlspaces, hop fences, climb walls onto roofs and back down).
+  // cracks and crawlspaces, hop fences, and get onto roofs by a marked pipe, a
+  // fire escape or a crate stack, then drop back down).
   const reachA = reach.slice(), qa2 = [];
   for (let k = 0; k < n; k++) if (reachA[k]) qa2.push(k);
   while (qa2.length) {
@@ -36,6 +37,7 @@ export function staticChecks() {
       if (!inG(X, Y) || X === 0 || Y === 0 || X === M.W - 1 || Y === M.H - 1) continue; // the map border is the edge of the world
       const k = gi(X, Y);
       if (reachA[k] || M.grid[k] === 7) continue;
+      if ((M.grid[k] === 0 || M.grid[k] === 6) && M.roofOK && !M.roofOK[k]) continue; // a roof with no way up
       reachA[k] = 1; qa2.push(k);
     }
   }
@@ -88,6 +90,19 @@ export function staticChecks() {
     const x = k % M.W, y = (k / M.W) | 0;
     if (N4.some(([dx, dz]) => !walk(tAt(x + dx, y + dz)))) add('warn', 'crack-in-corridor', toW(x), toW(y));
   }
+  // Rooftop loot sits on a roof you can get onto.
+  if (M.roofOK) for (const o of [...W.chests.filter(c => !c.open), ...(W.caches || []).filter(c => !c.taken)]) {
+    if ((o.y ?? 0) < 1) continue;
+    const gx = toG(o.x), gz = toG(o.z), t = tAt(gx, gz);
+    if ((t === 0 || t === 6) && !M.roofOK[gi(gx, gz)]) add('error', 'unreachable-roof-loot', o.x, o.z, { y: o.y });
+  }
+  // Every secret can be reached (with the rat's abilities), power-up tokens sit on clear floor,
+  // and nothing the level needs is locked behind a vault gate.
+  for (const f of W.finds || []) if (!nearA(f.x, f.z)) add('error', 'unreachable-secret', f.x, f.z, { kind: f.kind });
+  for (const p of W.pups || []) if (solidAt(p.x, p.z, 0.2) || wallAt(p.x, p.z, 0.4)) add('error', 'powerup-in-prop', p.x, p.z);
+  if (M.vault) for (const e of W.enemies) if (e.type === 'nest' && M.vault[gi(toG(e.x), toG(e.z))]) add('error', 'nest-in-vault', e.x, e.z);
+  // Every marked pipe stands on clear street and leads to a roof.
+  for (const c of W.climbs || []) if (!walk(tAt(toG(c.x + c.nx * 0.6), toG(c.z + c.nz * 0.6))) || solidAt(c.x + c.nx * 0.6, c.z + c.nz * 0.6, 0.2)) add('error', 'pipe-blocked', c.x, c.z);
   // The boss lair and every interior must be walkable to.
   if (G.arena && !near(G.arena.x, G.arena.z)) add('error', 'unreachable-lair', G.arena.x, G.arena.z);
   const rooms = new Map();

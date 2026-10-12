@@ -36,6 +36,8 @@ import { tickReaperSpawn } from './reaper.js';
 import { tickThieves } from './thieves.js';
 import { tickSetPieces } from '../world/setpieces.js';
 import { TUNE } from '../tuning.js';
+import { tickPowerups, puOn } from './powerups.js';
+import { tickFinds } from './finds.js';
 
 let seenT = 0;
 
@@ -99,7 +101,7 @@ function updateZones(dt) {
 
 /** Hidden lairs wake their mini-boss when the rat steps inside; secret walls show while sniffing. */
 function updateHidden() {
-  for (const s of W.secrets) s.g.visible = P.scent && M.grid[s.k] === 3;
+  for (const s of W.secrets) s.g.visible = (P.scent || puOn('glow')) && M.grid[s.k] === 3;
   const gx = toG(P.x), gz = toG(P.z);
   for (const L of W.lairs) {
     if (L.woke || gx < L.x || gz < L.y || gx >= L.x + L.w || gz >= L.y + L.h) continue;
@@ -301,7 +303,11 @@ function updateProjectiles(dt) {
     }
     p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     const dx = P.x - p.x, dy = P.y + 0.5 - p.y, dz = P.z - p.z, hr = 0.45 + (p.size > 1 ? (p.size - 1) * 0.3 : 0);
-    if (dx * dx + dy * dy + dz * dz < hr) { hurtP(p.dmg); if (p.slow) P.slowT = 1.5; p.life = 0; spark(p.x, p.y, p.z, 1, p.col); continue; }
+    if (dx * dx + dy * dy + dz * dz < hr) {
+      // Mirror Shell: the shot bounces back the way it came, at its owner.
+      if (puOn('mirror')) { shoot(p.x, p.y, p.z, -p.vx, 0, -p.vz, Math.max(14, Math.hypot(p.vx, p.vz)), p.dmg * TUNE.powerups.mirrorDmg, 1, 'mirror', { col: 0xe8e8ff }); p.life = 0; spark(p.x, p.y, p.z, 1.2, 0xe8e8ff); run.mirrored = (run.mirrored || 0) + 1; continue; }
+      hurtP(p.dmg); if (p.slow) P.slowT = 1.5; p.life = 0; spark(p.x, p.y, p.z, 1, p.col); continue;
+    }
     if (solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.8, p.col); if (p.onLand) p.onLand(p.x - p.vx * 0.05, p.z - p.vz * 0.05); }
   }
   keep(W.eproj, p => p.life > 0);
@@ -357,6 +363,7 @@ function updatePickups(dt) {
     if (Math.hypot(P.x - k.x, P.z - k.z) < 1.4 && Math.abs(P.y - k.y) < 1.6) {
       bury(k.g);
       run.keys++;
+      run.keysGot = (run.keysGot || 0) + 1;
       sfx('key');
       banner('Sewer key', 'The manhole will open for you · M to find it');
       return false;
@@ -418,6 +425,8 @@ export function update(dt) {
   tickSig(dt);
   tickTurbo(dt);
   tickVials(dt);
+  tickPowerups(dt);
+  tickFinds(dt);
   tickSetPieces(dt);
   updatePickups(dt);
   tickFood(dt);

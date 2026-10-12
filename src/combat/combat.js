@@ -7,7 +7,6 @@ import { flameTex } from '../render/textures.js';
 import { blood, spark, puff, boom, decal, gore, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { floorY } from '../world/grid.js';
-import { isSewer } from '../data/world.js';
 import { warn } from './hazards.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
@@ -32,6 +31,7 @@ import { dropFood, breakFoodAt } from '../game/food.js';
 import { lowHealth } from '../game/announcer.js';
 import { reaperBlocks, reaperDown } from '../game/reaper.js';
 import { robberDown } from '../game/thieves.js';
+import { puOn } from '../game/powerups.js';
 export { dropFood };
 
 // ---------- queries ----------
@@ -88,6 +88,8 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   const crit = perfectCrit() || Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
   e.lastSrc = src;
   if (crit) d *= st.critMul;
+  if (src === 'primary' && melee && puOn('split')) d *= TUNE.powerups.splitMelee; // Splitclaw: every swipe lands twice
+  if ((src === 'primary' || src === 'mirror') && puOn('ember') && !e.boss) { e.bT = Math.max(e.bT || 0, TUNE.powerups.emberT); e.bD = Math.max(e.bD || 0, TUNE.powerups.emberDps); } // Ember Breath
   if (e.ward > 0) d *= 0.4;
   const gm = guardMul(e, ang, base);
   if (gm < 1) { d *= gm; kb *= 0.2; }
@@ -137,7 +139,7 @@ export function hurtP(d, from, raw) {
     d *= 0.3;
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
   }
-  d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (1 + 0.1 * run.tier))); // st.taken comes from Armor
+  d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (puOn('iron') ? 1 - TUNE.powerups.ironCut : 1) * (1 + 0.1 * run.tier))); // st.taken comes from Armor
   run.hp -= d;
   run.dHurt = (run.dHurt || 0) + d;
   if (G.qa) G.qa.hurt(d, from, raw);
@@ -192,7 +194,7 @@ export function kill(e) {
     const gy = floorY(e.x, e.z);
     addChest(e.x, gy, e.z, true);
     for (let i = 0; i < 12; i++) scrapDrop(e.x, gy, e.z);
-    if (!isSewer() && !run.keys && !W.keys.length && Math.random() < 0.6) dropKey(e.x + 1.2, gy, e.z);
+    if (Math.random() < TUNE.keys.miniOdds) dropKey(e.x + 1.2, gy, e.z);
     banner(e.name + ' slain', 'Its hoard is yours');
     G.hitStop = Math.max(G.hitStop, 0.2);
   }
@@ -204,6 +206,7 @@ export function kill(e) {
     addXP(e.xp || 20);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
     if (Math.random() < 0.6) dropFood(e.x, e.y, e.z, 'wedge');
+    if (Math.random() < TUNE.keys.nestOdds) dropKey(e.x + 1, e.y, e.z);
     dnum(e.x, e.y + 2, e.z, 'Nest destroyed', 'info');
     G.shake = 0.35;
     return;
@@ -226,7 +229,7 @@ function corruptDeath(e) {
   if (Math.random() < TUNE.vials.eliteOdds) dropVial(e.x, floorY(e.x, e.z), e.z);
   for (let i = 0; i < 5; i++) scrapDrop(e.x, e.y, e.z);
   for (let i = 0; i < 3; i++) scrapDrop(e.x, e.y, e.z);
-  if (!isSewer() && !run.keys && !W.keys.length && Math.random() < 0.22) dropKey(e.x, e.y, e.z);
+  if (Math.random() < TUNE.keys.eliteOdds) dropKey(e.x, e.y, e.z);
   if (e.corrupt === 'split') {
     for (let i = 0; i < 3; i++) spawnEnemy(e.type, e.x + rand(-1, 1), e.z + rand(-1, 1), { plain: true, sc: 0.75 });
   }
@@ -252,7 +255,7 @@ export function dropKey(x, y, z) {
   g.position.set(x, gy + 0.8, z);
   world.add(g);
   W.keys.push({ x, y: gy, z, g });
-  dnum(x, gy + 2, z, 'Sewer key!', 'info');
+  dnum(x, gy + 2, z, 'A key!', 'info');
   sfx('key');
 }
 

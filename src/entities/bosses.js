@@ -18,7 +18,6 @@ import { spawnEnemy, mobState, moveBody, groundChase, flyTo, wait, cone, aimShot
 import { banner } from '../ui/hud.js';
 import { brainOf, think, lead, weigh, canAfford, spend, trySidestep, flankPoint } from './brain.js';
 import { addChest } from '../world/build.js';
-import { rankDistrict } from '../game/score.js';
 import { openGate, checkUnlocks } from '../game/flow.js';
 import { creatureMesh } from '../render/pools.js';
 import { BOSS_VARIANTS } from '../data/levels.js';
@@ -492,11 +491,10 @@ export function onBossDeath(e) {
   addXP(220);
   for (let i = 0; i < 30; i++) scrapDrop(e.x, gy, e.z);
   addChest(e.x, gy, e.z, isSewer());
-  if (!isSewer()) dropKey(e.x + 1.5, gy, e.z + 1.5);
+  dropKey(e.x + 1.5, gy, e.z + 1.5);
   run.bossDone = true;
   meta.bosses++;
   run.bosses = (run.bosses || 0) + 1;
-  if (G.mode !== 'trial') rankDistrict();
   run.bossHit = false;
   openGate();
   const got = checkUnlocks();

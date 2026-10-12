@@ -18,6 +18,7 @@ import { die } from '../ui/screens.js';
 import { PRIM } from '../combat/arsenal.js';
 import { CLASSES } from '../data/classes.js';
 import { mouseAim } from '../entities/player.js';
+import { puOn } from './powerups.js';
 
 const cheese = new THREE.MeshLambertMaterial({ color: 0xe8b84a, emissive: 0x4a3000, flatShading: true });
 const rind = new THREE.MeshLambertMaterial({ color: 0xc87a2a, emissive: 0x2a1000, flatShading: true });
@@ -127,7 +128,7 @@ export function tickFood(dt) {
     warnFood(f, zone, f.m);
     f.m.position.set(f.x, f.y + 0.4 + Math.sin(G.time * 3 + f.x) * 0.1, f.z);
     f.m.rotation.y += dt * 2;
-    if (f.ms) f.ms.visible = !!P.scent;
+    if (f.ms) f.ms.visible = !!P.scent || puOn('glow');
     if (Math.hypot(P.x - f.x, P.z - f.z) < 1 && Math.abs(P.y - f.y) < 1.2) {
       bury(f.m);
       W.foods.splice(i, 1);

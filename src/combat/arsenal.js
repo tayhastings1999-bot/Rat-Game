@@ -9,6 +9,7 @@ import { solidFor, tileAt, topAt, toG } from '../world/grid.js';
 import { near, hit, aoe } from './combat.js';
 import { TUNE } from '../tuning.js';
 import { breakFoodAt } from '../game/food.js';
+import { puOn } from '../game/powerups.js';
 
 /** Melee step-in: close most of the gap to a target just outside reach. */
 function stepIn(t, R) {
@@ -58,6 +59,8 @@ export function shoot(x, y, z, dx, dy, dz, spd, dmg, pierce, src, o = {}) {
     homing: o.homing || (pr && st.homing), split: pr && st.split && !o.child, size: o.size || 1 + (pr ? st.shotSize : 0) * (o.child ? 0.5 : 1), fx: pr, bounce: o.bounce || 0,
   });
   if (o.arc) { const p = W.pproj[W.pproj.length - 1]; p.vy += 2.2; p.g = 9; }
+  // Splitclaw: every primary shot fans out three ways.
+  if (pr && !o.child && puOn('split')) { const a = Math.atan2(dx, dz), s = TUNE.powerups.splitSpread; for (const k of [-s, s]) shoot(x, y, z, Math.sin(a + k), dy / d, Math.cos(a + k), spd, dmg * 0.7, pierce, src, { ...o, child: true }); }
   if (pr) { spark(x + dx / d * 0.5, y, z + dz / d * 0.5, 0.6, o.col || 0xffffff); P.throwT = 0.26; sfx('shoot'); }
 }
 

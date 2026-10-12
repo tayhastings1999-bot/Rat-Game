@@ -86,13 +86,13 @@ export function setupObjective(info, force) {
     }
     o.freed = 0;
   } else if (kind === 'hold') {
-    // A rooftop if the city has a climbable one at middle distance, else a room.
+    // A rooftop you can get onto (a marked pipe or fire escape leads up) at middle distance, else a room.
     let s = null;
     if (!isSewer()) {
       const mid = far[Math.floor(far.length * 0.5)];
       if (mid) for (let r = 1; r < 6 && !s; r++) for (let dz = -r; dz <= r && !s; dz++) for (let dx = -r; dx <= r && !s; dx++) {
         const x = mid.cx + dx, z = mid.cy + dz;
-        if (inG(x, z) && tAt(x, z) === 0 && M.hgt[gi(x, z)] <= 7.5 && M.hgt[gi(x, z)] >= 4.5) s = { x: toW(x), z: toW(z) };
+        if (inG(x, z) && tAt(x, z) === 0 && M.hgt[gi(x, z)] <= 7.5 && M.hgt[gi(x, z)] >= 4.5 && (!M.roofOK || M.roofOK[gi(x, z)])) s = { x: toW(x), z: toW(z) };
       }
     }
     if (!s) s = spot(far[Math.floor(far.length * 0.6)] || start);

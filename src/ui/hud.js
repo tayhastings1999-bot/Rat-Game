@@ -16,6 +16,8 @@ import { SIGS } from '../game/signature.js';
 import { BLASTS } from '../game/turbo.js';
 import { secretText } from '../game/secrets.js';
 import { TUNE } from '../tuning.js';
+import { findsText } from '../game/finds.js';
+import { puList } from '../game/powerups.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
@@ -61,13 +63,15 @@ export function hud() {
   $('lvlBig').textContent = String(run.level).padStart(2, '0');
   $('res').innerHTML =
     `<div class="r">${IC_SCRAP}<span>${Math.floor(run.scrap)}</span>${run.keys ? `<span class="keyc">${IC_KEY}<span>${run.keys}</span></span>` : ''}</div>` +
+    (findsText() ? `<span class="chip secrets">${findsText()}</span>` : '') +
     (isSewer() ? '<span class="chip" style="--cc:#b070ff">SEWER · MUTATED HORDE</span>' : '') +
     run.mods.map(m => `<span class="chip" style="--cc:${MODS[m].col}">${MODS[m].name}</span>`).join('') +
     (run.blood > 0 ? `<span class="chip" style="--cc:#ff4a3a">BLOODLUST ×${run.blood}</span>` : '') +
     (run.rain ? '<span class="chip" style="--cc:#8ab0e0">RAIN · SCENT FADES</span>' : '') +
     (P.scent ? `<span class="chip" style="--cc:#c8ff20">SCENT ${Math.ceil(P.scentE)}s</span>` : P.scentE < st.scentMax - 0.5 ? `<span class="chip" style="--cc:#6a7a4a">Nose ${Math.round(P.scentE / st.scentMax * 100)}%</span>` : '') +
     activeBuffs().map(b => `<span class="chip" style="--cc:${hexs(b.col)}">${b.name} ${Math.ceil(b.t)}s</span>`).join('') +
-    (P.perfectT > 0 ? '<span class="chip" style="--cc:#9af0ff">PERFECT · GUARANTEED CRITS</span>' : '');
+    (P.perfectT > 0 ? '<span class="chip" style="--cc:#9af0ff">PERFECT · GUARANTEED CRITS</span>' : '') +
+    puList().map(p => `<span class="pu px" style="--cc:${hexs(p.col)}">${p.name} ${Math.ceil(p.t)}s<i style="width:${Math.round(p.f * 100)}%"></i></span>`).join('');
   $('dmgTotal').textContent = commas(run.dmg);
   $('kills').textContent = run.kills;
   $('clock').textContent = fmt(run.time);

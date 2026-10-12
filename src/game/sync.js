@@ -19,6 +19,7 @@ import { newAnim, animateRat } from '../entities/ratAnim.js';
 import { nearest } from '../combat/combat.js';
 import { syncScent } from './scent.js';
 import { sigPose } from './signature.js';
+import { puOn } from './powerups.js';
 
 G.camPos = new THREE.Vector3(0, 12, 12);
 G.camOff = new THREE.Vector3();
@@ -108,7 +109,7 @@ export function sync(dt) {
       else e.mesh.material.emissive.setScalar(em);
       continue;
     }
-    if (e.hidden && !P.scent) continue; // lurkers in their cracks: only your nose finds them
+    if (e.hidden && !P.scent && !puOn('glow')) continue; // lurkers in their cracks: only your nose (or Glow Eyes) finds them
     if (!onScreen(e)) continue;
     const i = cnt[e.type]++;
     if (i >= MOB_CAP) continue;

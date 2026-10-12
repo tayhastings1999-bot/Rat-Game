@@ -287,7 +287,7 @@ export function placeTraps(rooms, startRoom) {
   const used = [];
   const free = (w, R = 12) => {
     const x = toW(w.x), z = toW(w.y);
-    if (used.some(u => Math.hypot(u[0] - x, u[1] - z) < R)) return false;
+    if (used.some(u => Math.hypot(u[0] - x, u[1] - z) < R) || W.climbs.some(c => Math.hypot(c.x - x, c.z - z) < 4)) return false;
     // Keep clear of props already standing there.
     if (W.plats.some(p => !p.thin && Math.abs(p.x - (x - w.dx * 0.8)) < p.w / 2 + 1.4 && Math.abs(p.z - (z - w.dy * 0.8)) < p.d / 2 + 1.4)) return false;
     used.push([x, z]);

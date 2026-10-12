@@ -7,11 +7,12 @@ import { TUNE, tuneHooks } from '../tuning.js';
 export const STAT_KEYS = ['str', 'spd', 'arm', 'mag'];
 export const STAT_NAMES = { str: 'Strength', spd: 'Speed', arm: 'Armor', mag: 'Magic' };
 
-/** The class-driven part of `st` for class `k`. */
+/** The class-driven part of `st` for class `k`, including what the current run's levels have grown. */
 export function derive(k) {
-  const S = TUNE.stats, c = TUNE.classes[k] || TUNE.classes.brawler;
+  const S = TUNE.stats, c0 = TUNE.classes[k] || TUNE.classes.brawler, g = run.cls === k && run.growth ? run.growth : null;
+  const c = g ? { ...c0, str: c0.str + g.str, spd: c0.spd + g.spd, arm: c0.arm + g.arm, mag: c0.mag + g.mag } : c0;
   return {
-    maxHp: c.hp,
+    maxHp: c0.hp + (g ? g.hp : 0),
     speed: S.spdBase + S.spdPer * c.spd,
     primMul: S.strBase + S.strPer * c.str,
     magMul: S.magBase + S.magPer * c.mag,
@@ -25,7 +26,24 @@ export function derive(k) {
 /** Story marks (endings) that adjust stats on top of the class; set by story.js at run start. */
 export const marks = { heal: 1, speed: 1, dmg: 0, taken: 1 };
 
-/** Re-derive the live rat's class stats (debug edits), keeping its HP fraction. */
+/**
+ * Stat growth on level-up (TUNE.growth): each level adds `perLevel` stat points,
+ * split across the four stats in proportion to the class's own stats, so a
+ * class grows along its strengths. Max HP grows too, and the gain is healed.
+ * Returns the stats that grew most this level, for the banner.
+ */
+export function growStats() {
+  const G2 = TUNE.growth, c = TUNE.classes[run.cls] || TUNE.classes.brawler, sum = STAT_KEYS.reduce((a, s) => a + c[s], 0) || 1;
+  const g = run.growth || (run.growth = { str: 0, spd: 0, arm: 0, mag: 0, hp: 0 });
+  for (const s of STAT_KEYS) g[s] += G2.perLevel * c[s] / sum;
+  g.hp += G2.hp;
+  const hp0 = st.maxHp;
+  reapply();
+  run.hp = Math.min(st.maxHp, run.hp + (st.maxHp - hp0));
+  return STAT_KEYS.slice().sort((a, b) => c[b] - c[a]).slice(0, 2).map(s => STAT_NAMES[s]);
+}
+
+/** Re-derive the live rat's class stats (debug edits, level growth), keeping its HP fraction. */
 function reapply() {
   if (!run.cls || G.state === 'menu') return;
   const f = run.hp / st.maxHp, d = derive(run.cls);
