@@ -3,8 +3,11 @@ import * as THREE from 'three';
 import { PI2 } from '../core/util.js';
 import { scene } from './renderer.js';
 import { GEO, MOB_GEOS, bodyMat, Bx } from './models.js';
+import { gradeBody, gradeGlow } from './enemyGrade.js';
 import { atlasTex } from './textures.js';
 import { rigGeo, rigMat, rigPool } from './rig.js';
+import { outlineMat } from './toon.js';
+import { TUNE } from '../tuning.js';
 
 export const dummy = new THREE.Object3D();
 export const tmpC = new THREE.Color();
@@ -21,12 +24,18 @@ export function mkIM(geo, mat, cap, col = true) {
   return m;
 }
 
-export const IMB = {}, IMG = {};
-for (const k in GEO) { rigGeo(GEO[k].body, k); rigGeo(GEO[k].glow, k); }
+export const IMB = {}, IMG = {}, IMO = {};
+for (const k in GEO) { gradeBody(GEO[k].body); gradeGlow(GEO[k].glow); rigGeo(GEO[k].body, k); rigGeo(GEO[k].glow, k); }
 for (const k of MOB_GEOS) {
   IMB[k] = mkIM(GEO[k].body.clone(), rigMat(bodyMat(), k), MOB_CAP); // no real-time shadows: mobs get PS1-style blob shadows
   IMG[k] = mkIM(GEO[k].glow.clone(), rigMat(new THREE.MeshBasicMaterial({ vertexColors: true }), k), MOB_CAP, false);
   rigPool(IMB[k], IMG[k], MOB_CAP);
+  // Inverted-hull outline (art bible §4): same geometry, pose buffers and instance matrices as the body.
+  IMO[k] = new THREE.InstancedMesh(IMB[k].geometry, rigMat(outlineMat(TUNE.art.outline), k), MOB_CAP);
+  IMO[k].instanceMatrix = IMB[k].instanceMatrix;
+  IMO[k].frustumCulled = false;
+  IMO[k].count = 0;
+  scene.add(IMO[k]);
 }
 
 /**
@@ -35,10 +44,12 @@ for (const k of MOB_GEOS) {
  */
 export function creatureMesh(k) {
   const bm = rigMat(bodyMat(), k), gm = rigMat(new THREE.MeshBasicMaterial({ vertexColors: true }), k);
-  gm.userData.rig.rA = bm.userData.rig.rA;
-  gm.userData.rig.rB = bm.userData.rig.rB;
+  const om = rigMat(outlineMat(TUNE.art.outlineBoss), k);
+  om.userData.rig.rA = gm.userData.rig.rA = bm.userData.rig.rA;
+  om.userData.rig.rB = gm.userData.rig.rB = bm.userData.rig.rB;
   const mesh = new THREE.Mesh(GEO[k].body, bm);
   mesh.add(new THREE.Mesh(GEO[k].glow, gm));
+  mesh.add(new THREE.Mesh(GEO[k].body, om));
   mesh.userData.rig = bm.userData.rig;
   mesh.userData.rigKey = k;
   return mesh;

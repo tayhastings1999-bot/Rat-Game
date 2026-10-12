@@ -2,6 +2,8 @@
 // systems read them at the moment they need them, so a change takes effect at
 // once. Values are grouped by system; each has a short note. New and rebuilt
 // systems read from here; older numbers move in as their systems are rebuilt.
+import { PLAYER } from './render/palette.js';
+
 export const TUNE = {
   enemies: {
     cap: 200, // live enemies at once (nests pulse and hold at the cap)
@@ -32,10 +34,22 @@ export const TUNE = {
     reviveR: 1.8, // a standing rat this close revives a downed one…
     reviveTime: 2.5, // …over this many seconds (the bar drains at half speed when nobody helps)
     reviveHp: 0.4, // back up with this fraction of max HP
-    leash: 26, // a rat farther than this from the lead is pulled back beside it
-    camBase: 13, camPerSpread: 0.9, camMax: 24, // camera distance = max(zoom, base + spread × perSpread), capped
+    leash: 22, // soft leash so everyone stays in frame: a rat farther than this from the lead is pulled back beside it
+    camPad: 3, // co-op framing: the box around every standing rat plus this padding, within camera.minWidth..maxWidth
     deadzone: 0.35, // gamepad stick deadzone
-    colors: [0xe03a2a, 0x3a7ae0, 0xe0c030, 0x3ac060], // player rings and HUD cards: red, blue, yellow, green
+    colors: PLAYER, // player rings and HUD cards: red, blue, yellow, green (render/palette.js)
+  },
+  art: {
+    // Look (art bible v1). Lights, fog, post and outlines; colours come from render/palette.js.
+    sun: 2.2, sunCol: 0xfff2dc, hemi: 0.6, hemiSky: 0x6a7aa8,
+    fogNear: 30, fogFar: 70, fogTint: 0.3, // fog to Void, tinted this far toward the zone's own fog colour
+    grain: 0.01, vignette: 0.3, dither: 0.35, // post (were 0.03 / 0.55 / 0.9)
+    edge: 0.9, edgeDepth: 0.06, // depth-edge outline strength and threshold (relative depth step)
+    outline: 0.035, outlineHero: 0.045, outlineBoss: 0.06, outlinePlayer: 0.02, // inverted-hull widths, world units
+    ring: 0.7, ringPulse: 0.08, // player ring radius and pulse
+    outlineMaxMobs: 120,
+    heroScale: 1.25, heroRim: 0.9, ringW: 0.16, glyph: 0.95, glyphY: 2.3, // hero identity (review #4)
+    enemyTone: 0x4a4656, enemyDark: 0.8, // enemy bodies: one desaturated dark tone, 20% darker (review #4) // perf guard: mob outlines switch off while more mobs than this are on screen
   },
   difficulty: {
     // Casual / Normal / Insane, picked in the Nest and saved per slot (meta.difficulty).
@@ -45,13 +59,15 @@ export const TUNE = {
     insane: { hp: 1.5, dmg: 1.6, spawn: 1.35, elite: 2, bossHp: 1.6, drain: 1.4, food: 0.8, gold: 1.75 },
   },
   camera: {
-    // Fixed-angle follow camera. Walls between it and the rat get a dithered see-through hole.
-    pitch: 0.9, // radians above the horizon
-    dist: 13, // starting distance; the mouse wheel zooms between minDist and maxDist
-    minDist: 8,
-    maxDist: 20,
-    fov: 55,
-    lead: 0.16, // look ahead of the rat by this × its velocity
+    // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9
+    // (Gauntlet shows the room, not just the hero). Walls in the way get a see-through hole.
+    pitch: 1.08, // radians above the horizon (~62°)
+    width: 22, // world units visible across at the target; the wheel zooms between minWidth and maxWidth
+    minWidth: 18,
+    maxWidth: 30,
+    fov: 35,
+    lead: 0.16, // look ahead by this × velocity…
+    leadMax: 1.5, // …capped at this many units
     cutPitch: 1.32, // steeper look-down inside ducts and buildings (the cutaway)
     fade: true, // the see-through hole
     fadeRadius: 2.6, // hole radius around the rat, world units

@@ -1,6 +1,9 @@
 // The player rat model (per class and fur skin), familiars, trial ghosts and
 // the pre-rendered menu/HUD portraits.
 import * as THREE from 'three';
+import { TUNE } from '../tuning.js';
+import { toon, addOutline, heroRim } from '../render/toon.js';
+import { PLAYER, PAL, css } from '../render/palette.js';
 import { rand, TAU, PI2 } from '../core/util.js';
 import { G, P, W, meta } from '../core/state.js';
 import { scene, renderer } from '../render/renderer.js';
@@ -17,10 +20,11 @@ function glow(col, s, par, x = 0, y = 0, z = 0, op = 0.8) {
   return g;
 }
 
-export function makeRat(C) {
+/** Build a rat model. player (0–3) adds that player's colour as an outer outline layer. */
+export function makeRat(C, player = -1) {
   if (!C.npc && skinOk(meta.skin)) C = { ...C, ...SKINS[meta.skin].over }; // story characters keep their own colours
-  // PS1 treatment: gouraud-lit, vertex-snapped, affinely textured.
-  const g = new THREE.Group(), L = (c, o = {}) => ps1(new THREE.MeshLambertMaterial({ color: c, ...o }));
+  // Toon-lit (3-step ramp), PS1 vertex snap, inverted-hull outline (art bible §3–4).
+  const g = new THREE.Group(), L = (c, o = {}) => ps1(toon({ color: c, ...o }));
   const fur = L(C.fur, { map: furTex }), furD = L(new THREE.Color(C.fur).multiplyScalar(0.62).getHex(), { map: furTex }), spk = L(C.spike);
   const skin = L(0xb0786c), claw = L(0x1a1616), tooth = L(0xf0e8d8), gear = L(C.gear, { map: stoneTex }), metal = L(0x8a8690, { map: stoneTex });
   const eyeM = new THREE.MeshBasicMaterial({ color: C.eye }), mouthM = new THREE.MeshBasicMaterial({ color: 0x6a0e0e });
@@ -209,7 +213,14 @@ export function makeRat(C) {
   wear.push(add(Bx(0.05, 0.14, 0.02), scarM, 0.12, 0.12, 0.25, head, [0, 0, 0.4]));
   for (const w of wear) w.visible = false;
   if (C.bulk) g.userData.bulk = C.bulk;
-  return { g, body, head, legs, tail, jaw, bulk: C.bulk || 1, flames, glider, wear };
+  // The player-colour outer layer only matters when several rats share the screen (co-op passes player ≥ 1;
+  // player 1 gets it in co-op too via coopStart). Solo relies on the ring.
+  addOutline(g, TUNE.art.outlineHero, player >= 0 ? PLAYER[player] : null, TUNE.art.outlinePlayer);
+  // Hero identity (review #4): every lit hero material gets a rim in the player's colour
+  // (solo = P1), and heroes are drawn TUNE.art.heroScale x bigger than before.
+  const rimC = PLAYER[Math.max(0, player)], seen = new Set();
+  g.traverse(o => { if (o.isMesh && o.material && o.material.isMeshToonMaterial && !seen.has(o.material)) { seen.add(o.material); heroRim(o.material, rimC, TUNE.art.heroRim); } });
+  return { g, body, head, legs, tail, jaw, bulk: (C.bulk || 1) * TUNE.art.heroScale, flames, glider, wear };
 }
 
 /** Per-frame class and wear details: flickering flames, the glider opening in the air, scars as HP falls. */
@@ -225,12 +236,57 @@ export function ratExtras(rat, A, hpF) {
 export function setRat(C) {
   if (G.rat) scene.remove(G.rat.g);
   G.rat = makeRat(C);
+  addGlyph(G.rat, 0);
   scene.add(G.rat.g);
 }
 
 export const blob = new THREE.Mesh(new THREE.CircleGeometry(0.45, 12), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.4, depthWrite: false }));
 blob.rotation.x = -PI2;
+blob.material.color.setHex(PAL.void);
+blob.material.opacity = 0.45;
 scene.add(blob);
+/**
+ * Player ring (art bible §6, thickened per review #4): an unlit, fully saturated ring in the
+ * player's colour, a child of that rat's blob shadow. Drawn over enemies (no depth test).
+ */
+export function playerRing(shadow, color) {
+  const r = TUNE.art.ring, m = new THREE.Mesh(new THREE.RingGeometry(r - TUNE.art.ringW, r, 28), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1, depthWrite: false, depthTest: false, toneMapped: false, fog: false }));
+  m.position.z = 0.005;
+  m.renderOrder = 20;
+  shadow.add(m);
+  return m;
+}
+// Floating player glyphs (review #4): P1 triangle, P2 circle, P3 square, P4 diamond, in the
+// player's colour with a Void outline, always on top.
+const glyphTex = [];
+function glyphTexture(i) {
+  if (glyphTex[i]) return glyphTex[i];
+  const cv = document.createElement('canvas'), s = 64, x = cv.getContext('2d');
+  cv.width = cv.height = s;
+  x.beginPath();
+  if (i === 0) { x.moveTo(32, 54); x.lineTo(8, 12); x.lineTo(56, 12); x.closePath(); } // point-down triangle
+  else if (i === 1) x.arc(32, 32, 22, 0, Math.PI * 2);
+  else if (i === 2) x.rect(12, 12, 40, 40);
+  else { x.moveTo(32, 6); x.lineTo(58, 32); x.lineTo(32, 58); x.lineTo(6, 32); x.closePath(); }
+  x.lineJoin = 'round'; x.lineWidth = 10; x.strokeStyle = css(PAL.void); x.stroke();
+  x.fillStyle = css(PLAYER[i]); x.fill();
+  x.lineWidth = 3; x.strokeStyle = 'rgba(255,255,255,.55)'; x.stroke();
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;
+  return (glyphTex[i] = t);
+}
+/** Add player i's glyph above a rat (kept upright by being a sprite). */
+export function addGlyph(rat, i) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture(i), depthTest: false, depthWrite: false, toneMapped: false, fog: false }));
+  sp.scale.setScalar(TUNE.art.glyph);
+  sp.position.y = TUNE.art.glyphY;
+  sp.renderOrder = 21;
+  rat.g.add(sp);
+  rat.glyph = sp;
+  return sp;
+}
+playerRing(blob, PLAYER[0]);
 
 // ---------- portraits ----------
 const pScene = new THREE.Scene();

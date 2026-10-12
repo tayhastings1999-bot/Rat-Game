@@ -232,7 +232,7 @@ export function pounceAt(e, wind, dur, hgt, dmg, R, after, target, roof) {
   let tx = target ? target.x : P.x + P.vx * wind * 0.5, tz = target ? target.z : P.z + P.vz * wind * 0.5;
   if (!roof && solidFor(tileAt(tx, tz), false) && floorY(tx, tz) > P.y + 0.5) { tx = P.x; tz = P.z; }
   const ty = floorY(tx, tz);
-  fx('warn', tx, ty, tz, R, 0xff2a1a, wind + dur, 0, 0.45);
+  fx('warn', tx, ty, tz, R, 0xff7a1a, wind + dur, 0, 0.45);
   fx('ring', tx, ty, tz, R, 0xff4a2a, wind + dur, 0, 0.9);
   wait(e, wind, e => {
     Object.assign(e, {

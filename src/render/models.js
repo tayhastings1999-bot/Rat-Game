@@ -2,6 +2,7 @@
 // they can be drawn with instancing. Every entry has a lit `body` and an
 // unlit `glow` part (eyes, mouths, lights).
 import * as THREE from 'three';
+import { toon } from './toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TAU, PI2 } from '../core/util.js';
 import { furTex } from './textures.js';
@@ -371,4 +372,4 @@ export const GEO = {
 export const MOB_GEOS = Object.keys(GEO).filter(k => k !== 'drone' && k !== 'ratking' && k !== 'owl' && k !== 'dog');
 
 /** Creature skin: gouraud-lit vertex colours over a coarse fur texture, with PS1 vertex snap and affine mapping. */
-export const bodyMat = () => ps1(new THREE.MeshLambertMaterial({ vertexColors: true, map: furTex }));
+export const bodyMat = () => ps1(toon({ vertexColors: true, map: furTex }));

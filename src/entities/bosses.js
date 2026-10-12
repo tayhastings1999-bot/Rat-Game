@@ -233,7 +233,7 @@ const AI = {
       { id: 'feint', w: 1.8, tag: 'gap', cost: 3, ok: p >= 2, go: () => {
         // Rolled too early? It saw that coming.
         e.cd = 1.8; e.feintT = G.time;
-        fx('warn', P.x, P.y, P.z, 3.4, 0xff2a1a, 0.45, 0, 0.45);
+        fx('warn', P.x, P.y, P.z, 3.4, 0xff7a1a, 0.45, 0, 0.45);
         wait(e, 0.45, e => { if (brainOf(e).rolled > e.feintT) { dnum(e.x, e.y + e.h + 1, e.z, 'READ YOU', 'crit'); pounceAt(e, 0.12, 0.4, 3, dmg * 1.4, 3.4, null, predictAt(e, 0.5, 0)); } else cone(e, 4.4, 1.4, dmg * 1.2); });
       } },
       { id: 'frenzy', w: 2, tag: 'gap', ok: p >= 2, go: () => { e.cd = 2.4; chargeStart(e, 0.45, 20, 0.55, leadAim(20)); e.onChargeEnd = e => { wait(e, 0.12, e => cone(e, 3.8, 1.3, dmg)); }; } },

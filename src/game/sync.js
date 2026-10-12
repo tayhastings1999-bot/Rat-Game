@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
 import { camera, sun, lantern, lampL, post, renderer } from '../render/renderer.js';
-import { IMB, IMG, MOB_CAP, shadowIM, scrapIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
+import { IMB, IMG, IMO, MOB_CAP, shadowIM, scrapIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
 import { animTick, writePose, rigTime } from '../render/rig.js';
 import { tickAmbient } from '../fx/ambient.js';
@@ -42,20 +42,21 @@ for (let i = 0; i < BAR_N; i++) {
 const corruptCol = {};
 for (const k in CORRUPT) corruptCol[k] = new THREE.Color(CORRUPT[k].col);
 
-const TK_RGB = { melee: [2.6, 0.55, 0.42], shot: [1.8, 0.65, 2.7], area: [2.7, 2.1, 0.4], heal: [0.6, 2.4, 0.5] };
+// Telegraph tints stay on the enemy hues (orange/purple/lime), never player red/blue/yellow/green.
+const TK_RGB = { melee: [2.6, 1.15, 0.3], shot: [1.6, 0.8, 2.8], area: [2.6, 1.5, 0.25], heal: [1.5, 2.3, 0.35] };
 function mobColor(e) {
   const t = G.time;
   if (e.flash > 0) return tmpC.setScalar(3.5);
-  if (e.thief || e.robber) return tmpC.setRGB(2, 1.6, 0.3);
+  if (e.thief || e.robber) return tmpC.setRGB(2.2, 1.2, 0.3);
   if (e.scab) return tmpC.setRGB(1.5, 0.6, 1.8);
-  if (e.disguise) return P.scent ? tmpC.setRGB(2.4, 0.5, 0.4) : tmpC.setScalar(1);
-  if (e.hidden) return tmpC.setRGB(0.6, 2.2, 0.5);
-  if (e.rage > 0) return tmpC.setRGB(1.7, 0.75, 0.6);
+  if (e.disguise) return P.scent ? tmpC.setRGB(2.3, 1.05, 0.3) : tmpC.setScalar(1);
+  if (e.hidden) return tmpC.setRGB(1.4, 0.8, 2.4);
+  if (e.rage > 0) return tmpC.setRGB(1.8, 0.9, 0.35);
   if (e.wind > 0 || e.tel > 0) { const c = TK_RGB[e.tk] || TK_RGB.melee, f = 0.8 + 0.25 * Math.sin(t * 40); return tmpC.setRGB(c[0] * f, c[1] * f, c[2] * f); }
   if (e.recov > 0) return tmpC.setRGB(1.35, 1.5, 1.75); // overextended: open for a punish
-  if (P.scent) return tmpC.setRGB(2.4, 0.5, 0.4);
+  if (P.scent) return tmpC.setRGB(2.3, 1.05, 0.3);
   if (e.bT > 0) return tmpC.setRGB(1.6, 0.8, 0.4);
-  if (e.pT > 0) return tmpC.setRGB(0.7, 1.4, 0.6);
+  if (e.pT > 0) return tmpC.setRGB(1.2, 1.5, 0.4);
   if (e.corrupt) return tmpC.copy(corruptCol[e.corrupt]).multiplyScalar(0.9).addScalar(0.55 + 0.25 * Math.sin(t * 6 + e.ph));
   if (e.ward > 0) return tmpC.setRGB(0.7, 1, 1.6);
   if (e.mut) return tmpC.setRGB(0.95, 1.2, 0.8);
@@ -128,7 +129,7 @@ export function sync(dt) {
       dummy.scale.setScalar(e.r * (e.champion ? 2.6 : 1.8) * (1 + 0.08 * Math.sin(G.time * 8 + e.ph)));
       dummy.updateMatrix();
       ringIM.setMatrixAt(rings, dummy.matrix);
-      ringIM.setColorAt(rings, e.hexT > 0 ? tmpC.setHex(0xc070ff) : e.champion ? tmpC.setHex(0xffd040) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x6ad0ff));
+      ringIM.setColorAt(rings, e.hexT > 0 ? tmpC.setHex(0xc070ff) : e.champion ? tmpC.setHex(0xff7a1a) : e.corrupt ? corruptCol[e.corrupt] : tmpC.setHex(0x7a3cff));
       rings++;
     }
   }
@@ -175,10 +176,13 @@ export function sync(dt) {
     IMB[c.type].userData.rB.setXYZW(i, 0, 0, Math.sin(c.t * 30) * 0.6, c.t * 30);
     return true;
   });
+  let onScreenMobs = 0;
+  for (const k in cnt) onScreenMobs += cnt[k];
   for (const k in IMB) {
     const n = Math.min(MOB_CAP, cnt[k]);
     IMB[k].userData.rA.needsUpdate = IMB[k].userData.rB.needsUpdate = true;
-    IMB[k].count = IMG[k].count = n;
+    IMB[k].count = IMG[k].count = IMO[k].count = n;
+    IMO[k].visible = onScreenMobs <= TUNE.art.outlineMaxMobs;
     IMB[k].instanceMatrix.needsUpdate = IMG[k].instanceMatrix.needsUpdate = true;
     if (IMB[k].instanceColor) IMB[k].instanceColor.needsUpdate = true;
   }
@@ -399,6 +403,7 @@ function poseRat(dt, shadow) {
   forPlatsNear(P.x, P.z, 0, p => { if (!p.carried && Math.abs(P.x - p.x) < p.w / 2 && Math.abs(P.z - p.z) < p.d / 2 && p.y <= P.y + 0.05 && p.y > gy) gy = p.y; });
   shadow.position.set(P.x, gy + 0.03, P.z);
   shadow.scale.setScalar(clamp(1 - (P.y - gy) * 0.08, 0.4, 1));
+  if (shadow.children[0]) shadow.children[0].scale.setScalar(1 + TUNE.art.ringPulse * Math.sin(t * 6));
 }
 
 function animateCamera(dt) {
@@ -407,8 +412,9 @@ function animateCamera(dt) {
   // hole (render/fade.js) instead of moving the camera. Inside a duct or a building the
   // camera tips further over to look down into the cutaway.
   const C = TUNE.camera, play = G.state === 'play';
-  lead.x += ((play ? P.vx * C.lead : 0) - lead.x) * Math.min(1, dt * 3);
-  lead.z += ((play ? P.vz * C.lead : 0) - lead.z) * Math.min(1, dt * 3);
+  const lv = Math.hypot(P.vx, P.vz) * C.lead, lk = lv > C.leadMax ? C.leadMax / lv : 1;
+  lead.x += ((play ? P.vx * C.lead * lk : 0) - lead.x) * Math.min(1, dt * 3);
+  lead.z += ((play ? P.vz * C.lead * lk : 0) - lead.z) * Math.min(1, dt * 3);
   const fov = C.fov + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
   tgt.set(P.x + G.camOff.x + (P.inDuct || P.inBldg ? 0 : lead.x), P.y + 1, P.z + G.camOff.z + (P.inDuct || P.inBldg ? 0 : lead.z));
@@ -418,7 +424,11 @@ function animateCamera(dt) {
   const cut = (P.inDuct || P.inBldg) ? 1 : 0;
   camFix += (cut - camFix) * Math.min(1, (cut > camFix ? 8 : 2.5) * dt);
   const base = G.state === 'menu' ? G.camPitch : C.pitch, pitch = base + (C.cutPitch - base) * camFix;
-  const dist = cf ? Math.min(TUNE.coop.camMax, Math.max(G.camDist, TUNE.coop.camBase + cf.spread * TUNE.coop.camPerSpread)) : G.camDist;
+  // In play the camera is sized by how many world units it shows across (TUNE.camera.width);
+  // co-op widens it to the box around every standing rat plus padding. Menus keep G.camDist.
+  const across = 2 * Math.tan(C.fov * Math.PI / 360) * camera.aspect;
+  const wantW = cf ? clamp(Math.max(cf.spanX, cf.spanZ * camera.aspect) + 2 * TUNE.coop.camPad, Math.max(C.minWidth, G.camWidth || C.width), C.maxWidth) : (G.camWidth || C.width);
+  const dist = G.state === 'menu' ? G.camDist : wantW / across;
   want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   G.camPos.lerp(want, 1 - Math.exp(-10 * dt));
   camLook.lerp(tgt, 1 - Math.exp(-14 * dt));
