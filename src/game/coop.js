@@ -18,6 +18,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { CLASSES } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
+import { powerScaling } from '../combat/combat.js';
 import { makeRat, blob, playerRing, addGlyph } from '../entities/rat.js';
 import { keys, stepPlayer, primary, startRoll, useSpecial, pressE, toggleLock } from '../entities/player.js';
 import { updateEnemies } from '../entities/mobs.js';
@@ -43,7 +44,8 @@ export const coop = {
 export const INPUTS = { kb1: 'Keyboard + mouse', kb2: 'Keyboard (arrows + numpad)', pad0: 'Gamepad 1', pad1: 'Gamepad 2', pad2: 'Gamepad 3', pad3: 'Gamepad 4' };
 
 // Per-rat fields kept on run (everything else on run is shared by the party: gold, keys, XP, level, kills).
-const RF = ['critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'flaskT', 'flaskOn', 'cheese', 'tails', 'specT', 'primT', 'growth', 'streak', 'streakT', 'lowWarned', 'blood', 'bloodT'];
+// pow0/powHp/powDmg: each rat's enemy power-following is measured against its own start.
+const RF = ['pow0', 'powHp', 'powDmg', 'critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'flaskT', 'flaskOn', 'cheese', 'tails', 'specT', 'primT', 'growth', 'streak', 'streakT', 'lowWarned', 'blood', 'bloodT'];
 // Per-rat fields kept on G (turbo input state, lock-on, aim and attack input).
 const GF = ['turboHeld', 'turboKey', 'turboArmT', 'turboFlash', 'lockOn', 'attack', 'aimAt', 'touch', 'rat'];
 const pick = (o, ks) => { const r = {}; for (const k of ks) r[k] = o[k]; return r; };
@@ -95,6 +97,7 @@ export function coopStart(freshStats, shopGrowth) {
     fill(st, freshStats(cls));
     st.salvage = p1.st.salvage; // gold upgrades and difficulty are party-wide
     run.hp = st.maxHp;
+    powerScaling(true); // each rat's own power baseline (not player 1's)
     const a = i * Math.PI * 0.5;
     fill(P, { ...base, safe: { ...base.safe }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1 });
     const rat = makeRat(C, i);
