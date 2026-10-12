@@ -31,6 +31,7 @@ import { eatNearby, drainHealth } from './food.js';
 import { comboTick } from './swarm.js';
 import { useFlask, cycleFlask } from './shop.js';
 import { dnum } from '../fx/fx.js';
+import { bark, ratName } from './announcer.js';
 
 /** Co-op state. setup is chosen in the Nest; players exist only during a co-op run. */
 export const coop = {
@@ -42,7 +43,7 @@ export const coop = {
 export const INPUTS = { kb1: 'Keyboard + mouse', kb2: 'Keyboard (arrows + numpad)', pad0: 'Gamepad 1', pad1: 'Gamepad 2', pad2: 'Gamepad 3', pad3: 'Gamepad 4' };
 
 // Per-rat fields kept on run (everything else on run is shared by the party: gold, keys, XP, level, kills).
-const RF = ['cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'cheese', 'tails', 'specT', 'primT', 'growth', 'combo', 'comboT', 'lowWarned', 'blood', 'bloodT'];
+const RF = ['critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'cheese', 'tails', 'specT', 'primT', 'growth', 'combo', 'comboT', 'lowWarned', 'blood', 'bloodT'];
 // Per-rat fields kept on G (turbo input state, lock-on, aim and attack input).
 const GF = ['turboHeld', 'turboKey', 'turboArmT', 'turboFlash', 'lockOn', 'attack', 'aimAt', 'touch', 'rat'];
 const pick = (o, ks) => { const r = {}; for (const k of ks) r[k] = o[k]; return r; };
@@ -69,8 +70,6 @@ export function asPlayer(i, fn) {
   try { return fn(); } finally { swapOut(p); swapIn(cur); }
 }
 
-/** Number of rats in this run (1 outside co-op). */
-export const playerCount = () => (coop.on ? coop.players.length : 1);
 /** Live enemy count across every co-op split (the cap checks use this). */
 export const enemyTotal = () => (coop.total != null ? coop.total : W.enemies.length);
 
@@ -82,6 +81,8 @@ export function coopStart(freshStats, shopGrowth) {
   if (n < 2) return;
   coop.on = true;
   const p1 = { i: 0, input: coop.setup.input[0], blob, prev: {} };
+  blob.material.color.setHex(TUNE.coop.colors[0]);
+  blob.material.opacity = 0.75;
   coop.players = [p1];
   swapOut(p1);
   const base = { ...p1.P }, pr = pick(run, RF);
@@ -95,7 +96,10 @@ export function coopStart(freshStats, shopGrowth) {
     fill(P, { ...base, safe: { ...base.safe }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1 });
     const rat = makeRat(C);
     scene.add(rat.g);
-    const b = blob.clone();
+    const b = new THREE.Mesh(blob.geometry, blob.material.clone());
+    b.rotation.copy(blob.rotation);
+    b.material.color.setHex(TUNE.coop.colors[i]);
+    b.material.opacity = 0.75;
     scene.add(b);
     const p = { i, input: coop.setup.input[i] || 'pad' + (i - 1), blob: b, prev: {} };
     G.rat = rat;
@@ -111,6 +115,8 @@ export function coopEnd() {
   if (coop.on) {
     if (coop.active !== 0) swapIn(coop.players[0]);
     for (const p of coop.players.slice(1)) { scene.remove(p.G.rat.g); scene.remove(p.blob); }
+    blob.material.color.setHex(0);
+    blob.material.opacity = 0.4;
   }
   coop.on = false;
   coop.players = [];
@@ -177,6 +183,33 @@ function edgeActions(p, v) {
   p.prev = v;
 }
 
+// ---------- single-player gamepad ----------
+// Outside co-op, the first connected gamepad drives player 1 alongside the keyboard
+// (same layout as co-op pads; Start pauses). Keys the pad set are released when it lets go.
+const solo = { i: 0, input: 'pad0', prev: {}, held: {} };
+export function padSolo() {
+  const v = virtualKeys(solo, {});
+  for (const k in solo.held) if (!v[k]) keys[k] = false;
+  solo.held = {};
+  for (const k in v) if (k !== 'attack' && v[k]) { keys[k] = true; solo.held[k] = true; }
+  // Pad attack auto-aims like touch (nearest enemy ahead) while held; the right stick aims and fires.
+  if (v.attack && !solo.prev.attack) { solo.touchWas = G.touch; G.touch = true; G.attack = true; }
+  else if (!v.attack && solo.prev.attack) { G.touch = solo.touchWas; G.attack = false; }
+  edgeActions(solo, v);
+}
+/** Start button (any pad): true on the frame it is pressed. */
+const startPrev = {};
+export function padStart() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let hit = false;
+  for (let i = 0; i < 4; i++) {
+    const gp = fakePads[i] || (pads && pads[i]), b = gp && gp.buttons && gp.buttons[9], on = !!(b && (b.pressed || b === true));
+    if (on && !startPrev[i]) hit = true;
+    startPrev[i] = on;
+  }
+  return hit;
+}
+
 // ---------- the split ----------
 const alive = () => coop.players.filter(p => !(p.i === coop.active ? P.downed : p.P.downed));
 const posOf = p => (p.i === coop.active ? P : p.P);
@@ -240,6 +273,7 @@ function tickRevive(p, dt) {
     q.downed = false; q.reviveT = 0; q.inv = 2;
     p.run.hp = p.st.maxHp * C.reviveHp;
     dnum(q.x, q.y + 1.8, q.z, 'Back up!', 'heal');
+    bark(`P${p.i + 1} is back on their feet!`);
   }
 }
 
@@ -303,6 +337,7 @@ export function coopDown() {
   run.hp = 0;
   P.vx = P.vz = 0;
   dnum(P.x, P.y + 1.8, P.z, 'Down! Stand next to them to revive', 'crit');
+  bark(`${ratName()} is down! Get them up!`);
   return true;
 }
 
@@ -338,7 +373,7 @@ export function coopHud() {
   return coop.players.map(p => {
     const cur = p.i === coop.active, q = cur ? P : p.P, r = cur ? run : p.run, s = cur ? st : p.st, C = CLASSES[r.cls];
     const hp = Math.max(0, r.hp) / (s.maxHp || 1);
-    return `<div class="cp${q.downed ? ' down' : ''}" style="--rc:${C.rc}"><b class="px">P${p.i + 1} · ${C.name}</b>
+    return `<div class="cp${q.downed ? ' down' : ''}" style="--rc:#${TUNE.coop.colors[p.i].toString(16).padStart(6, '0')}"><b class="px">P${p.i + 1} · ${C.name}</b>
       <u><s style="width:${hp * 100}%"></s></u><i style="width:${Math.min(100, (r.turbo || 0) / 3 * 100)}%"></i>
       <span class="px">${q.downed ? `DOWN ${Math.round((q.reviveT || 0) / TUNE.coop.reviveTime * 100)}%` : `${Math.ceil(r.hp)} HP`}${Object.values(r.flasks || {}).reduce((a, b) => a + b, 0) ? ` · ${Object.values(r.flasks).reduce((a, b) => a + b, 0)} flask` : ''}</span></div>`;
   }).join('');

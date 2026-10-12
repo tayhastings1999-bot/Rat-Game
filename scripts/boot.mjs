@@ -89,6 +89,22 @@ await check('pause and resume', async () => {
   await page.click('#resumeBtn');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: 5000 });
 });
+await check('single player: a gamepad moves the rat and Start pauses', async () => {
+  for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) !== 'play'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(150); }
+  const p0 = await S(() => ({ x: __scurry.P.x, z: __scurry.P.z }));
+  await S(() => { __scurry.fakePads[0] = { axes: [0, -1, 0, 0], buttons: [] }; });
+  await page.waitForTimeout(1200);
+  await S(() => { __scurry.fakePads[0].axes = [0, 0, 0, 0]; });
+  const p1 = await S(() => ({ x: __scurry.P.x, z: __scurry.P.z }));
+  if (Math.hypot(p1.x - p0.x, p1.z - p0.z) < 0.5) throw new Error('rat did not move');
+  await S(() => { __scurry.fakePads[0].buttons = []; __scurry.fakePads[0].buttons[9] = { pressed: true }; });
+  await page.waitForFunction(() => __scurry.G.state === 'paused', null, { timeout: 5000 });
+  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; });
+  await page.waitForTimeout(100);
+  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: true }; });
+  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: 5000 });
+  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; });
+});
 await check('held flasks show on the HUD, cycle with B and uncork with V', async () => {
   for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) !== 'play'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(150); }
   if (!(await page.locator('#slots .slot.flask').count())) throw new Error('no flask slot on the HUD');

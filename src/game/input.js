@@ -48,7 +48,6 @@ export function initInput() {
       if (e.code === 'KeyE') pressE();
       if (e.code === 'KeyF') toggleScent();
       if (e.code === 'KeyM' || e.code === 'Tab') openMap();
-      if (e.code === 'Escape' || e.code === 'KeyP') pause(true);
     } else if (s === 'paused' || s === 'map') {
       if (['Escape', 'KeyP', 'KeyM', 'Tab', 'Enter'].includes(e.code)) resume();
     } else if (s === 'menu') {

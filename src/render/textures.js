@@ -232,15 +232,6 @@ export const glassTex = ctex(64, (x, s) => {
   for (let i = 0; i < 4; i++) { x.fillRect(i * 16, 0, 1, s); x.fillRect(0, i * 16, s, 1); }
 });
 
-export const chainTex = ctex(64, x => {
-  x.clearRect(0, 0, 64, 64);
-  x.strokeStyle = '#a8acb0'; x.lineWidth = 1.5;
-  for (let i = -64; i < 128; i += 8) {
-    x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 64, 64); x.stroke();
-    x.beginPath(); x.moveTo(i, 64); x.lineTo(i + 64, 0); x.stroke();
-  }
-  x.fillStyle = '#6a6e74'; x.fillRect(0, 0, 64, 3); x.fillRect(0, 0, 3, 64);
-});
 
 // ---------- FX atlas: 4 rows x 4 frames (slash, spark, explosion, blood decal) ----------
 const hashN = (x, y, s) => { const v = Math.sin(x * 12.9898 + y * 78.233 + s * 37.719) * 43758.5453; return v - Math.floor(v); };

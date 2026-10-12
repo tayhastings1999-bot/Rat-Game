@@ -28,6 +28,7 @@ export const TUNE = {
     leash: 26, // a rat farther than this from the lead is pulled back beside it
     camBase: 13, camPerSpread: 0.9, camMax: 24, // camera distance = max(zoom, base + spread × perSpread), capped
     deadzone: 0.35, // gamepad stick deadzone
+    colors: [0xe03a2a, 0x3a7ae0, 0xe0c030, 0x3ac060], // player rings and HUD cards: red, blue, yellow, green
   },
   difficulty: {
     // Casual / Normal / Insane, picked in the Nest and saved per slot (meta.difficulty).

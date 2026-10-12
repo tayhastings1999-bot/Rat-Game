@@ -54,4 +54,3 @@ export const BOSS_VARIANTS = {
   brood: { suffix: ' and Brood', tint: 0x60ff60, desc: 'calls its family in at every phase' },
 };
 
-export const LEVEL_COUNT = CITY_LEVELS.length + SEWER_LEVELS.length + Object.keys(SECRET_LEVELS).length;

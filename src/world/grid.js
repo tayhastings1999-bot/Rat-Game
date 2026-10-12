@@ -49,8 +49,6 @@ export const topAt = (gx, gz) => (inG(gx, gz) ? M.hgt[gi(gx, gz)] : 12);
 export const OPEN = t => t === 1 || t === 2 || t === 4 || t === 9 || t === 10;
 /** Dry walkable ground (for placing props and spawning). */
 export const DRY = t => t === 1 || t === 9 || t === 10;
-/** Brick and concrete walls you can climb without augments. */
-export const CLIMB = t => t === 0 || t === 3 || t === 8;
 export const solidFor = (t, isP) => t === 0 || t === 6 || t === 3 || t === 8 || (t === 5 && !(isP && P.squeeze)) || (t === 11 && !(isP && P.squeeze && P.y < DUCT_TOP));
 
 /** Water and acid depth: city puddles are ankle-deep; sewer channels come up to the rat's belly. */
@@ -264,12 +262,3 @@ export function collideBody(b, prevY, R, H, isP) {
   return g;
 }
 
-/** True if any solid tile blocks the segment a→b (used to keep buildings from hiding the rat). */
-export function segBlocked(ax, ay, az, bx, by, bz) {
-  const dx = bx - ax, dy = by - ay, dz = bz - az, L = Math.hypot(dx, dy, dz), n = Math.ceil(L / 0.7);
-  for (let i = 2; i <= n; i++) {
-    const u = i / n, x = ax + dx * u, y = ay + dy * u, z = az + dz * u, gx = toG(x), gz = toG(z), t = tAt(gx, gz);
-    if ((t === 0 || t === 6 || t === 3 || (t === 11 && y > DUCT_TOP)) && y < topAt(gx, gz) - 0.2) return true;
-  }
-  return false;
-}

@@ -64,11 +64,6 @@ export function pfx(row, x, y, z, size, life, o = {}) {
   return f;
 }
 
-export function slashFx(A, R, col, from = P) {
-  sfx('slash');
-  pfx(0, from.x + Math.sin(A) * R * 0.5, from.y + 0.5, from.z + Math.cos(A) * R * 0.5, R * 2.1, 0.2, { ground: true, ang: A, col });
-  if (from === P) P.atk = 0.22;
-}
 // ---------- swipe crescents ----------
 /** Unit arc (inner 0.5, outer 1) spanning `span` radians around +z, uv.x along the arc, uv.y across it. */
 function arcGeo(span, segs = 22) {
