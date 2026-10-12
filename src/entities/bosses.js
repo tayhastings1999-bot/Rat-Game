@@ -5,6 +5,7 @@ import { onBossDeath as storyBossDown } from '../game/story.js';
 import * as THREE from 'three';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
+import { onBossWake } from '../game/shop.js';
 import { scene, dropCreature } from '../render/renderer.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -75,6 +76,7 @@ export function spawnBoss() {
   }
   W.enemies.push(b);
   G.boss = b;
+  onBossWake();
   if (b.variant === 'brood') callBrood(b);
   b.label = `${b.name.toUpperCase()} · I`;
   $('bossLabel').textContent = b.label;

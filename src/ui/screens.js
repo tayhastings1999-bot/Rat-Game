@@ -1,7 +1,10 @@
-// Overlay screens: main menu, pause, map and death.
+// Overlay screens: save slots, the Nest (hub and shop), pause, map and death.
 import { journalHTML, CHAPTERS, chapter } from '../game/story.js';
 import { fmt, commas, $ } from '../core/util.js';
-import { G, run, meta, best, settings, saveMeta, saveSettings, saveBest } from '../core/state.js';
+import { G, run, meta, best, settings, saveMeta, saveSettings, saveBest, save, SLOTS, readSlot, loadSlot, deleteSlot } from '../core/state.js';
+import { SHOP } from '../data/shop.js';
+import { rank, price, buy, effectText, isPerm, cheatDeath } from '../game/shop.js';
+import { SHOP_TABS } from '../data/shop.js';
 import { CLASSES, SKINS, skinOk } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
@@ -11,7 +14,7 @@ import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
 import { startRun, checkUnlocks, bankSalvage, menu } from '../game/flow.js';
 import { epitaph } from '../game/personality.js';
 import { runScore, shareCard } from '../game/score.js';
-import { drawMap } from './hud.js';
+import { drawMap, banner } from './hud.js';
 import { SIGS } from '../game/signature.js';
 import { BLASTS } from '../game/turbo.js';
 import { STAT_KEYS, STAT_NAMES } from '../game/stats.js';
@@ -43,22 +46,77 @@ export const HOWTO = `<div class="howto">
       <div><h3 class="px">Touch</h3><p>Left stick to move. Attack aims at the nearest enemy in front of you. Jump, Dodge, Special, Sig and Use sit on the right; hold Jump at a marked pipe to climb it. Tap Turbo for your blast; hold Turbo, let go, then tap Special or Sig for the turbo version. Vial throws a Rot Vial.</p></div>
     </div>`;
 
-export function renderMenu() {
-  G.state = 'menu';
+// ---------- save slots ----------
+export function renderSlotSelect() {
+  G.state = 'slots';
+  const last = (() => { try { return JSON.parse(localStorage.getItem('scurry.activeSlot')) || 0; } catch (_) { return 0; } })();
+  const slot = i => {
+    const d = readSlot(i);
+    if (!d) return `<button class="card slot" data-slot="${i}"><div class="row"><span class="key px">${i}</span><span class="role">Empty</span></div><b>New rat</b><span class="d">Start fresh in this burrow.</span></button>`;
+    const m = d.meta, ups = Object.values(m.shop || {}).reduce((a, b) => a + b, 0);
+    return `<div class="slotw"><button class="card slot${i === last ? ' on' : ''}" data-slot="${i}"><div class="row"><span class="key px">${i}</span><span class="role">${d.at ? new Date(d.at).toLocaleDateString() : ''}</span></div>
+      <b>Burrow ${i}</b><span class="s">${commas(m.salvage || 0)} gold · ${m.runs || 0} runs · ${ups} upgrades</span>
+      <span class="s">Deepest zone ${(m.maxDistrict || 0) + 1}${d.best && d.best.time ? ` · best ${fmt(d.best.time)}` : ''}</span></button>
+      <button class="btn ghost" data-del="${i}" style="font-size:11px;padding:6px 10px">Delete</button></div>`;
+  };
   show(`<div class="panel frame">
     <div class="kick px">A rat brawler · Streets above, sewer below</div><h1>Scurry</h1>
-    <p>Cinder Row burned, and the streets are crawling. Smash the nests, find the keys and the food, and kill what rules each zone.</p>
-    ${HOWTO}
-    <div class="kick px">Pick a rat to start · ${commas(meta.salvage || 0)} gold banked</div>
+    <p>Pick a burrow. Each one keeps its own gold, upgrades, furs and story.</p>
+    <div class="cards">${Array.from({ length: SLOTS }, (_, j) => slot(j + 1)).join('')}</div>
+    <p class="px" style="font-size:12px">Press 1–${SLOTS}</p></div>`);
+  ov.querySelectorAll('[data-slot]').forEach(b => { b.onclick = () => pickSlot(+b.dataset.slot); });
+  ov.querySelectorAll('[data-del]').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.del;
+      if (b.dataset.arm) { deleteSlot(i); renderSlotSelect(); return; }
+      b.dataset.arm = 1; b.textContent = 'Really delete?';
+    };
+  });
+}
+export function pickSlot(i) {
+  if (i < 1 || i > SLOTS) return;
+  loadSlot(i);
+  refreshPortraits();
+  setRat(CLASSES.brawler);
+  renderMenu();
+}
+
+// ---------- the Nest shop ----------
+function shopHTML() {
+  const item = ([id, S]) => {
+    const r = rank(id), c = price(id), can = c != null && (meta.salvage || 0) >= c, perm = isPerm(id);
+    const info = perm ? `${r ? effectText(id) : 'Not owned'}${c != null ? ` → ${effectText(id, r + 1)}` : ''}` : effectText(id);
+    return `<button class="card buy" data-buy="${id}" ${can ? '' : 'disabled'} style="${can ? '' : 'opacity:.55'}">
+      <div class="row"><b>${S.name}</b><span class="role">${perm ? `${r}/${S.max}` : `packed ${r}/${S.max}`}</span></div>
+      <span class="d">${info}</span><span class="s">${c == null ? (perm ? 'Maxed' : 'Pack full') : commas(c) + ' gold'}</span></button>`;
+  };
+  return Object.entries(SHOP_TABS).map(([t, label]) => `<div class="kick px" style="font-size:11px">${label}</div>
+    <div class="shop">${Object.entries(SHOP).filter(([, S]) => S.tab === t).map(item).join('')}</div>`).join('');
+}
+
+// ---------- the Nest (hub between runs) ----------
+export function renderMenu() {
+  if (!save.slot) { renderSlotSelect(); return; }
+  G.state = 'menu';
+  show(`<div class="panel frame">
+    <div class="kick px">Burrow ${save.slot} · The Nest</div><h1>Scurry</h1>
+    <p>Back in the Nest. Spend the gold you dragged home, then pick a rat and head up to Cinder Row.</p>
+    <details class="jwrap"><summary class="px">How to play</summary>${HOWTO}</details>
+    <div class="kick px" id="hubGold">The Nest shop · ${commas(meta.salvage || 0)} gold banked</div>
+    ${shopHTML()}
+    <div class="kick px">Pick a rat to start</div>
     <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => `<button class="card" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="">
         <b>${C.name}</b><span class="d">${C.blurb}</span>
         <span class="s">${TUNE.classes[k].hp} HP · ${PRIM[C.prim].name}</span>
         <span class="stats">${STAT_KEYS.map(sk => `<i title="${STAT_NAMES[sk]} ${TUNE.classes[k][sk]}/10"><em>${sk.toUpperCase()}</em><u><s style="width:${TUNE.classes[k][sk] * 10}%"></s></u></i>`).join('')}</span>
         <span class="s">Q: ${SPECIALS[C.special].name}<br>G: ${SIGS[k] ? SIGS[k].name : ''}<br>X: ${BLASTS[k] ? BLASTS[k].name : ''}</span></button>`).join('')}</div>${skinsHTML()}
-    <p class="px" style="font-size:12px">${best.time ? `Longest run: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}</p></div>`);
+    <p class="px" style="font-size:12px">${best.time ? `Longest run: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}</p>
+    <div class="btns"><button class="btn ghost" id="slotsBtn">Change burrow</button></div></div>`);
   G.mode = 'survival';
-  ov.querySelectorAll('.card').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
+  $('slotsBtn').onclick = renderSlotSelect;
+  ov.querySelectorAll('[data-buy]').forEach(b => { b.onclick = () => { if (buy(b.dataset.buy)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
+  ov.querySelectorAll('.card[data-k]').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
   ov.querySelectorAll('[data-s]').forEach(b => {
     b.onclick = () => {
       const i = +b.dataset.s;
@@ -93,7 +151,7 @@ export function pause(on) {
   $('sMu').oninput = e => { settings.music = +e.target.value; applyVolumes(); saveSettings(); };
   $('sFx').oninput = e => { settings.sfx = +e.target.value; applyVolumes(); saveSettings(); };
   $('sVo').onchange = e => { settings.voice = e.target.checked; saveSettings(); };
-  $('quit').onclick = () => { G.state = 'play'; run.hp = 0; die(); };
+  $('quit').onclick = () => { G.state = 'play'; run.hp = 0; run.abandon = true; die(); };
 }
 
 export function openMap() {
@@ -116,6 +174,7 @@ function dmgTable() {
 }
 
 export function die() {
+  if (cheatDeath()) { banner('Second Tail', 'Back on your feet'); return; }
   G.state = 'dead';
   const got = checkUnlocks();
   const nb = run.time > best.time;
@@ -126,7 +185,7 @@ export function die() {
     <p class="px" style="font-size:15px">Score <b style="color:var(--gold)">${commas(score)}</b>${(run.ranks || []).length ? ` · ranks <span class="ranks">${run.ranks.map(r => r.r).join(' ')}</span>` : ''}</p>
     <p class="px" style="color:#9ad0ff;font-size:13px">+${banked.salvage} gold banked</p>
     ${got.length ? `<p class="px" style="color:#f2b233;font-size:13px">Unlocked: ${got.join(' · ')}</p>` : ''}${dmgTable()}
-    <div class="btns"><button class="btn" id="again">Choose a rat</button><button class="btn ghost" id="share">Share run card</button><span class="px" style="font-size:12px;color:var(--dim)">or press R</span></div></div>`);
+    <div class="btns"><button class="btn" id="again">Back to the Nest</button><button class="btn ghost" id="share">Share run card</button><span class="px" style="font-size:12px;color:var(--dim)">or press R</span></div></div>`);
   $('again').onclick = menu;
   $('share').onclick = async () => { const b = $('share'); b.textContent = 'Making card…'; const r = await shareCard(); b.textContent = r === 'shared' ? 'Shared' : 'Card saved'; };
 }

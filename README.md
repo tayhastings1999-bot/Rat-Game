@@ -271,12 +271,12 @@ scripts/baseline.mjs per-phase baseline capture; pace.mjs leveling-pace tool
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
 
-Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta` in `core/state.js`) that modules import and mutate in place. Saves go to `localStorage` under `scurry.*`. Phase 1 drops the old Nest purchases and the `scurry4.*` / `scurry.daily.*` keys on load; banked salvage carries over as gold.
+Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta` in `core/state.js`) that modules import and mutate in place. Saves go to `localStorage`: progress in three versioned slots `scurry.slot1..3` (old `scurry.meta`/`scurry.best` saves move into slot 1 on first load and are left in place), settings in `scurry.settings`. Phase 1 drops the old Nest purchases and the `scurry4.*` / `scurry.daily.*` keys on load; banked salvage carries over as gold.
 
 ## Known gaps
 
 - Touch controls are tuned for landscape phones and tablets; portrait works but is cramped.
-- Mid-rebuild (Phase 3 of 5): there's no hub, shop or save slots yet, and gold has nothing to buy (Phase 4).
+- Phase 4 first pass: three save slots, the Nest (a menu hub between runs) and its gold shop (permanent upgrades, supplies for the next run, power-up flasks). The Nest is a screen, not yet a walkable place.
 - Turbo moves use the normal move's animation with an added pose, aura and class flourish; there are no fully bespoke turbo animations.
 - The bots don't climb pipes or hunt secrets, so the lab measures those from level data and scripted checks rather than play.
 - Scent Veil stops the horde chasing you; ranged mobs that already see you can still shoot.

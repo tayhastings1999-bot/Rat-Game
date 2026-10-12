@@ -252,3 +252,9 @@ body.combat #contracts{opacity:.25}
 .jrow{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start;font-size:14px}
 .jrow b.px{color:var(--gold);font-size:13px}.jrow span{display:block;color:var(--dim)}
 .jrow.lock{opacity:.45}.jrow.now b:not(.px){color:#ffd070}
+
+/* Nest shop and save slots */
+.shop{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.shop .card{padding:10px 12px;gap:4px}
+.slotw{display:flex;flex-direction:column;gap:6px}
+.card.slot.on{box-shadow:0 0 0 2px var(--gold)}

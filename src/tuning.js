@@ -232,6 +232,15 @@ export const TUNE = {
     base: 12, lin: 9, mul: 2.2, exp: 1.7,
     maxLevel: 99,
   },
+  shop: {
+    // The Nest shop (game/shop.js): permanent upgrades bought with banked gold, kept per save slot.
+    // cost of rank r (0-based) = round(base × grow^r). Stat ranks feed run.growth at run start.
+    statPer: 0.5, // stat points per rank of Sharp Teeth / Quick Feet / Scarred Hide / Rot Lore
+    hpPer: 10, // max HP per rank of Thick Hide
+    goldPer: 0.1, // gold pickup +10% per rank of Packrat
+    grow: 1.8, // upgrade price × this per rank owned
+    cheeseAt: 0.25, cheeseHeal: 0.4, // packed cheese: eaten below 25% HP, heals 40%
+  },
 };
 
 /** Flat list of [path, value] for the debug panel. */

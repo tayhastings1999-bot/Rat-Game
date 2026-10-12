@@ -60,6 +60,8 @@ const shot = name => page.screenshot({ path: OUT + name + '.png' });
 await step('load menu', async () => {
   await page.goto('http://localhost:5199/?debug');
   await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
+  await page.click('[data-slot="1"]'); // save slot screen comes first
+  await page.waitForSelector('.card[data-k="brawler"]');
   await S(() => { __scurry.G.testNoRoles = true; }); // placed lurkers and mimics would ambush scripted steps
   await wait(1500);
   await shot('01-menu');
@@ -778,6 +780,7 @@ await page.close(); // stop the desktop session's game loop competing for CPU
   await step('touch: phone menu and start', async () => {
     await tp.goto('http://localhost:5199/?debug');
     await tp.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
+    await tp.tap('[data-slot="1"]');
     await tp.waitForTimeout(1200);
     await tp.screenshot({ path: OUT + '12-phone-menu.png' });
     await tp.locator('.card[data-k="brawler"]').scrollIntoViewIfNeeded();
