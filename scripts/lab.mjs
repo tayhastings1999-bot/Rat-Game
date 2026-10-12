@@ -65,7 +65,11 @@ const L = {
       if (q) { s.G.testNoRoles = true; Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); }
     }, [cls, god, quiet]);
     for (let i = 0; i < 80; i++) { if (await S(() => __scurry.G.state === 'play' && __scurry.run.time >= 0.15)) break; await sleep(80); }
-    if (level) await L.level(...level);
+    if (level) {
+      await L.level(...level);
+      // A rat dropped into a later zone gets the levels a player would have by then (about 2.5 a zone).
+      await S(() => { const s = __scurry, want = Math.min(s.TUNE.xp.maxLevel, 1 + Math.round(2.5 * (s.run.tier || 0))); let g = 0; while (s.run.level < want && g++ < 60) s.addXP(s.run.need + 1); s.run.hp = s.st.maxHp; });
+    }
   },
   /** Rebuild the world as one of the fixed levels ([layer, index, secret]); the rat stands at its start. */
   async level(layer, i, secret = null) {

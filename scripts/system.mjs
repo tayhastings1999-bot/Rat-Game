@@ -363,6 +363,81 @@ await check('walls between the camera and the rat open a see-through hole', asyn
   assert(r.amt > 0.5 && r.r > 4, `fade off in play: ${JSON.stringify(r)}`);
   return `radius ${Math.round(r.r)}px`;
 });
+// ---------------------------------------------------------------- Phase 3
+await check('only marked pipes can be climbed, and each leads to a reachable roof', async () => {
+  await fresh();
+  const r = await S(() => {
+    const s = __scurry, c = s.W.climbs[0], w = s.wallSpot(4.5, 11.9);
+    s.P.x = c.x; s.P.z = c.z; s.P.y = 0; const atPipe = !!s.pipeNear();
+    s.P.x = w.x; s.P.z = w.z; const atWall = !!s.pipeNear() && !s.W.climbs.some(p => Math.hypot(p.x - w.x, p.z - w.z) < 2);
+    return { n: s.W.climbs.length, atPipe, atWall, roofOK: s.W.climbs.every(p => s.M.roofOK[p.gx + p.gz * s.M.W]) };
+  });
+  assert(r.n >= 6, `only ${r.n} pipes`);
+  assert(r.atPipe && !r.atWall, 'pipe reach wrong: ' + JSON.stringify(r));
+  assert(r.roofOK, 'a pipe leads to a roof marked unreachable');
+  return `${r.n} pipes`;
+});
+await check('keys stack, and a padlocked chest takes one', async () => {
+  await fresh();
+  const r = await S(() => {
+    const s = __scurry; s.god(true);
+    for (let i = 0; i < 2; i++) s.dropKey(s.P.x, s.P.y, s.P.z);
+    s.qa.stepRaw(0.3);
+    const held = s.run.keys, c = s.W.chests.find(c => c.locked);
+    if (!c) return { held };
+    s.P.x = c.x + 1; s.P.z = c.z; s.P.y = c.y;
+    s.run.keys = 0; s.pressE(); const shut = !c.open;
+    s.run.keys = 1; s.pressE();
+    return { held, shut, open: c.open, left: s.run.keys };
+  });
+  assert(r.held === 2, 'keys did not stack: ' + r.held);
+  assert(r.shut && r.open && r.left === 0, 'locked chest wrong: ' + JSON.stringify(r));
+  return 'stacked 2, one spent';
+});
+await check('power-ups run for 25 s and can overlap', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry; s.god(true); s.grantPowerup('iron'); s.grantPowerup('quick'); const both = s.puList().length; s.qa.stepRaw(24.5); const still = s.puList().length; s.qa.stepRaw(1); return { both, still, after: s.puList().length }; });
+  assert(r.both === 2 && r.still === 2 && r.after === 0, JSON.stringify(r));
+  return '2 at once, gone at 25 s';
+});
+await check('every level counts 3–6 secrets, and sniffing pings them', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry, m = s.run.finds.m, f = s.W.finds[0]; s.P.x = f.x + 10; s.P.z = f.z; const p = s.pingFinds(); return { m, lit: s.W.finds.filter(f => f.showT > 0).length, best: p && p.best }; });
+  assert(r.m >= 3 && r.m <= 6, 'secret count ' + r.m);
+  assert(r.lit >= 1, 'ping lit nothing');
+  return `${r.m} secrets, ${r.lit} pinged`;
+});
+await check('a level-up grows the class stats and max HP', async () => {
+  await fresh('brawler');
+  const r = await S(() => { const s = __scurry, hp = s.st.maxHp, m = s.st.primMul; s.addXP(s.run.need + 1); return { lvl: s.run.level, hp: s.st.maxHp - hp, str: s.st.primMul - m }; });
+  assert(r.lvl === 2 && r.hp > 0 && r.str > 0, JSON.stringify(r));
+  return `+${r.hp} HP`;
+});
+await check('a frame stamped before the last clock reset never runs time backwards (no sinking through the floor)', async () => {
+  await fresh();
+  const r = await S(async () => {
+    const s = __scurry, t0 = s.run.time;
+    let minY = 9;
+    s.G.last = performance.now() + 400; // what a slow world build or resume leaves behind
+    for (let i = 0; i < 20; i++) { await new Promise(r => requestAnimationFrame(r)); minY = Math.min(minY, s.P.y); }
+    return { back: s.run.time < t0, minY };
+  });
+  assert(!r.back, 'run time went backwards');
+  assert(r.minY > -0.4, 'the rat sank to y=' + r.minY.toFixed(2));
+  return 'held at y≥' + r.minY.toFixed(2);
+});
+await check('leaving a level shows a graded tally card', async () => {
+  await fresh();
+  await S(() => { __scurry.G.testNoTally = false; __scurry.exitRoad(); });
+  await sleep(150);
+  const st = await S(() => __scurry.G.state), card = await S(() => document.querySelector('.tally h1') && document.querySelector('.tally h1').textContent);
+  await page.keyboard.press('Enter');
+  await sleep(1200);
+  const after = await S(() => { const s = __scurry; s.G.testNoTally = true; return { st: s.G.state, ranks: (s.run.ranks || []).length }; });
+  assert(st === 'tally' && /^[SABCD]$/.test(card || ''), `no tally card (${st}, ${card})`);
+  assert(after.st === 'play' && after.ranks === 1, 'did not move on: ' + JSON.stringify(after));
+  return 'grade ' + card;
+});
 await check('every action has a key, a touch button and How to Play text', async () => {
   const r = await S(() => {
     const how = __scurry.HOWTO, btns = [...document.querySelectorAll('#tBtns [data-b], #tTop [data-b]')].map(b => b.dataset.b);

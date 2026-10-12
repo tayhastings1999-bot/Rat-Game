@@ -27,9 +27,9 @@ Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for pok
 
 ## What's in the game
 
-**Rebuild in progress.** Scurry is being rebuilt into a single-player dungeon brawler: a walkable hub, two realms of zones, a fixed camera, direct aim combat, constant health drain, generators (nests) that pour out one enemy family each, keys and treasure, and persistent heroes from level 1 to 99. The work lands in phases. **Phase 1** cut the roguelite layer (the threat engine, level-up picks, weapons and tomes, rule breakers, mutations, cursed loot, the Nest shop, the Daily Run, contracts, the shriek, stamina, the light meter and the road choice). **Phase 2 (this build)** added the combat core: a fixed camera that sees through walls, four class stats, the turbo meter and moves, Rot Vials, constant health drain with three sizes of food (some of it moldy, all of it breakable), tiered nests that each raise one enemy family, the Reaper, thieves and a low-health announcer. A follow-up pass added **22 fixed levels** (night and deep-sewer remixes with boss variants, and three secret zones), sleeping enemy packs, Reaper graves, thieves that take keys, a gentler first zone, a line-of-fire warning on food and per-class turbo visuals. Later phases add power-ups, the rest of the secrets system, the hub and the new progression.
+**Rebuild in progress.** Scurry is being rebuilt into a single-player dungeon brawler: a walkable hub, two realms of zones, a fixed camera, direct aim combat, constant health drain, generators (nests) that pour out one enemy family each, keys and treasure, and persistent heroes from level 1 to 99. The work lands in phases. **Phase 1** cut the roguelite layer (the threat engine, level-up picks, weapons and tomes, rule breakers, mutations, cursed loot, the Nest shop, the Daily Run, contracts, the shriek, stamina, the light meter and the road choice). **Phase 2 (this build)** added the combat core: a fixed camera that sees through walls, four class stats, the turbo meter and moves, Rot Vials, constant health drain with three sizes of food (some of it moldy, all of it breakable), tiered nests that each raise one enemy family, the Reaper, thieves and a low-health announcer. A follow-up pass added **22 fixed levels** (night and deep-sewer remixes with boss variants, and three secret zones), sleeping enemy packs, Reaper graves, thieves that take keys, a gentler first zone, a line-of-fire warning on food and per-class turbo visuals. **Phase 3 (this build)** adds levels and loot: climbing only at marked drainpipes and fire escapes (with rooftop caches), 3–6 secrets per level with a HUD counter and sniff pings, stacking keys that open locked gates and padlocked chests, eight 25-second power-ups, stat growth on every level-up and an exit tally with a grade; it also fixes collapsing floors, wading depth and things spawning inside props. Later phases add the hub, save slots, the shop and the new progression.
 
-**Structure.** A run is a chain of city levels: a jittered street grid with sidewalks, alleys, buildings of different roof heights, parks, yards, parking lots, cars, street lamps, neon, rooftop clutter and power lines between roofs. **Smash every nest to wake the level's boss.** Killing it opens a single road to the next level and drops a **sewer key**.
+**Structure.** A run is a chain of city levels: a jittered street grid with sidewalks, alleys, buildings of different roof heights, parks, yards, parking lots, cars, street lamps, neon, rooftop clutter and power lines between roofs. **Smash every nest to wake the level's boss.** Killing it opens a single road to the next level and drops a **key**.
 
 **22 levels.** Every level has a fixed seed (`src/data/levels.js`), so it has the same layout every time, and its own hazard, enemy families and boss. After the list runs out the run loops with a numeral (Cinder Row II) and fresh seeds.
 
@@ -46,7 +46,7 @@ The remixes are new layouts under moonlight or deeper dark, with a different fam
 - *The Rat Run*: 45 seconds of gold piled down every street, with thieves coming for it.
 - *The Bone Garden*: six Warrens, one from each family; smash them all and a hoard of premium chests appears with the way out.
 
-**The sewer.** Spend a key on a city level's manhole to descend. Keys also drop from corrupted elites. Each trip takes you to the next sewer level, with toxic water, zero-visibility pockets, mutated mobs (+50% HP, +25% damage, more elites) and premium and cursed chests. Beat the sewer boss and climb the ladder to the next surface district.
+**The sewer.** Spend a key on a city level's manhole to descend. Each trip takes you to the next sewer level, with toxic water, zero-visibility pockets, mutated mobs (+50% HP, +25% damage, more elites) and premium and cursed chests. Beat the sewer boss and climb the ladder to the next surface district.
 
 **Difficulty by zone.** Enemy strength comes from a per-zone table instead of the old threat engine: each zone has a difficulty index (`zone.threatPerZone` × zone number) that scales enemy HP, damage, speed, attack rate and elite odds. All of it lives in `src/tuning.js`.
 
@@ -62,11 +62,37 @@ The remixes are new layouts under moonlight or deeper dark, with a different fam
 
 A **Litter Pile** (160 HP) spawns slowly and keeps 6 children; a **Burrow** (320) is faster and keeps 10; a **Warren** (560) spawns every ~2s and keeps 14. Damage knocks a nest down a tier as its HP falls (a half-smashed Warren is a Burrow), and each nest sometimes raises its family's weaker member. Later zones have more nests, more Warrens and more HP; no Warrens appear before the third zone. A type's first appearance gets a banner. At most 200 enemies are alive at once.
 
-**Leveling.** Kills pay XP straight into your bar (nests 15/25/40 by tier, rivals 40, bosses 220). Level-ups are automatic: a banner, a shockwave that shoves the horde back and a small heal. There are no picks. XP to the next level is `base + lin·(L−1) + mul·(L−1)^exp`, capped at level 99.
+**Leveling.** Kills pay XP straight into your bar (nests 15/25/40 by tier, rivals 40, bosses 220). Level-ups are automatic: a banner, a shockwave that shoves the horde back and a small heal. There are no picks. Every level also **grows your stats**: 0.45 stat points split across Strength, Speed, Armor and Magic in proportion to your class's own stats (a Brawler grows mostly Strength and Armor), plus 4 max HP, healed at once (`TUNE.growth`). XP to the next level is `base + lin·(L−1) + mul·(L−1)^exp`, capped at level 99.
 
 **Gold.** Chests, bins, bounties and kills drop **gold** (the old salvage). Chests are free to open. Gold you carry is banked when the run ends and shows on the menu; the shop that spends it arrives in Phase 4.
 
-**Hidden places.** Cracked walls that look like plain brick hide secret passages (sniff with F to spot them; gnaw with E). Behind them: courtyards and pockets with loot, and each district's hidden **lair**, where a mini-boss (Alley Tom, Scrap Brute, Crow Matriarch, Bloated Queen, Ghoul Lord, Tick Hive) guards a hoard. Dead-end alleys always hold loot; fire escapes are a way onto the roofs.
+**Secrets.** Every level counts **3–6 secrets** (a fixed number per level), shown on the HUD as **SECRETS n/m**:
+- *Cracked walls* that look like plain brick (sniff with F to spot them; gnaw with E). Behind them: courtyards and pockets with loot and a power-up, and each district's hidden **lair**, where a mini-boss (Alley Tom, Scrap Brute, Crow Matriarch, Bloated Queen, Ghoul Lord, Tick Hive) guards a hoard.
+- *Squeeze rooms*: the chamber in the middle of a crawlspace network.
+- *Rooftop caches* at the top of a marked drainpipe.
+
+Reaching one pays 60 XP and gold. **Sniffing (F) pings**: every unfound secret within 40 flashes a violet marker for 6 seconds, and the two-note ping rises in pitch the closer the nearest one is (`TUNE.secrets`).
+
+**Climbing.** Only **marked drainpipes** (yellow bands, a paw mark at the foot) can be climbed: stand at one and hold Space. Fire escapes are stairs you hop up. City levels have about 13 pipes and sewer levels 4–5, each with a cache waiting at the top; any rooftop chest or cache gets a pipe up its building, and the rooftop "hold the beacon" job only uses roofs you can reach (`TUNE.climb`).
+
+**Keys and locks.** Keys **stack** (the HUD shows how many you hold). They drop from bosses (always), mini-bosses, corrupted elites, smashed nests, chests and the odd bin. Spend one on: a **locked gate** (one per level, across a dead-end vault holding a premium chest, a power-up and a cache), a **padlocked chest** (two per level: half again a premium chest's gold and always a power-up) or the manhole. Thieves still go for your keys first (`TUNE.keys`).
+
+**Power-ups.** Glowing tokens, two on the street per level, more in vaults, padlocked and premium chests and behind cracked walls. Each lasts **25 seconds** and they can overlap; the HUD shows each with a draining bar (`TUNE.powerups`):
+
+| Power-up | Effect |
+|---|---|
+| Scent Veil | Mobs more than 5 away lose your scent and mill about |
+| Iron Hide | 60% less damage taken |
+| Quickpaw | Move 35% and attack 30% faster |
+| Splitclaw | Shots split three ways; swipes hit 1.8× as hard |
+| Mirror Shell | Enemy shots bounce back off you at 1.5× damage |
+| Glow Eyes | See hidden lurkers, moldy food, secret walls and nearby secrets |
+| Ember Breath | Your attacks set enemies burning |
+| Moth Familiar | A moth circles you and zaps the nearest enemy every 0.7s |
+
+**Collapsing floors.** On the collapse levels (Rust Yards · Nightshift, Frozen Pipeworks) about 3.5% of open floor is cracked, never in a corridor. Step on a crack and it glows red and rattles for 0.9s, then drops into a hole for 8s before it knits back; anything in it falls (mobs die, bosses climb out). If you fall you come back up where you last stood safely, for 12 HP (`TUNE.hazards`).
+
+**Exit tally.** Leaving a level (the road, the ladder, the manhole or a secret drain) stops on a card: nests smashed (30 points), the boss (15), the side job (10), secrets found (20), damage taken (15) and time (10, full at 4 minutes or less) add up to a score out of 100 and a grade, **S** (90+), **A** (75), **B** (60), **C** (40) or **D**, which pays 60 / 40 / 20 / 10 / 0 gold. Grades feed the run score and the share card (`TUNE.tally`).
 
 **Enemies.** Twelve types, each with several telegraphed attacks chosen by distance and sometimes by your HP. Flyers move erratically: bats weave, screech and dive-bomb; crows orbit, swoop and fire feather volleys; moths drift, drop poison clouds and blink; wasps dart. Big patrol cats hunt in packs. **Corrupted elites** have double HP plus a modifier: Burning (fire trail), Warding (shields allies), Frenzied, Brood-bloated (splits), Leeching or Volatile (explodes on death).
 
@@ -110,7 +136,7 @@ Bosses take a capped share of trap damage (5% of max HP from a crush) plus a sta
 **Characters, ranks and sharing.**
 - *Boss intro cards* with a title, a line and a beat of slow-mo.
 - *Scab*, your rival, shows up about half a minute into each district and runs for an unopened chest. Beat him three times and he gives up a stash of supplies.
-- *District ranks* from S to D (clear time, HP lost, perfect dodges, side job), a *run score*, and a **Share run card** PNG on the death screen.
+- *Level grades* from the exit tally, a *run score*, and a **Share run card** PNG on the death screen.
 
 **Classes and stats.** Seven rats, all open from the start. Each has four stats from 1 to 10 (`TUNE.classes`), shown on its menu card: **Strength** scales primary attack damage, **Speed** sets move speed and attack and cooldown rate, **Armor** cuts damage taken (5.5% per point), and **Magic** scales specials, signatures, turbo and vials and fills the turbo meter faster.
 
@@ -150,7 +176,7 @@ Turbo has its own look per class. While a turbo move is boosted the rat burns in
 
 **Music.** A procedural soundtrack: boom-bap drums with trap hi-hat rolls and a discordant phrygian bass that climbs from 132 to 148 BPM in crowded fights. Each boss gets its own score (choir, FM bell, doom drums) that intensifies per phase. Music and effects have separate volume sliders.
 
-**Tuning and the debug panel.** Every rebuilt number lives in `src/tuning.js` (`TUNE`): camera, stats and classes, turbo, vials, nests, packs, boss variants, secret zones, the Reaper, thieves, food and the announcer among them. Open the game with `?debug` and a **Tune** button appears on the right edge: it lists every value by group and edits them live (class stat edits re-apply to your rat at once). Older numbers move into the file as their systems are rebuilt.
+**Tuning and the debug panel.** Every rebuilt number lives in `src/tuning.js` (`TUNE`): camera, stats and classes, stat growth, turbo, vials, nests, packs, boss variants, secrets and secret zones, climbing, keys, power-ups, hazards, the exit tally, the Reaper, thieves, food and the announcer among them. Open the game with `?debug` and a **Tune** button appears on the right edge: it lists every value by group and edits them live (class stat edits re-apply to your rat at once). Older numbers move into the file as their systems are rebuilt.
 
 ## The story
 
@@ -178,9 +204,9 @@ Scenes pause the game. Space or a tap advances, Esc skips to the choice, 1–3 c
 
 ## Controls
 
-WASD move · mouse aims on the ground · left click or J attacks (hold to repeat) · Shift dodge (1.2s cooldown, i-frames) · Space jump / hold on walls to climb · C squeeze · Q special · G class signature move · X turbo (tap: blast; hold + Q/G: turbo special or signature) · Z Rot Vial · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · wheel zoom · Esc pause. The camera follows at a fixed angle. The pause menu repeats all of this under **Controls**.
+WASD move · mouse aims on the ground · left click or J attacks (hold to repeat) · Shift dodge (1.2s cooldown, i-frames) · Space jump (hold at a marked pipe to climb) · C squeeze · Q special · G class signature move · X turbo (tap: blast; hold + Q/G: turbo special or signature) · Z Rot Vial · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · wheel zoom · Esc pause. The camera follows at a fixed angle. The pause menu repeats all of this under **Controls**.
 
-**Touch:** the left stick moves. Hold **Attack** to fire at the nearest enemy in a cone in front of you (no cone target: straight ahead). On the right: Lock, Sniff and Vial; Special, Sig and **Turbo** (tap for the blast; hold it, let go, then tap Special or Sig within 1.5s for the turbo version); Use (hold to gnaw), Dodge and Jump (hold on walls to climb). Map and Pause sit at the top.
+**Touch:** the left stick moves. Hold **Attack** to fire at the nearest enemy in a cone in front of you (no cone target: straight ahead). On the right: Lock, Sniff and Vial; Special, Sig and **Turbo** (tap for the blast; hold it, let go, then tap Special or Sig within 1.5s for the turbo version); Use (hold to gnaw), Dodge and Jump (hold at a marked pipe to climb). Map and Pause sit at the top.
 
 ## QA pipeline
 
@@ -234,10 +260,10 @@ src/
   world/             tile grid + collision, sewer and city generators, mesh builder + population, setpieces.js (interiors, tram, market, crane, gardens, lairs)
   entities/          player, rat model/portraits + ratAnim.js, mobs (AI + spawning), roles.js (new mob roles, pack behaviour), bosses
   combat/            damage/deaths/drops/zone scaling, primaries & specials, hazards (telegraphs, puddles)
-  game/              run flow (districts, sewer, banking), progress (XP, levels, gold), stats (class stats), turbo, vials, food (drain, sizes, mold),
+  game/              run flow (districts, sewer, banking), progress (XP, levels, gold), stats (class stats, growth), turbo, vials, food (drain, sizes, mold), powerups, finds (secrets, pings), score,
                      nests (tiers, families, sleeping packs), reaper (and graves), thieves, secrets (drains, secret zones), announcer, loot, update step, render sync + camera, input, story.js
   audio/             SFX + music sequencer
-  ui/                HUD, screens (menu, pause, map, death, endings), debugPanel.js, icons
+  ui/                HUD, screens (menu, pause, map, death, endings), tally.js (exit tally), debugPanel.js, icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
 scripts/smoke.mjs    headless end-to-end test
 scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs (src/qa/ holds the bots and level checks)
@@ -250,7 +276,8 @@ Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta`
 ## Known gaps
 
 - Touch controls are tuned for landscape phones and tablets; portrait works but is cramped.
-- Mid-rebuild (Phase 2 of 5, plus the improvement pass): there's no hub, power-ups, shop or save slots yet, and gold has nothing to buy. Levels are fixed, but the per-level hand tuning and the full secrets system (pipes, squeeze rooms, rooftop caches, the SECRETS counter) arrive in Phase 3.
+- Mid-rebuild (Phase 3 of 5): there's no hub, shop or save slots yet, and gold has nothing to buy (Phase 4).
 - Turbo moves use the normal move's animation with an added pose, aura and class flourish; there are no fully bespoke turbo animations.
-- Climbing still works on any wall; Phase 3 limits it to marked pipes and fire escapes.
+- The bots don't climb pipes or hunt secrets, so the lab measures those from level data and scripted checks rather than play.
+- Scent Veil stops the horde chasing you; ranged mobs that already see you can still shoot.
 - Balance (zone table, boss HP, drop rates) comes from design intent and automated runs, not playtesting.

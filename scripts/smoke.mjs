@@ -97,7 +97,7 @@ await step('XP from kills: auto level-up, no pause', async () => {
 await step('city interactions: chest, boards, climb, power line, key, manhole', async () => {
   const tp = (x, z, y) => S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y ?? 0; P.vx = P.vz = P.vy = 0; }, [x, z, y]);
   // Chest
-  const chest = await S(() => { const c = __scurry.W.chests.find(c => !c.open && c.y < 1); return c && { x: c.x, z: c.z, y: c.y }; });
+  const chest = await S(() => { const c = __scurry.W.chests.find(c => !c.open && c.y < 1 && !c.locked); return c && { x: c.x, z: c.z, y: c.y }; });
   if (chest) {
     const n0 = await S(() => __scurry.run.scrap + __scurry.W.scraps.length);
     await tp(chest.x + 1, chest.z, chest.y); await wait(200);
@@ -122,10 +122,21 @@ await step('city interactions: chest, boards, climb, power line, key, manhole', 
     const t = await S(k => __scurry.M.grid[k], board.k);
     if (t !== 1) throw new Error('boards not gnawed (tile ' + t + ')');
   }
-  // Climb a brick building
-  const wall = await S(() => { const w = __scurry.wallSpot(4.5, 6); return w && { ...w, h: w.top }; });
-  if (!wall) throw new Error('no climbable wall found');
+  // A plain brick wall can't be climbed any more: Space only hops.
   await S(() => { if (__scurry.P.carry) __scurry.dropCarry(); for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); });
+  const plain = await S(() => { const w = __scurry.wallSpot(5.5, 12); return w && !__scurry.W.climbs.some(c => Math.hypot(c.x - w.x, c.z - w.z) < 3) ? w : null; });
+  if (plain) {
+    await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 1.6; P.z = w.z + w.nz * 1.6; P.y = 0; P.vx = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, plain);
+    await page.keyboard.down('KeyW'); await wait(120); await page.keyboard.press('Space'); await page.keyboard.down('Space');
+    await wait(1800);
+    const py = await S(() => __scurry.P.y);
+    await page.keyboard.up('Space'); await page.keyboard.up('KeyW');
+    if (py > 3) throw new Error(`climbed a plain wall to y=${py.toFixed(2)}`);
+  }
+  // Climb a marked drainpipe
+  const wall = await S(() => { const w = __scurry.climbSpot(4.5); return w && { ...w, h: w.top }; });
+  if (!wall) throw new Error('no marked pipe found');
+  await S(() => { for (const e of __scurry.W.enemies) if (!e.boss && e.type !== 'nest') __scurry.kill(e); });
   await S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 1.6; P.z = w.z + w.nz * 1.6; P.y = 0; P.vx = P.vz = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, wall);
   await page.keyboard.down('KeyW'); await wait(120); await page.keyboard.press('Space'); await page.keyboard.down('Space');
   await until(h => __scurry.P.y >= h - 0.2, 7000, wall.h);
@@ -421,8 +432,9 @@ await step('surface boss: three phases, death, exits', async () => {
   await wait(1000);
   const s = await S(() => ({ exit: !!__scurry.G.exitD, boss: !!__scurry.G.boss, keys: __scurry.W.keys.length }));
   if (!s.exit || s.boss) throw new Error(JSON.stringify(s));
-  const rk = await S(() => ({ n: (__scurry.run.ranks || []).length, stamp: document.getElementById('rankStamp').textContent }));
-  if (!rk.n || !rk.stamp) throw new Error('no district rank ' + JSON.stringify(rk));
+  // The level's grade comes from the exit tally (scored here; recorded when the rat leaves).
+  const rk = await S(() => { const t = __scurry.tallyCalc(); return { grade: t.grade, boss: t.part.boss }; });
+  if (!/^[SABCD]$/.test(rk.grade) || !rk.boss) throw new Error('no level grade with the boss counted ' + JSON.stringify(rk));
 });
 await step('descend into sewer', async () => {
   await S(() => __scurry.enterSewer());

@@ -22,6 +22,21 @@ const toCrack = (L, n = 0) => L.S(n => {
 const place = (L, x, z, y = 0) => L.S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y; P.vx = P.vz = P.vy = 0; P.inv = 0; P.onGround = true; }, [x, z, y]);
 const step = (L, secs) => L.S(t => __scurry.qa.stepRaw(t), secs);
 const clearMobs = L => L.S(() => __scurry.W.enemies.forEach(e => { if (e.type !== 'nest') e.dead = true; }));
+/** Stand in front of a wall face (w from wallSpot/climbSpot), hold forward + Space; returns the highest y reached. */
+async function climbTry(L, w, secs = 2.2, stopAtTop = false) {
+  await L.S(w => { const { P, G } = __scurry; P.x = w.x + w.nx * 1.6; P.z = w.z + w.nz * 1.6; P.y = 0; P.vx = P.vz = P.vy = 0; G.camYaw = Math.atan2(-w.nx, -w.nz); }, w);
+  await L.S(() => __scurry.qa.stepRaw(0.2));
+  await L.page.keyboard.down('KeyW');
+  await L.page.keyboard.down('Space');
+  let peak = 0;
+  for (let i = 0; i < secs / 0.1; i++) {
+    peak = Math.max(peak, await L.S(() => { __scurry.qa.stepRaw(0.1); return __scurry.P.y; }));
+    if (stopAtTop && peak >= w.top - 0.1) break;
+  }
+  await L.page.keyboard.up('Space');
+  await L.page.keyboard.up('KeyW');
+  return peak;
+}
 const issuesOf = (all, kinds) => all.flatMap(l => l.issues.filter(i => kinds.includes(i.kind)).map(i => `${l.where}: ${i.kind}${i.type ? ' ' + i.type : ''}`));
 
 export const TRIALS = [
@@ -42,6 +57,14 @@ export const TRIALS = [
       } },
     ],
     t2: [
+      { name: 'run starts and level changes never drop the rat below the floor', async run(L) {
+        let worst = 9;
+        for (let i = 0; i < 4; i++) {
+          await L.fresh({ cls: ['brawler', 'roof', 'sneak', 'slinger'][i], god: true });
+          worst = Math.min(worst, await L.S(async () => { const s = __scurry; let m = 9; s.exitRoad(); for (let f = 0; f < 90; f++) { await new Promise(r => requestAnimationFrame(r)); if (s.G.state === 'play') m = Math.min(m, s.P.y); } return m; }));
+        }
+        return { ok: worst > -0.4, detail: `lowest y ${worst.toFixed(2)}` };
+      } },
       { name: 'static warnings stay rare (buried bins, props in walls)', async run(L) {
         const all = await L.staticAll(), n = all.reduce((a, l) => a + l.issues.filter(i => i.sev === 'warn').length, 0);
         return { ok: n <= 2, score: Math.max(0, 1 - n / 10), detail: `${n} warnings over ${all.length} maps` };
@@ -310,5 +333,410 @@ export const TRIALS = [
         return { ok: r != null && r < -0.15, detail: r != null ? `walker at ${r.toFixed(2)}` : 'none' };
       } },
     ],
+  },
+
+  // ------------------------------------------------------------------ P3: climbing only at marked pipes
+  {
+    id: 'climb', since: 'P3', title: 'Climbing only at marked pipes and fire escapes; rooftop caches',
+    t1: [
+      { name: 'Space against a plain wall only hops (no climbing)', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        await clearMobs(L);
+        const w = await L.S(() => { const s = __scurry, w = s.wallSpot(5.5, 11.9); return w && !s.W.climbs.some(c => Math.hypot(c.x - w.x, c.z - w.z) < 4) ? w : null; });
+        if (!w) return { ok: false, detail: 'no plain wall found' };
+        const y = await climbTry(L, w);
+        return { ok: y < 3, detail: `peak ${y.toFixed(2)} at a ${w.top}-high wall` };
+      } },
+      { name: 'holding Space at a marked pipe climbs to the roof', async run(L) {
+        const w = await L.S(() => __scurry.climbSpot(4.5));
+        if (!w) return { ok: false, detail: 'no pipe' };
+        const y = await climbTry(L, w);
+        return { ok: y >= w.top - 0.2, detail: `reached ${y.toFixed(2)} of ${w.top}` };
+      } },
+      { name: 'every level has marked pipes, and every rooftop item sits on a roof you can get onto', async run(L) {
+        const bad = [];
+        for (const lv of L.LEVELS.filter(l => !l[2])) {
+          const where = await L.level(...lv);
+          const r = await L.S(() => ({ n: __scurry.W.climbs.length, city: __scurry.M.kind === 'city', issues: __scurry.qa.staticChecks().issues.filter(i => /roof-loot|pipe-blocked/.test(i.kind)).length }));
+          if (r.n < (r.city ? 6 : 3) || r.issues) bad.push(`${where}: ${r.n} pipes, ${r.issues} issues`);
+        }
+        return { ok: !bad.length, detail: bad.slice(0, 3).join('; ') || 'all 19 levels' };
+      } },
+    ],
+    t2: [
+      { name: 'a rooftop "hold" objective is always on a roof with a way up', async run(L) {
+        let roof = 0, bad = 0;
+        for (const lv of [CINDER, CITY(1), CITY(2), CITY(3), CITY(5)]) {
+          await L.level(...lv);
+          const r = await L.S(() => { const s = __scurry, M = s.M; let roof = 0, bad = 0; for (let i = 0; i < 4; i++) { s.forceObjective('hold'); const o = s.run.obj; if (o.y > 1) { roof++; const k = Math.floor(o.x / 4 + M.W / 2) + Math.floor(o.z / 4 + M.H / 2) * M.W; if (!M.roofOK[k]) bad++; } } return { roof, bad }; });
+          roof += r.roof; bad += r.bad;
+        }
+        return { ok: bad === 0, score: roof ? 1 - bad / roof : 1, detail: `${roof} rooftop holds, ${bad} unreachable` };
+      } },
+      { name: 'the rooftop cache at a pipe is collected by climbing it', async run(L) {
+        await L.fresh({ level: CITY(2), god: true });
+        await clearMobs(L);
+        const w = await L.S(() => { const s = __scurry, c = s.W.climbs.find(c => c.cache && c.top >= 4.5 && c.top <= 7); return c ? { x: c.x, z: c.z, nx: c.nx, nz: c.nz, top: c.top } : null; });
+        if (!w) return { ok: false, detail: 'no pipe with a cache' };
+        const c0 = await L.S(() => __scurry.W.caches.filter(c => c.taken).length);
+        await climbTry(L, w, 1.6, true);
+        await L.S(() => __scurry.qa.stepRaw(0.8));
+        const c1 = await L.S(() => __scurry.W.caches.filter(c => c.taken).length);
+        return { ok: c1 > c0, detail: c1 > c0 ? 'cache taken on the roof' : 'cache still there' };
+      } },
+    ],
+    t3: {
+      // Pipes are spread through the level, close enough to find, and most lead to a cache.
+      async run(L) {
+        const m = { pipesCity: 0, pipesSewer: 0, cacheShare: 0, nearestFromStart: 0 };
+        let nc = 0, ns = 0;
+        for (const lv of L.LEVELS.filter(l => !l[2])) {
+          await L.level(...lv);
+          const r = await L.S(() => { const s = __scurry, c = s.W.climbs; return { city: s.M.kind === 'city', n: c.length, caches: c.filter(c => c.cache).length, near: Math.min(...c.map(c => Math.hypot(c.x - s.P.x, c.z - s.P.z))) }; });
+          if (r.city) { m.pipesCity += r.n; nc++; } else { m.pipesSewer += r.n; ns++; }
+          m.cacheShare += r.caches / Math.max(1, r.n);
+          m.nearestFromStart += r.near;
+        }
+        m.pipesCity /= nc; m.pipesSewer /= ns; m.cacheShare /= nc + ns; m.nearestFromStart /= nc + ns;
+        return m;
+      },
+      bands: { pipesCity: [8, 16], pipesSewer: [3, 7], cacheShare: [0.55, 1], nearestFromStart: [8, 40] },
+    },
+  },
+
+  // ------------------------------------------------------------------ P3: secrets, SECRETS n/m, F pings
+  {
+    id: 'secrets', since: 'P3', title: '3–6 secrets per level, the SECRETS counter and F pings',
+    t1: [
+      { name: 'every level counts 3–6 secrets; secret zones count none', async run(L) {
+        const bad = [];
+        for (const lv of L.LEVELS) {
+          const where = await L.level(...lv);
+          const m = await L.S(() => __scurry.run.finds.m);
+          if (lv[2] ? m !== 0 : m < 3 || m > 6) bad.push(`${where}: ${m}`);
+        }
+        return { ok: !bad.length, detail: bad.slice(0, 4).join('; ') || 'all levels in range' };
+      } },
+      { name: 'the HUD shows SECRETS n/m', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        await L.sleep(700);
+        const t = await L.S(() => document.getElementById('res').textContent);
+        return { ok: /SECRETS \d\/\d/i.test(t), detail: (t.match(/SECRETS \d\/\d/i) || ['missing'])[0] };
+      } },
+      { name: 'F pings: unfound secrets in range light up, with a sound', async run(L) {
+        const r = await L.S(() => { const s = __scurry, f = s.W.finds[0]; s.P.x = f.x + 12; s.P.z = f.z; s.P.scent = false; s.P.scentE = 99; const p = s.pingFinds(); return { p, lit: s.W.finds.filter(f => f.showT > 0).length, pings: s.run.pings }; });
+        return { ok: r.lit >= 1 && r.pings >= 1, detail: `${r.lit} lit, nearest ${r.p && Math.round(r.p.best)}` };
+      } },
+      { name: 'reaching each kind of secret counts it and pays XP and gold', async run(L) {
+        const got = {};
+        for (const lv of [CINDER, CITY(4), SEWER(0)]) {
+          await L.fresh({ level: lv, god: true });
+          await clearMobs(L);
+          Object.assign(got, await L.S(() => {
+            const s = __scurry, out = {};
+            for (const f of s.W.finds) {
+              if (out[f.kind]) continue;
+              const n0 = s.run.finds.n, xp0 = s.run.xp + s.run.level * 1e6, g0 = s.W.scraps.length + s.run.scrap;
+              if (f.kind === 'wall') { const [x, y] = f.rect; s.P.x = (x - s.M.W / 2 + 0.5) * 4; s.P.z = (y - s.M.H / 2 + 0.5) * 4; s.P.y = 0; }
+              else if (f.kind === 'squeeze') { s.P.x = f.x; s.P.z = f.z; s.P.y = 0; s.P.squeeze = true; }
+              else { s.P.x = f.x; s.P.z = f.z; s.P.y = f.y; }
+              s.qa.stepRaw(0.1);
+              out[f.kind] = s.run.finds.n > n0 && s.run.xp + s.run.level * 1e6 > xp0 && s.W.scraps.length + s.run.scrap > g0;
+            }
+            return out;
+          }));
+        }
+        const kinds = Object.keys(got);
+        return { ok: kinds.length === 3 && kinds.every(k => got[k]), detail: kinds.map(k => `${k} ${got[k] ? 'ok' : 'no'}`).join(', ') };
+      } },
+    ],
+    t2: [
+      { name: 'every secret on every level can be reached', async run(L) {
+        const bad = issuesOf(await L.staticAll(), ['unreachable-secret']);
+        return { ok: !bad.length, score: Math.max(0, 1 - bad.length / 10), detail: bad.slice(0, 3).join('; ') || 'all reachable' };
+      } },
+      { name: 'a found secret stays found (no double counting)', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        const r = await L.S(() => { const s = __scurry, f = s.W.finds.find(f => f.kind === 'roof') || s.W.finds[0]; s.P.x = f.x; s.P.z = f.z; s.P.y = f.y; s.qa.stepRaw(0.3); s.qa.stepRaw(0.3); return s.run.finds.n; });
+        return { ok: r === 1, detail: `counted ${r}` };
+      } },
+    ],
+    t3: {
+      // The level's secrets: how many, how varied, and whether a sniff at the start already hints at one.
+      async run(L) {
+        let n = 0, kinds = 0, startHint = 0, c = 0;
+        for (const lv of L.LEVELS.filter(l => !l[2])) {
+          await L.level(...lv);
+          const r = await L.S(() => { const s = __scurry, R = s.TUNE.secrets.pingR; return { m: s.run.finds.m, k: new Set(s.W.finds.map(f => f.kind)).size, hint: s.W.finds.some(f => Math.hypot(f.x - s.P.x, f.z - s.P.z) < R) }; });
+          n += r.m; kinds += r.k; startHint += r.hint ? 1 : 0; c++;
+        }
+        return { perLevel: n / c, kinds: kinds / c, startHint: startHint / c };
+      },
+      bands: { perLevel: [3.5, 5.5], kinds: [2, 3], startHint: [0.25, 0.75] },
+    },
+    ab: { name: 'a shorter ping (28)', set: { 'secrets.pingR': 28 } },
+  },
+
+  // ------------------------------------------------------------------ P3: keys stack and open locks
+  {
+    id: 'locks', since: 'P3', title: 'Keys stack and open locked gates and chests',
+    t1: [
+      { name: 'keys stack', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        const n = await L.S(() => { const s = __scurry; for (let i = 0; i < 3; i++) s.dropKey(s.P.x, s.P.y, s.P.z); s.qa.stepRaw(0.3); return s.run.keys; });
+        return { ok: n === 3, detail: `${n} held` };
+      } },
+      { name: 'a locked gate blocks the vault until a key opens it', async run(L) {
+        const r = await L.S(() => {
+          const s = __scurry, g = s.W.gates[0];
+          if (!g) return null;
+          const k = g.k, M = s.M, cx = (k % M.W - M.W / 2 + 0.5) * 4, cz = (((k / M.W) | 0) - M.H / 2 + 0.5) * 4;
+          // Walk at the bars from outside: the plat stops the rat.
+          const out = { x: g.x + g.nx * 1.5, z: g.z + g.nz * 1.5 };
+          s.P.x = out.x; s.P.z = out.z; s.P.y = 0; s.P.vx = -g.nx * 9; s.P.vz = -g.nz * 9;
+          for (let i = 0; i < 10; i++) { s.P.vx = -g.nx * 9; s.P.vz = -g.nz * 9; s.qa.stepRaw(0.05); }
+          const blocked = Math.hypot(s.P.x - cx, s.P.z - cz) > 2.2;
+          s.run.keys = 1;
+          s.P.x = out.x; s.P.z = out.z;
+          const opened = s.unlockGate(g);
+          return { blocked, opened, keys: s.run.keys, plat: s.W.plats.includes(g.plat) };
+        });
+        if (!r) return { ok: false, detail: 'no gate on Cinder Row' };
+        return { ok: r.blocked && r.opened && r.keys === 0 && !r.plat, detail: JSON.stringify(r) };
+      } },
+      { name: 'a locked chest stays shut without a key, and opens with one (with a power-up inside)', async run(L) {
+        const r = await L.S(() => {
+          const s = __scurry, c = s.W.chests.find(c => c.locked);
+          if (!c) return null;
+          s.run.keys = 0; s.P.x = c.x + 1; s.P.z = c.z; s.P.y = c.y;
+          s.pressE();
+          const shut = !c.open;
+          s.run.keys = 1;
+          const p0 = s.W.pups.length;
+          s.pressE();
+          return { shut, open: c.open, keys: s.run.keys, pup: s.W.pups.length > p0 };
+        });
+        if (!r) return { ok: false, detail: 'no locked chest' };
+        return { ok: r.shut && r.open && r.keys === 0 && r.pup, detail: JSON.stringify(r) };
+      } },
+    ],
+    t2: [
+      { name: 'nothing the level needs is ever behind a vault gate (nests, objectives, exits)', async run(L) {
+        const bad = issuesOf(await L.staticAll(), ['nest-in-vault']);
+        return { ok: !bad.length, detail: bad.slice(0, 3).join('; ') || 'clear' };
+      } },
+      { name: 'bots looking for loot skip locked chests they have no key for', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        const r = await L.S(() => { const s = __scurry; for (const c of s.W.chests) if (!c.locked) c.open = true; s.run.keys = 0; s.qa.start({ goal: 'loot every chest' }); const met = s.qa.goalMet(); s.qa.stop(); return met; });
+        return { ok: r === true, detail: r ? 'goal met with only locked chests left' : 'bot would hunt a locked chest' };
+      } },
+      { name: 'the manhole still takes a key', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        const r = await L.S(() => { const s = __scurry, mh = s.G.manhole; if (!mh) return null; s.run.keys = 0; s.P.x = mh.x + 0.5; s.P.z = mh.z; s.P.y = 0; return s.useTarget() && s.useTarget().label; });
+        return { ok: r == null || /locked/i.test(r), detail: r || 'no manhole' };
+      } },
+    ],
+    t3: {
+      // Bots play a level: keys turn up at a steady rate, enough to open a lock or two.
+      async run(L) {
+        const m = { keysPerMin: 0 };
+        const runs = [[CITY(1), 'brawler'], [SEWER(1), 'slinger']];
+        for (const [lv, cls] of runs) {
+          await L.fresh({ cls, level: lv, quiet: false });
+          const r = await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
+          const got = await L.S(() => __scurry.run.keysGot || 0);
+          m.keysPerMin += got / Math.max(0.25, r.simTime / 60) / runs.length;
+        }
+        return m;
+      },
+      bands: { keysPerMin: [0.25, 1.5] },
+    },
+    ab: { name: 'elites drop keys more often (40%)', set: { 'keys.eliteOdds': 0.4 } },
+  },
+
+  // ------------------------------------------------------------------ P3: eight timed power-ups
+  {
+    id: 'powerups', since: 'P3', title: 'Eight timed power-ups (25 s)',
+    t1: [
+      { name: 'each of the eight starts, shows a timer and wears off after 25 s', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        await clearMobs(L);
+        const r = await L.S(() => { const s = __scurry, ks = Object.keys(s.POWERUPS), out = {}; for (const k of ks) s.grantPowerup(k); out.on = ks.filter(k => s.puOn(k)).length; out.hud = s.puList().length; s.qa.stepRaw(24); out.still = ks.filter(k => s.puOn(k)).length; s.qa.stepRaw(1.5); out.off = ks.filter(k => !s.puOn(k)).length; return out; });
+        return { ok: r.on === 8 && r.hud === 8 && r.still === 8 && r.off === 8, detail: JSON.stringify(r) };
+      } },
+      { name: 'walking over a token picks it up', async run(L) {
+        const r = await L.S(() => { const s = __scurry, P = s.P, p = s.dropPowerup(P.x, P.y, P.z, 'iron'); s.qa.stepRaw(0.2); return s.puOn('iron') && !s.W.pups.includes(p); });
+        return { ok: r, detail: r ? 'Iron Hide on' : 'not picked up' };
+      } },
+      { name: 'every effect does what it says', async run(L) {
+        await L.fresh({ cls: 'slinger', level: CINDER });
+        await clearMobs(L);
+        const r = await L.S(() => {
+          const s = __scurry, P = s.P, o = {}, off = () => { for (const k of Object.keys(s.POWERUPS)) s.run.pu[k] = 0; };
+          const mob = (x, z) => { const e = s.spawnEnemy('mawling', x, z, { plain: true, force: true }); e.emT = 0; return e; };
+          // Iron Hide: less damage
+          off(); P.inv = 0; let hp = s.run.hp; s.hurtP(20); const plain = hp - s.run.hp; s.run.hp = hp; P.inv = 0;
+          s.grantPowerup('iron'); s.hurtP(20); o.iron = (hp - s.run.hp) / plain; s.run.hp = hp; off();
+          // Splitclaw: three shots per primary
+          const shots = () => { const n0 = s.W.pproj.length; s.run.primT = 0; s.G.attack = true; s.G.aimAt = { x: P.x + 6, z: P.z }; s.qa.stepRaw(1 / 30); s.G.attack = false; s.G.aimAt = null; return s.W.pproj.length - n0; };
+          s.W.pproj.length = 0; o.plainShots = shots(); s.qa.stepRaw(1); s.W.pproj.length = 0; s.grantPowerup('split'); o.splitShots = shots(); off(); s.W.pproj.length = 0; s.qa.stepRaw(1);
+          // Quickpaw: shorter attack cooldown
+          shots(); const cd0 = s.run.primT; s.qa.stepRaw(1); s.grantPowerup('quick'); shots(); o.quickCd = s.run.primT / cd0; off(); s.qa.stepRaw(1);
+          // Ember Breath: hits burn
+          const e1 = mob(P.x + 5, P.z); s.grantPowerup('ember'); s.hit(e1, 5, 0, 0, 'primary'); o.ember = e1.bT > 0; off(); e1.dead = true;
+          // Mirror Shell: an enemy shot comes back
+          s.grantPowerup('mirror'); P.inv = 0; hp = s.run.hp; s.W.eproj.push({ x: P.x + 0.2, y: P.y + 0.5, z: P.z, vx: -8, vy: 0, vz: 0, life: 2, dmg: 10, col: 0xff0000, size: 1 }); const m0 = s.run.mirrored || 0; s.qa.stepRaw(0.1); o.mirror = (s.run.mirrored || 0) > m0 && hp - s.run.hp < 5; off();
+          // Scent Veil: a mob 12 away stops closing in
+          const e2 = mob(P.x + 12, P.z); s.grantPowerup('veil'); const d0 = Math.hypot(e2.x - P.x, e2.z - P.z); s.qa.stepRaw(2); o.veilD = Math.hypot(e2.x - P.x, e2.z - P.z) - d0; off(); e2.dead = true;
+          // Moth Familiar: zaps a nearby mob
+          const e3 = mob(P.x + 4, P.z + 2); e3.hp = e3.maxHp = 500; s.grantPowerup('moth'); s.qa.stepRaw(2); o.moth = e3.maxHp - e3.hp; off(); e3.dead = true;
+          // Glow Eyes: mold shows without sniffing
+          const f = s.dropFood(P.x + 2, P.y, P.z, 'crumb', { mold: true }); s.grantPowerup('glow'); s.qa.stepRaw(0.1); o.glow = !!(f.ms && f.ms.visible); off();
+          return o;
+        });
+        const ok = r.iron < 0.6 && r.splitShots >= r.plainShots + 2 && r.quickCd < 0.9 && r.ember && r.mirror && r.veilD > -6 && r.moth > 0 && r.glow;
+        return { ok, detail: Object.entries(r).map(([k, v]) => `${k} ${typeof v === 'number' ? +v.toFixed(2) : v}`).join(', ') };
+      } },
+    ],
+    t2: [
+      { name: 'no token sits inside a prop or wall on any level', async run(L) {
+        const bad = issuesOf(await L.staticAll(), ['powerup-in-prop']);
+        return { ok: !bad.length, detail: bad.slice(0, 3).join('; ') || 'clear' };
+      } },
+      { name: 'all eight at once through 20 s of bot play: no errors, no stuck states', async run(L) {
+        await L.fresh({ cls: 'brawler', level: CITY(1), quiet: false });
+        await L.S(() => { const s = __scurry; for (const k of Object.keys(s.POWERUPS)) s.grantPowerup(k); });
+        const r = await L.play(20, { profile: 'average', goal: 'nests' });
+        const bad = r.anomalies.filter(k => /stuck|fell|inside|nan/.test(k));
+        return { ok: !bad.length, score: Math.max(0, 1 - bad.length * 0.25), detail: bad.join(', ') || `${Math.round(r.simTime)}s clean` };
+      } },
+    ],
+    t3: {
+      // Bots play with the level's tokens: some get picked up, they're running a fair share of the
+      // time, and they make the fight easier without trivialising it.
+      async run(L) {
+        const m = { pickupsPerMin: 0, uptime: 0, deathRate: 0 }, runs = [[CITY(0), 'brawler'], [CITY(1), 'slinger'], [SEWER(0), 'warlock']];
+        for (const [lv, cls] of runs) {
+          await L.fresh({ cls, level: lv, quiet: false });
+          const r = await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
+          const p = await L.S(() => ({ n: __scurry.run.puTaken || 0, up: __scurry.run.puUp || 0 }));
+          m.pickupsPerMin += p.n / Math.max(0.25, r.simTime / 60) / runs.length;
+          m.uptime += p.up / Math.max(1, r.simTime) / runs.length;
+          m.deathRate += (r.deaths ? 1 : 0) / runs.length;
+        }
+        return m;
+      },
+      bands: { pickupsPerMin: [0.3, 2.5], uptime: [0.1, 0.5], deathRate: [0, 0.34] },
+    },
+    ab: { name: 'shorter power-ups (18 s)', set: { 'powerups.dur': 18 } },
+  },
+
+  // ------------------------------------------------------------------ P3: stat growth on level-up
+  {
+    id: 'growth', since: 'P3', title: 'Stats grow with every level, along the class’s strengths',
+    t1: [
+      { name: 'a level-up grows the class’s strongest stats most, and max HP (healed)', async run(L) {
+        await L.fresh({ cls: 'brawler', level: CINDER, god: true });
+        const r = await L.S(() => { const s = __scurry, hp0 = s.st.maxHp, cur0 = s.run.hp, c = s.TUNE.classes.brawler; s.addXP(s.run.need + 1); const g = s.run.growth, top = ['str', 'spd', 'arm', 'mag'].sort((a, b) => c[b] - c[a])[0]; return { lvl: s.run.level, hpGain: s.st.maxHp - hp0, healed: s.run.hp - cur0, top, topGain: g[top], minGain: Math.min(g.str, g.spd, g.arm, g.mag) }; });
+        return { ok: r.lvl === 2 && r.hpGain > 0 && r.healed > 0 && r.topGain > r.minGain, detail: JSON.stringify(r) };
+      } },
+      { name: 'growth starts fresh each run', async run(L) {
+        await L.fresh({ cls: 'roof', god: true });
+        const g = await L.S(() => __scurry.run.growth || null);
+        return { ok: g == null, detail: g ? 'carried over' : 'fresh' };
+      } },
+    ],
+    t2: [
+      { name: 'twenty levels later the derived numbers stay sane', async run(L) {
+        await L.fresh({ cls: 'sneak', god: true });
+        const r = await L.S(() => { const s = __scurry; for (let i = 0; i < 20; i++) s.addXP(s.run.need + 1); return { lvl: s.run.level, cd: s.st.cd, taken: s.st.taken, speed: s.st.speed, maxHp: s.st.maxHp }; });
+        return { ok: r.cd >= 0.5 && r.taken >= 0.2 && r.speed < 20 && r.maxHp < 400, detail: JSON.stringify(r) };
+      } },
+    ],
+    t3: {
+      // An average bot over a few minutes: it levels, keeps killing at a good clip, and usually lives.
+      async run(L) {
+        const m = { levelsPerMin: 0, killsPerMin: 0, deathRate: 0 }, runs = [[CITY(0), 'brawler'], [CITY(1), 'roof'], [SEWER(0), 'sneak']];
+        for (const [lv, cls] of runs) {
+          await L.fresh({ cls, level: lv, quiet: false });
+          const r = await L.play(L.QUICK ? 120 : 200, { profile: 'average', goal: 'nests' });
+          const min = Math.max(0.25, r.simTime / 60);
+          m.levelsPerMin += (r.level - 1) / min / runs.length;
+          m.killsPerMin += r.kills / min / runs.length;
+          m.deathRate += (r.deaths ? 1 : 0) / runs.length;
+        }
+        return m;
+      },
+      bands: { levelsPerMin: [0.6, 3], killsPerMin: [8, 60], deathRate: [0, 0.5] },
+    },
+    ab: { name: 'faster growth (0.8 points a level)', set: { 'growth.perLevel': 0.8 } },
+  },
+
+  // ------------------------------------------------------------------ P3: the exit tally and grade
+  {
+    id: 'tally', since: 'P3', title: 'The exit tally: a grade for every level',
+    t1: [
+      { name: 'leaving a level stops on the tally card; Enter moves on', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        await L.S(() => { __scurry.G.testNoTally = false; __scurry.exitRoad(); });
+        await L.sleep(200);
+        const st = await L.S(() => __scurry.G.state);
+        await L.page.keyboard.press('Enter');
+        await L.sleep(1400);
+        const after = await L.S(() => ({ st: __scurry.G.state, lvl: __scurry.dName(), ranks: (__scurry.run.ranks || []).length }));
+        await L.S(() => { __scurry.G.testNoTally = true; });
+        return { ok: st === 'tally' && after.st === 'play' && after.ranks === 1, detail: `${st} → ${after.st} in ${after.lvl}` };
+      } },
+      { name: 'grades follow the score thresholds, and the bonus gold is paid', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        const r = await L.S(() => {
+          const s = __scurry, T = s.TUNE.tally;
+          // Clean sweep: every nest, the boss, every secret, no damage, fast.
+          for (const e of s.W.enemies) if (e.type === 'nest') e.dead = true;
+          s.run.bossDone = true; s.run.finds.n = s.run.finds.m; s.run.dHurt = 0; s.run.obj = { kind: 'nests' };
+          const best = s.tallyCalc();
+          // Nothing done, hurt badly, slow.
+          for (const e of s.W.enemies) if (e.type === 'nest') e.dead = false;
+          s.run.bossDone = false; s.run.finds.n = 0; s.run.dHurt = s.st.maxHp * 3; s.run.time += 2000; s.run.obj = { kind: 'heist', done: false };
+          const worst = s.tallyCalc();
+          return { best: best.grade, bestScore: best.score, worst: worst.grade, worstScore: worst.score, bonusS: T.goldS };
+        });
+        return { ok: r.best === 'S' && r.worst === 'D', detail: `${r.best} (${r.bestScore}) / ${r.worst} (${r.worstScore})` };
+      } },
+    ],
+    t2: [
+      { name: 'bots and test harnesses never stall on the card', async run(L) {
+        await L.fresh({ level: CINDER, god: true });
+        await L.S(() => { __scurry.exitRoad(); });
+        await L.sleep(1400);
+        const st = await L.S(() => __scurry.G.state);
+        return { ok: st === 'play', detail: st };
+      } },
+      { name: 'every way out of a level is tallied (road, manhole, secret drain)', async run(L) {
+        let n = 0;
+        for (const go of ['exitRoad', 'enterSewer', 'drain']) {
+          await L.fresh({ level: go === 'drain' ? CITY(3) : CINDER, god: true });
+          const r0 = await L.S(() => (__scurry.run.ranks || []).length);
+          await L.S(g => { const s = __scurry; if (g === 'drain') { const d = s.G.secretExit; if (d) { s.P.x = d.x; s.P.z = d.z; s.P.y = d.y; s.qa.stepRaw(0.1); } } else s[g](); }, go);
+          await L.sleep(1400);
+          if (await L.S(r0 => (__scurry.run.ranks || []).length > r0, r0)) n++;
+        }
+        return { ok: n === 3, score: n / 3, detail: `${n}/3 exits tallied` };
+      } },
+    ],
+    t3: {
+      // Average bots on three levels: grades should spread across the middle, not pile up at S or D.
+      async run(L) {
+        const scores = [];
+        for (const [lv, cls] of [[CITY(0), 'brawler'], [CITY(2), 'slinger'], [SEWER(0), 'plague']]) {
+          await L.fresh({ cls, level: lv, quiet: false });
+          await L.play(L.QUICK ? 90 : 160, { profile: 'average', goal: 'nests' });
+          scores.push(await L.S(() => __scurry.tallyCalc().score));
+        }
+        const mean = scores.reduce((a, b) => a + b, 0) / scores.length, spread = Math.max(...scores) - Math.min(...scores);
+        return { meanScore: mean, spread };
+      },
+      bands: { meanScore: [30, 75], spread: [5, 50, 0.5] },
+    },
   },
 ];
