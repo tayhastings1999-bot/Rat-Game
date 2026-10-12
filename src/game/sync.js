@@ -11,6 +11,7 @@ import { tickAmbient } from '../fx/ambient.js';
 import { M, G as GRAV, toW, floorY, forPlatsNear } from '../world/grid.js';
 import { fadeU } from '../render/fade.js';
 import { syncTurboFx } from './turbo.js';
+import { coopAnimate, coopFrame } from './coop.js';
 import { TUNE } from '../tuning.js';
 import { CORRUPT } from '../data/items.js';
 import { isSewer } from '../data/world.js';
@@ -327,8 +328,15 @@ export function sync(dt) {
 }
 
 export function animate(dt) {
+  if (!G.rat) return;
+  poseRat(dt, blob);
+  coopAnimate(dt, poseRat);
+  animateCamera(dt);
+}
+
+/** Pose the active rat's model and its blob shadow (co-op runs this once per rat). */
+function poseRat(dt, shadow) {
   const rat = G.rat;
-  if (!rat) return;
   const t = G.time, bulk = rat.bulk || 1;
   rat.g.position.set(P.x, P.y, P.z);
   rat.g.rotation.y += angD(P.facing, rat.g.rotation.y) * (1 - Math.exp(-18 * dt));
@@ -389,8 +397,11 @@ export function animate(dt) {
   let gy = floorY(P.x, P.z, true);
   if (gy > P.y + 0.05) gy = P.y;
   forPlatsNear(P.x, P.z, 0, p => { if (!p.carried && Math.abs(P.x - p.x) < p.w / 2 && Math.abs(P.z - p.z) < p.d / 2 && p.y <= P.y + 0.05 && p.y > gy) gy = p.y; });
-  blob.position.set(P.x, gy + 0.03, P.z);
-  blob.scale.setScalar(clamp(1 - (P.y - gy) * 0.08, 0.4, 1));
+  shadow.position.set(P.x, gy + 0.03, P.z);
+  shadow.scale.setScalar(clamp(1 - (P.y - gy) * 0.08, 0.4, 1));
+}
+
+function animateCamera(dt) {
 
   // Camera: a fixed angle that follows the rat. Walls in the way get a dithered see-through
   // hole (render/fade.js) instead of moving the camera. Inside a duct or a building the
@@ -401,9 +412,13 @@ export function animate(dt) {
   const fov = C.fov + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
   tgt.set(P.x + G.camOff.x + (P.inDuct || P.inBldg ? 0 : lead.x), P.y + 1, P.z + G.camOff.z + (P.inDuct || P.inBldg ? 0 : lead.z));
+  // Co-op: frame every standing rat, pulling back as they spread out (TUNE.coop.cam*).
+  const cf = play ? coopFrame() : null;
+  if (cf) tgt.set(cf.x + G.camOff.x, cf.y + 1, cf.z + G.camOff.z);
   const cut = (P.inDuct || P.inBldg) ? 1 : 0;
   camFix += (cut - camFix) * Math.min(1, (cut > camFix ? 8 : 2.5) * dt);
-  const base = G.state === 'menu' ? G.camPitch : C.pitch, pitch = base + (C.cutPitch - base) * camFix, dist = G.camDist;
+  const base = G.state === 'menu' ? G.camPitch : C.pitch, pitch = base + (C.cutPitch - base) * camFix;
+  const dist = cf ? Math.min(TUNE.coop.camMax, Math.max(G.camDist, TUNE.coop.camBase + cf.spread * TUNE.coop.camPerSpread)) : G.camDist;
   want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   G.camPos.lerp(want, 1 - Math.exp(-10 * dt));
   camLook.lerp(tgt, 1 - Math.exp(-14 * dt));

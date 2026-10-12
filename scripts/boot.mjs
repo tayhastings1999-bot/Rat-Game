@@ -115,6 +115,38 @@ await check('death returns to the Nest with gold banked', async () => {
   const g = await S(() => __scurry.readSlot(1).meta.salvage);
   if (g !== g0 + 77) throw new Error(`banked ${g}, wanted ${g0 + 77}`);
 });
+await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
+  await page.click('[data-pn="2"]');
+  for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
+  await S(() => { __scurry.fakePads[0] = { axes: [0, 0, 0, 0], buttons: [] }; });
+  await page.click('.card[data-k="brawler"]');
+  await page.waitForFunction(() => __scurry.G.state === 'play' || __scurry.G.state === 'levelup', null, { timeout: 15000 });
+  for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) !== 'play'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(150); }
+  const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: 1 + __scurry.TUNE.coop.perPlayer.bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
+  if (!s0.on || s0.n !== 2 || s0.rp !== 2) throw new Error('co-op not on ' + JSON.stringify(s0));
+  if (Math.abs(s0.boss - s0.want) > 1e-6) throw new Error('boss HP scale ' + s0.boss);
+  if (!(s0.hp > 0)) throw new Error('player 2 has no HP');
+  await S(() => { __scurry.fakePads[0].axes = [1, 0, 0, 0]; });
+  await page.waitForTimeout(1500);
+  await S(() => { __scurry.fakePads[0].axes = [0, 0, 0, 0]; });
+  const s1 = await S(() => ({ x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), ok: Number.isFinite(__scurry.P.x) }));
+  if (Math.hypot(s1.x - s0.x, s1.z - s0.z) < 0.5) throw new Error('player 2 did not move');
+  if (!s1.ok) throw new Error('player 1 position broke');
+  if ((await page.locator('#coopHud .cp').count()) !== 2) throw new Error('co-op HUD missing');
+});
+await check('co-op: a downed rat is revived by a partner, and the run ends only when all are down', async () => {
+  await S(() => { __scurry.god(false); __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); });
+  const d = await S(() => ({ st: __scurry.G.state, down: __scurry.asPlayer(1, () => !!__scurry.P.downed) }));
+  if (d.st !== 'play' || !d.down) throw new Error('not downed ' + JSON.stringify(d));
+  await S(() => { const s = __scurry, x = s.P.x + 0.6, z = s.P.z; s.asPlayer(1, () => { s.P.x = x; s.P.z = z; }); });
+  await page.waitForFunction(() => !__scurry.asPlayer(1, () => __scurry.P.downed), null, { timeout: 15000 });
+  await S(() => { __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); __scurry.run.hp = 0; __scurry.die(); });
+  if ((await S(() => __scurry.G.state)) !== 'dead') throw new Error('run did not end');
+  if (await S(() => __scurry.coop.on)) throw new Error('co-op still on after the run');
+  await page.click('#again');
+  await page.waitForSelector('[data-pn="1"]');
+  await page.click('[data-pn="1"]');
+});
 await check('old single-slot saves move into slot 1', async () => {
   const ctx = await browser.newContext();
   const p2 = await ctx.newPage();

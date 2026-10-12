@@ -273,11 +273,14 @@ export function zoneScaling() {
   run.atkM = 1 + Math.min(1.4, T * Z.atkPerThreat);
   // Difficulty mode (TUNE.difficulty), on top of the zone.
   const D = diffMods();
-  run.hpM *= D.hp;
-  run.dmgM *= D.dmg;
-  run.spawnM = D.spawn; // nest spawn rate
-  run.eliteM = D.elite;
-  run.bossHpM = D.bossHp;
+  // Local co-op: each rat beyond the first adds TUNE.coop.perPlayer (run.players is set by startRun).
+  const xp = Math.max(0, (run.players || 1) - 1), PP = TUNE.coop.perPlayer;
+  run.hpM *= D.hp * (1 + xp * PP.hp);
+  run.dmgM *= D.dmg * (1 + xp * PP.dmg);
+  run.spawnM = D.spawn * (1 + xp * PP.spawn); // nest spawn rate
+  run.eliteM = D.elite * (1 + xp * PP.elite);
+  run.bossHpM = D.bossHp * (1 + xp * PP.bossHp);
+  run.kidsM = 1 + xp * PP.nestKids; // children each nest keeps alive
   run.drainM = D.drain;
   run.foodM = D.food;
 }

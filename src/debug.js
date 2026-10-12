@@ -10,6 +10,7 @@ import { need, addXP } from './game/progress.js';
 import { rummage } from './game/loot.js';
 import { die, pause, HOWTO, pickSlot, renderMenu } from './ui/screens.js';
 import { buy, rank, price, useFlask, cycleFlask, selFlask } from './game/shop.js';
+import { coop, fakePads, asPlayer } from './game/coop.js';
 import { save, loadSlot, readSlot } from './core/state.js';
 import { dropKey, kill, hit, hurtP } from './combat/combat.js';
 import { setupObjective, objDone, openCage } from './game/objectives.js';
@@ -61,7 +62,7 @@ export function debugApi(state) {
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, pickSlot, renderMenu, save, loadSlot, readSlot, shop: { buy, rank, price, useFlask, cycleFlask, selFlask }, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, die, pause, pickSlot, renderMenu, save, loadSlot, readSlot, shop: { buy, rank, price, useFlask, cycleFlask, selFlask }, coop, fakePads, asPlayer, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, comboGain, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A marked drainpipe (the only climbable wall): stand point, outward normal, top. */
     climbSpot(minTop = 0) {
       const c = state.W.climbs.find(c => c.top >= minTop && c.gx > 3 && c.gz > 3 && c.gx < M.W - 4 && c.gz < M.H - 4);

@@ -1,7 +1,8 @@
 // Class stats: Strength, Speed, Armor and Magic (TUNE.classes, 1–10 each)
 // turned into the numbers the rest of the game reads from `st`. Editing a
 // class or stat value in the ?debug panel re-applies it to the rat at once.
-import { G, run, st } from '../core/state.js';
+import { G, P, run, st } from '../core/state.js';
+import { coopGrow } from './coop.js';
 import { TUNE, tuneHooks } from '../tuning.js';
 
 export const STAT_KEYS = ['str', 'spd', 'arm', 'mag'];
@@ -40,7 +41,18 @@ export function growStats() {
   const hp0 = st.maxHp;
   reapply();
   run.hp = Math.min(st.maxHp, run.hp + (st.maxHp - hp0));
+  coopGrow(growOne);
   return STAT_KEYS.slice().sort((a, b) => c[b] - c[a]).slice(0, 2).map(s => STAT_NAMES[s]);
+}
+/** Level growth for another co-op rat (no banner). */
+function growOne() {
+  const G2 = TUNE.growth, c = TUNE.classes[run.cls] || TUNE.classes.brawler, sum = STAT_KEYS.reduce((a, s) => a + c[s], 0) || 1;
+  const g = run.growth || (run.growth = { str: 0, spd: 0, arm: 0, mag: 0, hp: 0 });
+  for (const s of STAT_KEYS) g[s] += G2.perLevel * c[s] / sum;
+  g.hp += G2.hp;
+  const hp0 = st.maxHp, down = P.downed, h = run.hp;
+  reapply();
+  run.hp = down ? h : Math.min(st.maxHp, run.hp + (st.maxHp - hp0));
 }
 
 /** Re-derive the live rat's class stats (debug edits, level growth), keeping its HP fraction. */

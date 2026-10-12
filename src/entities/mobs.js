@@ -17,6 +17,7 @@ import { addXP } from '../game/progress.js';
 import { warn, puddle } from '../combat/hazards.js';
 import { bossAI } from './bosses.js';
 import { TUNE } from '../tuning.js';
+import { enemyTotal } from '../game/coop.js';
 import { thiefAI } from '../game/objectives.js';
 import { ROLE_AI, tickFlee, catHunt } from './roles.js';
 import { creatureMesh } from '../render/pools.js';
@@ -77,7 +78,7 @@ export function pickType() {
  * o.corrupt picks a specific corruption.
  */
 export function spawnEnemy(type, x, z, o = {}) {
-  if (W.enemies.length >= 220 && !o.force) return null; // story-critical spawns (thief, champion, bounty) ignore the cap
+  if (enemyTotal() >= 220 && !o.force) return null; // story-critical spawns (thief, champion, bounty) ignore the cap
   const D = EN[type], r0 = Math.min(1.2, (D.r || 0.5) * (o.sc || 1));
   // A walker that would appear inside a car, crate or bin on the street steps out to the nearest clear floor.
   if (!D.fly && !o.roof && DRY(tileAt(x, z)) && !freeSpot(x, z, r0)) { const f = nearFree(x, z, r0, 4); if (f) [x, z] = f; else if (!o.force) return null; }

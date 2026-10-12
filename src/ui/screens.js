@@ -5,6 +5,7 @@ import { G, run, meta, best, settings, saveMeta, saveSettings, saveBest, save, S
 import { SHOP } from '../data/shop.js';
 import { rank, price, buy, effectText, isPerm, cheatDeath } from '../game/shop.js';
 import { SHOP_TABS } from '../data/shop.js';
+import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
 import { CLASSES, SKINS, skinOk } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
@@ -94,6 +95,24 @@ function shopHTML() {
     <div class="shop">${Object.entries(SHOP).filter(([, S]) => S.tab === t).map(item).join('')}</div>`).join('');
 }
 
+// ---------- local co-op setup ----------
+function coopHTML() {
+  const S = coop.setup;
+  const row = i => `<div class="cprow px"><b>P${i + 1}</b>
+    <button class="btn ghost" data-ccls="${i}" style="font-size:11px;padding:6px 10px">${CLASSES[S.cls[i]].name}</button>
+    <button class="btn ghost" data-cin="${i}" style="font-size:11px;padding:6px 10px">${INPUTS[S.input[i]]}</button></div>`;
+  return `<div class="btns" id="coopBtns"><span class="px" style="font-size:12px">Players</span>${[1, 2, 3, 4].map(n => `<button class="btn ${S.n === n ? 'on' : 'ghost'}" data-pn="${n}" style="font-size:11px;padding:8px 12px">${n}</button>`).join('')}
+    ${S.n > 1 ? `<span class="px" style="font-size:11px;color:var(--dim)">Shared screen · no friendly fire · enemies get tougher per rat</span>` : ''}</div>
+    ${S.n > 1 ? `<div class="cpset">${Array.from({ length: S.n - 1 }, (_, j) => row(j + 1)).join('')}</div>` : ''}`;
+}
+function bindCoop() {
+  const S = coop.setup, ks = Object.keys(CLASSES), ins = Object.keys(INPUTS).filter(k => k !== 'kb1');
+  const again = () => { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; };
+  ov.querySelectorAll('[data-pn]').forEach(b => { b.onclick = () => { S.n = +b.dataset.pn; again(); }; });
+  ov.querySelectorAll('[data-ccls]').forEach(b => { b.onclick = () => { const i = +b.dataset.ccls; S.cls[i] = ks[(ks.indexOf(S.cls[i]) + 1) % ks.length]; again(); }; });
+  ov.querySelectorAll('[data-cin]').forEach(b => { b.onclick = () => { const i = +b.dataset.cin; S.input[i] = ins[(ins.indexOf(S.input[i]) + 1) % ins.length]; again(); }; });
+}
+
 // ---------- the Nest (hub between runs) ----------
 export function renderMenu() {
   if (!save.slot) { renderSlotSelect(); return; }
@@ -105,7 +124,8 @@ export function renderMenu() {
     <div class="kick px" id="hubGold">The Nest shop · ${commas(meta.salvage || 0)} gold banked</div>
     ${shopHTML()}
     <div class="btns" id="diffBtns"><span class="px" style="font-size:12px">Difficulty</span>${Object.keys(TUNE.difficulty).map(d => `<button class="btn ${(meta.difficulty || 'normal') === d ? 'on' : 'ghost'}" data-diff="${d}" style="font-size:11px;padding:8px 12px">${d[0].toUpperCase() + d.slice(1)} · gold ×${TUNE.difficulty[d].gold}</button>`).join('')}</div>
-    <div class="kick px">Pick a rat to start</div>
+    ${coopHTML()}
+    <div class="kick px">Pick a rat to start${coop.setup.n > 1 ? ' (player 1)' : ''}</div>
     <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => `<button class="card" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="">
         <b>${C.name}</b><span class="d">${C.blurb}</span>
@@ -116,6 +136,7 @@ export function renderMenu() {
     <div class="btns"><button class="btn ghost" id="slotsBtn">Change burrow</button></div></div>`);
   G.mode = 'survival';
   $('slotsBtn').onclick = renderSlotSelect;
+  bindCoop();
   ov.querySelectorAll('[data-diff]').forEach(b => { b.onclick = () => { meta.difficulty = b.dataset.diff; saveMeta(); const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; }; });
   ov.querySelectorAll('[data-buy]').forEach(b => { b.onclick = () => { if (buy(b.dataset.buy)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
   ov.querySelectorAll('.card[data-k]').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
@@ -177,6 +198,8 @@ function dmgTable() {
 
 export function die() {
   if (cheatDeath()) { banner('Second Tail', 'Back on your feet'); return; }
+  if (coopDown()) return; // co-op: down until revived, while anyone still stands
+  coopEnd();
   G.state = 'dead';
   const got = checkUnlocks();
   const nb = run.time > best.time;

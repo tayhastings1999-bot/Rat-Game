@@ -19,6 +19,7 @@ import { TUNE } from '../tuning.js';
 import { findsText } from '../game/finds.js';
 import { puList, puT, POWERUPS } from '../game/powerups.js';
 import { selFlask, heldFlasks } from '../game/shop.js';
+import { coop, coopHud } from '../game/coop.js';
 
 export function initHudIcons() {
   $('icHeart').innerHTML = IC_HEART;
@@ -57,6 +58,7 @@ function objective() {
 }
 
 export function hud() {
+  { let c = $('coopHud'); if (coop.on) { if (!c) { c = document.createElement('div'); c.id = 'coopHud'; $('hud').appendChild(c); } c.innerHTML = coopHud(); } else if (c) c.remove(); }
   $('hpFill').style.width = clamp(run.hp / st.maxHp * 100, 0, 100) + '%';
   $('hpTxt').textContent = Math.ceil(Math.max(0, run.hp)) + ' / ' + st.maxHp;
   const S = SPECIALS[CLASSES[run.cls].special], cd = $('specCd');

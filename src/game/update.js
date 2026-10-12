@@ -38,6 +38,7 @@ import { tickSetPieces } from '../world/setpieces.js';
 import { TUNE } from '../tuning.js';
 import { tickPowerups, puOn } from './powerups.js';
 import { tickFinds } from './finds.js';
+import { coop, coopUpdate, coopSplit } from './coop.js';
 
 let seenT = 0;
 
@@ -196,7 +197,7 @@ function tickCracks(dt) {
   }
 }
 
-function updatePlayerStatus(dt) {
+export function updatePlayerStatus(dt) {
   if (P.poisonT > 0) { P.poisonT -= dt; P.pTick -= dt; if (P.pTick <= 0) { P.pTick = 0.5; hurtP(3, null, true); } }
   const tp = tileAt(P.x, P.z);
   if (tp === 4 && P.y < -0.15) { P.acidT -= dt; if (P.acidT <= 0) { P.acidT = 0.5; hurtP(5, null, true); puff(P.x, P.y + 0.5, P.z, 0xb8f040, 4, 1.5); } }
@@ -253,7 +254,7 @@ const solidAt = (x, y, z) => {
   return hit;
 };
 
-function updateProjectiles(dt) {
+export function updateProjectiles(dt) {
   for (const p of W.pproj) {
     p.life -= dt;
     if (p.homing) {
@@ -348,7 +349,7 @@ function updateObjects(dt) {
   }
 }
 
-function updatePickups(dt) {
+export function updatePickups(dt) {
   const mr = st.magnet * st.magnet;
   const pull = g => {
     const dx = P.x - g.x, dy = P.y + 0.5 - g.y, dz = P.z - g.z, d2 = dx * dx + dy * dy + dz * dz;
@@ -372,8 +373,15 @@ function updatePickups(dt) {
   });
 }
 
+/** One frame of play. In local co-op (game/coop.js) this runs once per frame for the
+ *  lead player, with the other rats stepped around it by coopUpdate. */
 export function update(dt) {
-  run.time += dt;
+  if (coop.on) { coopUpdate(dt, updateSolo); return; }
+  updateSolo(dt);
+}
+
+/** Per-rat timers (also stepped for every co-op rat). */
+export function tickPlayerTimers(dt) {
   P.inv = Math.max(0, P.inv - dt);
   P.aimT -= dt;
   P.atk -= dt;
@@ -381,13 +389,23 @@ export function update(dt) {
   P.throwT = Math.max(0, (P.throwT || 0) - dt);
   run.specT = Math.max(0, run.specT - dt);
   run.hp = Math.min(st.maxHp, run.hp + st.regen * st.healMul * dt);
+}
+
+/** Remember a safe spot to come back to after a fall. */
+export function markSafe() {
+  if (P.onGround && Math.abs(P.y - floorY(P.x, P.z, true)) < 0.1 && DRY(tileAt(P.x, P.z)) && !W.cracks.has(gi(toG(P.x), toG(P.z)))) { P.safe.x = P.x; P.safe.z = P.z; }
+}
+
+function updateSolo(dt) {
+  run.time += dt;
+  tickPlayerTimers(dt);
   tickDucts(dt);
   updateZones(dt);
   stepPlayer(dt / 2);
   stepPlayer(dt / 2);
   primary(dt);
   tickHaz(dt);
-  if (P.onGround && Math.abs(P.y - floorY(P.x, P.z, true)) < 0.1 && DRY(tileAt(P.x, P.z)) && !W.cracks.has(gi(toG(P.x), toG(P.z)))) { P.safe.x = P.x; P.safe.z = P.z; }
+  markSafe();
   updateMods(dt);
   updateHidden();
   updatePlayerStatus(dt);
@@ -408,11 +426,12 @@ export function update(dt) {
   if (!run.bossDone && !G.boss && run.nests <= 0 && M.spawnTiles.length && !run.secret) spawnBoss();
   tickSecret(dt, openGate, exitSecret);
   tickSecretDrain(dt, enterSecret);
-  updateEnemies(dt, cap);
+  G.spawnCap = cap;
+  { const back = coopSplit('enemies'); updateEnemies(dt, cap); back(); }
   tickForage(dt);
   comboTick(dt);
   if (G.state !== 'play') return;
-  updateProjectiles(dt);
+  { const back = coopSplit('proj'); updateProjectiles(dt); back(); }
   updateObjects(dt);
   tickInteractives(dt);
   tickTraps(dt);

@@ -17,6 +17,7 @@ import { setRat, FACE } from '../entities/rat.js';
 import { banner, renderSlots, hud } from '../ui/hud.js';
 import { renderMenu, hideOverlay } from '../ui/screens.js';
 import { applyShop, shopGrowth } from './shop.js';
+import { coop, coopStart, coopEnd } from './coop.js';
 import { coldOpen } from './feel.js';
 import { setupObjective } from './objectives.js';
 import { storyBeat } from './personality.js';
@@ -74,6 +75,7 @@ export function setupWorld(seed) {
 }
 
 export function menu() {
+  coopEnd();
   G.state = 'menu';
   $('hud').style.display = 'none';
   $('bossWrap').style.display = 'none';
@@ -94,7 +96,7 @@ export function startRun(k) {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, dmgBy: {},
     specT: 0, primT: 0, lowWarned: false, hp: 0, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 1.5, surgeT: 55, lullT: 0, seenMobs: {},
-    growth: shopGrowth(), keys: 0, bosses: 0, minis: 0, turbo: 0, vials: TUNE.vials.start, evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, combo: 0, comboT: 0, buffs: {}, forage: 0,
+    players: Math.max(1, Math.min(4, coop.setup.n | 0)), growth: shopGrowth(), keys: 0, bosses: 0, minis: 0, turbo: 0, vials: TUNE.vials.start, evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, combo: 0, comboT: 0, buffs: {}, forage: 0,
   });
   resetObj(st, freshStats(k));
   applyShop();
@@ -117,6 +119,7 @@ export function startRun(k) {
   $('clsName').textContent = C.name;
   $('portrait').src = FACE[k];
   $('zoneName').textContent = dName();
+  coopStart(freshStats, shopGrowth);
   renderSlots();
   hud();
   G.last = performance.now();

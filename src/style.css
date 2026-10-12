@@ -262,3 +262,15 @@ body.combat #contracts{opacity:.25}
 #slots .slot.flask b{color:var(--fc);font-size:14px}
 #slots .slot.flask .kinds{position:absolute;top:-14px;left:0;font-size:9px;color:var(--dim);white-space:nowrap}
 #slots .slot.flask .cd{background:color-mix(in srgb,var(--fc) 35%,transparent)}
+
+/* Local co-op */
+.cpset{display:flex;flex-wrap:wrap;gap:10px}
+.cprow{display:flex;align-items:center;gap:8px;font-size:12px}
+#coopHud{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);display:flex;gap:10px;pointer-events:none}
+#coopHud .cp{width:150px;padding:6px 8px;background:rgba(10,8,8,.7);border:1px solid var(--rc);display:flex;flex-direction:column;gap:3px}
+#coopHud .cp b{font-size:10px;color:var(--rc)}
+#coopHud .cp u{display:block;height:6px;background:#2a1a1a}
+#coopHud .cp u s{display:block;height:100%;background:#d03a2a}
+#coopHud .cp i{display:block;height:3px;background:#f2b233}
+#coopHud .cp span{font-size:10px;color:var(--dim)}
+#coopHud .cp.down{opacity:.6;border-style:dashed}
