@@ -11,6 +11,7 @@ export const TUNE = {
   zone: {
     // Enemy strength by zone (zone 0 = the first). Replaces the old threat engine.
     threatPerZone: 2, // the zone's difficulty index, per zone number
+    bossHpPerZone: 0.15, bossHpBase: 0.6, // boss HP = base·0.6 × (1 + 0.15·zone): fights land at ~60-120 s of uptime because player damage per swing grows slowly
     hpPerThreat: 0.2, // enemy HP +20% per point
     dmgPerThreat: 0.075, // enemy damage +7.5% per point
     spdPerThreat: 0.03, // enemy speed +3% per point (max +55%)
@@ -132,11 +133,12 @@ export const TUNE = {
   nests: {
     // Three tiers. Damage knocks a nest down a tier once its HP falls below the next tier's.
     hp1: 160, hp2: 320, hp3: 560, // Litter Pile, Burrow, Warren (× zone and sewer scaling)
+    hpPerZone: 0.15, sewerHp: 1.2, hpCap: 2.2, // HP × min(hpCap, (1 + hpPerZone·zone) × sewerHp)
     every1: 4.5, every2: 3.2, every3: 2.2, // seconds between spawns while you're in range
     kids1: 6, kids2: 10, kids3: 14, // live children a nest keeps at most
     xp1: 15, xp2: 25, xp3: 40,
     range: 45, // nests only spawn while you're this close
-    count: 7, countPerZone: 0.5, countMax: 12, // nests per zone
+    count: 5, countPerZone: 0.25, countMax: 8, // nests per zone (trimmed for 2-4 min levels)
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
     warrenMinZone: 2, // no Warrens before this zone
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
