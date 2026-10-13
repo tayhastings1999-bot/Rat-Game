@@ -494,7 +494,6 @@ export function bossStatus(e) {
 }
 
 export function onBossDeath(e) {
-  playSting('victory'); // soundtrack v3 "A-men" (no-op on the procedural score)
   storyBossDown(e);
   G.victoryT = 2.6; // the rat rears up and roars (ratAnim.js)
   dropCreature(e.mesh);
@@ -517,6 +516,7 @@ export function onBossDeath(e) {
   run.bossHit = false;
   if (finalDue(e.kind)) { run.finalUp = true; run.bossDone = false; banner(e.name + ' falls', 'The runes burn… something wears the real crown'); return; } // spawnBoss runs again next step
   if (secretDue(e)) { run.secretUp = true; run.bossDone = false; banner(e.name + ' falls', 'The Great Rune flares… the floor of the Court splits open'); return; }
+  playSting('victory'); // soundtrack v3 "A-men": only on the last boss of the chain, not before The Crowned One / Nameless Rat rise (P25-1)
   openGate();
   const got = checkUnlocks();
   if (gear) { banner(e.name + ' falls', `Legendary: ${gear.name} · ${gear.txt}`); return; }

@@ -11,7 +11,7 @@ import { world } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
 import { fx, puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { M, toW, floorY, DRY } from '../world/grid.js';
+import { M, toW, floorY, DRY, nearFree } from '../world/grid.js';
 import { curD } from '../data/world.js';
 import { addChest, addCache } from '../world/build.js';
 import { scrapDrop } from '../combat/combat.js';
@@ -51,7 +51,7 @@ export function setupSecret(info) {
   if (!D.secret) return;
   run.scabSeen = true; // Scab doesn't follow you down here
   run.secretsSeen = (run.secretsSeen || 0) + 1;
-  const rooms = (info.byDist || []).slice(), at = i => { const r = rooms[i % Math.max(1, rooms.length)]; return r ? [toW(r.cx), toW(r.cy)] : [P.x + rand(-8, 8), P.z + rand(-8, 8)]; };
+  const rooms = (info.byDist || []).slice(), at = i => { const r = rooms[i % Math.max(1, rooms.length)]; if (!r) return [P.x + rand(-8, 8), P.z + rand(-8, 8)]; const x = toW(r.cx), z = toW(r.cy); return nearFree(x, z, 0.8, 8) || [x, z]; }; // off any prop at the room centre (P24-4: buried chests)
   if (D.secret === 'vault') {
     run.secretT = S.vaultTime;
     for (let i = 0; i < S.vaultChests; i++) { const [x, z] = at(i); addChest(x, 0, z, true); }
