@@ -44,6 +44,7 @@ export const SEWER_LEVELS = [
 export const SECRET_LEVELS = {
   vault: { id: 'vault', kind: 'city', base: 1, seed: 'cheese-vault', title: 'The Cheese Vault', secret: 'vault', haz: null, fam: ['vermin'], over: { fog: 0x1e1408, sky: 0x2a1a08, lamp: 0xffd040, neon: [0xffd040, 0xffb020] } },
   run: { id: 'run', kind: 'city', base: 0, seed: 'rat-run', title: 'The Rat Run', secret: 'run', haz: null, fam: ['vermin'], over: { fog: 0x14100a, lamp: 0xffe080 } },
+  treasure: { id: 'treasure', kind: 'city', base: 1, seed: 'treasure-room', title: 'Treasure Room', secret: 'treasure', haz: null, fam: ['vermin'], over: { fog: 0x2a1c06, sky: 0x3a2808, lamp: 0xffe060, neon: [0xffd040, 0xfff0a0] } },
   garden: { id: 'garden', kind: 'sewer', base: 2, seed: 'bone-garden', title: 'The Bone Garden', secret: 'garden', haz: null, fam: ['vermin', 'wings', 'rot', 'prowl', 'guard'], over: { fog: 0x0c0a0e, lamp: 0xe0d8c0 } },
 };
 

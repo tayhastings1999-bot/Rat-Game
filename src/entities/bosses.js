@@ -3,6 +3,8 @@
 // timed action queue for multi-part patterns.
 import { onBossDeath as storyBossDown } from '../game/story.js';
 import * as THREE from 'three';
+import { bossGear, finalDue, secretDue } from '../game/runes.js';
+import { playSting } from '../audio/stems.js';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene, dropCreature } from '../render/renderer.js';
@@ -64,8 +66,21 @@ export function spawnBoss() {
     Object.assign(b, { name: 'Scab, the Knotted King', scabKing: true, lore: ['Your brother, in a crown of tails', '"Nobody leaves. Not this time. Not ever again."'] });
     mesh.traverse(o => { if (o.material && o.material.color) o.material.color.multiplyScalar(0.7); });
   }
+  // The final boss (every rune held): The Crowned One rises after the King of the Court falls.
+  if (run.finalUp) {
+    Object.assign(b, { name: 'The Crowned One', final: true, hp: b.hp * TUNE.runes.finalHp, maxHp: b.maxHp * TUNE.runes.finalHp, lore: ['Who writes the lists', '"Every colony has a price. Yours was cheap."'] });
+    mesh.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(new THREE.Color(0xffd040), 0.5); });
+  }
+  // The secret boss (the Great Rune whole): The Nameless Rat, built to be nearly impossible.
+  // Its ×6 replaces the co-op boss-HP multiplier rather than stacking on it (difficulty bossHp still applies).
+  if (run.secretUp) {
+    const coopM = 1 + Math.max(0, (run.players || 1) - 1) * TUNE.coop.perPlayer.bossHp;
+    const S = TUNE.runes;
+    Object.assign(b, { name: 'The Nameless Rat', final: false, secretBoss: true, hp: b.hp * S.secretHp / coopM, maxHp: b.maxHp * S.secretHp / coopM, dmg: b.dmg * S.secretDmg, spd: b.spd * S.secretSpd, armored: S.secretTaken, lore: ['Under the Court, under the crown', '"You found every piece of me. Now I am whole."'] });
+    mesh.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(new THREE.Color(0xff5ad8), 0.6); });
+  }
   // Remixed levels: a variant of the boss (a new name, a tint and a twist).
-  if (V && !b.scabKing) {
+  if (V && !b.scabKing && !b.final && !b.secretBoss) {
     b.variant = D.bossV;
     b.name += V.suffix;
     b.loreKick = 'Variant · ' + V.desc;
@@ -479,6 +494,7 @@ export function bossStatus(e) {
 }
 
 export function onBossDeath(e) {
+  playSting('victory'); // soundtrack v3 "A-men" (no-op on the procedural score)
   storyBossDown(e);
   G.victoryT = 2.6; // the rat rears up and roars (ratAnim.js)
   dropCreature(e.mesh);
@@ -493,10 +509,16 @@ export function onBossDeath(e) {
   addChest(e.x, gy, e.z, isSewer());
   dropKey(e.x + 1.5, gy, e.z + 1.5);
   run.bossDone = true;
+  if (e.secretBoss) { run.secretDone = true; run.secretUp = false; meta.secretWins = (meta.secretWins || 0) + 1; }
+  if (e.final) { run.finalDone = true; run.finalUp = false; meta.finalWins = (meta.finalWins || 0) + 1; }
+  const gear = bossGear(e.kind);
   meta.bosses++;
   run.bosses = (run.bosses || 0) + 1;
   run.bossHit = false;
+  if (finalDue(e.kind)) { run.finalUp = true; run.bossDone = false; banner(e.name + ' falls', 'The runes burn… something wears the real crown'); return; } // spawnBoss runs again next step
+  if (secretDue(e)) { run.secretUp = true; run.bossDone = false; banner(e.name + ' falls', 'The Great Rune flares… the floor of the Court splits open'); return; }
   openGate();
   const got = checkUnlocks();
+  if (gear) { banner(e.name + ' falls', `Legendary: ${gear.name} · ${gear.txt}`); return; }
   banner(e.name + ' falls', got.length ? 'Unlocked: ' + got.join(', ') : isSewer() ? 'A ladder leads back to the streets' : 'The road is open — or take the key below');
 }

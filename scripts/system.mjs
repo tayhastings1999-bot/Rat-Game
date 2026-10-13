@@ -5,7 +5,7 @@
 //   Math       damage and armor, i-frames, health/XP bars matching the numbers,
 //              healing caps, kills and XP, automatic level-ups, the kit slots,
 //              the dodge cooldown, manual attack, and the save file round-tripping.
-//   Fuzz       random keys/mouse/touch at full speed during play; the rat and
+//   Fuzz       random keys/mouse at full speed during play; the rat and
 //              mobs teleported to random spots (walls, roofs, edges) with wild
 //              velocities; random clicks on every overlay. Watches for
 //              exceptions, NaN, out-of-bounds and stuck states.
@@ -284,7 +284,7 @@ await check('22 levels with fixed seeds, remixes and boss variants', async () =>
     run.district = 0; run.tier = 0; s.setupWorld(s.levelSeed()); const c = hash();
     return { n, same: a === b, differs: a !== c, name, bossV: D.bossV, night: D.night };
   });
-  assert(r.n === 22, `${r.n} levels`);
+  assert(r.n === 23, `${r.n} levels`); // 22 fixed levels + the treasure room
   assert(r.same, 'the same level built twice came out different');
   assert(r.differs, 'a remix has the same layout as its original');
   assert(r.night && r.bossV && /After Dark/.test(r.name), 'remix not set up: ' + JSON.stringify(r));
@@ -439,11 +439,28 @@ await check('leaving a level shows a graded tally card', async () => {
   assert(after.st === 'play' && after.ranks === 1, 'did not move on: ' + JSON.stringify(after));
   return 'grade ' + card;
 });
-await check('every action has a key, a touch button and How to Play text', async () => {
+await check('the tally card dismisses itself in ~2.5 s with no key press', async () => {
+  await fresh();
+  await S(() => { __scurry.G.testNoTally = false; __scurry.exitRoad(); });
+  await sleep(300);
+  const st = await S(() => __scurry.G.state);
+  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: 8000 });
+  await S(() => { __scurry.G.testNoTally = true; });
+  assert(st === 'tally', 'no tally card: ' + st);
+  return 'auto-dismissed';
+});
+await check('story scenes wait for a lull: never open with an awake enemy close by', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry; s.run.dStart = s.run.time - 10; const e = s.spawnEnemy('mawling', s.P.x + 3, s.P.z, { plain: true, force: true }); const busy = s.story.calm(); e.dead = true; e.hp = 0; const quiet = s.story.calm(); return { busy, quiet }; });
+  assert(r.busy === false && r.quiet === true, JSON.stringify(r));
+  return 'gated';
+});
+// Touch play is off for now (TOUCH_CONTROLS in src/ui/touch.js), so actions need a key and How to Play text only.
+await check('every action has a key and How to Play text', async () => {
   const r = await S(() => {
-    const how = __scurry.HOWTO, btns = [...document.querySelectorAll('#tBtns [data-b], #tTop [data-b]')].map(b => b.dataset.b);
-    const need = { attack: ['atk', 'J</kbd>'], dodge: ['roll', 'Shift'], jump: ['jump', 'Space'], special: ['spec', '<kbd>Q</kbd>'], sig: ['sig', '<kbd>G</kbd>'], turbo: ['turbo', '<kbd>X</kbd>'], vial: ['vial', '<kbd>Z</kbd>'], use: ['use', '<kbd>E</kbd>'], lock: ['lock', '<kbd>R</kbd>'], sniff: ['scent', '<kbd>F</kbd>'], map: ['map', '<kbd>M</kbd>'], pause: ['pause', 'Esc'] };
-    return Object.entries(need).filter(([, [b, k]]) => !btns.includes(b) || !how.includes(k)).map(([n]) => n);
+    const how = __scurry.HOWTO;
+    const need = { attack: 'J</kbd>', dodge: 'Shift', jump: 'Space', special: '<kbd>Q</kbd>', sig: '<kbd>G</kbd>', turbo: '<kbd>X</kbd>', vial: '<kbd>Z</kbd>', use: '<kbd>E</kbd>', lock: '<kbd>R</kbd>', sniff: '<kbd>F</kbd>', map: '<kbd>M</kbd>', pause: 'Esc' };
+    return Object.entries(need).filter(([, k]) => !how.includes(k)).map(([n]) => n);
   });
   assert(!r.length, 'missing: ' + r.join(', '));
   return '12 actions';
@@ -460,7 +477,7 @@ await check('save file round-trips', async () => {
 });
 
 // ---------------------------------------------------------------- fuzzing
-await check(`input fuzz (${FUZZ_SECS}s of random keys, mouse and touch)`, async () => {
+await check(`input fuzz (${FUZZ_SECS}s of random keys and mouse)`, async () => {
   await fresh();
   await S(() => { __scurry.god(true); Object.assign(__scurry.run, { spawnT: 0.5, surgeT: 20 }); });
   const KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'KeyC', 'KeyQ', 'KeyG', 'KeyX', 'KeyE', 'KeyR', 'KeyF', 'KeyV', 'KeyM', 'Escape', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'Enter', 'KeyP'];

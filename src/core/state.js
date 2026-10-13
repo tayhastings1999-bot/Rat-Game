@@ -52,7 +52,7 @@ export const run = {};
 export const st = {};
 
 export const settings = Object.assign(
-  { shake: 1, music: 0.55, sfx: 0.7, voice: false },
+  { shake: 1, music: 0.55, sfx: 0.7, voice: false, musicMode: 'v3' }, // musicMode: 'v3' stems | 'procedural' (v2 isn't shipped: plays procedural)
   loadJSON('scurry.settings', loadJSON('scurry5.settings', {})),
 );
 if (settings.vol != null && settings.sfx == null) settings.sfx = settings.vol;
@@ -72,9 +72,10 @@ const BEST0 = () => ({ time: 0, kills: 0, district: 0 });
 // The final four classes (Oct 2026). Brawler, Plaguebearer and Roof Rat were cut; a save
 // that still names one moves to the closest live role. Kept here (not in data/classes.js)
 // because classes.js imports from this file.
-export const LIVE_CLASSES = ['tank', 'slinger', 'warlock', 'sneak'];
+// Saves only remap retired ids here; whether an id exists (and is unlocked) is checked at use
+// by liveClass() in data/classes.js, so a save naming a future class survives a migration.
 export const RETIRED_CLASS = { brawler: 'tank', plague: 'warlock', roof: 'slinger' };
-export const liveClassId = k => (LIVE_CLASSES.includes(k) ? k : RETIRED_CLASS[k] || 'tank');
+export const liveClassId = k => (typeof k === 'string' && k ? RETIRED_CLASS[k] || k : 'tank');
 
 /** Bring any stored slot up to SAVE_VERSION. */
 function migrate(d) {

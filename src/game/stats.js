@@ -1,7 +1,8 @@
 // Class stats: Strength, Speed, Armor and Magic (TUNE.classes, 1–10 each)
 // turned into the numbers the rest of the game reads from `st`. Editing a
 // class or stat value in the ?debug panel re-applies it to the rat at once.
-import { G, P, run, st } from '../core/state.js';
+import { G, P, run, st, meta } from '../core/state.js';
+import { GEAR } from '../data/runes.js';
 import { coopGrow } from './coop.js';
 import { TUNE, tuneHooks } from '../tuning.js';
 import { powerScaling } from '../combat/combat.js';
@@ -18,12 +19,15 @@ export function soft(v, at = TUNE.balance.softAt, R = TUNE.balance.softR) {
 /** The class-driven part of `st` for class `k`, including what the current run's levels have grown. */
 export function derive(k) {
   const S = TUNE.stats, c0 = TUNE.classes[k] || TUNE.classes.tank, g = run.cls === k && run.growth ? run.growth : null;
-  const c = g ? { ...c0, str: soft(c0.str + g.str), spd: soft(c0.spd + g.spd), arm: soft(c0.arm + g.arm), mag: soft(c0.mag + g.mag) } : c0;
+  let c = g ? { ...c0, str: soft(c0.str + g.str), spd: soft(c0.spd + g.spd), arm: soft(c0.arm + g.arm), mag: soft(c0.mag + g.mag) } : c0;
+  // Legendary gear (data/runes.js GEAR), once owned by this burrow: a stat point and a small multiplier.
+  const L = meta.gear && meta.gear[k] && GEAR[k], m = (L && L.mul) || {};
+  if (L) c = { ...c, [L.stat]: soft(c[L.stat] + L.add) };
   return {
-    maxHp: c0.hp + (g ? g.hp : 0),
+    maxHp: Math.round((c0.hp + (g ? g.hp : 0)) * (m.maxHp || 1)),
     speed: S.spdBase + S.spdPer * c.spd,
-    primMul: S.strBase + S.strPer * c.str,
-    magMul: S.magBase + S.magPer * c.mag,
+    primMul: (S.strBase + S.strPer * c.str) * (m.dmg || 1),
+    magMul: (S.magBase + S.magPer * c.mag) * (m.dmg || 1),
     taken: Math.max(TUNE.balance.armFloor, 1 - S.armPer * c.arm),
     cd: Math.max(0.5, S.rateBase - S.ratePer * c.spd),
     turboGain: S.gainBase + S.gainPer * c.mag,
