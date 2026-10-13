@@ -246,7 +246,7 @@ function corruptDeath(e) {
 }
 
 export function scrapDrop(x, y, z) {
-  if (W.scraps.length < 290) W.scraps.push({ x: x + rand(-0.6, 0.6), y, z: z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
+  if (W.scraps.length < 590) W.scraps.push({ x: x + rand(-0.6, 0.6), y, z: z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
 }
 const keyMat = new THREE.MeshBasicMaterial({ color: 0xffd040 });
 export function dropKey(x, y, z) {
