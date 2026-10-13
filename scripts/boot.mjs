@@ -114,6 +114,24 @@ await check('class unlock hook: secret rats stay hidden, locked rats show locked
   if (!r.hidden || !r.locked || r.ran !== 'tank') throw new Error(JSON.stringify(r));
   await page.waitForSelector('.card[data-k="tank"]');
 });
+await check('realm hub: pick any reached city/sewer level; sewer runs stay underground; Continue resumes', async () => {
+  const r = await S(() => {
+    const s = __scurry, m = s.meta, keep = { d: m.maxDistrict, w: m.maxSewer, pack: JSON.stringify(m.pack || {}) };
+    m.maxDistrict = 2; m.maxSewer = 1; delete m.cont; s.renderMenu();
+    const city = document.querySelectorAll('#realmCity [data-realm]').length, sewer = document.querySelectorAll('#realmSewer [data-realm]').length;
+    document.querySelector('[data-realm="sewer:1"]').click();
+    document.querySelector('.card[data-k="tank"]').click();
+    const at = { layer: s.run.layer, idx: s.run.sewerIdx, realm: s.run.realm, cont: !!m.cont };
+    s.run.level = 7; s.checkpoint(); s.menu();
+    const btn = !!document.getElementById('contBtn');
+    document.getElementById('contBtn').click();
+    const back = { layer: s.run.layer, idx: s.run.sewerIdx, level: s.run.level };
+    s.menu(); delete m.cont; delete m.startAt; m.maxDistrict = keep.d; m.maxSewer = keep.w; m.pack = JSON.parse(keep.pack); s.saveMeta(); s.renderMenu();
+    return { city, sewer, at, btn, back };
+  });
+  if (r.city !== 3 || r.sewer !== 2 || r.at.layer !== 'sewer' || r.at.idx !== 1 || r.at.realm !== 'sewer' || !r.at.cont || !r.btn || r.back.layer !== 'sewer' || r.back.level !== 7) throw new Error(JSON.stringify(r));
+  await page.waitForSelector('.card[data-k="tank"]');
+});
 await check('start a run from the menu', async () => {
   await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
@@ -177,6 +195,17 @@ await check('held flasks show on the HUD, cycle with B and uncork with V', async
   await toPlay(); await page.keyboard.press('KeyV'); // uncork where it left off
   if (!(await page.evaluate(k => __scurry.puOn(k), b))) throw new Error('resume failed');
 });
+await check('shots pop Rot Vials on the floor: the burst hurts enemies, never the rat', async () => {
+  const r = await S(() => {
+    const s = __scurry, x = s.P.x + 4, z = s.P.z, g0 = !!s.G.god; s.god(false);
+    const hp0 = s.run.hp, n0 = s.W.vials.length; s.dropVial(x, s.P.y, z);
+    const e = s.spawnEnemy('mawling', x, z + 1, { plain: true, force: true }), eh = e.hp;
+    const v = s.W.vials[s.W.vials.length - 1], popped = s.popVialsAt(v.x, v.z, 0.3);
+    const out = { popped, gone: s.W.vials.length === n0, hurt: e.dead || e.hp < eh, safe: s.run.hp >= hp0 };
+    s.god(g0); return out;
+  });
+  if (r.popped !== 1 || !r.gone || !r.hurt || !r.safe) throw new Error(JSON.stringify(r));
+});
 await check('a Second Tail cheats death once', async () => {
   await S(() => { __scurry.run.tails = 1; __scurry.run.hp = 0; __scurry.die(); });
   const r = await S(() => ({ st: __scurry.G.state, hp: __scurry.run.hp, tails: __scurry.run.tails }));
@@ -233,6 +262,29 @@ await check('rune fragments: one per regular level in a hidden area, saved per s
   if (!r.covers || !r.placed || !r.hidden || !r.whole || !r.boss || !r.boss.secret || Math.abs(r.ratio - r.want) > 0.05) throw new Error(JSON.stringify(r));
   if (!r.saved) throw new Error('fragment not saved to the slot ' + JSON.stringify(r));
 });
+await check('soundtrack v3: stems load (or fall back), bar-locked fades, MUSIC_V3 mapping, musicMode fallback', async () => {
+  const m = await S(() => { const M = __scurry.music3; return { boss2: M.mixFor(3, false, { phase: 2 }), boss0: M.mixFor(3, true, { phase: 0 }), c1: M.mixFor(1, true, null), c2: M.mixFor(2, false, null), menu: M.mixFor(0, false, 'menu') }; });
+  if (m.boss2.p1 !== 1 || m.boss2.p2 !== 1 || m.boss2.p3 !== 0 || m.boss2.city || m.boss0.p1 !== 0.5 || m.c1.sewer !== 1 || m.c1.combat !== 0.6 || m.c2.city !== 0.85 || m.c2.combat !== 1 || m.menu.menu !== 1 || m.menu.city) throw new Error('mapping ' + JSON.stringify(m));
+  await page.waitForFunction(() => ['ready', 'failed'].includes(__scurry.music3.stems.state) || __scurry.music3.stems.state === 'idle' && !__scurry.audioReady(), null, { timeout: T(30000) });
+  const r = await S(() => { const M = __scurry.music3, st = M.stems.state; if (st !== 'ready') return { st, why: M.stems.failed };
+    M.updateStems(2, false, null, false); const L = M.stems.last, k = (L.at - M.stems.t0) / M.BAR;
+    M.settings.musicMode = 'procedural'; const off = !M.stemsOn(); M.settings.musicMode = 'v3';
+    return { st, onBar: Math.abs(k - Math.round(k)) < 1e-6, len: L.len, off }; });
+  if (r.st === 'ready' && (!r.onBar || r.len > 0.3 || !r.off)) throw new Error(JSON.stringify(r));
+  if (r.st === 'failed') throw new Error('stems failed to load: ' + r.why);
+});
+await check('drop-in/drop-out co-op: F6 adds a keyboard rat at the lead mid-run, scaling follows, F6 again removes it', async () => {
+  await S(() => { __scurry.startRun('tank'); __scurry.god(true); });
+  await toPlay();
+  const before = await S(() => ({ hpM: __scurry.run.hpM, n: __scurry.run.players }));
+  await page.keyboard.press('F6');
+  const mid = await S(() => { const s = __scurry, q = s.asPlayer(1, () => ({ x: s.P.x, z: s.P.z })); return { on: s.coop.on, n: s.coop.players.length, players: s.run.players, hpM: s.run.hpM, d: Math.hypot(q.x - s.P.x, q.z - s.P.z) }; });
+  await page.keyboard.press('F6');
+  const after = await S(() => ({ on: __scurry.coop.on, players: __scurry.run.players, hpM: __scurry.run.hpM, st: __scurry.G.state }));
+  await S(() => { __scurry.god(false); __scurry.menu(); });
+  if (!mid.on || mid.n !== 2 || mid.players !== 2 || !(mid.hpM > before.hpM) || mid.d > 3) throw new Error('join ' + JSON.stringify({ before, mid }));
+  if (after.on || after.players !== 1 || Math.abs(after.hpM - before.hpM) > 1e-6 || after.st !== 'play') throw new Error('leave ' + JSON.stringify(after));
+});
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
@@ -256,6 +308,27 @@ await check('co-op: the lead rat revive count resets on a new map', async () => 
   await toPlay();
   await S(() => { __scurry.P.revUsed = 2; __scurry.run.seed = __scurry.run.seed + '-test'; }); // a seed change = a new map for leash()
   await page.waitForFunction(() => !__scurry.P.revUsed, null, { timeout: T(5000) });
+});
+await check('co-op callouts name the player colour + class, tint the line, and carry a manifest id', async () => {
+  const r = await S(() => { const s = __scurry, A = s.announcer; A.callout('crit', 1); const b = { ...s.run.lastBark }; A.foodShot(2); const f = { ...s.run.lastBark }; return { b, f, n0: A.callName(0) }; });
+  // The name can sit anywhere in the line ("Eat or die, Blue Rat!"); lines are picked at random.
+  if (!/\bBlue (Rat|Slinger|Warlock|Sneak)\b/.test(r.b.text) || !r.b.color || !/^(vo|ann)_/.test(r.b.vo || '')) throw new Error('crit ' + JSON.stringify(r.b));
+  if (!/^(vo|ann)_/.test(r.f.vo || '') || !r.f.color) throw new Error('food ' + JSON.stringify(r.f));
+  if (!/^Red (Rat|Slinger|Warlock|Sneak)$/.test(r.n0)) throw new Error('name ' + r.n0);
+});
+await check('co-op: only the lead takes the manhole; a pipe moves only the rat that used it, with no fade', async () => {
+  await toPlay();
+  const m = await S(() => { const s = __scurry, mh = s.G.manhole; if (!mh) return 'no manhole'; s.run.keys = 1; const layer = s.run.layer; s.asPlayer(1, () => { s.P.x = mh.x; s.P.z = mh.z; s.P.y = 0; s.pressE(); }); return { layer: s.run.layer === layer, keys: s.run.keys, st: s.G.state }; });
+  if (typeof m === 'string' || !m.layer || m.keys !== 1 || m.st !== 'play') throw new Error('player 2 took the manhole ' + JSON.stringify(m));
+  const p = await S(() => { const s = __scurry, pipe = s.W.pipes.find(p => p.link); if (!pipe) return null;
+    s.asPlayer(1, () => { s.P.x = pipe.x; s.P.z = pipe.z; s.P.y = 0; s.pressE(); });
+    const far = Math.hypot(pipe.link.ex - s.P.x, pipe.link.ez - s.P.z) > s.TUNE.coop.leash;
+    const p1 = { x: s.P.x, z: s.P.z };
+    return { p1, far, ex: pipe.link.ex, ez: pipe.link.ez, st: s.G.state, fade: document.getElementById('fade').style.opacity }; });
+  if (!p) return; // no linked pipe on this map
+  if (p.st !== 'play' || p.fade === '1') throw new Error('pipe froze or blanked the shared screen ' + JSON.stringify(p));
+  await page.waitForFunction(p => { const s = __scurry, q = s.asPlayer(1, () => ({ x: s.P.x, z: s.P.z }));
+    return Math.hypot(q.x - p.ex, q.z - p.ez) < 1.5 && (p.far ? Math.hypot(s.P.x - p.ex, s.P.z - p.ez) < 2.5 : Math.hypot(s.P.x - p.p1.x, s.P.z - p.p1.z) < 0.5); }, p, { timeout: T(5000) });
 });
 await check('co-op: a downed rat is revived by a partner, and the run ends only when all are down', async () => {
   await S(() => { __scurry.god(false); __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); });

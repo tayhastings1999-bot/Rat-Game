@@ -52,7 +52,7 @@ export const run = {};
 export const st = {};
 
 export const settings = Object.assign(
-  { shake: 1, music: 0.55, sfx: 0.7, voice: false },
+  { shake: 1, music: 0.55, sfx: 0.7, voice: false, musicMode: 'v3' }, // musicMode: 'v3' stems | 'procedural' (v2 isn't shipped: plays procedural)
   loadJSON('scurry.settings', loadJSON('scurry5.settings', {})),
 );
 if (settings.vol != null && settings.sfx == null) settings.sfx = settings.vol;

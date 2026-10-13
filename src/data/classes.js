@@ -11,10 +11,10 @@ import { meta, RETIRED_CLASS, liveClassId } from '../core/state.js';
 //   secret: true   hidden from the picker entirely until unlocked (otherwise shown locked)
 // Once req passes, meta['c_' + id] is set so the unlock sticks. Nothing uses this yet.
 export const CLASSES = {
-  tank: { name: 'Sewer Rat', role: 'Tank', rc: '#c9d4e8', blurb: 'Scarred, heavy and nearly unkillable. Gnashes and shoves the horde back by brute force.', prim: 'gnash', special: 'bulwark', fur: 0x5e5044, spike: 0x8a7a60, eye: 0xff6a2a, gear: 0x4a4640, bulk: 1.18 },
-  slinger: { name: 'Sewer Slinger', role: 'Ranged', rc: '#e8e4da', blurb: 'Quick feet, quicker stones. Kites the horde and never stops moving.', prim: 'stone', special: 'volley', fur: 0xa08870, spike: 0xa87a48, eye: 0xffc040, gear: 0x6a4a2c },
-  warlock: { name: 'Rat Warlock', role: 'Magic', rc: '#7a3cff', blurb: 'Fragile, but the hex bolts find their mark. Blinks out of trouble.', prim: 'hex', special: 'blink', fur: 0x6e6874, spike: 0x8a6ab0, eye: 0xc080ff, gear: 0x2a2234 },
-  sneak: { name: 'Sewer Sneak', role: 'Evasive', rc: '#5c6474', blurb: 'Slight and quick. Stabs hardest from behind, chokes the horde in smoke, and steps through shadow to get there.', prim: 'shiv', special: 'smoke', fur: 0x4a5048, spike: 0x5a7a60, eye: 0x6affb0, gear: 0x2a3a30, bulk: 0.86 },
+  tank: { name: 'Sewer Rat', call: 'Rat', role: 'Tank', rc: '#c9d4e8', blurb: 'Scarred, heavy and nearly unkillable. Gnashes and shoves the horde back by brute force.', prim: 'gnash', special: 'bulwark', fur: 0x5e5044, spike: 0x8a7a60, eye: 0xff6a2a, gear: 0x4a4640, bulk: 1.18 },
+  slinger: { name: 'Sewer Slinger', call: 'Slinger', role: 'Ranged', rc: '#e8e4da', blurb: 'Quick feet, quicker stones. Kites the horde and never stops moving.', prim: 'stone', special: 'volley', fur: 0xa08870, spike: 0xa87a48, eye: 0xffc040, gear: 0x6a4a2c },
+  warlock: { name: 'Rat Warlock', call: 'Warlock', role: 'Magic', rc: '#3BF2FF', blurb: 'Fragile, but the hex bolts find their mark. Blinks out of trouble.', prim: 'hex', special: 'blink', fur: 0x6e6874, spike: 0x8a6ab0, eye: 0xc080ff, gear: 0x2a2234 },
+  sneak: { name: 'Sewer Sneak', call: 'Sneak', role: 'Evasive', rc: '#5c6474', blurb: 'Slight and quick. Stabs hardest from behind, chokes the horde in smoke, and steps through shadow to get there.', prim: 'shiv', special: 'smoke', fur: 0x4a5048, spike: 0x5a7a60, eye: 0x6affb0, gear: 0x2a3a30, bulk: 0.86 },
 };
 
 /** The class a new run, the menu and co-op seats start on. */

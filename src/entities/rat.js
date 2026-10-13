@@ -116,7 +116,7 @@ export function makeRat(C, player = -1) {
     add(Bx(0.02, 0.18, 0.02), L(0x3a1a1a), 0.08, 0.02, 0.3, head, [0, 0, 0.5]);
   }
   // ---- signature silhouettes: one unmistakable shape per class ----
-  const flames = [], glider = [];
+  const flames = [];
   if (C.prim === 'hex') {
     // Rat Warlock: a crown of dripping candle stubs.
     add(new THREE.TorusGeometry(0.17, 0.03, 4, 10), L(0xe8dcc0), 0, 0.5, -0.12, head, [PI2, 0, 0]);
@@ -164,15 +164,13 @@ export function makeRat(C, player = -1) {
   // (solo = P1), and heroes are drawn TUNE.art.heroScale x bigger than before.
   const rimC = PLAYER[Math.max(0, player)], seen = new Set();
   g.traverse(o => { if (o.isMesh && o.material && o.material.isMeshToonMaterial && !seen.has(o.material)) { seen.add(o.material); heroRim(o.material, rimC, TUNE.art.heroRim); } });
-  return { g, body, head, legs, tail, jaw, bulk: (C.bulk || 1) * TUNE.art.heroScale, flames, glider, wear };
+  return { g, body, head, legs, tail, jaw, bulk: (C.bulk || 1) * TUNE.art.heroScale, flames, wear };
 }
 
-/** Per-frame class and wear details: flickering flames, the glider opening in the air, scars as HP falls. */
+/** Per-frame class and wear details: flickering flames, scars as HP falls. */
 export function ratExtras(rat, A, hpF) {
   const t = G.time;
   rat.flames.forEach((f, i) => { const k = 0.85 + Math.sin(t * 17 + i * 2.1) * 0.12 + Math.random() * 0.08; f.scale.set(f.userData.s0 ?? (f.userData.s0 = f.scale.x), (f.userData.s0) * k * 1.3, 1); });
-  const open = !P.onGround && !P.climbing ? 1 : 0.25;
-  rat.glider.forEach((m, i) => { m.scale.x += (open - m.scale.x) * 0.2; m.rotation.z = (i ? 1 : -1) * (0.15 - open * 0.1) + Math.sin(t * 9) * 0.04 * open; });
   rat.wear.forEach((w, i) => { w.visible = hpF < [0.75, 0.55, 0.35, 0.2][i]; });
   if (hpF < 0.3 && P.onGround && Math.random() < 0.06) W.parts.push({ x: P.x + rand(-0.2, 0.2), y: P.y + 0.5, z: P.z + rand(-0.2, 0.2), vx: 0, vy: -1, vz: 0, life: 0.5, c: 0x8a0a0a, s: 0.6 });
 }

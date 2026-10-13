@@ -31,7 +31,7 @@ import { tickRoles } from '../entities/roles.js';
 import { tickSig } from './signature.js';
 import { tickTurbo } from './turbo.js';
 import { tickRunes } from './runes.js';
-import { tickVials } from './vials.js';
+import { tickVials, popVialsAt } from './vials.js';
 import { tickFood, breakFoodAt } from './food.js';
 import { tickReaperSpawn } from './reaper.js';
 import { tickThieves } from './thieves.js';
@@ -40,6 +40,7 @@ import { TUNE } from '../tuning.js';
 import { tickPowerups, puOn } from './powerups.js';
 import { tickFinds } from './finds.js';
 import { coop, coopUpdate, coopSplit, padSolo } from './coop.js';
+import { foodShot } from './announcer.js';
 
 let seenT = 0;
 
@@ -278,7 +279,8 @@ export function updateProjectiles(dt) {
       spark(p.x, p.y, p.z, 1, p.col); sfx('clank');
     } else if (p.y < floorY(p.x, p.z) - 0.1 || solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.7, p.col); continue; }
     // Your shots smash food they touch (and stop there).
-    if (W.foods.length && breakFoodAt(p.x, p.z, 0.2, p.y)) { p.life = 0; continue; }
+    if (W.foods.length && breakFoodAt(p.x, p.z, 0.2, p.y)) { p.life = 0; foodShot(p.who); continue; }
+    if (W.vials.length && popVialsAt(p.x, p.z, 0.25, p.y)) { p.life = 0; continue; }
     for (const e of W.enemies) {
       if (e.dead || p.hs.has(e) || e.hidden) continue;
       const dx = e.x - p.x, dz = e.z - p.z, rr = e.r + 0.22 * p.size;
