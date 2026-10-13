@@ -196,19 +196,20 @@ await step('nests raise their family, secrets, lairs, melee kit', async () => {
   await gnawUntil(k => __scurry.M.grid[k] === 1, 12000, sec.k);
   await page.keyboard.up('KeyW');
   if ((await S(k => __scurry.M.grid[k], sec.k)) !== 1) throw new Error('secret wall not gnawed');
-  // Lair: walk in, mini-boss wakes; kill it, hoard appears.
+  // Lair: walk in, an elite guard pack wakes (the old mini-bosses are gone); kill them, hoard appears.
   const lair = await S(() => { const L = __scurry.W.lairs[0]; return L && { x: L.cx, z: L.cz }; });
   if (!lair) throw new Error('no lair generated');
   const chests0 = await S(() => __scurry.W.chests.length);
   await S(l => { const P = __scurry.P; P.x = l.x; P.z = l.z; P.y = 0; }, lair);
-  await wait(600);
-  const mini = await S(() => { const e = __scurry.W.enemies.find(e => e.mini); return e && { name: e.name, hp: Math.round(e.hp) }; });
-  if (!mini) throw new Error('mini-boss did not wake');
-  console.log('     mini-boss:', JSON.stringify(mini));
+  // Poll (slow CI runners): the lair wakes on the next frame the rat is inside it.
+  await page.waitForFunction(() => { const L = __scurry.W.lairs[0]; return L.woke && (L.guards || []).some(e => !e.dead); }, null, { timeout: 8000, polling: 100 }).catch(() => {});
+  const guards = await S(() => { const L = __scurry.W.lairs[0]; return (L.guards || []).filter(e => !e.dead && e.elite).length; });
+  if (!guards) throw new Error('lair guards did not wake ' + JSON.stringify(await S(() => { const L = __scurry.W.lairs[0]; return { woke: L.woke, n: (L.guards || []).length, g: (L.guards || []).map(e => [e.type, e.dead, e.elite, Math.round(e.hp)]), en: __scurry.W.enemies.length, st: __scurry.G.state }; })));
+  console.log('     lair guards:', guards);
   await shot('03b-lair');
-  await S(() => { const e = __scurry.W.enemies.find(e => e.mini); e.hp = 0; __scurry.kill(e); });
+  await S(() => { for (const e of __scurry.W.lairs[0].guards) if (!e.dead) { e.hp = 0; __scurry.kill(e); } });
   await wait(1200);
-  if ((await S(() => __scurry.W.chests.length)) <= chests0) throw new Error('mini-boss left no hoard');
+  if ((await S(() => __scurry.W.chests.length)) <= chests0) throw new Error('lair left no hoard');
   // Melee kit: kills stack bloodlust.
   await S(() => { const { P } = __scurry; for (let i = 0; i < 4; i++) { const e = __scurry.spawnEnemy('mawling', P.x + 1.5, P.z + 0.5, { plain: true }); if (e) e.hp = 1; } });
   // Bloodlust decays 2.5s after a kill, so poll for it (slow CI runners) instead of reading it once later.
