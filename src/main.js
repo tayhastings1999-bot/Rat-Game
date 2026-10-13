@@ -13,7 +13,7 @@ import { menu } from './game/flow.js';
 import { initInput } from './game/input.js';
 import { hud, drawMap, initHudIcons } from './ui/hud.js';
 import { initTouch } from './ui/touch.js';
-import { padStart } from './game/coop.js';
+import { padStart, padBack, slotOf, dropIn, dropOut, coop } from './game/coop.js';
 import { pause, resume } from './ui/screens.js';
 
 initHudIcons();
@@ -36,7 +36,14 @@ function loop(now) {
   let sdt = dt;
   if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; }
   else if (G.slowMo > 0) { G.slowMo -= dt; sdt = dt * 0.3; } // perfect dodge
-  if (padStart()) { if (G.state === 'play') pause(true); else if (G.state === 'paused') resume(); }
+  // Start on a pad that isn't in the party drops that pad in mid-run (pad 1 solo is player 1's, so it pauses);
+  // Back on a joined pad drops it out. Any other Start pauses / resumes.
+  const sp = padStart(), bp = padBack();
+  if (sp >= 0) {
+    const inp = 'pad' + sp, joinable = G.state === 'play' && slotOf(inp) < 0 && (coop.on || sp > 0);
+    if (!(joinable && dropIn(inp) >= 0)) { if (G.state === 'play') pause(true); else if (G.state === 'paused') resume(); }
+  }
+  if (bp >= 0 && G.state === 'play' && slotOf('pad' + bp) > 0) dropOut(slotOf('pad' + bp));
   const t0 = performance.now();
   if (G.state === 'play' && !G.qaHold) { // qaHold: the QA bot is stepping the simulation itself
     update(sdt);

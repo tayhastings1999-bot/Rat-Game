@@ -216,6 +216,18 @@ await check('death returns to the Nest with gold banked', async () => {
   const g = await S(() => __scurry.readSlot(1).meta.salvage);
   if (g !== g0 + 77) throw new Error(`banked ${g}, wanted ${g0 + 77}`);
 });
+await check('drop-in/drop-out co-op: F6 adds a keyboard rat at the lead mid-run, scaling follows, F6 again removes it', async () => {
+  await S(() => { __scurry.startRun('tank'); __scurry.god(true); });
+  await toPlay();
+  const before = await S(() => ({ hpM: __scurry.run.hpM, n: __scurry.run.players }));
+  await page.keyboard.press('F6');
+  const mid = await S(() => { const s = __scurry, q = s.asPlayer(1, () => ({ x: s.P.x, z: s.P.z })); return { on: s.coop.on, n: s.coop.players.length, players: s.run.players, hpM: s.run.hpM, d: Math.hypot(q.x - s.P.x, q.z - s.P.z) }; });
+  await page.keyboard.press('F6');
+  const after = await S(() => ({ on: __scurry.coop.on, players: __scurry.run.players, hpM: __scurry.run.hpM, st: __scurry.G.state }));
+  await S(() => { __scurry.god(false); __scurry.menu(); });
+  if (!mid.on || mid.n !== 2 || mid.players !== 2 || !(mid.hpM > before.hpM) || mid.d > 3) throw new Error('join ' + JSON.stringify({ before, mid }));
+  if (after.on || after.players !== 1 || Math.abs(after.hpM - before.hpM) > 1e-6 || after.st !== 'play') throw new Error('leave ' + JSON.stringify(after));
+});
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
