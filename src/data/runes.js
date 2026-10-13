@@ -1,3 +1,4 @@
+import { CITY_LEVELS, SEWER_LEVELS } from './levels.js';
 // Runes and legendary gear (data only, so new realms, runes and class gear are one entry each).
 // RUNES: one hidden rune per listed level. Collecting every rune unlocks the final boss (The Crowned One, who
 // rises in the Rat King's Court after the King falls). Rune counts are also the hook for future secret rats:
@@ -24,3 +25,12 @@ export const GEAR = {
   warlock: { boss: 'brood', name: 'Brood-Eye Focus', stat: 'mag', add: 1, mul: { dmg: 1.08 }, txt: '+1 Magic, +8% damage' },
   sneak: { boss: 'maw', name: 'Many-Fang Shiv', stat: 'str', add: 1, mul: { dmg: 1.08 }, txt: '+1 Strength, +8% damage' },
 };
+
+// Rune fragments: every regular (non-secret) level hides one fragment in a hidden area (a city courtyard
+// behind a false wall, or a sewer pocket behind drywall). All of them form the Great Rune, which summons
+// the secret boss (The Nameless Rat) in the Court after the Rat King and, if all runes are held, after
+// The Crowned One too. Kept per save slot in meta.fragments. The list derives from the level tables, so
+// a new level gets a fragment automatically.
+export const FRAGMENTS = [...CITY_LEVELS, ...SEWER_LEVELS].filter(L => !L.secret).map(L => ({ id: 'f_' + L.id, level: L.id }));
+export const fragCount = m => FRAGMENTS.filter(f => m.fragments && m.fragments[f.id]).length;
+export const greatRune = m => fragCount(m) >= FRAGMENTS.length;

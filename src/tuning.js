@@ -151,7 +151,7 @@ export const TUNE = {
     armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP ×
     broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
   },
-  runes: { finalHp: 1.6 }, // The Crowned One: the Court's boss body at this much HP
+  runes: { finalHp: 1.6, secretHp: 6, secretDmg: 1.8, secretSpd: 1.25, secretTaken: 0.6 }, // The Crowned One at finalHp; The Nameless Rat (Great Rune): ×6 HP, ×1.8 damage, ×1.25 speed, takes 60% damage
   treasure: {
     // Treasure rooms: a short timed bonus room full of gold, entered now and then between levels.
     odds: 0.12, minZone: 1, // chance on leaving a level (not from the first zone, never twice in a row)

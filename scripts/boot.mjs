@@ -240,6 +240,28 @@ await check('runes: picking one up saves it; all of them raise The Crowned One a
   });
   if (!r.gear || r.again || !(r.st1 > r.st0) || !r.one) throw new Error(JSON.stringify(r));
 });
+await check('rune fragments: one per regular level in a hidden area, saved per slot; all of them summon The Nameless Rat', async () => {
+  const r = await S(() => {
+    const s = __scurry, m = s.meta, R = s.runes, keep = JSON.stringify(m.fragments || {});
+    const levels = [...s.LEVELS.CITY_LEVELS, ...s.LEVELS.SEWER_LEVELS].filter(L => !L.secret).map(L => L.id);
+    const covers = levels.every(id => R.FRAGMENTS.some(f => f.level === id)) && R.FRAGMENTS.length === levels.length;
+    m.fragments = {};
+    s.startRun('tank'); s.god(true); s.G.testNoTally = true;
+    const f = (s.W.runes || []).find(o => o.frag);
+    const placed = !!f, hidden = !!(f && f.hidden);
+    if (f) R.takeFragment(f);
+    const sl = s.save.slot, saved = !!(f && sl && (s.readSlot(sl).meta.fragments || {})[f.id]);
+    for (const F of R.FRAGMENTS) m.fragments[F.id] = true;
+    const whole = R.greatRune(m);
+    s.run.secretUp = true; s.G.boss = null; s.spawnBoss(); const b = s.G.boss;
+    const boss = b ? { name: b.name, secret: !!b.secretBoss, mul: b.maxHp } : null;
+    s.run.secretUp = false; s.G.boss = null; s.spawnBoss(); const base = s.G.boss ? s.G.boss.maxHp : 0;
+    m.fragments = JSON.parse(keep); s.saveMeta(); s.G.testNoTally = false; s.god(false); s.menu();
+    return { covers, placed, hidden, saved, whole, boss, ratio: boss && base ? boss.mul / base : 0, want: s.TUNE.runes.secretHp };
+  });
+  if (!r.covers || !r.placed || !r.hidden || !r.whole || !r.boss || !r.boss.secret || Math.abs(r.ratio - r.want) > 0.05) throw new Error(JSON.stringify(r));
+  if (!r.saved) throw new Error('fragment not saved to the slot ' + JSON.stringify(r));
+});
 await check('treasure rooms: a timed bonus room of gold, then on to the next level', async () => {
   await S(() => { __scurry.startRun('tank'); __scurry.god(true); });
   await toPlay();
@@ -273,6 +295,23 @@ await check('drop-in/drop-out co-op: F6 adds a keyboard rat at the lead mid-run,
   await S(() => { __scurry.god(false); __scurry.menu(); });
   if (!mid.on || mid.n !== 2 || mid.players !== 2 || !(mid.hpM > before.hpM) || mid.d > 3) throw new Error('join ' + JSON.stringify({ before, mid }));
   if (after.on || after.players !== 1 || Math.abs(after.hpM - before.hpM) > 1e-6 || after.st !== 'play') throw new Error('leave ' + JSON.stringify(after));
+});
+await check('The Nameless Rat: difficulty boss HP applies (Casual/Normal/Insane), co-op adds nothing', async () => {
+  const r = await S(() => {
+    const s = __scurry, m = s.meta, d0 = m.difficulty, keep = { players: s.run.players, hpM: s.run.hpM, dmgM: s.run.dmgM };
+    s.startRun('tank'); s.god(true); s.G.testNoTally = true;
+    const hp = {};
+    for (const d of ['casual', 'normal', 'insane']) for (const n of [1, 2]) {
+      m.difficulty = d; s.run.players = n; s.run.hpM = keep.hpM; s.run.dmgM = keep.dmgM; s.zoneScaling();
+      s.run.secretUp = true; s.G.boss = null; s.spawnBoss(); hp[d + n] = s.G.boss ? s.G.boss.maxHp : 0;
+    }
+    s.run.secretUp = false; s.G.boss = null; m.difficulty = d0; Object.assign(s.run, keep); s.zoneScaling();
+    s.G.testNoTally = false; s.god(false); s.menu();
+    return { hp, D: s.TUNE.difficulty };
+  });
+  const { hp, D } = r, near = (a, b) => Math.abs(a - b) <= Math.max(2, b * 0.01);
+  for (const d of ['casual', 'normal', 'insane']) if (!hp[d + 1] || !near(hp[d + 2], hp[d + 1])) throw new Error('co-op changed ' + d + ' ' + JSON.stringify(hp));
+  if (!near(hp.casual1, hp.normal1 * D.casual.bossHp) || !near(hp.insane1, hp.normal1 * D.insane.bossHp)) throw new Error('difficulty HP lost ' + JSON.stringify(hp));
 });
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
