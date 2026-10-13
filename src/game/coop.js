@@ -72,6 +72,15 @@ export function asPlayer(i, fn) {
   try { return fn(); } finally { swapOut(p); swapIn(cur); }
 }
 
+/** The lead: the first rat still standing (it alone takes exits). True in solo play. */
+export function isLead() {
+  if (!coop.on) return true;
+  const down = p => (p.i === coop.active ? P.downed : p.P.downed);
+  const lead = coop.players.find(p => !down(p)) || coop.players[0];
+  return lead.i === coop.active;
+}
+export const leadNum = () => { const down = p => (p.i === coop.active ? P.downed : p.P.downed); return ((coop.players.find(p => !down(p)) || coop.players[0]).i) + 1; };
+
 /** Live enemy count across every co-op split (the cap checks use this). */
 export const enemyTotal = () => (coop.total != null ? coop.total : W.enemies.length);
 
@@ -368,6 +377,7 @@ export function coopDown() {
   P.reviveT = 0;
   P.downT = 0;
   run.hp = 0;
+  run.downs = (run.downs || 0) + 1; // shared party count (the lab's co-op trial reads it)
   P.vx = P.vz = 0;
   dnum(P.x, P.y + 1.8, P.z, 'Down! Stand next to them to revive', 'crit');
   bark(`${ratName()} is down! Get them up!`);
