@@ -125,6 +125,7 @@ export const TUNE = {
     radius: 11,
     dmg: 120, nestDmg: 90, bossDmg: 260, reaperDmg: 300,
     poison: 4, // seconds of rot on everything hit
+    popGrace: 1, // seconds after a vial drops before shots/specials can set it off
     shotMul: 0.75, // a floor flask popped by a shot or swing bursts at this damage (radius × √) — enemies only
     chestOdds: 0.3, binOdds: 0.08, eliteOdds: 0.1, // chance to drop one (premium chests always do)
   },
