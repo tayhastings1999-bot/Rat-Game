@@ -11,7 +11,7 @@ import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
 import { pause, resume, openMap, pickSlot } from '../ui/screens.js';
 import { useFlask, cycleFlask } from './shop.js';
-import { coop, P2_CODES } from './coop.js';
+import { coop, P2_CODES, dropIn, dropOut, slotOf } from './coop.js';
 import { renderSlots } from '../ui/hud.js';
 import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
@@ -31,6 +31,8 @@ export function initInput() {
     keys[e.code] = true;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyJ') { held.key = true; syncAttack(); }
+    // F6: the second keyboard player (arrows + numpad) drops in, or out again, mid-run.
+    if (e.code === 'F6' && G.state === 'play' && !e.repeat) { const k = slotOf('kb2'); if (k > 0) dropOut(k); else dropIn('kb2'); }
     if (e.code === 'KeyX' && G.state === 'play') turboDown();
     if (e.repeat) return;
     const s = G.state;

@@ -2,7 +2,7 @@
 // action buttons on the right, pause/map at the top. Attack aims at the nearest
 // enemy in a cone in front of you. Turbo: tap for the class blast; hold it,
 // let go, then tap Special or Sig within a moment for the turbo version.
-// Shown once a touch is detected.
+// Shown once a touch is detected, while TOUCH_CONTROLS is on (it is off for now).
 import { $ } from '../core/util.js';
 import { G, P } from '../core/state.js';
 import { audioInit } from '../audio/audio.js';
@@ -17,8 +17,11 @@ import { useFlask, cycleFlask } from '../game/shop.js';
 import { renderSlots } from './hud.js';
 
 const STICK_R = 52;
+/** Touch play is off for now (Taylor's call, 2026-10-13). True brings the on-screen controls back. */
+export const TOUCH_CONTROLS = false;
 
 export function initTouch() {
+  if (!TOUCH_CONTROLS) { touchOnlyNotice(); return; }
   const root = document.createElement('div');
   root.id = 'touch';
   root.innerHTML = `
@@ -98,6 +101,16 @@ export function initTouch() {
     b.addEventListener('lostpointercapture', up);
     b.addEventListener('contextmenu', e => e.preventDefault());
   }
+}
+
+/** On a device with no mouse or trackpad, say why nothing responds to touch. */
+function touchOnlyNotice() {
+  if (!matchMedia('(pointer: coarse)').matches || matchMedia('(any-pointer: fine)').matches) return;
+  const n = document.createElement('div');
+  n.id = 'noTouch';
+  n.className = 'px';
+  n.textContent = 'Touch controls are off for now. Play with a keyboard and mouse or a gamepad.';
+  document.body.appendChild(n);
 }
 
 function press(k) {

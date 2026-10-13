@@ -8,7 +8,7 @@ This is the production build of the **Scurry v5** design from Claude Design, plu
 
 **On GitHub Pages:** https://tayhastings1999-bot.github.io/Rat-Game/ (rebuilt automatically on every push to `main`).
 
-Also hosted on claude.ai: https://claude.ai/artifact/Jfhgbb7RbS6iHANvSRPUoD (private to the owner until shared from the page's Share menu). Click a rat to start. Keyboard and mouse on desktop; on a phone or tablet, on-screen controls appear automatically (landscape works best).
+Also hosted on claude.ai: https://claude.ai/artifact/Jfhgbb7RbS6iHANvSRPUoD (private to the owner until shared from the page's Share menu). Click a rat to start. Keyboard and mouse, or a gamepad. Touch play is off for now: a phone or tablet shows a notice instead of on-screen controls.
 
 ## Run it
 
@@ -21,7 +21,7 @@ npm run smoke      # headless end-to-end test (needs Chromium; see below)
 npm run artifact   # build + package dist/artifact.html for hosting as a claude.ai Artifact
 ```
 
-`npm run smoke` drives a real browser through the whole loop with zero tolerance for console errors. It covers the menu, a city run, XP and automatic level-ups, interactions (chests, gnawing boards, climbing, power lines, bins, key and manhole), corrupted elites, every boss through all three phases, the sewer and ladder, pause and map, death and gold banking, every class, a horde soak, and a phone-sized touch session. It uses `/opt/pw-browsers/chromium` by default; set `CHROMIUM=/path/to/chrome` to override. Screenshots land in `scripts/out/`. Headless Chromium runs the game at roughly half speed, so waits in the script are generous.
+`npm run smoke` drives a real browser through the whole loop with zero tolerance for console errors. It covers the menu, a city run, XP and automatic level-ups, interactions (chests, gnawing boards, climbing, power lines, bins, key and manhole), corrupted elites, every boss through all three phases, the sewer and ladder, pause and map, death and gold banking, every class, a horde soak, and a phone-sized check that touch-only devices get the controls-off notice. It uses `/opt/pw-browsers/chromium` by default; set `CHROMIUM=/path/to/chrome` to override. Screenshots land in `scripts/out/`. Headless Chromium runs the game at roughly half speed, so waits in the script are generous.
 
 Add `?debug` to the URL (or run the dev server) to get `window.__scurry` for poking at state and the **Tune** panel for live-editing `src/tuning.js`.
 
@@ -62,7 +62,7 @@ The remixes are new layouts under moonlight or deeper dark, with a different fam
 
 A **Litter Pile** (160 HP) spawns slowly and keeps 6 children; a **Burrow** (320) is faster and keeps 10; a **Warren** (560) spawns every ~2s and keeps 14. Damage knocks a nest down a tier as its HP falls (a half-smashed Warren is a Burrow), and each nest sometimes raises its family's weaker member. Later zones have more nests, more Warrens and more HP; no Warrens appear before the third zone. A type's first appearance gets a banner. At most 200 enemies are alive at once.
 
-**Leveling.** Kills pay XP straight into your bar (nests 15/25/40 by tier, rivals 40, bosses 220). Level-ups are automatic: a banner, a shockwave that shoves the horde back and a small heal. There are no picks. Every level also **grows your stats**: 0.45 stat points split across Strength, Speed, Armor and Magic in proportion to your class's own stats (a Brawler grows mostly Strength and Armor), plus 4 max HP, healed at once (`TUNE.growth`). XP to the next level is `base + lin·(L−1) + mul·(L−1)^exp`, capped at level 99.
+**Leveling.** Kills pay XP straight into your bar (nests 15/25/40 by tier, rivals 40, bosses 220). Level-ups are automatic: a banner, a shockwave that shoves the horde back and a small heal. There are no picks. Every level also **grows your stats**: 0.45 stat points split across Strength, Speed, Armor and Magic in proportion to your class's own stats (a Sewer Rat grows mostly Strength and Armor), plus 4 max HP, healed at once (`TUNE.growth`). XP to the next level is `base + lin·(L−1) + mul·(L−1)^exp`, capped at level 99.
 
 **Gold.** Chests, bins, bounties and kills drop **gold** (the old salvage). Chests are free to open. Gold you carry is banked when the run ends and shows on the menu; the shop that spends it arrives in Phase 4.
 
@@ -179,7 +179,7 @@ Turbo has its own look per class. While a turbo move is boosted the rat burns in
 
 ## The story
 
-**Wick and Bram.** The night Cinder Row burned, Wick ran and told the nest that their littermate Bram died under the falling beams. Bram didn't die. He heard Wick run. He crawled into the sewer, was taken in by the Rat King's Court, and learned the King sells whole colonies to the Exterminator so his Court stays fed. Bram, now **Scab**, lit the fire on Cinder Row himself to drive the nest out before the poison came. He saved them, and he can't forgive them for leaving him. His answer is the Knot: tie every rat to every other by the tail so no one is ever left behind again.
+**Wick and Bram.** The night Cinder Row burned, Wick ran and told the nest that their littermate Bram died under the falling beams. Bram didn't die. He heard Wick run. Since the winter they starved, Bram had been running scraps for the Rat King's Court, and that's where he heard the Court name Cinder Row: the King sells whole colonies to the Exterminator so his Court stays fed. He told Moss, and nobody listens to a runt, so Bram, now **Scab**, lit the straw himself to drive the nest out before the poison came. Fire, you can run from. Poison, you can't. He saved them, and he can't forgive them for leaving him. His answer is the Knot: tie every rat to every other by the tail so no one is ever left behind again.
 
 The theme is the game's core verb. Running keeps you alive; going back is what makes you worth keeping. Wick's flaw (run, alone) and Scab's (hold on, by force) are the same wound. Scab is right about the threat and never lies to you. He feeds the Court's runts first, coughs from the smoke, and can't stand the dark. He is also the rat who steals your chests, lays poison in your path, takes Pip to see whether you'll go back, and spends the whole story making you strong enough to kill the King for him.
 
@@ -205,7 +205,7 @@ Scenes pause the game. Space or a tap advances, Esc skips to the choice, 1–3 c
 
 WASD move · mouse aims on the ground · left click or J attacks (hold to repeat) · Shift dodge (1.2s cooldown, i-frames) · Space jump (hold at a marked pipe to climb) · C squeeze · Q special · G class signature move · X turbo (tap: blast; hold + Q/G: turbo special or signature) · Z Rot Vial · E use / grab / hold to gnaw · R lock-on · F scent (8s gauge) · M map · wheel zoom · Esc pause. The camera follows at a fixed angle. The pause menu repeats all of this under **Controls**.
 
-**Touch:** the left stick moves. Hold **Attack** to fire at the nearest enemy in a cone in front of you (no cone target: straight ahead). On the right: Lock, Sniff and Vial; Special, Sig and **Turbo** (tap for the blast; hold it, let go, then tap Special or Sig within 1.5s for the turbo version); Use (hold to gnaw), Dodge and Jump (hold at a marked pipe to climb). Map and Pause sit at the top.
+**Touch:** off for now. The on-screen controls are still in `src/ui/touch.js`; setting `TOUCH_CONTROLS` there to `true` brings them back.
 
 ## QA pipeline
 
@@ -214,7 +214,7 @@ Three stages, cheapest first. Stages 1 and 2 are deterministic regression checks
 | Stage | Command | Kind | Time | What it checks | Runs |
 |---|---|---|---|---|---|
 | 1 · Boot gate | `npm run build && npm run test:boot` | Deterministic | ~15s | Production bundle loads, menu and every class card render, a run starts from the real button, the loop advances and draws, pause and resume, no console errors. | Every push |
-| 2 · System, UI, fuzz | `npm run smoke && npm run test:system` | Deterministic + fuzz | ~10 min | The whole loop end to end, every button on every screen, combat and economy math, every action's key / touch button / How to Play text, save round-trip, and random input with crash/NaN/out-of-bounds checks. | Every push |
+| 2 · System, UI, fuzz | `npm run smoke && npm run test:system` | Deterministic + fuzz | ~10 min | The whole loop end to end, every button on every screen, combat and economy math, every action's key and How to Play text, save round-trip, and random input with crash/NaN/out-of-bounds checks. | Every push |
 | 3 · Feature lab | `npm run lab -- --quick` | Checks + bots, scored | ~10 min | One trial per new feature, level, mob or idea, scored out of 100 in three tiers (below). | Every push |
 
 **Tiered scoring.** Each trial in `scripts/lab/trials.mjs` is scored:
@@ -265,7 +265,7 @@ src/
   ui/                HUD, screens (menu, pause, map, death, endings), tally.js (exit tally), debugPanel.js, icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
 scripts/smoke.mjs    headless end-to-end test
-scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs (src/qa/ holds the bots and level checks)
+scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs and trials-p4.mjs (src/qa/ holds the bots and level checks)
 scripts/baseline.mjs per-phase baseline capture; pace.mjs leveling-pace tool
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
@@ -274,9 +274,10 @@ Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta`
 
 ## Known gaps
 
-- Touch controls are tuned for landscape phones and tablets; portrait works but is cramped.
+- Touch play is off for now (`TOUCH_CONTROLS` in `src/ui/touch.js`). When it was on, the controls suited landscape phones and tablets; portrait was cramped.
 - Phase 4 first pass: three save slots, the Nest (a menu hub between runs) and its gold shop (permanent upgrades, supplies for the next run, power-up flasks). The Nest is a screen, not yet a walkable place.
 - Turbo moves use the normal move's animation with an added pose, aura and class flourish; there are no fully bespoke turbo animations.
 - The bots don't climb pipes or hunt secrets, so the lab measures those from level data and scripted checks rather than play.
+- In the lab's co-op runs, players 2–4 are simple pad bots (they follow the lead, fight nearby mobs and nests, and back off when crowded), not full QA bots, so co-op numbers are a floor on what real partners would manage.
 - Scent Veil stops the horde chasing you; ranged mobs that already see you can still shoot.
 - Balance (zone table, boss HP, drop rates) comes from design intent and automated runs, not playtesting.
