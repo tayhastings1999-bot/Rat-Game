@@ -260,40 +260,47 @@ export const TRIALS_P4 = [
       } },
     ],
     t3: {
-      // Bot fights with and without a flask uncorked at the start, a few of each, compared by median (single
-      // fights swing 3× either way). No Rot Vial: one clears a ring outright.
-      //  · Iron Hide: a tank in a zone-4 ring (Cinder Row · After Dark) of brutes, spitters, ghouls and
-      //    ticks, 15 s. Damage taken should drop by about TUNE.powerups.ironCut.
-      //  · Splitclaw: the same tank holding the right stick on five brutes that stand still and never strike
-      //    back, 6 s (the QA bot ignores harmless mobs, and in the ring fight the extra damage drowns in noise).
+      // The same scripted fight with and without a flask uncorked, three or five of each, by median: the rat holds
+      // the right stick (aiming and firing) and stands its ground, so the only difference is the flask. (Free
+      // bot fights swing 3× either way on who targets whom, and the QA bot ignores mobs that can't hurt it.)
+      //  · Iron Hide: a sneak in a zone-4 ring (Cinder Row · After Dark) of mawlings and ticks that attack,
+      //    6 s. Damage taken should drop by about TUNE.powerups.ironCut. (Not the tank: its Armor plus the
+      //    flask reach the TUNE.balance.minTaken floor, so the flask cuts less for it.)
+      //  · Splitclaw: a tank swinging at five brutes that stand still and never strike back, 6 s. Melee
+      //    swipes hit ×TUNE.powerups.splitMelee; ranged shots split three ways instead.
       async run(L) {
         const n = L.QUICK ? 3 : 5, med = a => { const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
-        const uncork = k => L.S(k => { const s = __scurry; s.run.vials = 0; if (k) { s.run.flasks = { [k]: 1 }; s.run.flaskSel = 0; s.shop.useFlask(); } }, k);
-        const stripped = () => L.S(() => window.__ring.reduce((a, [e, hp0]) => a + hp0 - (e.dead ? 0 : Math.max(0, e.hp)), 0));
-        const ringFight = async k => {
-          await L.fresh({ cls: 'tank', level: CITY(4) });
+        let notOpened = 0;
+        const fight = async (cls, k, spawn) => {
+          await L.fresh({ cls, level: CITY(4) });
           await clearMobs(L);
-          await ring(L, [['brute', 3], ['spitter', 8], ['ghoul', 6], ['tick', 10]]);
-          await uncork(k);
-          return (await L.play(15, { profile: 'average', goal: 'survive' })).dmgTaken;
+          for (let i = 0; i < 40 && !(await L.S(() => __scurry.G.state === 'play')); i++) await L.sleep(100);
+          const on = await L.S(([k, spawn]) => {
+            const s = __scurry, P = s.P; window.__ring = [];
+            if (spawn === 'ring') for (let j = 0; j < 18; j++) { const a = j / 18 * 6.283, r = 2.5 + (j % 2); const e = s.spawnEnemy(j % 3 ? 'mawling' : 'tick', P.x + Math.sin(a) * r, P.z + Math.cos(a) * r, { plain: true, force: true }); if (e) e.emT = 0; }
+            else for (let j = 0; j < 5; j++) { const e = s.spawnEnemy('brute', P.x + (j - 2) * 1.6, P.z + 3, { plain: true, force: true }); e.emT = 0; e.spd = 0; e.cd = e.atkCd = 1e9; window.__ring.push([e, e.hp]); }
+            s.run.vials = 0; s.P.inv = 0;
+            if (!k) return true;
+            s.run.flasks = { [k]: 1 }; s.run.flaskSel = 0; s.shop.useFlask();
+            return s.puOn(k);
+          }, [k, spawn]);
+          if (!on) notOpened++;
+          // Right stick straight ahead (the camera looks down -z, so stick up is world +z): aim and fire.
+          return L.S(() => {
+            const s = __scurry, h0 = s.run.dHurt || 0;
+            s.fakePads[0] = { axes: [0, 0, 0, 1], buttons: [] }; s.qa.stepRaw(6); delete s.fakePads[0]; s.qa.stepRaw(0.1);
+            return { hurt: (s.run.dHurt || 0) - h0, dealt: window.__ring.reduce((a, [e, hp0]) => a + hp0 - (e.dead ? 0 : Math.max(0, e.hp)), 0) };
+          });
         };
-        const dummyFight = async k => {
-          await L.fresh({ cls: 'tank', level: CITY(4) });
-          await clearMobs(L);
-          await L.S(() => { const s = __scurry, P = s.P; window.__ring = []; for (let j = 0; j < 5; j++) { const e = s.spawnEnemy('brute', P.x + (j - 2) * 1.6, P.z + 3, { plain: true, force: true }); e.emT = 0; e.spd = 0; e.cd = e.atkCd = 1e9; window.__ring.push([e, e.hp]); } });
-          await uncork(k);
-          // Right stick straight at them (the camera looks down -z: stick up is world +z), which aims and fires.
-          await L.S(() => { const s = __scurry; s.fakePads[0] = { axes: [0, 0, 0, 1], buttons: [] }; s.qa.stepRaw(6); delete s.fakePads[0]; s.qa.stepRaw(0.1); });
-          return stripped();
-        };
-        const hurt = { plain: [], iron: [] }, dps = { plain: [], split: [] };
+        const hurt = { plain: [], iron: [] }, dealt = { plain: [], split: [] };
         for (let i = 0; i < n; i++) {
-          for (const k of ['plain', 'iron']) hurt[k].push(await ringFight(k === 'plain' ? null : k));
-          for (const k of ['plain', 'split']) dps[k].push(await dummyFight(k === 'plain' ? null : k));
+          for (const k of ['plain', 'iron']) hurt[k].push((await fight('sneak', k === 'plain' ? null : k, 'ring')).hurt);
+          for (const k of ['plain', 'split']) dealt[k].push(Math.round((await fight('tank', k === 'plain' ? null : k, 'dummies')).dealt));
         }
-        return { ironHurtRatio: med(hurt.iron) / Math.max(1, med(hurt.plain)), splitDmgRatio: med(dps.split) / Math.max(1, med(dps.plain)), plainHurt: med(hurt.plain) };
+        L.log(`    fights · hurt plain ${hurt.plain} iron ${hurt.iron} · damage dealt plain ${dealt.plain} split ${dealt.split}${notOpened ? ` · ${notOpened} flask(s) failed to open` : ''}`);
+        return { ironHurtRatio: med(hurt.iron) / Math.max(1, med(hurt.plain)), splitDmgRatio: med(dealt.split) / Math.max(1, med(dealt.plain)), plainHurt: med(hurt.plain), flasksOpened: notOpened ? 0 : 1 };
       },
-      bands: { ironHurtRatio: [0.2, 0.65], splitDmgRatio: [1.3, 2.6], plainHurt: [30, 1e4, 0.5] },
+      bands: { ironHurtRatio: [0.25, 0.6], splitDmgRatio: [1.4, 2.6], plainHurt: [20, 1e4, 0.5], flasksOpened: [1, 1, 0.5] },
     },
   },
 
@@ -631,8 +638,10 @@ export const TRIALS_P4 = [
         await L.fresh({ god: true });
         await clearMobs(L);
         await horde(L, 120);
-        await L.S(() => { const s = __scurry; s.W.enemies.forEach(e => { e.spd = 0; e.cd = 99; }); });
+        // No i-frames: the rat (and its glyph) blink while P.inv > 0, which would hide them from the shot.
+        await L.S(() => { const s = __scurry; s.W.enemies.forEach(e => { e.spd = 0; e.cd = 99; }); s.P.inv = 0; });
         await L.sleep(1200);
+        await L.S(() => { __scurry.P.inv = 0; });
         // Only the 3D view counts: the DOM HUD (P1's red panel and bars) and callouts are hidden for the shot.
         await L.S(() => { window.__hid = [...document.body.children].filter(e => e.id !== 'c' && e.tagName !== 'SCRIPT'); window.__hid.forEach(e => { e.dataset.vis = e.style.visibility; e.style.visibility = 'hidden'; }); });
         await L.sleep(100);
