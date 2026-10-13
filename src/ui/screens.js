@@ -12,6 +12,7 @@ import { M } from '../world/grid.js';
 import { PRIM, SPECIALS } from '../combat/arsenal.js';
 import { applyVolumes } from '../audio/audio.js';
 import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
+import { playSting } from '../audio/stems.js';
 import { startRun, checkUnlocks, bankSalvage, menu, realmLevels } from '../game/flow.js';
 import { epitaph } from '../game/personality.js';
 import { runScore, shareCard } from '../game/score.js';
@@ -223,6 +224,7 @@ export function die() {
   if (coopDown()) return; // co-op: down until revived, while anyone still stands
   coopEnd();
   G.state = 'dead';
+  if (!run.abandon) playSting('death'); // quitting from pause isn't a death
   if (meta.cont) { delete meta.cont; saveMeta(); } // Continue is a checkpoint for the live run, not a second life
   const got = checkUnlocks();
   const nb = run.time > best.time;
