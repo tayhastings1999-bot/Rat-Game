@@ -138,6 +138,7 @@ export const TUNE = {
     every1: 6, every2: 4.5, every3: 3.2, // seconds between spawns while you're in range (slower: there are ~3x more nests on the bigger maps)
     kids1: 3, kids2: 5, kids3: 7, // live children a nest keeps at most (halved: density per screen stays fair with ~3x the nests)
     xp1: 15, xp2: 25, xp3: 40,
+    startClear: 10, // tiles of walking distance from the start kept free of nests (a quiet first minute)
     range: 32, // nests only spawn while you're this close (tighter on the bigger maps, so far nests don't flood you)
     count: 20, countPerZone: 0.6, countMax: 28, // nests per zone (10-20 min levels on bigger maps)
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
