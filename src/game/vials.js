@@ -23,7 +23,7 @@ export function dropVial(x, y, z) {
   g.add(body, cork);
   g.position.set(x + rand(-0.4, 0.4), y + 0.4, z + rand(-0.4, 0.4));
   world.add(g);
-  W.vials.push({ x: g.position.x, y, z: g.position.z, g });
+  W.vials.push({ x: g.position.x, y, z: g.position.z, g, t: G.time });
 }
 
 /** Walk over a flask to pick it up (unless your bandolier is full). */
@@ -47,18 +47,43 @@ export function throwVial() {
   if (!(run.vials > 0)) { dnum(P.x, P.y + 1.6, P.z, 'No Rot Vials', 'info'); return; }
   run.vials--;
   run.vialsUsed = (run.vialsUsed || 0) + 1;
-  const V = TUNE.vials, R = V.radius;
-  for (const e of near(P.x, P.y, P.z, R, 6)) {
-    const a = Math.atan2(e.x - P.x, e.z - P.z);
-    hit(e, e.reaper ? V.reaperDmg : e.type === 'nest' ? V.nestDmg : e.boss ? V.bossDmg : V.dmg, a, e.boss ? 0 : 14, 'vial');
+  burst(P.x, P.y, P.z, 1);
+  dnum(P.x, P.y + 2, P.z, 'ROT VIAL', 'poison');
+}
+
+/**
+ * A rot burst at (x, y, z). Only enemies (and nests, bosses, the Reaper) are hit: rot never hurts a rat, so co-op
+ * friendly fire stays off. mul scales damage and radius (a shot-open floor flask is a little weaker than a throw).
+ */
+export function burst(x, y, z, mul = 1) {
+  const V = TUNE.vials, R = V.radius * Math.sqrt(mul);
+  for (const e of near(x, y, z, R, 6)) {
+    const a = Math.atan2(e.x - x, e.z - z);
+    hit(e, (e.reaper ? V.reaperDmg : e.type === 'nest' ? V.nestDmg : e.boss ? V.bossDmg : V.dmg) * mul, a, e.boss ? 0 : 14, 'vial');
     e.pT = Math.max(e.pT || 0, V.poison);
     e.pD = Math.max(e.pD || 0, 6);
   }
-  boom(P.x, P.y + 0.6, P.z, R * 1.2, 0x9be06a);
-  fx('ring', P.x, P.y, P.z, R, 0x9be06a, 0.6);
-  puff(P.x, P.y + 0.4, P.z, 0x9be06a, 50, 9);
+  boom(x, y + 0.6, z, R * 1.2, 0x9be06a);
+  fx('ring', x, y, z, R, 0x9be06a, 0.6);
+  puff(x, y + 0.4, z, 0x9be06a, 50, 9);
   G.shake = Math.max(G.shake, 0.6);
   G.hitStop = Math.max(G.hitStop, 0.08);
   sfx('boom');
-  dnum(P.x, P.y + 2, P.z, 'ROT VIAL', 'poison');
+}
+
+/** Your shots and swings set off Rot Vials lying on the floor (a trap you can spring from range). Returns how many. */
+export function popVialsAt(x, z, R, y = null, grace = 0) {
+  let n = 0;
+  for (let i = W.vials.length - 1; i >= 0; i--) {
+    const v = W.vials[i];
+    if (grace && G.time - (v.t || 0) < grace) continue; // a vial that just dropped can't be set off by the same fight's next hit
+    if (Math.hypot(v.x - x, v.z - z) > R + 0.35 || (y != null && Math.abs(v.y - y) > 2.5)) continue;
+    bury(v.g);
+    W.vials.splice(i, 1);
+    burst(v.x, v.y, v.z, TUNE.vials.shotMul);
+    dnum(v.x, v.y + 2, v.z, 'POP!', 'poison');
+    run.vialsPopped = (run.vialsPopped || 0) + 1;
+    n++;
+  }
+  return n;
 }

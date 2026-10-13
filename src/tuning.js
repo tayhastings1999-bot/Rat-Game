@@ -126,6 +126,8 @@ export const TUNE = {
     radius: 11,
     dmg: 120, nestDmg: 90, bossDmg: 260, reaperDmg: 300,
     poison: 4, // seconds of rot on everything hit
+    popGrace: 1, // seconds after a vial drops before shots/specials can set it off
+    shotMul: 0.75, // a floor flask popped by a shot or swing bursts at this damage (radius × √) — enemies only
     chestOdds: 0.3, binOdds: 0.08, eliteOdds: 0.1, // chance to drop one (premium chests always do)
   },
   nests: {
@@ -151,6 +153,13 @@ export const TUNE = {
     frenziedSpd: 1.12, frenziedRate: 1.35, // Unleashed: move speed ×, attack rate ×
     armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP ×
     broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
+  },
+  runes: { finalHp: 1.6, secretHp: 6, secretDmg: 1.8, secretSpd: 1.25, secretTaken: 0.6 }, // The Crowned One at finalHp; The Nameless Rat (Great Rune): ×6 HP, ×1.8 damage, ×1.25 speed, takes 60% damage
+  treasure: {
+    // Treasure rooms: a short timed bonus room full of gold, entered now and then between levels.
+    odds: 0.12, minZone: 1, // chance on leaving a level (not from the first zone, never twice in a row)
+    drainOdds: 0.35, // levels without a fixed secret zone hide a drain to a treasure room this often (seeded per level)
+    time: 25, piles: 70, perPile: 3, chests: 2, radius: 60,
   },
   secrets: {
     // Secrets in every level (game/finds.js): cracked walls, squeeze rooms, rooftop caches.

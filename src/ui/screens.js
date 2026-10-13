@@ -8,10 +8,12 @@ import { SHOP_TABS } from '../data/shop.js';
 import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
 import { CLASSES, SKINS, skinOk, liveClass, classOpen, pickerClasses, openClasses } from '../data/classes.js';
 import { MODS, dName, levelTitle } from '../data/world.js';
+import { RUNES, GEAR, runeCount, finalOpen } from '../data/runes.js';
 import { M } from '../world/grid.js';
 import { PRIM, SPECIALS } from '../combat/arsenal.js';
 import { applyVolumes } from '../audio/audio.js';
 import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
+import { playSting } from '../audio/stems.js';
 import { startRun, checkUnlocks, bankSalvage, menu, realmLevels } from '../game/flow.js';
 import { epitaph } from '../game/personality.js';
 import { runScore, shareCard } from '../game/score.js';
@@ -152,6 +154,7 @@ export function renderMenu() {
         <span class="s">${TUNE.classes[k].hp} HP · ${PRIM[C.prim].name}</span>
         <span class="stats">${STAT_KEYS.map(sk => `<i title="${STAT_NAMES[sk]} ${TUNE.classes[k][sk]}/10"><em>${sk.toUpperCase()}</em><u><s style="width:${TUNE.classes[k][sk] * 10}%"></s></u></i>`).join('')}</span>
         <span class="s">Q: ${SPECIALS[C.special].name}<br>G: ${SIGS[k] ? SIGS[k].name : ''}<br>X: ${BLASTS[k] ? BLASTS[k].name : ''}</span></button>`).join('')}</div>${skinsHTML()}
+    <p class="px" style="font-size:12px" id="runeLine">Runes ${runeCount(meta)}/${RUNES.length}${finalOpen(meta) ? ' · the Crowned One waits in the Court' : ''} · Legendary gear: ${Object.keys(GEAR).filter(k => meta.gear && meta.gear[k]).map(k => GEAR[k].name).join(', ') || 'none yet (realm bosses guard one per rat)'}</p>
     <p class="px" style="font-size:12px">${best.time ? `Longest run: ${fmt(best.time)} · ${best.kills} kills` : 'No runs yet'}</p>
     <div class="btns"><button class="btn ghost" id="slotsBtn">Change burrow</button></div></div>`);
   $('slotsBtn').onclick = renderSlotSelect;
@@ -223,6 +226,7 @@ export function die() {
   if (coopDown()) return; // co-op: down until revived, while anyone still stands
   coopEnd();
   G.state = 'dead';
+  if (!run.abandon) playSting('death'); // quitting from pause isn't a death
   if (meta.cont) { delete meta.cont; saveMeta(); } // Continue is a checkpoint for the live run, not a second life
   const got = checkUnlocks();
   const nb = run.time > best.time;

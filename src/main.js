@@ -53,7 +53,7 @@ function loop(now) {
     if (mapT <= 0) { mapT = 0.2; drawMap($('minimap'), 4.6, 20); }
   } else {
     if (G.state === 'menu' || G.state === 'nest') { G.camYaw += dt * 0.12; P.facing += dt * 0.4; }
-    if (G.state === 'menu' || G.state === 'nest') setMusic(0, false);
+    if (G.state === 'menu' || G.state === 'nest') setMusic(0, false, 'menu');
   }
   const t1 = performance.now();
   sync(G.state === 'play' || G.state === 'menu' || G.state === 'nest' ? sdt : 0);
