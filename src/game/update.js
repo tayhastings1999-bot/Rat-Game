@@ -424,7 +424,10 @@ function updateSolo(dt) {
   // Carrying the cheese wheel draws the horde twice as fast.
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
   // Smashing every nest wakes the boss.
-  if (!run.bossDone && !G.boss && run.nests <= 0 && M.spawnTiles.length && !run.secret) spawnBoss();
+  // The boss wakes when the nests are gone, or after TUNE.nests.bossAfter seconds in the level regardless: nests are
+  // endless (they spawn until destroyed), so a level can't stall on one hidden nest. That caps a level at ~2-4 min.
+  const lvlT = run.time - (run.dStart || 0);
+  if (!run.bossDone && !G.boss && (run.nests <= 0 || lvlT > TUNE.nests.bossAfter) && M.spawnTiles.length && !run.secret) spawnBoss();
   tickSecret(dt, openGate, exitSecret);
   tickSecretDrain(dt, enterSecret);
   G.spawnCap = cap;
