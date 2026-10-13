@@ -216,6 +216,7 @@ export const TUNE = {
     mothDmg: 16, mothEvery: 0.7, mothRange: 9, // Moth Familiar
   },
   tally: {
+    autoSecs: 2.5, // the card dismisses itself after this long (Enter skips)
     // The exit tally (ui/tally.js): points per part (they add up to 100) and grade thresholds.
     wNests: 30, wBoss: 15, wSide: 10, wSecrets: 20, wHealth: 15, wTime: 10,
     hurtPar: 2, // taking this many × your max HP scores 0 for health
@@ -279,6 +280,7 @@ export const TUNE = {
     low: 0.3, crit: 0.12, // bark below these fractions of max HP
     rearm: 0.5, // re-arm once health is back above this
     showSecs: 2.6,
+    vo: { on: false, path: 'vo/' }, // recorded VO by manifest id (off until Taylor picks the voice source); desktop never uses browser speech
     bossSecs: 2.5, // a boss intro is this quick bark and nothing else: no card, no slow-mo, no pause
   },
   sneak: {

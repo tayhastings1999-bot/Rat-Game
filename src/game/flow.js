@@ -91,7 +91,27 @@ export function menu() {
   renderMenu();
 }
 
-export function startRun(k) {
+/** Realms the hub can start in (per burrow): every city level reached, and every sewer level reached. */
+export function realmLevels() {
+  const city = Array.from({ length: Math.max(0, meta.maxDistrict || 0) + 1 }, (_, i) => i);
+  const sewer = Array.from({ length: Math.max(-1, meta.maxSewer == null ? -1 : meta.maxSewer) + 1 }, (_, i) => i);
+  return { city, sewer };
+}
+const RUN_KEEP = ['realm', 'layer', 'district', 'sewerIdx', 'tier', 'level', 'xp', 'need', 'scrap', 'scrapSpent', 'kills', 'dmg', 'time', 'keys', 'bosses', 'minis', 'vials', 'turbo', 'hp', 'growth'];
+/** Checkpoint the run at the start of every level, so the hub can offer Continue (cleared on death). */
+export function checkpoint() {
+  if (G.testNoSave) return;
+  meta.cont = { cls: run.cls, run: Object.fromEntries(RUN_KEEP.map(k => [k, run[k]])), st: { ...st }, at: dName() };
+  saveMeta();
+}
+
+/**
+ * Start a run. opt.realm ('city' | 'sewer') with opt.idx picks a reached level from the hub; a sewer-realm run
+ * stays underground (ladders lead to the next sewer level). opt.cont resumes meta.cont.
+ */
+export function startRun(k, opt = {}) {
+  const cont = opt.cont && meta.cont ? meta.cont : null;
+  if (cont) k = cont.cls;
   k = liveClass(k); // locked, unknown or an old save, link or test naming a cut class gets its heir
   meta.cls = k; meta.coopCls = coop.setup.cls.map(liveClass); // remembered per burrow (save v3)
   const C = CLASSES[k];
@@ -107,6 +127,11 @@ export function startRun(k) {
   G.turboHeld = G.turboKey = false;
   G.turboArmT = 0;
   run.hp = st.maxHp;
+  run.realm = 'city';
+  const R = realmLevels();
+  if (cont) { Object.assign(run, cont.run); Object.assign(st, cont.st); }
+  else if (opt.realm === 'sewer' && R.sewer.length) { const i = Math.min(opt.idx | 0, R.sewer.length - 1); Object.assign(run, { realm: 'sewer', layer: 'sewer', sewerIdx: i, tier: i + 1 }); }
+  else if (opt.realm === 'city') { const i = Math.min(opt.idx | 0, R.city.length - 1); Object.assign(run, { district: i, tier: i }); }
   meta.runs = (meta.runs || 0) + 1;
   saveMeta();
   const seed = levelSeed(); // every level has a fixed layout (data/levels.js)
@@ -130,6 +155,7 @@ export function startRun(k) {
   onRunStart();
   districtStart();
   coldOpen();
+  checkpoint();
 }
 
 /** Boss dead: open the way on. Surface → a road gate; sewer → a ladder up. */
@@ -171,6 +197,7 @@ function transition(apply, title) {
     $('fade').style.opacity = 0;
     G.state = 'play';
     G.last = performance.now();
+    checkpoint();
     banner(title(), got.length ? 'Unlocked: ' + got.join(', ') : storyGoal() || storyBeat());
   }, 450);
 }
@@ -205,6 +232,8 @@ export function exitSecret() {
   leave(() => transition(() => { run.secret = null; if (sewer) { run.layer = 'surface'; run.sewerIdx++; } run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : '')));
 }
 export function exitLadder() {
+  // A sewer-realm run (started from the hub) stays underground: sewer progress no longer waits on city loops.
+  if (run.realm === 'sewer') { leave(() => transition(() => { run.sewerIdx++; run.tier++; }, () => 'Deeper · ' + dName())); return; }
   if (treasureDetour()) return;
   leave(() => transition(() => { run.layer = 'surface'; run.district++; run.sewerIdx++; run.tier++; }, () => 'Back on the streets · ' + dName()));
 }
