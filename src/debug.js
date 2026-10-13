@@ -51,7 +51,7 @@ import { hud, renderSlots } from './ui/hud.js';
 import { dropFood } from './combat/combat.js';
 import { staticChecks } from './qa/checks.js';
 import { spawnReaper } from './game/reaper.js';
-import { throwVial, dropVial } from './game/vials.js';
+import { throwVial, dropVial, popVialsAt } from './game/vials.js';
 import { tickThieves, robberAI } from './game/thieves.js';
 import { turboBlast, turboGain, turboAuraOpacity } from './game/turbo.js';
 import { breakFoodAt, drainRate } from './game/food.js';
@@ -67,7 +67,7 @@ export function debugApi(state) {
   return {
     ...state, M, demoAI, qa: { ...qa, staticChecks }, hud, renderSlots, dropFood,
     CLASSES, liveClass, announcer: { callName, callout, foodShot, CALLOUTS }, checkpoint, realmLevels, saveMeta, music3: { stems, mixFor, stemsOn, updateStems, nextBar, BAR, settings }, PRIM, SPECIALS, SIGS, startRun, menu, enterSewer, exitRoad, exitLadder, spawnBoss, spawnEnemy, pickType, TUNE, tuneEntries, setTune,
-    hit, die, pause, pickSlot, renderMenu, save, loadSlot, readSlot, shop: { buy, rank, price, sellPrice, useFlask, cycleFlask, selFlask }, coop, fakePads, asPlayer, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, streakHit, streakMul, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
+    hit, die, pause, pickSlot, renderMenu, save, loadSlot, readSlot, shop: { buy, rank, price, sellPrice, useFlask, cycleFlask, selFlask }, coop, fakePads, asPlayer, dropKey, freeSpot, pressE, unlockGate, pipeNear, dropPowerup, grantPowerup, puOn, puList, POWERUPS, pingFinds, tallyCalc, tallyContinue, growStats, fadeU, FAMILIES, setupWorld, curD, dName, levelSeed, LEVELS: { CITY_LEVELS, SEWER_LEVELS, SECRET_LEVELS }, HOWTO, spawnReaper, throwVial, dropVial, popVialsAt, tickThieves, robberAI, turboBlast, turboGain, turboAuraOpacity, breakFoodAt, drainRate, tickNest, tierHp, addXP, gainXP: addXP, chewTarget, useTarget, grabTarget, audioReady, music, musicLevel, renderer, scene, world, update, sync, animate, story: storyApi, streakHit, streakMul, dropCarry, kill, rummage, addPred, scentInfo, trapCount, springTrap, ductInfo,
     /** A marked drainpipe (the only climbable wall): stand point, outward normal, top. */
     climbSpot(minTop = 0) {
       const c = state.W.climbs.find(c => c.top >= minTop && c.gx > 3 && c.gz > 3 && c.gx < M.W - 4 && c.gz < M.H - 4);

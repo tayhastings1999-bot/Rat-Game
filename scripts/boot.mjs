@@ -195,6 +195,17 @@ await check('held flasks show on the HUD, cycle with B and uncork with V', async
   await toPlay(); await page.keyboard.press('KeyV'); // uncork where it left off
   if (!(await page.evaluate(k => __scurry.puOn(k), b))) throw new Error('resume failed');
 });
+await check('shots pop Rot Vials on the floor: the burst hurts enemies, never the rat', async () => {
+  const r = await S(() => {
+    const s = __scurry, x = s.P.x + 4, z = s.P.z, g0 = !!s.G.god; s.god(false);
+    const hp0 = s.run.hp, n0 = s.W.vials.length; s.dropVial(x, s.P.y, z);
+    const e = s.spawnEnemy('mawling', x, z + 1, { plain: true, force: true }), eh = e.hp;
+    const v = s.W.vials[s.W.vials.length - 1], popped = s.popVialsAt(v.x, v.z, 0.3);
+    const out = { popped, gone: s.W.vials.length === n0, hurt: e.dead || e.hp < eh, safe: s.run.hp >= hp0 };
+    s.god(g0); return out;
+  });
+  if (r.popped !== 1 || !r.gone || !r.hurt || !r.safe) throw new Error(JSON.stringify(r));
+});
 await check('a Second Tail cheats death once', async () => {
   await S(() => { __scurry.run.tails = 1; __scurry.run.hp = 0; __scurry.die(); });
   const r = await S(() => ({ st: __scurry.G.state, hp: __scurry.run.hp, tails: __scurry.run.tails }));

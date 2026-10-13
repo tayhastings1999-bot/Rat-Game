@@ -27,7 +27,7 @@ import { banner } from '../ui/hud.js';
 import { die } from '../ui/screens.js';
 import { tryParry } from '../game/signature.js';
 import { turboGain } from '../game/turbo.js';
-import { dropVial } from '../game/vials.js';
+import { dropVial, popVialsAt } from '../game/vials.js';
 import { dropFood, breakFoodAt } from '../game/food.js';
 import { lowHealth } from '../game/announcer.js';
 import { reaperBlocks, reaperDown } from '../game/reaper.js';
@@ -127,7 +127,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
 const FOOD_BREAKERS = new Set(['primary', 'special']);
 export function aoe(x, y, z, R, dm, kb, src, slow, itemFx) {
   const m = 1 + 0.05 * (run.level - 1);
-  if (FOOD_BREAKERS.has(src)) breakFoodAt(x, z, R, y); // your attacks smash food too
+  if (FOOD_BREAKERS.has(src)) { breakFoodAt(x, z, R, y); popVialsAt(x, z, R, y); } // your attacks smash food and pop floor vials too
   for (const e of near(x, y, z, R)) {
     hit(e, dm * m, Math.atan2(e.x - x, e.z - z), kb, src, false, itemFx);
     if (slow) e.slow = slow;
