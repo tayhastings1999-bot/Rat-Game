@@ -439,6 +439,22 @@ await check('leaving a level shows a graded tally card', async () => {
   assert(after.st === 'play' && after.ranks === 1, 'did not move on: ' + JSON.stringify(after));
   return 'grade ' + card;
 });
+await check('the tally card dismisses itself in ~2.5 s with no key press', async () => {
+  await fresh();
+  await S(() => { __scurry.G.testNoTally = false; __scurry.exitRoad(); });
+  await sleep(300);
+  const st = await S(() => __scurry.G.state);
+  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: 8000 });
+  await S(() => { __scurry.G.testNoTally = true; });
+  assert(st === 'tally', 'no tally card: ' + st);
+  return 'auto-dismissed';
+});
+await check('story scenes wait for a lull: never open with an awake enemy close by', async () => {
+  await fresh();
+  const r = await S(() => { const s = __scurry; s.run.dStart = s.run.time - 10; const e = s.spawnEnemy('mawling', s.P.x + 3, s.P.z, { plain: true, force: true }); const busy = s.story.calm(); e.dead = true; e.hp = 0; const quiet = s.story.calm(); return { busy, quiet }; });
+  assert(r.busy === false && r.quiet === true, JSON.stringify(r));
+  return 'gated';
+});
 await check('every action has a key, a touch button and How to Play text', async () => {
   const r = await S(() => {
     const how = __scurry.HOWTO, btns = [...document.querySelectorAll('#tBtns [data-b], #tTop [data-b]')].map(b => b.dataset.b);
