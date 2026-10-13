@@ -3,7 +3,7 @@
 // rolls and a discordant synth bass. Intensity rises with combat and bosses.
 import { rand, chance, pick } from '../core/util.js';
 import { settings } from '../core/state.js';
-import { initStems, stemsOn, updateStems, stems, BAR } from './stems.js';
+import { initStems, stemsOn, updateStems, stemMode, stems, BAR } from './stems.js';
 
 let AC = null, master = null, sfxBus = null, musicBus = null, verb = null, noiseBuf = null, drumBus = null, bassBus = null, ambGain = null;
 const sfxLast = {};
@@ -431,6 +431,8 @@ function playBossStep(s, t, stepLen) {
 
 function scheduleMusic() {
   if (!AC || AC.state !== 'running') return;
+  initStems(AC, musicBus); // lazy: switching procedural -> v3 later loads the stems (no-op once loading)
+  stemMode(); // stems loaded but musicMode switched away: silence them
   // Soundtrack v3: the stems carry the music; the procedural score only plays as the fallback.
   if (stemsOn()) {
     updateStems(music.want, music.sewer, music.wantBoss, music.menu);

@@ -17,7 +17,7 @@ const LAYER = { menu: 'mus3_menu_loop', city: 'mus3_city_explore_loop', sewer: '
 // Full boss stacks run 1-2 LU hot (MUSIC_V3.md): trimmed here.
 const TRIM = { menu: 1, city: 1, sewer: 1, combat: 1, p1: 0.85, p2: 0.85, p3: 0.85 };
 
-export const stems = { state: 'idle', t0: 0, bufs: {}, gains: {}, srcs: [], target: {}, failed: null, mix: null };
+export const stems = { state: 'idle', t0: 0, bufs: {}, gains: {}, srcs: [], target: {}, from: {}, pend: {}, muted: false, failed: null, mix: null };
 let AC = null, bus = null;
 
 /** Which music plays: 'v3' only once every stem decoded; otherwise the procedural score. */
@@ -26,15 +26,17 @@ export const stemsOn = () => musicMode() === 'v3' && stems.state === 'ready';
 
 /** Start loading (once, after the AudioContext exists). Never throws; failure flips to procedural. */
 export function initStems(ctx, musicBus) {
-  if (AC || musicMode() !== 'v3') return;
+  if (AC || !ctx || musicMode() !== 'v3') return;
   AC = ctx; bus = musicBus;
   if (typeof fetch === 'undefined') { stems.state = 'failed'; stems.failed = 'no fetch'; return; }
   stems.state = 'loading';
+  // A hung fetch must not leave us 'loading' forever and then cut in mid-level: give up after 20 s.
+  const to = setTimeout(() => { if (stems.state === 'loading') { stems.state = 'failed'; stems.failed = 'timeout'; } }, 20000);
   const ids = [...LOOPS, ...Object.values(STINGS)];
   Promise.all(ids.map(id => fetch(URL0(id)).then(r => { if (!r.ok) throw new Error(id + ' ' + r.status); return r.arrayBuffer(); })
     .then(b => new Promise((ok, no) => AC.decodeAudioData(b, ok, no))).then(buf => { stems.bufs[id] = buf; })))
-    .then(start)
-    .catch(e => { stems.state = 'failed'; stems.failed = String(e && e.message || e); });
+    .then(() => { clearTimeout(to); if (stems.state === 'loading') start(); })
+    .catch(e => { clearTimeout(to); stems.state = 'failed'; stems.failed = String(e && e.message || e); });
 }
 function start() {
   stems.mix = AC.createGain(); stems.mix.connect(bus);
@@ -42,7 +44,7 @@ function start() {
   for (const [k, id] of Object.entries(LAYER)) {
     const g = AC.createGain(); g.gain.value = 0; g.connect(stems.mix);
     const s = AC.createBufferSource(); s.buffer = stems.bufs[id]; s.loop = true; s.connect(g); s.start(stems.t0);
-    stems.gains[k] = g; stems.srcs.push(s); stems.target[k] = 0;
+    stems.gains[k] = g; stems.srcs.push(s); stems.target[k] = 0; stems.from[k] = 0; stems.pend[k] = 0;
   }
   stems.state = 'ready';
 }
@@ -64,6 +66,8 @@ export function mixFor(intensity, sewer, boss) {
 /** Called from the music tick: move layers toward the wanted mix, each fade starting on a bar line. */
 export function updateStems(intensity, sewer, boss, menu) {
   if (!stemsOn()) return;
+  // Back from 'procedural' (stemMode below muted the stems): bring the mix up on the next bar.
+  if (stems.muted) { const at = nextBar(AC.currentTime), m = stems.mix.gain; m.cancelScheduledValues(at); m.setValueAtTime(0, at); m.linearRampToValueAtTime(1, at + FADE); stems.muted = false; }
   const want = mixFor(menu ? 0 : intensity, sewer, menu ? 'menu' : boss), now = AC.currentTime;
   for (const k of Object.keys(want)) {
     const v = want[k] * TRIM[k];
@@ -73,8 +77,13 @@ export function updateStems(intensity, sewer, boss, menu) {
     const at = nextBar(now, unit), g = stems.gains[k].gain;
     // The bed and combat leaving for a boss fade over a whole bar; other moves are short.
     const len = intensity === 3 && (k === 'city' || k === 'sewer' || k === 'combat') ? BAR : FADE;
-    g.cancelScheduledValues(at);
-    g.setValueAtTime(stems.target[k], at);
+    // If an earlier fade hasn't started yet (the state flipped again within the bar), drop it and fade
+    // from the level the layer is really at, not the target it never reached (avoids a jump/click).
+    const pend = stems.pend[k] > now;
+    const from = pend ? stems.from[k] : stems.target[k];
+    g.cancelScheduledValues(pend ? Math.min(at, stems.pend[k]) : at);
+    g.setValueAtTime(from, at);
+    stems.from[k] = from; stems.pend[k] = at;
     g.linearRampToValueAtTime(v, at + len);
     stems.target[k] = v;
     stems.last = { k, at, len };
@@ -89,4 +98,11 @@ export function playSting(kind) {
   const m = stems.mix.gain; m.cancelScheduledValues(at); m.setValueAtTime(m.value, at); m.linearRampToValueAtTime(0.35, at + FADE); m.setValueAtTime(0.35, at + b.duration - 0.5); m.linearRampToValueAtTime(1, at + b.duration);
   stems.lastSting = kind;
   return true;
+}
+/** Called every music tick: if the stems are loaded but musicMode isn't 'v3', fade them out so they don't play under the procedural score. */
+export function stemMode() {
+  if (stems.state !== 'ready' || stemsOn() || stems.muted) return;
+  const now = AC.currentTime, m = stems.mix.gain;
+  m.cancelScheduledValues(now); m.setValueAtTime(m.value, now); m.linearRampToValueAtTime(0, now + FADE);
+  stems.muted = true;
 }
