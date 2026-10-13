@@ -32,7 +32,7 @@ import { eatNearby, drainHealth } from './food.js';
 import { streakTick } from './swarm.js';
 import { useFlask, cycleFlask } from './shop.js';
 import { dnum } from '../fx/fx.js';
-import { bark, ratName } from './announcer.js';
+import { callout } from './announcer.js';
 
 /** Co-op state. setup is chosen in the Nest; players exist only during a co-op run. */
 export const coop = {
@@ -71,6 +71,15 @@ export function asPlayer(i, fn) {
   swapOut(cur); swapIn(p);
   try { return fn(); } finally { swapOut(p); swapIn(cur); }
 }
+
+/** The lead: the first rat still standing (it alone takes exits). True in solo play. */
+export function isLead() {
+  if (!coop.on) return true;
+  const down = p => (p.i === coop.active ? P.downed : p.P.downed);
+  const lead = coop.players.find(p => !down(p)) || coop.players[0];
+  return lead.i === coop.active;
+}
+export const leadNum = () => { const down = p => (p.i === coop.active ? P.downed : p.P.downed); return ((coop.players.find(p => !down(p)) || coop.players[0]).i) + 1; };
 
 /** Live enemy count across every co-op split (the cap checks use this). */
 export const enemyTotal = () => (coop.total != null ? coop.total : W.enemies.length);
@@ -348,7 +357,7 @@ function tickRevive(p, dt, lead) {
     q.revUsed = (q.revUsed || 0) + 1;
     standUp(p, C.reviveHp);
     dnum(q.x, q.y + 1.8, q.z, 'Back up!', 'heal');
-    bark(`P${p.i + 1} is back on their feet!`);
+    callout('revived', p.i);
     return;
   }
   if (q.downT < C.downTime) return;
@@ -357,10 +366,10 @@ function tickRevive(p, dt, lead) {
     const L = posOf(lead);
     Object.assign(q, { x: L.x + 1, y: L.y + 0.2, z: L.z, vx: 0, vy: 0, vz: 0 });
     standUp(p, C.tokenHp);
-    bark(`P${p.i + 1} spends a cheese token!${run.tokens > 0 ? ` ${run.tokens} left.` : run.tokens === 0 ? ' That was the last one.' : ''}`);
+    callout('token', p.i, run.tokens > 0 ? ` ${run.tokens} left.` : run.tokens === 0 ? ' That was the last one.' : '');
   } else {
     q.out = true;
-    bark(`P${p.i + 1} is out until the next level.`);
+    callout('out', p.i);
   }
 }
 
@@ -427,9 +436,10 @@ export function coopDown() {
   P.reviveT = 0;
   P.downT = 0;
   run.hp = 0;
+  run.downs = (run.downs || 0) + 1; // shared party count (the lab's co-op trial reads it)
   P.vx = P.vz = 0;
   dnum(P.x, P.y + 1.8, P.z, 'Down! Stand next to them to revive', 'crit');
-  bark(`${ratName()} is down! Get them up!`);
+  callout('down');
   return true;
 }
 
