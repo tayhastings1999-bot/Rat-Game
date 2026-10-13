@@ -5,7 +5,7 @@
 //   Math       damage and armor, i-frames, health/XP bars matching the numbers,
 //              healing caps, kills and XP, automatic level-ups, the kit slots,
 //              the dodge cooldown, manual attack, and the save file round-tripping.
-//   Fuzz       random keys/mouse/touch at full speed during play; the rat and
+//   Fuzz       random keys/mouse at full speed during play; the rat and
 //              mobs teleported to random spots (walls, roofs, edges) with wild
 //              velocities; random clicks on every overlay. Watches for
 //              exceptions, NaN, out-of-bounds and stuck states.
@@ -455,11 +455,12 @@ await check('story scenes wait for a lull: never open with an awake enemy close 
   assert(r.busy === false && r.quiet === true, JSON.stringify(r));
   return 'gated';
 });
-await check('every action has a key, a touch button and How to Play text', async () => {
+// Touch play is off for now (TOUCH_CONTROLS in src/ui/touch.js), so actions need a key and How to Play text only.
+await check('every action has a key and How to Play text', async () => {
   const r = await S(() => {
-    const how = __scurry.HOWTO, btns = [...document.querySelectorAll('#tBtns [data-b], #tTop [data-b]')].map(b => b.dataset.b);
-    const need = { attack: ['atk', 'J</kbd>'], dodge: ['roll', 'Shift'], jump: ['jump', 'Space'], special: ['spec', '<kbd>Q</kbd>'], sig: ['sig', '<kbd>G</kbd>'], turbo: ['turbo', '<kbd>X</kbd>'], vial: ['vial', '<kbd>Z</kbd>'], use: ['use', '<kbd>E</kbd>'], lock: ['lock', '<kbd>R</kbd>'], sniff: ['scent', '<kbd>F</kbd>'], map: ['map', '<kbd>M</kbd>'], pause: ['pause', 'Esc'] };
-    return Object.entries(need).filter(([, [b, k]]) => !btns.includes(b) || !how.includes(k)).map(([n]) => n);
+    const how = __scurry.HOWTO;
+    const need = { attack: 'J</kbd>', dodge: 'Shift', jump: 'Space', special: '<kbd>Q</kbd>', sig: '<kbd>G</kbd>', turbo: '<kbd>X</kbd>', vial: '<kbd>Z</kbd>', use: '<kbd>E</kbd>', lock: '<kbd>R</kbd>', sniff: '<kbd>F</kbd>', map: '<kbd>M</kbd>', pause: 'Esc' };
+    return Object.entries(need).filter(([, k]) => !how.includes(k)).map(([n]) => n);
   });
   assert(!r.length, 'missing: ' + r.join(', '));
   return '12 actions';
@@ -476,7 +477,7 @@ await check('save file round-trips', async () => {
 });
 
 // ---------------------------------------------------------------- fuzzing
-await check(`input fuzz (${FUZZ_SECS}s of random keys, mouse and touch)`, async () => {
+await check(`input fuzz (${FUZZ_SECS}s of random keys and mouse)`, async () => {
   await fresh();
   await S(() => { __scurry.god(true); Object.assign(__scurry.run, { spawnT: 0.5, surgeT: 20 }); });
   const KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'KeyC', 'KeyQ', 'KeyG', 'KeyX', 'KeyE', 'KeyR', 'KeyF', 'KeyV', 'KeyM', 'Escape', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'Enter', 'KeyP'];
