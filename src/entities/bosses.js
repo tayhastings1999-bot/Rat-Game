@@ -54,7 +54,7 @@ export function spawnBoss() {
   const b = {
     type: B.geo, kind, name: B.name, boss: true, heavy: true, fly: !!B.fly, mesh,
     x, y: B.fly ? gy + 5 : gy, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp,
-    spd: B.spd * (run.spdM || 1), dmg: 16 * (run.dmgM || 1) * (1 + 0.15 * run.tier),
+    spd: B.spd * (run.spdM || 1), dmg: 16 * (run.dmgM || 1) * (run.bossDmgM || 1) * (1 + 0.15 * run.tier),
     r: BASE_R[B.geo] * B.sc * 0.75, h: BASE_H[B.geo] * B.sc, sc: 1, col: B.col, blood: B.blood,
     flash: 0, slow: 0, ang: 0, pT: 0, pD: 0, bT: 0, bD: 0, dT: 0, tT: 0, wind: 0, atkCd: 0, lunge: 0, ward: 0,
     phase: 1, cd: 2.2, st: 'move', tt: 0, tel: 0, seq: [], last: '', mvT: 0, mvDir: 1, oa: rand(0, TAU), ow: 1, hv: 0, mass: 8, bar: true,

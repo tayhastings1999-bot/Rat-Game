@@ -26,7 +26,6 @@ const rawWait = ms => page.waitForTimeout(ms);
 /** Wait, then clear any level-up screens the kills produced (picks option 1). */
 const wait = async ms => {
   await rawWait(ms);
-  for (let i = 0; i < 20 && (await page.evaluate(() => window.__scurry && __scurry.G.state)) === 'levelup'; i++) { await page.keyboard.press('Digit1'); await rawWait(80); }
 };
 /** Poll a page condition (clearing level-ups) until it holds or time runs out; returns the last value. */
 const until = async (fn, ms = 5000, arg) => {
@@ -91,7 +90,7 @@ await step('XP from kills: auto level-up, no pause', async () => {
   await S(() => { const s = __scurry; s.addXP(s.need(s.run.level) * 2.5); });
   const r = await S(() => ({ L: __scurry.run.level, st: __scurry.G.state }));
   if (r.L <= L0 || r.st !== 'play') throw new Error('level-up ' + JSON.stringify(r));
-  await shot('03-levelup');
+  await shot('03-level-gain');
   const x0 = await S(() => __scurry.run.xp + __scurry.run.level * 1e6);
   await S(() => { const { P } = __scurry, e = __scurry.spawnEnemy('mawling', P.x + 2, P.z, { plain: true, force: true }); if (e) __scurry.kill(e); });
   if (!(await S(x0 => __scurry.run.xp + __scurry.run.level * 1e6 > x0, x0))) throw new Error('kill gave no XP');
@@ -787,7 +786,6 @@ await page.close(); // stop the desktop session's game loop competing for CPU
     await tp.locator('.card[data-k="brawler"]').scrollIntoViewIfNeeded();
     await tp.tap('.card[data-k="brawler"]');
     await tp.waitForTimeout(1200);
-    for (let i = 0; i < 10 && (await tp.evaluate(() => __scurry.G.state)) === 'levelup'; i++) { await tp.tap('.card[data-i="0"]'); await tp.waitForTimeout(200); }
     await tp.evaluate(() => { __scurry.run.need = 1e9; __scurry.run.evT = 1e9; });
     const s = await tp.evaluate(() => ({ state: __scurry.G.state, touch: document.body.classList.contains('touch'), vis: getComputedStyle(document.getElementById('touch')).display }));
     if (s.state !== 'play' || !s.touch || s.vis !== 'block') throw new Error(JSON.stringify(s));
@@ -804,8 +802,6 @@ await page.close(); // stop the desktop session's game loop competing for CPU
     const moved = Math.hypot(mid.p[0] - p0[0], mid.p[1] - p0[1]);
     if (moved < 2) throw new Error('rat moved only ' + moved.toFixed(2) + ' ' + JSON.stringify(mid));
     await tp.screenshot({ path: OUT + '13-phone-play.png' });
-    for (let i = 0; i < 10 && (await tp.evaluate(() => __scurry.G.state)) === 'levelup'; i++) { await tp.tap('.card[data-i="0"]'); await tp.waitForTimeout(150); }
-    await tp.evaluate(() => { __scurry.st.xp = 0; }); // no more level-ups mid-test
     await tp.waitForTimeout(300);
     const [jx, jy] = await center('[data-b="jump"]');
     const y0 = await tp.evaluate(() => __scurry.P.y);

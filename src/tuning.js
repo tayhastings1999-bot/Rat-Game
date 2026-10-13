@@ -30,7 +30,7 @@ export const TUNE = {
     // Per difficulty: tokens per run and teammate revives per rat per level (-1 = unlimited).
     downTime: 15, // seconds a downed rat waits before a token is spent (or it sits out)
     tokenHp: 0.6, // HP fraction when a token brings a rat back
-    rules: { casual: { tokens: -1, revives: -1 }, normal: { tokens: 3, revives: 2 }, insane: { tokens: 2, revives: 0 } },
+    rules: { casual: { tokens: -1, revives: -1 }, normal: { tokens: 3, revives: 2 }, insane: { tokens: 1, revives: 0 } },
     reviveR: 1.8, // a standing rat this close revives a downed one…
     reviveTime: 2.5, // …over this many seconds (the bar drains at half speed when nobody helps)
     reviveHp: 0.4, // back up with this fraction of max HP
@@ -54,9 +54,13 @@ export const TUNE = {
   difficulty: {
     // Casual / Normal / Insane, picked in the Nest and saved per slot (meta.difficulty).
     // Multipliers on top of zone scaling (and player-count scaling in co-op). zoneScaling() in combat.js applies them.
-    casual: { hp: 0.75, dmg: 0.65, spawn: 0.8, elite: 0.6, bossHp: 0.8, drain: 0.7, food: 1.25, gold: 0.75 },
-    normal: { hp: 1, dmg: 1, spawn: 1, elite: 1, bossHp: 1, drain: 1, food: 1, gold: 1 },
-    insane: { hp: 1.5, dmg: 1.6, spawn: 1.35, elite: 2, bossHp: 1.6, drain: 1.4, food: 0.8, gold: 1.75 },
+    // atk = enemy attack-rate × (cooldowns only: wind-up telegraphs are never shortened), spd = enemy move ×,
+    // pu = street power-ups ×, vials = starting Rot Vials ±, bossDmg = boss damage × on top of dmg.
+    casual: { hp: 0.75, dmg: 0.65, spawn: 0.8, elite: 0.6, bossHp: 0.8, drain: 0.7, food: 1.25, gold: 0.75, atk: 0.85, spd: 0.95, pu: 1, vials: 0 },
+    normal: { hp: 1, dmg: 1, spawn: 1, elite: 1, bossHp: 1, drain: 1, food: 1, gold: 1, atk: 1, spd: 1, pu: 1, vials: 0 },
+    // Insane: "brutal but accomplishable". Mistakes cost a lot (damage, faster follow-ups, less
+    // food and fewer power-ups), but the rules and telegraphs are the same as Normal.
+    insane: { hp: 1.3, dmg: 1.6, spawn: 1.3, elite: 2, bossHp: 1.15, bossDmg: 0.7, drain: 1.4, food: 0.6, gold: 1.75, atk: 1.25, spd: 1.08, pu: 0.5, vials: -1 },
   },
   camera: {
     // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9
@@ -112,6 +116,9 @@ export const TUNE = {
     blastMin: 1, // segments needed for a blast (it spends every full one)
     blastBase: 1, blastPerSeg: 0.75, // blast power × (base + perSeg·(segments − 1))
     tapTime: 0.35, // X released within this many seconds without Q/G = blast
+    // Hit streak (replaces the combo meter): hits within `window` s of each other count;
+    // past minHits each hit adds perHit to turbo gain, capped at +max. A hit taken resets it.
+    streak: { window: 2.5, minHits: 5, perHit: 0.02, max: 0.2, killHits: 2, perfectHits: 4 },
     armTime: 1.5, // held longer and let go: turbo stays armed this long for the next Q or G
   },
   vials: {
@@ -166,6 +173,19 @@ export const TUNE = {
     speed: 6.5, // climbing speed
     topPush: 4.5, // the hand-up onto the roof at the top of a pipe
     hopUp: 2.2, // a roof this much higher than the one you're on is still reachable by a hop
+  },
+  balance: {
+    // Power vs challenge (DESIGN_DECISIONS: "strong, never safe"). Stats past `softAt` grow at a
+    // diminishing rate (half value at softAt + softR, asymptote softAt + softR). The total
+    // damage-taken multiplier from Armor stops at armFloor and the full stack (Armor × Iron Hide × buffs) at minTaken, and the
+    // player-side outgoing damage multiplier soft-caps past outAt. Enemies scale with the rat's
+    // actual power: HP × (offense / start)^hpFollow, damage × (effective HP / start)^dmgFollow,
+    // so growth always shows (exponents < 1) but never makes the game safe.
+    softAt: 10, softR: 8,
+    armFloor: 0.4, // Armor alone never cuts damage taken below this
+    minTaken: 0.25, // Armor × Iron Hide × buffs never below this
+    outAt: 2.5, outR: 2,
+    hpFollow: 0.35, dmgFollow: 0.35,
   },
   growth: {
     // Stat growth on level-up (game/stats.js growStats): points split by the class's own stats.

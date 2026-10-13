@@ -188,12 +188,7 @@ body.combat #mapBox{opacity:.18}
 .tb.turbo{background:rgba(242,178,51,.4);border-color:#ffd040}
 .tb.vial{border-color:#9be06a}
 .tb.atk{grid-column:span 3;width:auto;height:52px;border-radius:12px;background:rgba(224,56,44,.6);border-color:#ffd040}
-/* Breakthroughs */
 @keyframes capPulse{from{filter:brightness(.8)}to{filter:brightness(1.35)}}
-#slots .slot.evo{border-color:var(--gold);box-shadow:0 0 12px rgba(242,178,51,.7)}
-#slots .slot.evo em{color:var(--gold)}
-.panel.breakthrough{box-shadow:0 0 0 2px var(--gold),0 0 40px rgba(242,178,51,.35)}
-.panel.breakthrough h2{color:var(--gold)}
 /* Contracts tracker */
 #contracts{position:absolute;right:28px;top:292px;font-size:11px;line-height:1.7;text-align:right;color:var(--dim);transition:opacity .4s;max-width:260px}
 body.touch #contracts{top:auto;bottom:40%;right:12px;font-size:9px}

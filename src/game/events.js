@@ -1,5 +1,5 @@
 // District events: every minute and a half or so something happens that you
-// have to react to. Never during a boss fight or a breakthrough trial.
+// have to react to. Never during a boss fight.
 //  - Food truck crash: a loot pile appears somewhere, and so does the horde.
 //  - Stampede: a line of cats charges across the street. Get clear or get high.
 //  - Fumigation sweep: a wall of gas rolls across the whole district. Get on a

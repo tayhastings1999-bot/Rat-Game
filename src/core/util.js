@@ -55,7 +55,7 @@ export function mulberry(a) {
   };
 }
 
-// Seedable RNG used by map generation so trial maps are identical for everyone.
+// Seedable RNG used by map generation so a level seed always builds the same map.
 export const rng = { next: Math.random };
 export const seedRng = seed => { rng.next = mulberry(hashS(seed)); };
 export const unseedRng = () => { rng.next = Math.random; };

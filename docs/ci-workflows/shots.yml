@@ -1,0 +1,35 @@
+# Screenshots for PRs that touch rendering or UI: title, Nest, city, sewer,
+# co-op and horde frames from scripts/shots.mjs, uploaded as an artifact.
+name: Screenshots
+
+on:
+  pull_request:
+    paths:
+      - 'src/render/**'
+      - 'src/ui/**'
+      - 'src/style.css'
+      - 'src/fonts.css'
+      - 'index.html'
+      - 'src/entities/rat.js'
+      - 'src/world/build.js'
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    name: Capture screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run build
+      - run: OUT=$RUNNER_TEMP/shots/ LABEL=pr${{ github.event.pull_request.number }} node scripts/shots.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'screenshots-pr${{ github.event.pull_request.number }}', path: '${{ runner.temp }}/shots/' }
+      - run: echo "Screenshots uploaded as artifact screenshots-pr${{ github.event.pull_request.number }}." >> "$GITHUB_STEP_SUMMARY"

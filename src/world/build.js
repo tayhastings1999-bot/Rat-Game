@@ -6,6 +6,7 @@ import { toon } from '../render/toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rand, TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
 import { G, W, run } from '../core/state.js';
+import { diffMods } from '../combat/combat.js';
 import { TUNE } from '../tuning.js';
 import { dropPowerup, PU_KEYS } from '../game/powerups.js';
 import { scene, world, hemi, sun, lantern, lampL, buried, bury } from '../render/renderer.js';
@@ -830,7 +831,8 @@ function lockChests() {
 function placePowerups(info) {
   const rooms = (info.byDist || []).filter(r => r !== info.startRoom), lo = Math.floor(rooms.length * 0.2), hi = Math.max(lo + 1, Math.floor(rooms.length * 0.9));
   const pool = rooms.slice(lo, hi);
-  for (let i = 0; i < TUNE.powerups.perLevel && pool.length; i++) {
+  const n = Math.round(TUNE.powerups.perLevel * (diffMods().pu ?? 1));
+  for (let i = 0; i < n && pool.length; i++) {
     const r = pool.splice(Math.floor(rng.next() * pool.length), 1)[0], kind = PU_KEYS[Math.floor(rng.next() * PU_KEYS.length)];
     const t = shuffleR(roomTiles(r).slice()).find(([x, y]) => freeSpot(toW(x), toW(y), 1));
     if (t) dropPowerup(toW(t[0]), 0, toW(t[1]), kind);

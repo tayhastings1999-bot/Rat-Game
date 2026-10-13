@@ -61,7 +61,7 @@ function scan() {
   };
   if (G.exitD) tgt([G.exitD], 0x6ad06a);
   { const ts = objTargets(); if (ts.length) tgt(ts, 0xffd040); }
-  if (G.mode === 'survival' && G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
+  if (G.manhole && run.keys) tgt([G.manhole], 0xb070ff);
   if (W.keys.length) tgt(W.keys, 0xffd040);
   if (G.boss && !G.boss.revealed) tgt([G.boss], 0xff2a60);
   if (G.evMarker) tgt([G.evMarker.e || G.evMarker], 0xffd040);

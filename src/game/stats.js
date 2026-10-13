@@ -4,20 +4,27 @@
 import { G, P, run, st } from '../core/state.js';
 import { coopGrow } from './coop.js';
 import { TUNE, tuneHooks } from '../tuning.js';
+import { powerScaling } from '../combat/combat.js';
 
 export const STAT_KEYS = ['str', 'spd', 'arm', 'mag'];
 export const STAT_NAMES = { str: 'Strength', spd: 'Speed', arm: 'Armor', mag: 'Magic' };
+/** Diminishing returns past TUNE.balance.softAt: linear below, then x/(1+x/R) above (asymptote softAt+R). */
+export function soft(v, at = TUNE.balance.softAt, R = TUNE.balance.softR) {
+  if (v <= at) return v;
+  const x = v - at;
+  return at + x / (1 + x / R);
+}
 
 /** The class-driven part of `st` for class `k`, including what the current run's levels have grown. */
 export function derive(k) {
   const S = TUNE.stats, c0 = TUNE.classes[k] || TUNE.classes.brawler, g = run.cls === k && run.growth ? run.growth : null;
-  const c = g ? { ...c0, str: c0.str + g.str, spd: c0.spd + g.spd, arm: c0.arm + g.arm, mag: c0.mag + g.mag } : c0;
+  const c = g ? { ...c0, str: soft(c0.str + g.str), spd: soft(c0.spd + g.spd), arm: soft(c0.arm + g.arm), mag: soft(c0.mag + g.mag) } : c0;
   return {
     maxHp: c0.hp + (g ? g.hp : 0),
     speed: S.spdBase + S.spdPer * c.spd,
     primMul: S.strBase + S.strPer * c.str,
     magMul: S.magBase + S.magPer * c.mag,
-    taken: Math.max(0.2, 1 - S.armPer * c.arm),
+    taken: Math.max(TUNE.balance.armFloor, 1 - S.armPer * c.arm),
     cd: Math.max(0.5, S.rateBase - S.ratePer * c.spd),
     turboGain: S.gainBase + S.gainPer * c.mag,
     meleeLeech: c.leech || 0,
@@ -63,5 +70,6 @@ function reapply() {
   st.speed *= marks.speed;
   st.taken *= marks.taken;
   run.hp = Math.min(st.maxHp, Math.max(1, f * st.maxHp));
+  powerScaling();
 }
 tuneHooks.push(path => { if (path.startsWith('classes.') || path.startsWith('stats.')) reapply(); });

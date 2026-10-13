@@ -12,7 +12,7 @@ import { warn } from './hazards.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
 import { addChest } from '../world/build.js';
-import { comboGain, comboBreak } from '../game/swarm.js';
+import { streakHit, streakBreak } from '../game/swarm.js';
 import { TUNE } from '../tuning.js';
 import { buffOn } from '../game/forage.js';
 import { rivalDeath } from '../world/ducts.js';
@@ -90,6 +90,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   e.lastSrc = src;
   if (crit) d *= st.critMul;
   if (src === 'primary' && melee && puOn('split')) d *= TUNE.powerups.splitMelee; // Splitclaw: every swipe lands twice
+  { const B = TUNE.balance, m = d / (crit ? st.critMul : 1) / base; if (m > B.outAt) d *= (B.outAt + (m - B.outAt) / (1 + (m - B.outAt) / B.outR)) / m; } // soft cap on stacked player multipliers
   if ((src === 'primary' || src === 'mirror') && puOn('ember') && !e.boss) { e.bT = Math.max(e.bT || 0, TUNE.powerups.emberT); e.bD = Math.max(e.bD || 0, TUNE.powerups.emberDps); } // Ember Breath
   if (e.ward > 0) d *= 0.4;
   const gm = guardMul(e, ang, base);
@@ -103,7 +104,7 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   if (ang != null) e.hitA = ang;
   e.hurt = true;
   P.lastHitT = G.time;
-  if (src !== 'swarm' && src !== 'dot') comboGain(Math.min(4, 0.6 + d / 12));
+  if (src !== 'swarm' && src !== 'dot') streakHit(1);
   if (src !== 'turbo') turboGain(d);
   sfx('hit');
   if (crit || d >= 40) G.hitStop = Math.max(G.hitStop, 0.035);
@@ -141,7 +142,8 @@ export function hurtP(d, from, raw) {
     d *= 0.3;
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
   }
-  d = Math.max(1, Math.round(d * st.taken * (buffOn('ironmold') ? 0.6 : 1) * (puOn('iron') ? 1 - TUNE.powerups.ironCut : 1) * (1 + 0.1 * run.tier))); // st.taken comes from Armor
+  const tk = Math.max(TUNE.balance.minTaken, st.taken * (buffOn('ironmold') ? 0.6 : 1) * (puOn('iron') ? 1 - TUNE.powerups.ironCut : 1)); // st.taken comes from Armor; stacked cuts floor at minTaken
+  d = Math.max(1, Math.round(d * tk * (1 + 0.1 * run.tier) * (run.powDmg || 1)));
   run.hp -= d;
   run.dHurt = (run.dHurt || 0) + d;
   if (G.qa) G.qa.hurt(d, from, raw);
@@ -155,7 +157,7 @@ export function hurtP(d, from, raw) {
     if (from.corrupt === 'leech' && !from.dead) { from.hp = Math.min(from.maxHp, from.hp + from.maxHp * 0.12); puff(from.x, from.y + from.h * 0.6, from.z, 0xd02040, 6, 2); }
   }
   blood(P.x, P.y + 0.5, P.z, 0xa01010, null, raw ? 2 : 6);
-  if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); comboBreak(); }
+  if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); streakBreak(); }
   onLowHp();
   lowHealth();
   if (run.hp <= 0) die();
@@ -169,7 +171,7 @@ export function kill(e) {
   run.kills++;
   meta.kills++;
   if (e.mini) run.minis = (run.minis || 0) + 1;
-  comboGain(e.mini ? 20 : e.elite ? 8 : e.boss ? 0 : 3);
+  streakHit(TUNE.turbo.streak.killHits);
   sfx('kill');
   if (e.boss || e.pred || e.elite || e.type === 'brute' || e.type === 'nest') G.hitStop = Math.max(G.hitStop, e.boss ? 0.3 : 0.08);
   const big = e.boss || e.pred;
@@ -280,9 +282,24 @@ export function zoneScaling() {
   run.spawnM = D.spawn * (1 + xp * PP.spawn); // nest spawn rate
   run.eliteM = D.elite * (1 + xp * PP.elite);
   run.bossHpM = D.bossHp * (1 + xp * PP.bossHp);
+  run.bossDmgM = D.bossDmg || 1; // boss hits relative to the difficulty's dmg (Insane keeps bosses beatable)
   run.kidsM = 1 + xp * PP.nestKids; // children each nest keeps alive
   run.drainM = D.drain;
   run.foodM = D.food;
+  run.atkM *= D.atk || 1;
+  run.spdM *= D.spd || 1;
+  powerScaling();
+}
+/**
+ * Enemies follow the rat's real power (TUNE.balance): offense = mean of primary and magic multipliers,
+ * effective HP = max HP / damage taken, both relative to the run's start. Called at run
+ * start (records the baseline) and after every level-up / stat change.
+ */
+export function powerScaling(reset) {
+  const B = TUNE.balance, off = ((st.primMul || 1) + (st.magMul || 1)) / 2, ehp = (st.maxHp || 1) / Math.max(0.05, st.taken || 1);
+  if (reset || !run.pow0) run.pow0 = { off, ehp };
+  run.powHp = Math.max(1, Math.pow(off / run.pow0.off, B.hpFollow));
+  run.powDmg = Math.max(1, Math.pow(ehp / run.pow0.ehp, B.dmgFollow));
 }
 /** The active difficulty's multipliers (Normal when unset or unknown). */
 export const diffMods = () => TUNE.difficulty[meta.difficulty] || TUNE.difficulty.normal;

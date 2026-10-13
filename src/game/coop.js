@@ -18,6 +18,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { CLASSES } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
+import { powerScaling } from '../combat/combat.js';
 import { makeRat, blob, playerRing, addGlyph } from '../entities/rat.js';
 import { keys, stepPlayer, primary, startRoll, useSpecial, pressE, toggleLock } from '../entities/player.js';
 import { updateEnemies } from '../entities/mobs.js';
@@ -28,7 +29,7 @@ import { tickSig, useSig } from './signature.js';
 import { tickPowerups } from './powerups.js';
 import { throwVial } from './vials.js';
 import { eatNearby, drainHealth } from './food.js';
-import { comboTick } from './swarm.js';
+import { streakTick } from './swarm.js';
 import { useFlask, cycleFlask } from './shop.js';
 import { dnum } from '../fx/fx.js';
 import { bark, ratName } from './announcer.js';
@@ -43,7 +44,8 @@ export const coop = {
 export const INPUTS = { kb1: 'Keyboard + mouse', kb2: 'Keyboard (arrows + numpad)', pad0: 'Gamepad 1', pad1: 'Gamepad 2', pad2: 'Gamepad 3', pad3: 'Gamepad 4' };
 
 // Per-rat fields kept on run (everything else on run is shared by the party: gold, keys, XP, level, kills).
-const RF = ['critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'flaskT', 'flaskOn', 'cheese', 'tails', 'specT', 'primT', 'growth', 'combo', 'comboT', 'lowWarned', 'blood', 'bloodT'];
+// pow0/powHp/powDmg: each rat's enemy power-following is measured against its own start.
+const RF = ['pow0', 'powHp', 'powDmg', 'critWarned', 'cls', 'hp', 'turbo', 'vials', 'pu', 'buffs', 'flasks', 'flaskSel', 'flaskT', 'flaskOn', 'cheese', 'tails', 'specT', 'primT', 'growth', 'streak', 'streakT', 'lowWarned', 'blood', 'bloodT'];
 // Per-rat fields kept on G (turbo input state, lock-on, aim and attack input).
 const GF = ['turboHeld', 'turboKey', 'turboArmT', 'turboFlash', 'lockOn', 'attack', 'aimAt', 'touch', 'rat'];
 const pick = (o, ks) => { const r = {}; for (const k of ks) r[k] = o[k]; return r; };
@@ -91,10 +93,11 @@ export function coopStart(freshStats, shopGrowth) {
   const base = { ...p1.P }, pr = pick(run, RF);
   for (let i = 1; i < n; i++) {
     const cls = CLASSES[coop.setup.cls[i]] ? coop.setup.cls[i] : 'brawler', C = CLASSES[cls];
-    Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, flaskT: {}, flaskOn: null, cheese: 0, tails: 0, specT: 0, primT: 0, growth: shopGrowth(), combo: 0, comboT: 0, lowWarned: false, blood: 0, bloodT: 0 });
+    Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, flaskT: {}, flaskOn: null, cheese: 0, tails: 0, specT: 0, primT: 0, growth: shopGrowth(), streak: 0, streakT: 0, lowWarned: false, blood: 0, bloodT: 0 });
     fill(st, freshStats(cls));
     st.salvage = p1.st.salvage; // gold upgrades and difficulty are party-wide
     run.hp = st.maxHp;
+    powerScaling(true); // each rat's own power baseline (not player 1's)
     const a = i * Math.PI * 0.5;
     fill(P, { ...base, safe: { ...base.safe }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1 });
     const rat = makeRat(C, i);
@@ -257,7 +260,7 @@ function stepOther(dt) {
   if (G.state !== 'play') return;
   { const back = coopSplit('enemies'); updateEnemies(dt, G.spawnCap || TUNE.enemies.cap); back(); }
   { const back = coopSplit('proj'); updateProjectiles(dt); back(); }
-  comboTick(dt);
+  streakTick(dt);
   tickSig(dt);
   tickTurbo(dt);
   tickPowerups(dt);

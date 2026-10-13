@@ -32,7 +32,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const pct = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * p))]; };
 const r2 = v => +(+v).toFixed(2);
 
-const startRun = prof => S(([c, p]) => { const s = __scurry; s.qa.stop(); s.G.mode = 'survival'; s.meta.startAt = 'row'; s.startRun(c); s.qa.start({ profile: p, goal: 'survive' }); }, [CLS, prof]);
+const startRun = prof => S(([c, p]) => { const s = __scurry; s.qa.stop(); s.startRun(c); s.qa.start({ profile: p, goal: 'survive' }); }, [CLS, prof]);
 /** One measurement point: real frames for renderer.info, timed sync, scene census. */
 const probe = () => S(async () => {
   const s = __scurry, r = s.renderer;

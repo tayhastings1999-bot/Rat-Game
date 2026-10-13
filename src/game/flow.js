@@ -11,7 +11,7 @@ import { carveDucts } from '../world/ducts.js';
 import { buildWorld, populate, addExit } from '../world/build.js';
 import { curD, dName, isSewer, MODS, levelSeed } from '../data/world.js';
 import { CLASSES, SKINS } from '../data/classes.js';
-import { zoneScaling } from '../combat/combat.js';
+import { zoneScaling, diffMods } from '../combat/combat.js';
 import { need } from './progress.js';
 import { setRat, FACE } from '../entities/rat.js';
 import { banner, renderSlots, hud } from '../ui/hud.js';
@@ -35,7 +35,7 @@ export function freshStats(k) {
   const C = CLASSES[k], melee = C.prim === 'rake' || C.prim === 'gnash';
   return {
     ...derive(k), regen: 0, dmg: 1, area: C.area || 1,
-    squeezeMul: 1, comboMul: 1,
+    squeezeMul: 1,
     magnet: 2.6, crit: 0.05, critMul: 2, xp: 1, jumps: C.jumps || 0, multi: 0, range: 1, shotSpd: 1, tear: 1,
     homing: false, split: false, shotSize: 0, kb: 1, scentMax: 8,
     chew: 1, specCd: 1, foeSpd: 1, salvage: 1, foodMul: 1, healMul: 1,
@@ -81,7 +81,6 @@ export function menu() {
   $('bossWrap').style.display = 'none';
   resetObj(run, { cls: 'brawler', tier: 0, time: 0, nests: 0, mods: [], level: 1, dmgBy: {}, layer: 'surface', district: 0, sewerIdx: 0 });
   resetObj(st, freshStats('brawler'));
-  G.mode = 'survival';
   setupWorld('MENU');
   setRat(CLASSES.brawler);
   G.camDist = 11;
@@ -96,7 +95,7 @@ export function startRun(k) {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, dmgBy: {},
     specT: 0, primT: 0, lowWarned: false, hp: 0, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 1.5, surgeT: 55, lullT: 0, seenMobs: {},
-    players: Math.max(1, Math.min(4, coop.setup.n | 0)), growth: shopGrowth(), keys: 0, bosses: 0, minis: 0, turbo: 0, vials: TUNE.vials.start, evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, combo: 0, comboT: 0, buffs: {}, forage: 0,
+    players: Math.max(1, Math.min(4, coop.setup.n | 0)), growth: shopGrowth(), keys: 0, bosses: 0, minis: 0, turbo: 0, vials: Math.max(0, TUNE.vials.start + (diffMods().vials || 0)), evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, streak: 0, streakT: 0, buffs: {}, forage: 0,
   });
   resetObj(st, freshStats(k));
   applyShop();

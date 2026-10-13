@@ -15,7 +15,6 @@ const errors = [];
 page.on('pageerror', e => errors.push('pageerror: ' + (e.stack || e.message)));
 page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 const S = (fn, a) => page.evaluate(fn, a);
-const clear = async () => { for (let i = 0; i < 20 && (await S(() => __scurry.G.state)) === 'levelup'; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(80); } };
 const calm = () => S(() => { const s = __scurry; s.god(true); Object.assign(s.run, { expoCd: 1e9, evT: 1e9, scabSeen: true, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9, bossAt: 1e9 }); s.W.enemies.forEach(e => { if (!e.mesh && e.type !== 'nest') e.dead = true; }); });
 const tp = (x, z, y = 0) => S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y; P.vx = P.vz = P.vy = 0; }, [x, z, y]);
 await page.goto('http://localhost:5195/?debug');
@@ -23,7 +22,6 @@ await page.waitForFunction(() => window.__scurry && document.querySelector('#ove
 await S(() => { __scurry.G.testNoRoles = true; __scurry.startRun('brawler'); });
 await page.waitForTimeout(800);
 for (let d = 0; d < 4; d++) {
-  await clear();
   await calm();
   const info = await S(() => { const s = __scurry, W = s.W; return { name: s.M.kind, d: s.run.district, tram: !!W.tram, crane: !!W.crane, uses: W.uses.length, washers: W.washers.length, rain: s.run.rain, arena: s.G.arena && s.G.arena.kind, dogs: W.enemies.filter(e => e.dog).length, inside: s.M.inside.reduce((a, v) => a + (v ? 1 : 0), 0) }; });
   console.log('district', d, JSON.stringify(info));

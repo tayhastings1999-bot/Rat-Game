@@ -16,7 +16,7 @@ import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
 import { spawnBoss } from '../entities/bosses.js';
 import { exitRoad, exitLadder, openGate, enterSecret, exitSecret } from './flow.js';
 import { tickSecret, tickSecretDrain } from './secrets.js';
-import { comboTick } from './swarm.js';
+import { streakTick } from './swarm.js';
 import { tickForage } from './forage.js';
 import { tickScent } from './scent.js';
 import { tickTraps } from './traps.js';
@@ -430,7 +430,7 @@ function updateSolo(dt) {
   G.spawnCap = cap;
   { const back = coopSplit('enemies'); updateEnemies(dt, cap); back(); }
   tickForage(dt);
-  comboTick(dt);
+  streakTick(dt);
   if (G.state !== 'play') return;
   { const back = coopSplit('proj'); updateProjectiles(dt); back(); }
   updateObjects(dt);
@@ -476,7 +476,7 @@ function updateSolo(dt) {
     if (Math.hypot(e.x - P.x, e.z - P.z) < 9) near9++;
   }
   // Combat: fade the controls text and minimap so the fight reads clearly.
-  const combat = !!G.lockOn || near9 >= 3 || (run.combo || 0) > 8 || !!(G.boss && G.boss.revealed);
+  const combat = !!G.lockOn || near9 >= 3 || (run.streak || 0) > 4 || !!(G.boss && G.boss.revealed);
   if (combat !== G.combat) { G.combat = combat; document.body.classList.toggle('combat', combat); }
   const bs = G.boss;
   setMusic(bs ? 3 : close > 8 || (run.T || 0) > 8 ? 2 : 1, isSewer(), bs ? { kind: bs.kind, phase: bs.revealed ? bs.phase : 0 } : null);

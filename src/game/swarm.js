@@ -1,17 +1,24 @@
-// Combo meter: hits and kills fill a fast-draining meter; taking a hit empties
-// it. (Phase 2 turns it into the 3-segment Turbo meter.)
-import { G, run, st } from '../core/state.js';
+// Hit streak (folded into turbo; the separate combo meter is gone). Landing hits and kills
+// in quick succession builds a streak; past TUNE.turbo.streak.minHits every extra hit adds a
+// small turbo-gain bonus, capped at streak.max. Taking a hit, or going streak.window seconds
+// without landing one, resets it.
+import { G, run } from '../core/state.js';
+import { TUNE } from '../tuning.js';
 
-export const COMBO_MAX = 100;
-
-export function comboGain(v) {
+/** A hit (1) or kill (streak.killHits) landed. */
+export function streakHit(n = 1) {
   if (G.state !== 'play') return;
-  run.combo = Math.min(COMBO_MAX, (run.combo || 0) + v * (st.comboMul || 1));
-  run.comboT = 0;
+  run.streak = (run.streak || 0) + n;
+  run.streakT = 0;
 }
-/** Getting hurt breaks the combo. */
-export function comboBreak() { run.combo = 0; }
-export function comboTick(dt) {
-  run.comboT = (run.comboT || 0) + dt;
-  if (run.comboT > 1) run.combo = Math.max(0, (run.combo || 0) - (25 + (run.combo || 0) * 0.4) * dt);
+/** Getting hurt breaks the streak. */
+export function streakBreak() { run.streak = 0; }
+export function streakTick(dt) {
+  run.streakT = (run.streakT || 0) + dt;
+  if (run.streakT > TUNE.turbo.streak.window) run.streak = 0;
+}
+/** Turbo gain multiplier from the current streak: 1 .. 1 + streak.max. */
+export function streakMul() {
+  const S = TUNE.turbo.streak, over = (run.streak || 0) - S.minHits;
+  return over > 0 ? 1 + Math.min(S.max, over * S.perHit) : 1;
 }
