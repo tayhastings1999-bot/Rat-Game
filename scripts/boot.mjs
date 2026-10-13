@@ -222,6 +222,12 @@ await check('co-op: the lead rat revive count resets on a new map', async () => 
   await S(() => { __scurry.P.revUsed = 2; __scurry.run.seed = __scurry.run.seed + '-test'; }); // a seed change = a new map for leash()
   await page.waitForFunction(() => !__scurry.P.revUsed, null, { timeout: T(5000) });
 });
+await check('co-op callouts name the player colour + class, tint the line, and carry a manifest id', async () => {
+  const r = await S(() => { const s = __scurry, A = s.announcer; A.callout('crit', 1); const b = { ...s.run.lastBark }; A.foodShot(2); const f = { ...s.run.lastBark }; return { b, f, n0: A.callName(0) }; });
+  if (!/^Blue /.test(r.b.text) || !r.b.color || !/^(vo|ann)_/.test(r.b.vo || '')) throw new Error('crit ' + JSON.stringify(r.b));
+  if (!/^(vo|ann)_/.test(r.f.vo || '') || !r.f.color) throw new Error('food ' + JSON.stringify(r.f));
+  if (!/^Red (Rat|Slinger|Warlock|Sneak)$/.test(r.n0)) throw new Error('name ' + r.n0);
+});
 await check('co-op: a downed rat is revived by a partner, and the run ends only when all are down', async () => {
   await S(() => { __scurry.god(false); __scurry.asPlayer(1, () => { __scurry.run.hp = 0; __scurry.die(); }); });
   const d = await S(() => ({ st: __scurry.G.state, down: __scurry.asPlayer(1, () => !!__scurry.P.downed) }));

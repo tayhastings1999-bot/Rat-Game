@@ -273,6 +273,7 @@ export const TUNE = {
     low: 0.3, crit: 0.12, // bark below these fractions of max HP
     rearm: 0.5, // re-arm once health is back above this
     showSecs: 2.6,
+    vo: { on: false, path: 'vo/' }, // recorded VO by manifest id (off until Taylor picks the voice source); desktop never uses browser speech
     bossSecs: 2.5, // a boss intro is this quick bark and nothing else: no card, no slow-mo, no pause
   },
   sneak: {

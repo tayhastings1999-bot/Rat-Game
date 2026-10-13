@@ -32,7 +32,7 @@ import { eatNearby, drainHealth } from './food.js';
 import { streakTick } from './swarm.js';
 import { useFlask, cycleFlask } from './shop.js';
 import { dnum } from '../fx/fx.js';
-import { bark, ratName } from './announcer.js';
+import { callout } from './announcer.js';
 
 /** Co-op state. setup is chosen in the Nest; players exist only during a co-op run. */
 export const coop = {
@@ -289,7 +289,7 @@ function tickRevive(p, dt, lead) {
     q.revUsed = (q.revUsed || 0) + 1;
     standUp(p, C.reviveHp);
     dnum(q.x, q.y + 1.8, q.z, 'Back up!', 'heal');
-    bark(`P${p.i + 1} is back on their feet!`);
+    callout('revived', p.i);
     return;
   }
   if (q.downT < C.downTime) return;
@@ -298,10 +298,10 @@ function tickRevive(p, dt, lead) {
     const L = posOf(lead);
     Object.assign(q, { x: L.x + 1, y: L.y + 0.2, z: L.z, vx: 0, vy: 0, vz: 0 });
     standUp(p, C.tokenHp);
-    bark(`P${p.i + 1} spends a cheese token!${run.tokens > 0 ? ` ${run.tokens} left.` : run.tokens === 0 ? ' That was the last one.' : ''}`);
+    callout('token', p.i, run.tokens > 0 ? ` ${run.tokens} left.` : run.tokens === 0 ? ' That was the last one.' : '');
   } else {
     q.out = true;
-    bark(`P${p.i + 1} is out until the next level.`);
+    callout('out', p.i);
   }
 }
 
@@ -370,7 +370,7 @@ export function coopDown() {
   run.hp = 0;
   P.vx = P.vz = 0;
   dnum(P.x, P.y + 1.8, P.z, 'Down! Stand next to them to revive', 'crit');
-  bark(`${ratName()} is down! Get them up!`);
+  callout('down');
   return true;
 }
 
