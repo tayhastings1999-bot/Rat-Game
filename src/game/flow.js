@@ -31,6 +31,7 @@ import { TUNE } from '../tuning.js';
 import { derive } from './stats.js';
 import { setupFinds } from './finds.js';
 import { showTally } from '../ui/tally.js';
+import { placeRune } from './runes.js';
 
 export function freshStats(k) {
   const C = CLASSES[k], melee = !!PRIM[C.prim].melee; // Gnash and Shiv
@@ -63,6 +64,7 @@ export function setupWorld(seed) {
   setupObjective(info, curD().secret ? 'nests' : forcedObjective()); // no side jobs in a secret zone
   setupSecret(info);
   setupFinds(info);
+  placeRune(info);
   placePacks(info); // seeded, before the RNG is released
   unseedRng();
   clearFx();

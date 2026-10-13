@@ -30,6 +30,7 @@ import { banner } from '../ui/hud.js';
 import { tickRoles } from '../entities/roles.js';
 import { tickSig } from './signature.js';
 import { tickTurbo } from './turbo.js';
+import { tickRunes } from './runes.js';
 import { tickVials, popVialsAt } from './vials.js';
 import { tickFood, breakFoodAt } from './food.js';
 import { tickReaperSpawn } from './reaper.js';
@@ -447,6 +448,7 @@ function updateSolo(dt) {
   tickSig(dt);
   tickTurbo(dt);
   tickVials(dt);
+  tickRunes(dt);
   tickPowerups(dt);
   tickFinds(dt);
   tickSetPieces(dt);

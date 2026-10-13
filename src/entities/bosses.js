@@ -3,6 +3,7 @@
 // timed action queue for multi-part patterns.
 import { onBossDeath as storyBossDown } from '../game/story.js';
 import * as THREE from 'three';
+import { bossGear, finalDue } from '../game/runes.js';
 import { playSting } from '../audio/stems.js';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
@@ -65,8 +66,13 @@ export function spawnBoss() {
     Object.assign(b, { name: 'Scab, the Knotted King', scabKing: true, lore: ['Your brother, in a crown of tails', '"Nobody leaves. Not this time. Not ever again."'] });
     mesh.traverse(o => { if (o.material && o.material.color) o.material.color.multiplyScalar(0.7); });
   }
+  // The final boss (every rune held): The Crowned One rises after the King of the Court falls.
+  if (run.finalUp) {
+    Object.assign(b, { name: 'The Crowned One', final: true, hp: b.hp * TUNE.runes.finalHp, maxHp: b.maxHp * TUNE.runes.finalHp, lore: ['Who writes the lists', '"Every colony has a price. Yours was cheap."'] });
+    mesh.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(new THREE.Color(0xffd040), 0.5); });
+  }
   // Remixed levels: a variant of the boss (a new name, a tint and a twist).
-  if (V && !b.scabKing) {
+  if (V && !b.scabKing && !b.final) {
     b.variant = D.bossV;
     b.name += V.suffix;
     b.loreKick = 'Variant · ' + V.desc;
@@ -495,10 +501,14 @@ export function onBossDeath(e) {
   addChest(e.x, gy, e.z, isSewer());
   dropKey(e.x + 1.5, gy, e.z + 1.5);
   run.bossDone = true;
+  if (e.final) { run.finalDone = true; run.finalUp = false; meta.finalWins = (meta.finalWins || 0) + 1; }
+  const gear = bossGear(e.kind);
   meta.bosses++;
   run.bosses = (run.bosses || 0) + 1;
   run.bossHit = false;
+  if (finalDue(e.kind)) { run.finalUp = true; run.bossDone = false; banner(e.name + ' falls', 'The runes burn… something wears the real crown'); return; } // spawnBoss runs again next step
   openGate();
   const got = checkUnlocks();
+  if (gear) { banner(e.name + ' falls', `Legendary: ${gear.name} · ${gear.txt}`); return; }
   banner(e.name + ' falls', got.length ? 'Unlocked: ' + got.join(', ') : isSewer() ? 'A ladder leads back to the streets' : 'The road is open — or take the key below');
 }
