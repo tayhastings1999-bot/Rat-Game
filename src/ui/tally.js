@@ -9,6 +9,7 @@ import { G, W, run, st } from '../core/state.js';
 import { show, hideOverlay } from './screens.js';
 import { dName } from '../data/world.js';
 import { sfx } from '../audio/audio.js';
+import { playSting } from '../audio/stems.js';
 import { TUNE } from '../tuning.js';
 
 /** This level's numbers, its score out of 100 and its grade. */
@@ -64,7 +65,7 @@ export function showTally(next) {
   document.getElementById('tallyGo').onclick = tallyContinue;
   const bar = document.querySelector('.tallybar i'); requestAnimationFrame(() => requestAnimationFrame(() => { if (bar) bar.style.width = '0%'; }));
   clearTimeout(autoT); autoT = setTimeout(tallyContinue, TUNE.tally.autoSecs * 1000); // a beat to read it, never a wall
-  sfx('level');
+  if (!playSting('clear')) sfx('level');
   return t;
 }
 

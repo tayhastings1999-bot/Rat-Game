@@ -195,6 +195,17 @@ await check('held flasks show on the HUD, cycle with B and uncork with V', async
   await toPlay(); await page.keyboard.press('KeyV'); // uncork where it left off
   if (!(await page.evaluate(k => __scurry.puOn(k), b))) throw new Error('resume failed');
 });
+await check('shots pop Rot Vials on the floor: the burst hurts enemies, never the rat', async () => {
+  const r = await S(() => {
+    const s = __scurry, x = s.P.x + 4, z = s.P.z, g0 = !!s.G.god; s.god(false);
+    const hp0 = s.run.hp, n0 = s.W.vials.length; s.dropVial(x, s.P.y, z);
+    const e = s.spawnEnemy('mawling', x, z + 1, { plain: true, force: true }), eh = e.hp;
+    const v = s.W.vials[s.W.vials.length - 1], popped = s.popVialsAt(v.x, v.z, 0.3);
+    const out = { popped, gone: s.W.vials.length === n0, hurt: e.dead || e.hp < eh, safe: s.run.hp >= hp0 };
+    s.god(g0); return out;
+  });
+  if (r.popped !== 1 || !r.gone || !r.hurt || !r.safe) throw new Error(JSON.stringify(r));
+});
 await check('a Second Tail cheats death once', async () => {
   await S(() => { __scurry.run.tails = 1; __scurry.run.hp = 0; __scurry.die(); });
   const r = await S(() => ({ st: __scurry.G.state, hp: __scurry.run.hp, tails: __scurry.run.tails }));
@@ -226,6 +237,17 @@ await check('treasure rooms: a timed bonus room of gold, then on to the next lev
   await S(() => { __scurry.run.secretT = 0.05; });
   await page.waitForFunction(d => !__scurry.run.secret && __scurry.run.district === d + 1 && __scurry.G.state === 'play', r, { timeout: T(8000) });
   await S(() => { const s = __scurry; s.god(false); s.G.testNoTally = false; s.menu(); });
+});
+await check('soundtrack v3: stems load (or fall back), bar-locked fades, MUSIC_V3 mapping, musicMode fallback', async () => {
+  const m = await S(() => { const M = __scurry.music3; return { boss2: M.mixFor(3, false, { phase: 2 }), boss0: M.mixFor(3, true, { phase: 0 }), c1: M.mixFor(1, true, null), c2: M.mixFor(2, false, null), menu: M.mixFor(0, false, 'menu') }; });
+  if (m.boss2.p1 !== 1 || m.boss2.p2 !== 1 || m.boss2.p3 !== 0 || m.boss2.city || m.boss0.p1 !== 0.5 || m.c1.sewer !== 1 || m.c1.combat !== 0.6 || m.c2.city !== 0.85 || m.c2.combat !== 1 || m.menu.menu !== 1 || m.menu.city) throw new Error('mapping ' + JSON.stringify(m));
+  await page.waitForFunction(() => ['ready', 'failed'].includes(__scurry.music3.stems.state) || __scurry.music3.stems.state === 'idle' && !__scurry.audioReady(), null, { timeout: T(30000) });
+  const r = await S(() => { const M = __scurry.music3, st = M.stems.state; if (st !== 'ready') return { st, why: M.stems.failed };
+    M.updateStems(2, false, null, false); const L = M.stems.last, k = (L.at - M.stems.t0) / M.BAR;
+    M.settings.musicMode = 'procedural'; const off = !M.stemsOn(); M.settings.musicMode = 'v3';
+    return { st, onBar: Math.abs(k - Math.round(k)) < 1e-6, len: L.len, off }; });
+  if (r.st === 'ready' && (!r.onBar || r.len > 0.3 || !r.off)) throw new Error(JSON.stringify(r));
+  if (r.st === 'failed') throw new Error('stems failed to load: ' + r.why);
 });
 await check('drop-in/drop-out co-op: F6 adds a keyboard rat at the lead mid-run, scaling follows, F6 again removes it', async () => {
   await S(() => { __scurry.startRun('tank'); __scurry.god(true); });
