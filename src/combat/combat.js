@@ -274,9 +274,10 @@ export function zoneScaling() {
   const Z = TUNE.zone, T = (run.tier || 0) * Z.threatPerZone;
   run.T = T;
   run.hpM = 1 + T * Z.hpPerThreat;
-  run.dmgM = 1 + T * Z.dmgPerThreat;
+  const SW = run.layer === 'sewer' && !run.secret && Z.sewer; // sewer levels: their own gentler damage / attack-rate curve
+  run.dmgM = 1 + T * (SW ? SW.dmgPerThreat : Z.dmgPerThreat);
   run.spdM = 1 + Math.min(0.55, T * Z.spdPerThreat);
-  run.atkM = 1 + Math.min(1.4, T * Z.atkPerThreat);
+  run.atkM = 1 + Math.min(1.4, T * (SW ? SW.atkPerThreat : Z.atkPerThreat));
   // Difficulty mode (TUNE.difficulty), on top of the zone.
   const D = diffMods();
   // Local co-op: each rat beyond the first adds TUNE.coop.perPlayer (run.players is set by startRun).

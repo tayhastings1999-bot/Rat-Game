@@ -16,6 +16,9 @@ export const TUNE = {
     dmgPerThreat: 0.075, // enemy damage +7.5% per point
     spdPerThreat: 0.03, // enemy speed +3% per point (max +55%)
     atkPerThreat: 0.07, // enemy attack rate +7% per point (max +140%)
+    // Sewer levels only (Taylor, 2026-10-13): damage and attack rate grow more gently with zone underground,
+    // where an average rat was dying in 1-3 min at zone 5+ regardless of level length. City and HP/speed unchanged.
+    sewer: { dmgPerThreat: 0.015, atkPerThreat: 0.015 },
     eliteBase: 0.02, // elite odds at zone 0, after the first minute
     elitePerThreat: 0.008,
     eliteMax: 0.2,
