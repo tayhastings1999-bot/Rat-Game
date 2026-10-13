@@ -211,6 +211,7 @@ export function kill(e) {
   if (e.type === 'nest') {
     bury(e.mesh);
     run.nests--;
+    if (!(run.reaper && !run.reaper.dead)) run.reaperT = TUNE.reaper.delay; // progress resets the dawdle clock: the Reaper hunts lingering, not long levels
     addXP(e.xp || 20);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
     if (Math.random() < 0.6) dropFood(e.x, e.y, e.z, 'wedge');

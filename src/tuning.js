@@ -241,7 +241,7 @@ export const TUNE = {
   reaper: {
     // Rises when you linger in a zone; drains on touch; only vials and turbo blasts hurt it.
     minZone: 1, // first zone it can appear in (0 = the first zone)
-    delay: 150, // seconds in a zone before it rises
+    delay: 180, // seconds without destroying a nest before it rises (each nest resets it; 10-20 min levels made a flat zone timer fire every level)
     returnAfter: 90, // seconds before it comes back after leaving
     spd: 3.4, // glides through walls; slower than every rat
     reach: 1.4,

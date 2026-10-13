@@ -153,7 +153,7 @@ export function genCity(seed, D) {
   const bigLots = shuffleR(lots.filter(L => L.type === 'bldg' && L.w >= 4 && L.h >= 4 && L.x > 1 && L.y > 1 && L.x + L.w < W - 1 && L.y + L.h < W - 1 && solidLot(L)));
   bigLots.sort((a, b) => b.w * b.h - a.w * a.h);
   const lairLot = bigLots.find(L => L.compound) || bigLots.find(L => L.w >= 5 && L.h >= 5) || bigLots[0];
-  for (const L of [lairLot, ...shuffleR(bigLots.filter(l => l !== lairLot)).slice(0, 3)].filter(Boolean)) {
+  for (const L of [lairLot, ...shuffleR(bigLots.filter(l => l !== lairLot)).slice(0, Math.round(3 * (W / 52) ** 2))].filter(Boolean)) { // more hidden courtyards on bigger maps (3 at 52 tiles, ~6 at 72)
     const doors = [];
     for (let x = L.x + 1; x < L.x + L.w - 1; x++) { doors.push([x, L.y, 0, -1]); doors.push([x, L.y + L.h - 1, 0, 1]); }
     for (let y = L.y + 1; y < L.y + L.h - 1; y++) { doors.push([L.x, y, -1, 0]); doors.push([L.x + L.w - 1, y, 1, 0]); }
