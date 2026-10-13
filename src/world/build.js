@@ -599,7 +599,7 @@ function reachRoofLoot() {
         if (!seen.has(j) && (t === 0 || t === 6) && Math.abs(M.hgt[j] - h0) <= TUNE.climb.hopUp) { seen.add(j); q.push(j); }
       }
     }
-    if (spot) { addClimb(spot); floodRoofs(); continue; }
+    if (spot) { addClimb(spot); floodRoofs(); if (!onRoof(o)) continue; } // the pipe may not reach this tile (roof steps up more than a hop): then set it down
     // No face for a pipe: set it down on the street at the foot of the building.
     const [nx, nz] = nearOpenSpot(o.x, o.z);
     o.x = nx; o.z = nz; o.y = 0;
