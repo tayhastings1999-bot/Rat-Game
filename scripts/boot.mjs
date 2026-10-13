@@ -256,10 +256,12 @@ await check('rune fragments: one per regular level in a hidden area, saved per s
     s.run.secretUp = true; s.G.boss = null; s.spawnBoss(); const b = s.G.boss;
     const boss = b ? { name: b.name, secret: !!b.secretBoss, mul: b.maxHp } : null;
     s.run.secretUp = false; s.G.boss = null; s.spawnBoss(); const base = s.G.boss ? s.G.boss.maxHp : 0;
+    const m0 = s.run.bossHpM; s.run.bossHpM = 2 * (m0 || 1); s.run.secretUp = true; s.G.boss = null; s.spawnBoss(); const coopHp = s.G.boss ? s.G.boss.maxHp : 0; s.run.bossHpM = m0; s.run.secretUp = false; s.G.boss = null;
     m.fragments = JSON.parse(keep); s.saveMeta(); s.G.testNoTally = false; s.god(false); s.menu();
-    return { covers, placed, hidden, saved, whole, boss, ratio: boss && base ? boss.mul / base : 0, want: s.TUNE.runes.secretHp };
+    return { covers, placed, hidden, saved, whole, boss, ratio: boss && base ? boss.mul / base : 0, want: s.TUNE.runes.secretHp, coopSame: boss && Math.abs(coopHp - boss.mul) <= 1 };
   });
   if (!r.covers || !r.placed || !r.hidden || !r.whole || !r.boss || !r.boss.secret || Math.abs(r.ratio - r.want) > 0.05) throw new Error(JSON.stringify(r));
+  if (!r.coopSame) throw new Error('secret boss HP stacks with the co-op multiplier ' + JSON.stringify(r));
   if (!r.saved) throw new Error('fragment not saved to the slot ' + JSON.stringify(r));
 });
 await check('soundtrack v3: stems load (or fall back), bar-locked fades, MUSIC_V3 mapping, musicMode fallback', async () => {

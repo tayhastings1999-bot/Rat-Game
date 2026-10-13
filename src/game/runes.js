@@ -8,6 +8,10 @@ import { toW, floorY } from '../world/grid.js';
 import { curD } from '../data/world.js';
 import { RUNES, GEAR, runeCount, finalOpen, FINAL_LEVEL, FRAGMENTS, fragCount, greatRune } from '../data/runes.js';
 import { banner } from '../ui/hud.js';
+import { coop } from './coop.js';
+
+/** Every rat in play (co-op: any of them can pick up runes and fragments; they're shared per save slot). */
+const rats = () => coop.on ? coop.players.map(p => (p.i === coop.active ? P : p.P)).filter(q => q && !q.downed) : [P];
 
 /** Place this level's rune (if it has one this burrow hasn't taken) in the room farthest from the start. */
 export function placeRune(info) {
@@ -31,7 +35,7 @@ export function tickRunes(dt) {
     const o = W.runes[i];
     o.g.rotation.y += dt * 2.5;
     o.g.position.y = o.y + 1 + Math.sin(G.time * 2.5) * 0.15;
-    if (Math.hypot(P.x - o.x, P.z - o.z) > 1.2 || Math.abs(P.y - o.y) > 1.6) continue;
+    if (!rats().some(q => Math.hypot(q.x - o.x, q.z - o.z) <= 1.2 && Math.abs(q.y - o.y) <= 1.6)) continue;
     (o.frag ? takeFragment : takeRune)(o);
     W.runes.splice(i, 1);
   }
