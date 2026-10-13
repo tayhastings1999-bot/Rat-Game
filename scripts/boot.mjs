@@ -240,6 +240,17 @@ await check('runes: picking one up saves it; all of them raise The Crowned One a
   });
   if (!r.gear || r.again || !(r.st1 > r.st0) || !r.one) throw new Error(JSON.stringify(r));
 });
+await check('treasure rooms: a timed bonus room of gold, then on to the next level', async () => {
+  await S(() => { __scurry.startRun('tank'); __scurry.god(true); });
+  await toPlay();
+  const r = await S(() => { const s = __scurry; s.G.forceTreasure = true; s.G.testNoTally = true; s.run.tier = Math.max(1, s.run.tier); s.exitRoad(); s.G.forceTreasure = false; return s.run.district; });
+  await page.waitForFunction(() => __scurry.run.secret === 'treasure' && __scurry.G.state === 'play', null, { timeout: T(8000) });
+  const t = await S(() => { const s = __scurry; return { gold: s.W.scraps.length, mobs: s.W.enemies.filter(e => !e.dead).length, clock: s.run.secretT }; });
+  if (t.gold < 50 || t.clock <= 0 || t.clock > 30) throw new Error(JSON.stringify(t));
+  await S(() => { __scurry.run.secretT = 0.05; });
+  await page.waitForFunction(d => !__scurry.run.secret && __scurry.run.district === d + 1 && __scurry.G.state === 'play', r, { timeout: T(8000) });
+  await S(() => { const s = __scurry; s.god(false); s.G.testNoTally = false; s.menu(); });
+});
 await check('soundtrack v3: stems load (or fall back), bar-locked fades, MUSIC_V3 mapping, musicMode fallback', async () => {
   const m = await S(() => { const M = __scurry.music3; return { boss2: M.mixFor(3, false, { phase: 2 }), boss0: M.mixFor(3, true, { phase: 0 }), c1: M.mixFor(1, true, null), c2: M.mixFor(2, false, null), menu: M.mixFor(0, false, 'menu') }; });
   if (m.boss2.p1 !== 1 || m.boss2.p2 !== 1 || m.boss2.p3 !== 0 || m.boss2.city || m.boss0.p1 !== 0.5 || m.c1.sewer !== 1 || m.c1.combat !== 0.6 || m.c2.city !== 0.85 || m.c2.combat !== 1 || m.menu.menu !== 1 || m.menu.city) throw new Error('mapping ' + JSON.stringify(m));
