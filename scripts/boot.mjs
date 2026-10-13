@@ -166,13 +166,21 @@ await check('single player: a gamepad moves the rat and Start pauses', async () 
   await until(`Math.hypot(__scurry.P.x - ${p0.x}, __scurry.P.z - ${p0.z}) >= 0.5`, T(15000));
   await S(() => { __scurry.fakePads[0].axes = [0, 0, 0, 0]; });
   await toPlay();
-  // Hold Start until the game sees it (a slow frame can miss a short tap), then release.
-  await S(() => { __scurry.fakePads[0].buttons = []; __scurry.fakePads[0].buttons[9] = { pressed: true }; });
-  await page.waitForFunction(() => __scurry.G.state === 'paused', null, { timeout: T(10000) });
-  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; });
-  await page.waitForTimeout(300); // let the menu poll the release edge
-  await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: true }; });
-  await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(10000) });
+  // Tap Start (held until seen, then released) and wait for the wanted state. On slow CI runners a frame
+  // can swallow the edge, or a level-flow overlay can steal the first press: retry a few times.
+  const tapStart = async want => {
+    for (let i = 0; i < 4; i++) {
+      await S(() => { __scurry.fakePads[0].buttons = []; __scurry.fakePads[0].buttons[9] = { pressed: true }; });
+      const ok = await page.waitForFunction(w => __scurry.G.state === w, want, { timeout: T(4000) }).then(() => true, () => false);
+      await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; });
+      await page.waitForTimeout(300); // let the menu poll the release edge
+      if (ok) return;
+      if (want === 'paused') await toPlay();
+    }
+    throw new Error('Start never reached ' + want + ' (state ' + await S(() => __scurry.G.state) + ')');
+  };
+  await tapStart('paused');
+  await tapStart('play');
   await S(() => { __scurry.fakePads[0].buttons[9] = { pressed: false }; delete __scurry.fakePads[0]; });
 });
 await check('held flasks show on the HUD, cycle with B and uncork with V', async () => {

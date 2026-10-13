@@ -16,6 +16,9 @@ export const TUNE = {
     dmgPerThreat: 0.075, // enemy damage +7.5% per point
     spdPerThreat: 0.03, // enemy speed +3% per point (max +55%)
     atkPerThreat: 0.07, // enemy attack rate +7% per point (max +140%)
+    // Sewer levels only (Taylor, 2026-10-13): damage and attack rate grow more gently with zone underground,
+    // where an average rat was dying in 1-3 min at zone 5+ regardless of level length. City and HP/speed unchanged.
+    sewer: { dmgPerThreat: 0.015, atkPerThreat: 0.015 },
     eliteBase: 0.02, // elite odds at zone 0, after the first minute
     elitePerThreat: 0.008,
     eliteMax: 0.2,
@@ -133,12 +136,14 @@ export const TUNE = {
   nests: {
     // Three tiers. Damage knocks a nest down a tier once its HP falls below the next tier's.
     hp1: 160, hp2: 320, hp3: 560, // Litter Pile, Burrow, Warren (× zone and sewer scaling)
+    bossAfter: 600, // seconds before the boss wakes even with nests left (a fallback; normally you clear the nests first)
     hpPerZone: 0.15, sewerHp: 1.2, hpCap: 2.2, // HP × min(hpCap, (1 + hpPerZone·zone) × sewerHp)
-    every1: 4.5, every2: 3.2, every3: 2.2, // seconds between spawns while you're in range
-    kids1: 6, kids2: 10, kids3: 14, // live children a nest keeps at most
+    every1: 6, every2: 4.5, every3: 3.2, // seconds between spawns while you're in range (slower: there are ~3x more nests on the bigger maps)
+    kids1: 3, kids2: 5, kids3: 7, // live children a nest keeps at most (halved: density per screen stays fair with ~3x the nests)
     xp1: 15, xp2: 25, xp3: 40,
-    range: 45, // nests only spawn while you're this close
-    count: 5, countPerZone: 0.25, countMax: 8, // nests per zone (trimmed for 2-4 min levels)
+    startClear: 10, // tiles of walking distance from the start kept free of nests (a quiet first minute)
+    range: 32, // nests only spawn while you're this close (tighter on the bigger maps, so far nests don't flood you)
+    count: 20, countPerZone: 0.6, countMax: 28, // nests per zone (10-20 min levels on bigger maps)
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
     warrenMinZone: 2, // no Warrens before this zone
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
@@ -240,7 +245,7 @@ export const TUNE = {
   reaper: {
     // Rises when you linger in a zone; drains on touch; only vials and turbo blasts hurt it.
     minZone: 1, // first zone it can appear in (0 = the first zone)
-    delay: 150, // seconds in a zone before it rises
+    delay: 180, // seconds without destroying a nest before it rises (each nest resets it; 10-20 min levels made a flat zone timer fire every level)
     returnAfter: 90, // seconds before it comes back after leaving
     spd: 3.4, // glides through walls; slower than every rat
     reach: 1.4,
@@ -271,8 +276,8 @@ export const TUNE = {
   },
   food: {
     // Health drains all the time; food is the only way back.
-    drainBase: 0.5, drainPerZone: 0.1, // HP per second = drainBase + drainPerZone × zone (zone 0 first)
-    drainZone0: 0.3, // the first zone drains gentler
+    drainBase: 0.3, drainPerZone: 0.06, // (was 0.5 + 0.1: levels are ~4x longer now) HP per second = drainBase + drainPerZone × zone (zone 0 first)
+    drainZone0: 0.2, // the first zone drains gentler (was 0.3)
     crumb: 25, wedge: 60, cache: 120, // HP each size restores
     mold: 0.12, moldSewer: 0.25, // chance a drop is moldy (surface, sewer)
     moldPoison: 5, // seconds of poison from eating moldy food

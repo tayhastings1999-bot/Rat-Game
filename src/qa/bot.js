@@ -105,7 +105,10 @@ function anomaly(kind, detail = {}) {
 // ---------- navigation ----------
 // 5 (crevice) and 11 (duct) count: walking into them squeezes the rat in automatically, and in the
 // sewers they are often the only link to a nest (the old field left the bot pinned in a corner).
-const walk = t => t === 1 || t === 2 || t === 9 || t === 10 || t === 5 || t === 11;
+// 4 (acid) counts too, but only as a last resort: acid burns 10 HP/s, and wading it on every route was
+// what killed the bot in Toxic Refinery (deaths with no enemy near). steerTo tries a dry route first.
+const walk = t => t === 1 || t === 2 || t === 9 || t === 10 || t === 5 || t === 11 || t === 4;
+const dryWalk = t => t !== 4 && walk(t);
 /** Distance field (in tiles) to a target tile over ground the rat can walk. */
 /**
  * Tiles the grid calls walkable but a tall static prop (crate stack, pillar, car) fills, plus tiles
@@ -124,9 +127,9 @@ function blockedTiles() {
   }
   return B.blocked;
 }
-function fieldTo(gx, gz) {
-  const k0 = gi(gx, gz), bl = blockedTiles();
-  if (B.fieldK === k0 && B.field && B.fieldT > 0) return B.field;
+function fieldTo(gx, gz, acid = false) {
+  const k0 = gi(gx, gz), bl = blockedTiles(), ok = acid ? walk : dryWalk, key = k0 * 2 + (acid ? 1 : 0);
+  if (B.fieldK === key && B.field && B.fieldT > 0) return B.field;
   const n = M.W * M.H, d = new Int16Array(n).fill(-1), q = new Int32Array(n);
   let h = 0, t = 0;
   if (!inG(gx, gz)) return d;
@@ -137,11 +140,11 @@ function fieldTo(gx, gz) {
       const X = x + dx, Y = y + dy;
       if (!inG(X, Y)) continue;
       const k = gi(X, Y);
-      if (d[k] >= 0 || !walk(M.grid[k]) || (bl.has(k) && k !== k0)) continue;
+      if (d[k] >= 0 || !ok(M.grid[k]) || (bl.has(k) && k !== k0)) continue;
       d[k] = d[c] + 1; q[t++] = k;
     }
   }
-  B.field = d; B.fieldK = k0; B.fieldT = 1.5;
+  B.field = d; B.fieldK = key; B.fieldT = 1.5;
   return d;
 }
 /** Steer toward a world point along the field; returns a unit direction (or null when unreachable). */
@@ -157,8 +160,9 @@ function steerTo(x, z) {
     if (!best) return null;
     [tx, tz] = best;
   }
-  const f = fieldTo(tx, tz);
-  const here = inG(px, pz) ? f[gi(px, pz)] : -1;
+  let f = fieldTo(tx, tz);
+  let here = inG(px, pz) ? f[gi(px, pz)] : -1;
+  if (here < 0 && inG(px, pz)) { f = fieldTo(tx, tz, true); here = f[gi(px, pz)]; } // no dry route: wade the acid
   if (here < 0) return OFF; // the rat is off the field (roof, duct, prop): not the target's fault
   if (here <= 1) { const l = Math.hypot(x - P.x, z - P.z) || 1; return [(x - P.x) / l, (z - P.z) / l]; }
   let bd = here, bx = 0, bz = 0;
@@ -324,6 +328,12 @@ function think(dt) {
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
+  }
+  // Boss spacing: a player who can't roll (cooldown) steps back out of a boss wind-up instead of
+  // trading hits, then closes again when it whiffs. The roll dodge above still handles the rest.
+  if (tg && tg.kind === 'boss' && tg.e && !tg.e.dead && B.goal !== 'die') {
+    const e = tg.e, dx = P.x - e.x, dz = P.z - e.z, dd = Math.hypot(dx, dz) || 1;
+    if (e.st === 'wind' && dd < 7 && (P.rollCd > 0 || P.roll > 0) && Math.random() < 0.35 + pr.dodge * 0.6) d = [dx / dd, dz / dd];
   }
   // Kite away from crowds (skilled players don't stand in the middle).
   if (th.crowd >= 3 && Math.random() < pr.kite && B.goal !== 'die') {

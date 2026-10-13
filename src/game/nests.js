@@ -9,7 +9,7 @@ import { G, P, W, run } from '../core/state.js';
 import { dnum, puff } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { FAMILIES, NEST_NAMES, curD, isSewer } from '../data/world.js';
-import { toW } from '../world/grid.js';
+import { toW, nearFree } from '../world/grid.js';
 import { INTRO, spawnEnemy } from '../entities/mobs.js';
 import { banner } from '../ui/hud.js';
 import { TUNE } from '../tuning.js';
@@ -91,7 +91,15 @@ export function placePacks(info) {
     const size = Math.min(K.sizeMax, Math.round(K.size + K.sizeGrow * z));
     const ti = Math.min(2, Math.floor(rng.next() * (z < 2 ? 2 : 3)));
     for (let j = 0; j < size; j++) {
-      const e = spawnEnemy(F.types[ti], cx + (rng.next() - 0.5) * 4, cz + (rng.next() - 0.5) * 4, { plain: true, force: true, pack: 1 });
+      // Each sleeper starts a body-width clear of props and of its packmates: scaled clutter fills rooms, and
+      // sleepers spawned overlapping get shoved apart by crowd separation, which ignores props (lab: enemy-in-prop).
+      let f = null;
+      for (let t = 0; t < 6 && !f; t++) {
+        const c = nearFree(cx + (rng.next() - 0.5) * 5, cz + (rng.next() - 0.5) * 5, 1.0, 6);
+        if (c && !W.enemies.some(o => !o.dead && Math.hypot(o.x - c[0], o.z - c[1]) < 1.8)) f = c;
+      }
+      if (!f) continue;
+      const e = spawnEnemy(F.types[ti], f[0], f[1], { plain: true, force: true, pack: 1 });
       if (e) { e.sleep = i + 1; e.ang = rng.next() * 6.28; placed++; }
     }
   }

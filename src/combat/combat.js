@@ -211,6 +211,7 @@ export function kill(e) {
   if (e.type === 'nest') {
     bury(e.mesh);
     run.nests--;
+    if (!(run.reaper && !run.reaper.dead)) run.reaperT = TUNE.reaper.delay; // progress resets the dawdle clock: the Reaper hunts lingering, not long levels
     addXP(e.xp || 20);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
     if (Math.random() < 0.6) dropFood(e.x, e.y, e.z, 'wedge');
@@ -245,7 +246,7 @@ function corruptDeath(e) {
 }
 
 export function scrapDrop(x, y, z) {
-  if (W.scraps.length < 290) W.scraps.push({ x: x + rand(-0.6, 0.6), y, z: z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
+  if (W.scraps.length < 590) W.scraps.push({ x: x + rand(-0.6, 0.6), y, z: z + rand(-0.6, 0.6), pull: false, s: 0, ph: rand(0, 6) });
 }
 const keyMat = new THREE.MeshBasicMaterial({ color: 0xffd040 });
 export function dropKey(x, y, z) {
@@ -273,9 +274,10 @@ export function zoneScaling() {
   const Z = TUNE.zone, T = (run.tier || 0) * Z.threatPerZone;
   run.T = T;
   run.hpM = 1 + T * Z.hpPerThreat;
-  run.dmgM = 1 + T * Z.dmgPerThreat;
+  const SW = run.layer === 'sewer' && !run.secret && Z.sewer; // sewer levels: their own gentler damage / attack-rate curve
+  run.dmgM = 1 + T * (SW ? SW.dmgPerThreat : Z.dmgPerThreat);
   run.spdM = 1 + Math.min(0.55, T * Z.spdPerThreat);
-  run.atkM = 1 + Math.min(1.4, T * Z.atkPerThreat);
+  run.atkM = 1 + Math.min(1.4, T * (SW ? SW.atkPerThreat : Z.atkPerThreat));
   // Difficulty mode (TUNE.difficulty), on top of the zone.
   const D = diffMods();
   // Local co-op: each rat beyond the first adds TUNE.coop.perPlayer (run.players is set by startRun).
