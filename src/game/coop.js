@@ -18,7 +18,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { CLASSES, liveClass } from '../data/classes.js';
 import { TUNE } from '../tuning.js';
-import { powerScaling } from '../combat/combat.js';
+import { powerScaling, zoneScaling } from '../combat/combat.js';
 import { makeRat, blob, playerRing, addGlyph } from '../entities/rat.js';
 import { keys, stepPlayer, primary, startRoll, useSpecial, pressE, toggleLock } from '../entities/player.js';
 import { updateEnemies } from '../entities/mobs.js';
@@ -77,46 +77,103 @@ export const enemyTotal = () => (coop.total != null ? coop.total : W.enemies.len
 
 // ---------- setup / teardown ----------
 /** Called by startRun once player 1's run is built (run, st, P and G.rat are player 1). */
+let mk = null; // { freshStats, shopGrowth } from startRun, kept for drop-in joins
 export function coopStart(freshStats, shopGrowth) {
   coopEnd();
+  mk = { freshStats, shopGrowth };
   const n = Math.max(1, Math.min(4, coop.setup.n | 0));
   if (n < 2) return;
+  partyOn();
+  const p1 = coop.players[0], base = { ...p1.P }, pr = pick(run, RF);
+  for (let i = 1; i < n; i++) addPlayer(i, coop.setup.input[i] || 'pad' + (i - 1), base, pr, p1);
+  swapIn(p1);
+  coop.seed = run.seed;
+  run.tokens = coopRules().tokens;
+}
+/** Turn a solo run into a party of one (player 1 in a context, with its co-op outline). Singletons stay P1. */
+function partyOn() {
   coop.on = true;
   const p1 = { i: 0, input: coop.setup.input[0], blob, prev: {} };
   coop.players = [p1];
-  // Player 1's model gets its red outer outline layer for co-op (solo rats only have the Void hull).
+  coop.active = 0;
   scene.remove(G.rat.g);
   G.rat = makeRat(CLASSES[run.cls], 0);
   addGlyph(G.rat, 0);
   scene.add(G.rat.g);
   swapOut(p1);
-  const base = { ...p1.P }, pr = pick(run, RF);
-  for (let i = 1; i < n; i++) {
-    const cls = liveClass(coop.setup.cls[i]), C = CLASSES[cls];
-    Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, flaskT: {}, flaskOn: null, cheese: 0, tails: 0, specT: 0, primT: 0, growth: shopGrowth(), streak: 0, streakT: 0, lowWarned: false, blood: 0, bloodT: 0 });
-    fill(st, freshStats(cls));
-    st.salvage = p1.st.salvage; // gold upgrades and difficulty are party-wide
-    run.hp = st.maxHp;
-    powerScaling(true); // each rat's own power baseline (not player 1's)
-    const a = i * Math.PI * 0.5;
-    fill(P, { ...base, safe: { ...base.safe }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1 });
-    const rat = makeRat(C, i);
-    addGlyph(rat, i);
-    scene.add(rat.g);
-    const b = new THREE.Mesh(blob.geometry, blob.material);
-    b.rotation.copy(blob.rotation);
-    playerRing(b, TUNE.coop.colors[i]);
-    scene.add(b);
-    const p = { i, input: coop.setup.input[i] || 'pad' + (i - 1), blob: b, prev: {} };
-    G.rat = rat;
-    Object.assign(G, { turboHeld: false, turboKey: false, turboArmT: 0, turboFlash: 0, lockOn: null, attack: false, aimAt: null, touch: true });
-    swapOut(p);
-    coop.players.push(p);
-  }
-  swapIn(p1);
-  coop.seed = run.seed;
-  run.tokens = coopRules().tokens;
 }
+/** Build rat i next to `base` (singletons hold P1 before and are left holding the new rat; caller swaps P1 back). */
+function addPlayer(i, input, base, pr, p1) {
+  const cls = liveClass(coop.setup.cls[i]), C = CLASSES[cls];
+  Object.assign(run, pr, { cls, turbo: 0, vials: TUNE.vials.start, pu: {}, buffs: {}, flasks: {}, flaskSel: 0, flaskT: {}, flaskOn: null, cheese: 0, tails: 0, specT: 0, primT: 0, growth: mk.shopGrowth(), streak: 0, streakT: 0, lowWarned: false, blood: 0, bloodT: 0 });
+  fill(st, mk.freshStats(cls));
+  st.salvage = p1.st.salvage; // gold upgrades and difficulty are party-wide
+  run.hp = st.maxHp;
+  powerScaling(true); // each rat's own power baseline (not player 1's)
+  const a = i * Math.PI * 0.5;
+  fill(P, { ...base, safe: { ...(base.safe || base) }, x: base.x + Math.sin(a) * 1.5, z: base.z + Math.cos(a) * 1.5, carry: null, sig: null, grab: null, inv: 1.5, downed: false, out: false, reviveT: 0, downT: 0, revUsed: 0 });
+  const rat = makeRat(C, i);
+  addGlyph(rat, i);
+  scene.add(rat.g);
+  const b = new THREE.Mesh(blob.geometry, blob.material);
+  b.rotation.copy(blob.rotation);
+  playerRing(b, TUNE.coop.colors[i]);
+  scene.add(b);
+  const p = { i, input, blob: b, prev: {} };
+  G.rat = rat;
+  Object.assign(G, { turboHeld: false, turboKey: false, turboArmT: 0, turboFlash: 0, lockOn: null, attack: false, aimAt: null, touch: true });
+  swapOut(p);
+  coop.players.push(p);
+  return p;
+}
+
+// ---------- drop-in / drop-out ----------
+/** Party size changed: enemy scaling follows at once (new spawns, nests and the next boss read it). */
+function rescale() {
+  run.players = coop.on ? coop.players.length : 1;
+  zoneScaling();
+  run.tokens = coop.on ? Math.max(run.tokens || 0, coopRules().tokens) : run.tokens;
+}
+/** A new rat joins mid-run on `input` ('kb2', 'pad1', ...) and spawns at the lead. Returns its index or -1. */
+export function dropIn(input) {
+  if (G.state !== 'play' || !mk) return -1;
+  if (coop.on && (coop.players.length >= 4 || coop.players.some(p => p.input === input))) return -1;
+  if (!coop.on) partyOn();
+  const cur = coop.players[coop.active], lead = coop.players.find(p => !(p.i === coop.active ? P.downed : p.P.downed)) || coop.players[0];
+  const L = { ...(lead === cur ? P : lead.P) }, p1 = coop.players[0];
+  swapOut(cur);
+  const pr = pick(run, RF), i = coop.players.length;
+  addPlayer(i, input, L, pr, p1);
+  swapIn(cur);
+  coop.seed = run.seed;
+  rescale();
+  bark(`P${i + 1} drops in!`);
+  return i;
+}
+/** Rat i (not player 1) drops out; later rats move up a slot (and take that slot's colour). */
+export function dropOut(i) {
+  if (!coop.on || i <= 0 || i >= coop.players.length) return false;
+  if (coop.active !== 0) swapIn(coop.players[0]);
+  const gone = coop.players[i];
+  bark(`P${i + 1} drops out`);
+  scene.remove(gone.G.rat.g); scene.remove(gone.blob);
+  coop.players.splice(i, 1);
+  coop.players.forEach((p, j) => {
+    if (p.i === j) return;
+    p.i = j;
+    if (j === 0) return;
+    scene.remove(p.G.rat.g); scene.remove(p.blob);
+    const rat = makeRat(CLASSES[p.run.cls], j); addGlyph(rat, j); scene.add(rat.g); p.G.rat = rat;
+    const b = new THREE.Mesh(blob.geometry, blob.material); b.rotation.copy(blob.rotation); playerRing(b, TUNE.coop.colors[j]); scene.add(b); p.blob = b;
+  });
+  coop.active = 0;
+  if (coop.players.length < 2) coopEnd(); // back to solo (player 1 keeps everything)
+  rescale();
+  return true;
+}
+/** Which party slot uses this input (-1 if none). */
+export const slotOf = input => (coop.on ? coop.players.findIndex(p => p.input === input) : -1);
+
 /** Back to one rat (menu, death). */
 export function coopEnd() {
   if (coop.on) {
@@ -202,18 +259,20 @@ export function padSolo() {
   else if (!v.attack && solo.prev.attack) { G.touch = solo.touchWas; G.attack = false; }
   edgeActions(solo, v);
 }
-/** Start button (any pad): true on the frame it is pressed. */
-const startPrev = {};
-export function padStart() {
+/** Start (9) and Back (8) on any pad: the index of the pad pressed this frame, or -1. */
+const startPrev = {}, backPrev = {};
+const padEdge = (btn, prev) => {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  let hit = false;
+  let hit = -1;
   for (let i = 0; i < 4; i++) {
-    const gp = fakePads[i] || (pads && pads[i]), b = gp && gp.buttons && gp.buttons[9], on = !!(b && (b.pressed || b === true));
-    if (on && !startPrev[i]) hit = true;
-    startPrev[i] = on;
+    const gp = fakePads[i] || (pads && pads[i]), b = gp && gp.buttons && gp.buttons[btn], on = !!(b && (b.pressed || b === true));
+    if (on && !prev[i] && hit < 0) hit = i;
+    prev[i] = on;
   }
   return hit;
-}
+};
+export const padStart = () => padEdge(9, startPrev);
+export const padBack = () => padEdge(8, backPrev);
 
 // ---------- the split ----------
 const alive = () => coop.players.filter(p => !(p.i === coop.active ? P.downed : p.P.downed));
