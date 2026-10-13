@@ -159,7 +159,8 @@ textarea{-webkit-user-select:text;user-select:text}
   #overlay{padding:2vh 3vw}
 }
 
-/* ---- touch controls ---- */
+/* ---- touch controls (off for now: TOUCH_CONTROLS in ui/touch.js) ---- */
+#noTouch{position:fixed;left:50%;bottom:calc(8px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;max-width:calc(100% - 32px);box-sizing:border-box;padding:8px 14px;font-size:11px;line-height:1.5;text-align:center;color:var(--bone);background:var(--m1);border:1px solid var(--chrome-lo);border-radius:4px;pointer-events:none}
 #touch{position:fixed;inset:0;pointer-events:none;display:none;z-index:4}
 body.touch.playing #touch{display:block}
 body.touch #hint,body.touch #timer{display:none}
