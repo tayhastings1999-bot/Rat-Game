@@ -3,6 +3,7 @@
 // rolls and a discordant synth bass. Intensity rises with combat and bosses.
 import { rand, chance, pick } from '../core/util.js';
 import { settings } from '../core/state.js';
+import { initStems, stemsOn, updateStems } from './stems.js';
 
 let AC = null, master = null, sfxBus = null, musicBus = null, verb = null, noiseBuf = null, drumBus = null, bassBus = null, ambGain = null;
 const sfxLast = {};
@@ -86,6 +87,7 @@ export function audioInit() {
   };
   drip();
   music.nextT = AC.currentTime + 0.1;
+  initStems(AC, musicBus); // soundtrack v3 stems (falls back to the procedural score below)
   setInterval(scheduleMusic, 25);
 }
 
@@ -202,6 +204,8 @@ const fq = semi => E1 * Math.pow(2, semi / 12);
 /** boss: { kind, phase } while a boss is awake (phase 0 = not yet revealed). */
 export function setMusic(intensity, sewer, boss) {
   music.want = intensity;
+  music.menu = boss === 'menu'; // the Nest/menu passes 'menu': the menu loop alone
+  if (music.menu) boss = null;
   music.sewer = !!sewer;
   music.wantBoss = boss || null;
   // Phase changes land on the next beat, not the next bar.
@@ -427,6 +431,8 @@ function playBossStep(s, t, stepLen) {
 
 function scheduleMusic() {
   if (!AC || AC.state !== 'running') return;
+  // Soundtrack v3: the stems carry the music; the procedural score only plays as the fallback.
+  if (stemsOn()) { updateStems(music.want, music.sewer, music.wantBoss, music.menu); music.intensity = music.want; return; }
   if (music.nextT < AC.currentTime - 0.5) music.nextT = AC.currentTime + 0.05;
   while (music.nextT < AC.currentTime + 0.14) {
     const stepLen = 60 / music.bpm / 4;

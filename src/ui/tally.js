@@ -9,6 +9,7 @@ import { G, W, run, st } from '../core/state.js';
 import { show, hideOverlay } from './screens.js';
 import { dName } from '../data/world.js';
 import { sfx } from '../audio/audio.js';
+import { playSting } from '../audio/stems.js';
 import { TUNE } from '../tuning.js';
 
 /** This level's numbers, its score out of 100 and its grade. */
@@ -61,7 +62,7 @@ export function showTally(next) {
     <p class="px" style="font-size:13px;color:var(--dim)">${t.kills} kills · ${t.gold} gold picked up${t.foodLost ? ` · ${t.foodLost} food destroyed` : ''}</p>
     <div class="btns"><button class="btn" id="tallyGo">Onward</button><span class="px" style="font-size:12px;color:var(--dim)">or press Enter</span></div></div>`);
   document.getElementById('tallyGo').onclick = tallyContinue;
-  sfx('level');
+  if (!playSting('clear')) sfx('level');
   return t;
 }
 

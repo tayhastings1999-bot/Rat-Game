@@ -198,6 +198,17 @@ await check('death returns to the Nest with gold banked', async () => {
   const g = await S(() => __scurry.readSlot(1).meta.salvage);
   if (g !== g0 + 77) throw new Error(`banked ${g}, wanted ${g0 + 77}`);
 });
+await check('soundtrack v3: stems load (or fall back), bar-locked fades, MUSIC_V3 mapping, musicMode fallback', async () => {
+  const m = await S(() => { const M = __scurry.music3; return { boss2: M.mixFor(3, false, { phase: 2 }), boss0: M.mixFor(3, true, { phase: 0 }), c1: M.mixFor(1, true, null), c2: M.mixFor(2, false, null), menu: M.mixFor(0, false, 'menu') }; });
+  if (m.boss2.p1 !== 1 || m.boss2.p2 !== 1 || m.boss2.p3 !== 0 || m.boss2.city || m.boss0.p1 !== 0.5 || m.c1.sewer !== 1 || m.c1.combat !== 0.6 || m.c2.city !== 0.85 || m.c2.combat !== 1 || m.menu.menu !== 1 || m.menu.city) throw new Error('mapping ' + JSON.stringify(m));
+  await page.waitForFunction(() => ['ready', 'failed'].includes(__scurry.music3.stems.state) || __scurry.music3.stems.state === 'idle' && !__scurry.audioReady(), null, { timeout: T(30000) });
+  const r = await S(() => { const M = __scurry.music3, st = M.stems.state; if (st !== 'ready') return { st, why: M.stems.failed };
+    M.updateStems(2, false, null, false); const L = M.stems.last, k = (L.at - M.stems.t0) / M.BAR;
+    M.settings.musicMode = 'procedural'; const off = !M.stemsOn(); M.settings.musicMode = 'v3';
+    return { st, onBar: Math.abs(k - Math.round(k)) < 1e-6, len: L.len, off }; });
+  if (r.st === 'ready' && (!r.onBar || r.len > 0.3 || !r.off)) throw new Error(JSON.stringify(r));
+  if (r.st === 'failed') throw new Error('stems failed to load: ' + r.why);
+});
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');

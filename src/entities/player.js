@@ -23,7 +23,6 @@ import { TUNE } from '../tuning.js';
 import { boltTarget } from '../world/setpieces.js';
 import { tryTurboMove } from '../game/turbo.js';
 import { puOn } from '../game/powerups.js';
-import { coop } from '../game/coop.js';
 
 export const keys = {};
 /** On-screen joystick (touch). x = right, y = forward, each -1..1. */
