@@ -265,7 +265,7 @@ src/
   ui/                HUD, screens (menu, pause, map, death, endings), tally.js (exit tally), debugPanel.js, icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
 scripts/smoke.mjs    headless end-to-end test
-scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs (src/qa/ holds the bots and level checks)
+scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs and trials-p4.mjs (src/qa/ holds the bots and level checks)
 scripts/baseline.mjs per-phase baseline capture; pace.mjs leveling-pace tool
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
@@ -278,5 +278,6 @@ Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta`
 - Phase 4 first pass: three save slots, the Nest (a menu hub between runs) and its gold shop (permanent upgrades, supplies for the next run, power-up flasks). The Nest is a screen, not yet a walkable place.
 - Turbo moves use the normal move's animation with an added pose, aura and class flourish; there are no fully bespoke turbo animations.
 - The bots don't climb pipes or hunt secrets, so the lab measures those from level data and scripted checks rather than play.
+- In the lab's co-op runs, players 2–4 are simple pad bots (they follow the lead, fight nearby mobs and nests, and back off when crowded), not full QA bots, so co-op numbers are a floor on what real partners would manage.
 - Scent Veil stops the horde chasing you; ranged mobs that already see you can still shoot.
 - Balance (zone table, boss HP, drop rates) comes from design intent and automated runs, not playtesting.
