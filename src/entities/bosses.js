@@ -39,7 +39,7 @@ const ROMAN = ['I', 'II', 'III'];
 
 export function spawnBoss() {
   const D = curD(), kind = D.boss, B = BOSSES[kind], V = D.bossV && BOSS_VARIANTS[D.bossV], BV = TUNE.bossVariants;
-  const hp = Math.round(B.hp * (1 + 0.7 * run.tier) * (1 + (run.T || 0) * 0.06) * (V ? BV.remixHp * (D.bossV === 'armored' ? BV.armoredHp : 1) : 1) * (run.bossHpM || 1));
+  const hp = Math.round(B.hp * TUNE.zone.bossHpBase * (1 + TUNE.zone.bossHpPerZone * (run.tier || 0)) * (V ? BV.remixHp * (D.bossV === 'armored' ? BV.armoredHp : 1) : 1) * (run.bossHpM || 1));
   // Wake as far from the rat as the horde can walk.
   let k = -1, bd = -1;
   for (const t of M.spawnTiles) if (M.flow[t] > bd) { bd = M.flow[t]; k = t; }

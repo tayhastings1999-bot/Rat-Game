@@ -55,7 +55,7 @@ export function parseGoal(text = '') {
 const B = {
   on: false, profile: PROFILES.average, goal: 'progress', goalText: '', assist: false,
   t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0,
-  stuckT: 0, stuckX: 0, stuckZ: 0, unstick: 0, banned: new Set(), visited: new Set(), seenWind: new Map(),
+  stuckT: 0, stuckX: 0, stuckZ: 0, unstick: 0, blocked: new Set(), blockedSeed: null, banned: new Set(), visited: new Set(), seenWind: new Map(),
   ring: [], ringT: 0, sampleT: 0, done: null,
 };
 const T = {}; // telemetry, reset per session
@@ -103,10 +103,29 @@ function anomaly(kind, detail = {}) {
 }
 
 // ---------- navigation ----------
-const walk = t => t === 1 || t === 2 || t === 9 || t === 10;
+// 5 (crevice) and 11 (duct) count: walking into them squeezes the rat in automatically, and in the
+// sewers they are often the only link to a nest (the old field left the bot pinned in a corner).
+const walk = t => t === 1 || t === 2 || t === 9 || t === 10 || t === 5 || t === 11;
 /** Distance field (in tiles) to a target tile over ground the rat can walk. */
+/**
+ * Tiles the grid calls walkable but a tall static prop (crate stack, pillar, car) fills, plus tiles
+ * the bot got stuck walking into. Rebuilt per map. Without this the bot pinned itself against prop
+ * corners on open sewer floor.
+ */
+function blockedTiles() {
+  if (B.blockedSeed === run.seed) return B.blocked;
+  B.blocked = new Set(); B.blockedSeed = run.seed;
+  for (const p of W.plats) {
+    if (p.dyn || p.y - (p.th || 0) > 0.6 || p.y < 1.2) continue; // floats overhead, or low enough to hop
+    for (let gz = toG(p.z - p.d / 2); gz <= toG(p.z + p.d / 2); gz++) for (let gx = toG(p.x - p.w / 2); gx <= toG(p.x + p.w / 2); gx++) {
+      const cx = toW(gx), cz = toW(gz);
+      if (inG(gx, gz) && Math.abs(cx - p.x) < p.w / 2 + 0.4 && Math.abs(cz - p.z) < p.d / 2 + 0.4) B.blocked.add(gi(gx, gz));
+    }
+  }
+  return B.blocked;
+}
 function fieldTo(gx, gz) {
-  const k0 = gi(gx, gz);
+  const k0 = gi(gx, gz), bl = blockedTiles();
   if (B.fieldK === k0 && B.field && B.fieldT > 0) return B.field;
   const n = M.W * M.H, d = new Int16Array(n).fill(-1), q = new Int32Array(n);
   let h = 0, t = 0;
@@ -118,7 +137,7 @@ function fieldTo(gx, gz) {
       const X = x + dx, Y = y + dy;
       if (!inG(X, Y)) continue;
       const k = gi(X, Y);
-      if (d[k] >= 0 || !walk(M.grid[k])) continue;
+      if (d[k] >= 0 || !walk(M.grid[k]) || (bl.has(k) && k !== k0)) continue;
       d[k] = d[c] + 1; q[t++] = k;
     }
   }
@@ -373,6 +392,9 @@ function watchdogs(dt) {
     // (Only while the bot is driving: raw stepping under a test's own keys must not have them released.)
     if (B.on && (B.dir[0] || B.dir[1]) && moved < 0.8 && !P.chewing && G.state === 'play') {
       B.unstick++;
+      // Something the grid doesn't know about is in the way: block the tile we were walking into.
+      const bx = toG(P.x + B.dir[0] * 1.2), bz = toG(P.z + B.dir[1] * 1.2);
+      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) { blockedTiles().add(gi(bx, bz)); B.fieldT = 0; }
       keys.Space = true; P.buffer = 0.13; // hop
       setDir(rand(-1, 1), rand(-1, 1));
       if (B.unstick >= 3) {

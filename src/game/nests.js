@@ -16,7 +16,8 @@ import { TUNE } from '../tuning.js';
 import { enemyTotal } from './coop.js';
 
 const N = () => TUNE.nests;
-const scale = () => (1 + (run.tier || 0) * 0.5) * (isSewer() ? 1.5 : 1);
+const scale = () => Math.min(N().hpCap, (1 + (run.tier || 0) * N().hpPerZone) * (isSewer() ? N().sewerHp : 1));
+/** HP at which (zone growth is flat and capped so late nests stay a 10-30 swing job) */
 /** HP at which a nest is each tier (index 0 = Litter Pile). */
 export const tierHp = () => [N().hp1, N().hp2, N().hp3].map(h => h * scale());
 export const tierName = t => NEST_NAMES[t - 1] || 'Nest';
