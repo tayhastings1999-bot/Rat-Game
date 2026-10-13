@@ -3,6 +3,7 @@
 // timed action queue for multi-part patterns.
 import { onBossDeath as storyBossDown } from '../game/story.js';
 import * as THREE from 'three';
+import { playSting } from '../audio/stems.js';
 import { rand, angD, pick, TAU, $ } from '../core/util.js';
 import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene, dropCreature } from '../render/renderer.js';
@@ -479,6 +480,7 @@ export function bossStatus(e) {
 }
 
 export function onBossDeath(e) {
+  playSting('victory'); // soundtrack v3 "A-men" (no-op on the procedural score)
   storyBossDown(e);
   G.victoryT = 2.6; // the rat rears up and roars (ratAnim.js)
   dropCreature(e.mesh);
