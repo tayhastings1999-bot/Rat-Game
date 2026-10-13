@@ -135,11 +135,11 @@ export const TUNE = {
     hp1: 160, hp2: 320, hp3: 560, // Litter Pile, Burrow, Warren (× zone and sewer scaling)
     bossAfter: 600, // seconds before the boss wakes even with nests left (a fallback; normally you clear the nests first)
     hpPerZone: 0.15, sewerHp: 1.2, hpCap: 2.2, // HP × min(hpCap, (1 + hpPerZone·zone) × sewerHp)
-    every1: 4.5, every2: 3.2, every3: 2.2, // seconds between spawns while you're in range
-    kids1: 6, kids2: 10, kids3: 14, // live children a nest keeps at most
+    every1: 6, every2: 4.5, every3: 3.2, // seconds between spawns while you're in range (slower: there are ~3x more nests on the bigger maps)
+    kids1: 3, kids2: 5, kids3: 7, // live children a nest keeps at most (halved: density per screen stays fair with ~3x the nests)
     xp1: 15, xp2: 25, xp3: 40,
-    range: 45, // nests only spawn while you're this close
-    count: 13, countPerZone: 0.5, countMax: 20, // nests per zone (10-20 min levels on bigger maps)
+    range: 32, // nests only spawn while you're this close (tighter on the bigger maps, so far nests don't flood you)
+    count: 20, countPerZone: 0.6, countMax: 28, // nests per zone (10-20 min levels on bigger maps)
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
     warrenMinZone: 2, // no Warrens before this zone
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)

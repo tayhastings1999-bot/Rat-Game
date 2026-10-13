@@ -105,7 +105,8 @@ function anomaly(kind, detail = {}) {
 // ---------- navigation ----------
 // 5 (crevice) and 11 (duct) count: walking into them squeezes the rat in automatically, and in the
 // sewers they are often the only link to a nest (the old field left the bot pinned in a corner).
-const walk = t => t === 1 || t === 2 || t === 9 || t === 10 || t === 5 || t === 11;
+// 4 (acid) counts too: a shallow acid channel is often the only link between sewer rooms; the rat wades it and takes the burn, as a player would.
+const walk = t => t === 1 || t === 2 || t === 9 || t === 10 || t === 5 || t === 11 || t === 4;
 /** Distance field (in tiles) to a target tile over ground the rat can walk. */
 /**
  * Tiles the grid calls walkable but a tall static prop (crate stack, pillar, car) fills, plus tiles
