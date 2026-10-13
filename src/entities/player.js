@@ -2,6 +2,7 @@
 // class primary, specials, lock-on and every E-key interaction.
 import * as THREE from 'three';
 import { angD, $ } from '../core/util.js';
+import { coop, asPlayer, isLead, leadNum } from '../game/coop.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { puff, spark, boom, fx, bolt, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -317,21 +318,44 @@ export function doUse(u) {
   if (u.kind === 'pipe') {
     const p = u.o.link;
     if (!p) return;
+    const through = () => {
+      P.x = p.ex; P.z = p.ez; P.y = floorY(p.ex, p.ez, true);
+      P.vx = P.vz = P.vy = 0;
+      if (P.carry) dropCarry();
+      dnum(P.x, P.y + 1.6, P.z, 'Squeezed through', 'info');
+      for (const e of W.enemies) if (e.pred && e.mode === 'hunt') { e.mode = 'patrol'; e.hurt = false; }
+    };
+    if (coop.on) {
+      // Shared screen: no fade and no 'trans' freeze. The rat that used the pipe goes through alone
+      // (it ducks in, frozen and untouchable, and is moved by index); the others keep playing.
+      const who = coop.active;
+      P.lock = Math.max(P.lock || 0, 0.3); P.inv = Math.max(P.inv || 0, 0.5); P.vx = P.vz = 0;
+      puff(P.x, P.y + 0.3, P.z, 0x3a3a3a, 10, 2);
+      // If the exit lies past the leash from the lead, the leash would snap this rat straight back,
+      // so the whole party squeezes through together instead (still no fade).
+      const lead = coop.players.find(q => !(q.i === who ? P.downed : q.P.downed)) || coop.players[0];
+      const L = lead.i === who ? P : lead.P;
+      const all = lead.i !== who && Math.hypot(p.ex - L.x, p.ez - L.z) > TUNE.coop.leash;
+      setTimeout(() => {
+        if (G.state !== 'play' && G.state !== 'paused') return;
+        asPlayer(who, through);
+        if (all) for (const q of coop.players) if (q.i !== who) asPlayer(q.i, () => { through(); P.x += Math.sin(q.i * 1.7); P.z += Math.cos(q.i * 1.7); });
+      }, 240);
+      return;
+    }
     G.state = 'trans';
     $('fade').style.opacity = 1;
     setTimeout(() => {
-      P.x = p.ex; P.z = p.ez; P.y = floorY(p.ex, p.ez, true);
-      P.vx = P.vz = P.vy = 0;
+      through();
       G.camPos.set(P.x, P.y + 10, P.z + 8);
-      if (P.carry) dropCarry();
       $('fade').style.opacity = 0;
       G.state = 'play';
       G.last = performance.now();
-      dnum(P.x, P.y + 1.6, P.z, 'Squeezed through', 'info');
-      for (const e of W.enemies) if (e.pred && e.mode === 'hunt') { e.mode = 'patrol'; e.hurt = false; }
     }, 240);
   }
   if (u.kind === 'manhole') {
+    // Co-op: like the road, ladder and drain, only the lead takes the party down (the leash brings the rest).
+    if (!isLead()) { dnum(P.x, P.y + 1.6, P.z, `P${leadNum()} leads the way down`, 'info'); return; }
     if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, nests, chests and bosses', 'info'); return; }
     run.keys--;
     enterSewer();
