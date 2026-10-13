@@ -198,6 +198,19 @@ await check('death returns to the Nest with gold banked', async () => {
   const g = await S(() => __scurry.readSlot(1).meta.salvage);
   if (g !== g0 + 77) throw new Error(`banked ${g}, wanted ${g0 + 77}`);
 });
+await check('runes: picking one up saves it; all of them raise The Crowned One after the Court boss; bosses drop class gear once', async () => {
+  const r = await S(() => {
+    const s = __scurry, m = s.meta, keep = JSON.stringify({ runes: m.runes || {}, gear: m.gear || {} });
+    s.startRun('tank'); s.god(true); s.G.testNoTally = true;
+    const st0 = s.st.maxHp, g = s.runes.bossGear('exterm'), again = s.runes.bossGear('exterm');
+    s.startRun('tank'); const st1 = s.st.maxHp;
+    m.runes = {}; s.runes.takeRune({ id: 'r_neon', name: 'Rune of Neon', x: s.P.x, y: s.P.y, z: s.P.z, g: null });
+    const one = !!m.runes.r_neon;
+    const k = JSON.parse(keep); m.runes = k.runes; m.gear = k.gear; s.G.testNoTally = false; s.god(false); s.menu();
+    return { gear: !!g, again: !!again, st0, st1, one };
+  });
+  if (!r.gear || r.again || !(r.st1 > r.st0) || !r.one) throw new Error(JSON.stringify(r));
+});
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');

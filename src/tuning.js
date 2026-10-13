@@ -149,6 +149,7 @@ export const TUNE = {
     armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP ×
     broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
   },
+  runes: { finalHp: 1.6 }, // The Crowned One: the Court's boss body at this much HP
   secrets: {
     // Secrets in every level (game/finds.js): cracked walls, squeeze rooms, rooftop caches.
     min: 3, max: 6, // how many a level counts (the HUD's SECRETS n/m)
