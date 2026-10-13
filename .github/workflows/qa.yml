@@ -45,7 +45,7 @@ jobs:
       - name: UI sweep, math checks, fuzzing
         run: npm run test:system
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: { name: system-results, path: scripts/out/system/ }
 
   lab:
@@ -63,5 +63,5 @@ jobs:
       - if: always()
         run: cat scripts/out/lab/SCORES.md >> "$GITHUB_STEP_SUMMARY"
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: { name: lab-report, path: scripts/out/lab/ }
