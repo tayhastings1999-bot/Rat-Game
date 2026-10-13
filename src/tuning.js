@@ -149,6 +149,12 @@ export const TUNE = {
     armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP ×
     broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
   },
+  treasure: {
+    // Treasure rooms: a short timed bonus room full of gold, entered now and then between levels.
+    odds: 0.12, minZone: 1, // chance on leaving a level (not from the first zone, never twice in a row)
+    drainOdds: 0.35, // levels without a fixed secret zone hide a drain to a treasure room this often (seeded per level)
+    time: 25, piles: 70, perPile: 3, chests: 2, radius: 60,
+  },
   secrets: {
     // Secrets in every level (game/finds.js): cracked walls, squeeze rooms, rooftop caches.
     min: 3, max: 6, // how many a level counts (the HUD's SECRETS n/m)

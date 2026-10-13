@@ -198,6 +198,17 @@ await check('death returns to the Nest with gold banked', async () => {
   const g = await S(() => __scurry.readSlot(1).meta.salvage);
   if (g !== g0 + 77) throw new Error(`banked ${g}, wanted ${g0 + 77}`);
 });
+await check('treasure rooms: a timed bonus room of gold, then on to the next level', async () => {
+  await S(() => { __scurry.startRun('tank'); __scurry.god(true); });
+  await toPlay();
+  const r = await S(() => { const s = __scurry; s.G.forceTreasure = true; s.G.testNoTally = true; s.run.tier = Math.max(1, s.run.tier); s.exitRoad(); s.G.forceTreasure = false; return s.run.district; });
+  await page.waitForFunction(() => __scurry.run.secret === 'treasure' && __scurry.G.state === 'play', null, { timeout: T(8000) });
+  const t = await S(() => { const s = __scurry; return { gold: s.W.scraps.length, mobs: s.W.enemies.filter(e => !e.dead).length, clock: s.run.secretT }; });
+  if (t.gold < 50 || t.clock <= 0 || t.clock > 30) throw new Error(JSON.stringify(t));
+  await S(() => { __scurry.run.secretT = 0.05; });
+  await page.waitForFunction(d => !__scurry.run.secret && __scurry.run.district === d + 1 && __scurry.G.state === 'play', r, { timeout: T(8000) });
+  await S(() => { const s = __scurry; s.god(false); s.G.testNoTally = false; s.menu(); });
+});
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
