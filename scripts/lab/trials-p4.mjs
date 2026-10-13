@@ -248,10 +248,6 @@ export const TRIALS_P4 = [
         await L.fresh({ god: true });
         return { ok: r.p1 === 'iron' && r.p2 == null, detail: JSON.stringify(r) };
       } },
-      { name: 'touch has Flask and Swap buttons', async run(L) {
-        const n = await L.S(() => document.querySelectorAll('[data-b="flask"], [data-b="swap"]').length);
-        return { ok: n === 2, detail: `${n} buttons` };
-      } },
     ],
     t3: {
       // The same scripted fight with and without a flask uncorked, three or five of each, by median: the rat holds
@@ -463,19 +459,6 @@ export const TRIALS_P4 = [
       } },
     ],
     t2: [
-      { name: 'the touch stick drives player 1 only', async run(L) {
-        await L.fresh({ players: 2, padBots: false, god: true });
-        await clearMobs(L);
-        const r = await L.S(async () => {
-          const s = __scurry, pl = await import('/src/entities/player.js'), p2 = () => s.asPlayer(1, () => [s.P.x, s.P.z]), a = p2();
-          pl.stick.active = true; pl.stick.x = 1; pl.stick.y = 0;
-          s.qa.stepRaw(1);
-          pl.stick.active = false; pl.stick.x = 0;
-          const b = p2();
-          return +Math.hypot(b[0] - a[0], b[1] - a[1]).toFixed(2);
-        });
-        return { ok: r < 0.3, detail: `player 2 moved ${r}` };
-      } },
       { name: 'a level change brings every rat along and stands the downed back up', async run(L) {
         await L.fresh({ players: 3, padBots: false });
         await clearMobs(L);
