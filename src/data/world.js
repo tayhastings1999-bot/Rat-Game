@@ -106,3 +106,8 @@ export const levelSeed = () => curL().seed + (lap() ? '-' + lap() : '');
 export const isSewer = () => run.layer === 'sewer';
 export const dName = () => curD().title + ROMAN[Math.min(5, lap())];
 export const nextSurfaceName = () => { const L = CITY_LEVELS[((run.district || 0) + 1) % CITY_LEVELS.length]; return L.title || SURFACE[L.base].name; };
+/** A level's display name by realm and index (laps get a numeral), for the hub's level select. */
+export function levelTitle(sewer, i) {
+  const list = sewer ? SEWER_LEVELS : CITY_LEVELS, L = list[i % list.length], B = (sewer ? SEWER : SURFACE)[L.base];
+  return (L.title || B.name) + ROMAN[Math.min(5, Math.floor(i / list.length))];
+}

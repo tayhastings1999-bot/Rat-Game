@@ -114,6 +114,24 @@ await check('class unlock hook: secret rats stay hidden, locked rats show locked
   if (!r.hidden || !r.locked || r.ran !== 'tank') throw new Error(JSON.stringify(r));
   await page.waitForSelector('.card[data-k="tank"]');
 });
+await check('realm hub: pick any reached city/sewer level; sewer runs stay underground; Continue resumes', async () => {
+  const r = await S(() => {
+    const s = __scurry, m = s.meta, keep = { d: m.maxDistrict, w: m.maxSewer, pack: JSON.stringify(m.pack || {}) };
+    m.maxDistrict = 2; m.maxSewer = 1; delete m.cont; s.renderMenu();
+    const city = document.querySelectorAll('#realmCity [data-realm]').length, sewer = document.querySelectorAll('#realmSewer [data-realm]').length;
+    document.querySelector('[data-realm="sewer:1"]').click();
+    document.querySelector('.card[data-k="tank"]').click();
+    const at = { layer: s.run.layer, idx: s.run.sewerIdx, realm: s.run.realm, cont: !!m.cont };
+    s.run.level = 7; s.checkpoint(); s.menu();
+    const btn = !!document.getElementById('contBtn');
+    document.getElementById('contBtn').click();
+    const back = { layer: s.run.layer, idx: s.run.sewerIdx, level: s.run.level };
+    s.menu(); delete m.cont; delete m.startAt; m.maxDistrict = keep.d; m.maxSewer = keep.w; m.pack = JSON.parse(keep.pack); s.saveMeta(); s.renderMenu();
+    return { city, sewer, at, btn, back };
+  });
+  if (r.city !== 3 || r.sewer !== 2 || r.at.layer !== 'sewer' || r.at.idx !== 1 || r.at.realm !== 'sewer' || !r.at.cont || !r.btn || r.back.layer !== 'sewer' || r.back.level !== 7) throw new Error(JSON.stringify(r));
+  await page.waitForSelector('.card[data-k="tank"]');
+});
 await check('start a run from the menu', async () => {
   await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
