@@ -6,13 +6,13 @@ import { SHOP } from '../data/shop.js';
 import { rank, price, buy, effectText, isPerm, cheatDeath, sellPrice, sell } from '../game/shop.js';
 import { SHOP_TABS } from '../data/shop.js';
 import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
-import { CLASSES, SKINS, skinOk, liveClass } from '../data/classes.js';
-import { MODS, dName } from '../data/world.js';
+import { CLASSES, SKINS, skinOk, liveClass, classOpen, pickerClasses, openClasses } from '../data/classes.js';
+import { MODS, dName, levelTitle } from '../data/world.js';
 import { M } from '../world/grid.js';
 import { PRIM, SPECIALS } from '../combat/arsenal.js';
 import { applyVolumes } from '../audio/audio.js';
 import { PORT, refreshPortraits, setRat } from '../entities/rat.js';
-import { startRun, checkUnlocks, bankSalvage, menu } from '../game/flow.js';
+import { startRun, checkUnlocks, bankSalvage, menu, realmLevels } from '../game/flow.js';
 import { epitaph } from '../game/personality.js';
 import { runScore, shareCard } from '../game/score.js';
 import { drawMap, banner } from './hud.js';
@@ -44,7 +44,6 @@ export const HOWTO = `<div class="howto">
         <p>Each rat has four stats: <b>Strength</b> (attack damage), <b>Speed</b> (movement and attack rate), <b>Armor</b> (damage taken) and <b>Magic</b> (specials, turbo and vials). Every level-up grows them, most where your class is strongest.</p>
         <p>Every level hides 3–6 <b style="color:#c080ff">secrets</b> (cracked walls, squeeze rooms, rooftop caches up the yellow-banded pipes); the HUD counts them and sniffing (<kbd>F</kbd>) pings the ones nearby. <b style="color:#ffd040">Keys</b> stack: spend one at a locked gate, a padlocked chest or the manhole. Glowing tokens are 25-second <b>power-ups</b>. Leaving a level shows a tally and a grade.</p></div>
       <div><h3 class="px">Keyboard &amp; mouse</h3><p><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim · <kbd>Left click</kbd> or <kbd>J</kbd> attack (hold to repeat) · <kbd>Shift</kbd> dodge · <kbd>Space</kbd> jump, hold at a marked (yellow-banded) pipe to climb · <kbd>Q</kbd> special · <kbd>G</kbd> signature · <kbd>X</kbd> turbo (tap: blast, hold + Q/G: turbo move) · <kbd>Z</kbd> Rot Vial · <kbd>V</kbd> uncork flask · <kbd>B</kbd> switch flask · <kbd>R</kbd> lock on · <kbd>E</kbd> use, hold to gnaw · <kbd>C</kbd> squeeze · <kbd>F</kbd> sniff · <kbd>M</kbd> map · <kbd>Wheel</kbd> zoom · <kbd>Esc</kbd> pause</p></div>
-      <div><h3 class="px">Touch</h3><p>Left stick to move. Attack aims at the nearest enemy in front of you. Jump, Dodge, Special, Sig and Use sit on the right; hold Jump at a marked pipe to climb it. Tap Turbo for your blast; hold Turbo, let go, then tap Special or Sig for the turbo version. Vial throws a Rot Vial.</p></div>
     </div>`;
 
 // ---------- save slots ----------
@@ -109,7 +108,7 @@ function coopHTML() {
     ${S.n > 1 ? `<div class="cpset">${Array.from({ length: S.n - 1 }, (_, j) => row(j + 1)).join('')}</div>` : ''}`;
 }
 function bindCoop() {
-  const S = coop.setup, ks = Object.keys(CLASSES), ins = Object.keys(INPUTS).filter(k => k !== 'kb1');
+  const S = coop.setup, ks = openClasses(), ins = Object.keys(INPUTS).filter(k => k !== 'kb1');
   const again = () => { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; };
   ov.querySelectorAll('[data-pn]').forEach(b => { b.onclick = () => { S.n = +b.dataset.pn; again(); }; });
   ov.querySelectorAll('[data-ccls]').forEach(b => { b.onclick = () => { const i = +b.dataset.ccls; S.cls[i] = ks[(ks.indexOf(liveClass(S.cls[i])) + 1) % ks.length]; again(); }; });
@@ -117,6 +116,22 @@ function bindCoop() {
 }
 
 // ---------- the Nest (hub between runs) ----------
+// ---------- realm hub: level select + Continue ----------
+/** Where a run picked from the cards starts: the realm/level chosen in the hub (clamped to what's reached). */
+export function hubStart() {
+  const R = realmLevels(), a = meta.startAt || { realm: 'city', idx: 0 };
+  if (a.realm === 'sewer' && R.sewer.length) return { realm: 'sewer', idx: Math.min(a.idx, R.sewer.length - 1) };
+  return { realm: 'city', idx: Math.min(a.realm === 'city' ? a.idx : 0, R.city.length - 1) };
+}
+function realmHTML() {
+  const R = realmLevels(), a = hubStart();
+  const btn = (r, i, n) => `<button class="btn ${a.realm === r && a.idx === i ? 'on' : 'ghost'}" data-realm="${r}:${i}" style="font-size:11px;padding:6px 10px">${n}</button>`;
+  return `<div class="kick px">Where to? · the City${R.sewer.length ? ' or the Sewers' : ' (find a manhole to open the Sewers)'}</div>
+    ${meta.cont ? `<div class="btns"><button class="btn" id="contBtn">Continue · ${CLASSES[liveClass(meta.cont.cls)].name} · ${meta.cont.at}</button></div>` : ''}
+    <div class="btns" id="realmCity"><span class="px" style="font-size:12px">City</span>${R.city.map(i => btn('city', i, levelTitle(false, i))).join('')}</div>
+    ${R.sewer.length ? `<div class="btns" id="realmSewer"><span class="px" style="font-size:12px">Sewers</span>${R.sewer.map(i => btn('sewer', i, levelTitle(true, i))).join('')}</div>` : ''}`;
+}
+
 export function renderMenu() {
   if (!save.slot) { renderSlotSelect(); return; }
   G.state = 'menu';
@@ -128,8 +143,10 @@ export function renderMenu() {
     ${shopHTML()}
     <div class="btns" id="diffBtns"><span class="px" style="font-size:12px">Difficulty</span>${Object.keys(TUNE.difficulty).map(d => `<button class="btn ${(meta.difficulty || 'normal') === d ? 'on' : 'ghost'}" data-diff="${d}" style="font-size:11px;padding:8px 12px">${d[0].toUpperCase() + d.slice(1)} · gold ×${TUNE.difficulty[d].gold}</button>`).join('')}</div>
     ${coopHTML()}
+    ${realmHTML()}
     <div class="kick px">Pick a rat to start${coop.setup.n > 1 ? ' (player 1)' : ''}</div>
-    <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => `<button class="card" data-k="${k}" style="--rc:${C.rc}">
+    <div class="cards">${pickerClasses().map(k => [k, CLASSES[k]]).map(([k, C], i) => !classOpen(k) ? `<button class="card locked" data-locked="${k}" disabled style="--rc:${C.rc};opacity:.5">
+        <div class="row"><span class="key px">${i + 1}</span><span class="role">Locked</span></div><b>${C.name}</b><span class="d">${C.unlock.hint || '???'}</span></button>` : `<button class="card" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="">
         <b>${C.name}</b><span class="d">${C.blurb}</span>
         <span class="s">${TUNE.classes[k].hp} HP · ${PRIM[C.prim].name}</span>
@@ -142,7 +159,9 @@ export function renderMenu() {
   ov.querySelectorAll('[data-diff]').forEach(b => { b.onclick = () => { meta.difficulty = b.dataset.diff; saveMeta(); const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; }; });
   ov.querySelectorAll('[data-sell]').forEach(b => { b.onclick = () => { if (sell(b.dataset.sell)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
   ov.querySelectorAll('[data-buy]').forEach(b => { b.onclick = () => { if (buy(b.dataset.buy)) { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; } }; });
-  ov.querySelectorAll('.card[data-k]').forEach(b => { b.onclick = () => startRun(b.dataset.k); });
+  ov.querySelectorAll('.card[data-k]').forEach(b => { b.onclick = () => startRun(b.dataset.k, hubStart()); });
+  ov.querySelectorAll('[data-realm]').forEach(b => { b.onclick = () => { const [r, i] = b.dataset.realm.split(':'); meta.startAt = { realm: r, idx: +i }; saveMeta(); const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; }; });
+  const cb = $('contBtn'); if (cb) cb.onclick = () => startRun(meta.cont.cls, { cont: true });
   ov.querySelectorAll('[data-s]').forEach(b => {
     b.onclick = () => {
       const i = +b.dataset.s;
@@ -204,6 +223,7 @@ export function die() {
   if (coopDown()) return; // co-op: down until revived, while anyone still stands
   coopEnd();
   G.state = 'dead';
+  if (meta.cont) { delete meta.cont; saveMeta(); } // Continue is a checkpoint for the live run, not a second life
   const got = checkUnlocks();
   const nb = run.time > best.time;
   if (nb) { Object.assign(best, { time: run.time, kills: run.kills, district: run.tier }); saveBest(); }

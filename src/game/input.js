@@ -5,13 +5,13 @@ import { clamp } from '../core/util.js';
 import { G, P } from '../core/state.js';
 import { canvas } from '../render/renderer.js';
 import { audioInit } from '../audio/audio.js';
-import { CLASSES } from '../data/classes.js';
+import { pickerClasses, classOpen } from '../data/classes.js';
 import { keys, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
 import { pause, resume, openMap, pickSlot } from '../ui/screens.js';
 import { useFlask, cycleFlask } from './shop.js';
-import { coop, P2_CODES } from './coop.js';
+import { coop, P2_CODES, dropIn, dropOut, slotOf } from './coop.js';
 import { renderSlots } from '../ui/hud.js';
 import { useSig } from './signature.js';
 import { TUNE } from '../tuning.js';
@@ -31,6 +31,8 @@ export function initInput() {
     keys[e.code] = true;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyJ') { held.key = true; syncAttack(); }
+    // F6: the second keyboard player (arrows + numpad) drops in, or out again, mid-run.
+    if (e.code === 'F6' && G.state === 'play' && !e.repeat) { const k = slotOf('kb2'); if (k > 0) dropOut(k); else dropIn('kb2'); }
     if (e.code === 'KeyX' && G.state === 'play') turboDown();
     if (e.repeat) return;
     const s = G.state;
@@ -52,8 +54,8 @@ export function initInput() {
       if (['Escape', 'KeyP', 'KeyM', 'Tab', 'Enter'].includes(e.code)) resume();
     } else if (s === 'menu') {
       const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'].indexOf(e.code);
-      const k = Object.keys(CLASSES)[i];
-      if (i >= 0 && k) startRun(k);
+      const k = pickerClasses()[i];
+      if (i >= 0 && k && classOpen(k)) startRun(k);
     } else if (s === 'slots') {
       const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
       if (i >= 0) pickSlot(i + 1);
