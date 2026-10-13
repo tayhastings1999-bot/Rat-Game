@@ -324,14 +324,21 @@ export function doUse(u) {
       for (const e of W.enemies) if (e.pred && e.mode === 'hunt') { e.mode = 'patrol'; e.hurt = false; }
     };
     if (coop.on) {
-      // Shared screen: no fade and no 'trans' freeze for everyone else. A pipe is a shortcut out
-      // of the leash radius, so (like every exit) only the lead squeezes through; the leash then
-      // brings partners along. The lead ducks in (frozen, untouchable) and is moved by index.
-      if (!isLead()) { dnum(P.x, P.y + 1.6, P.z, `P${leadNum()} leads through pipes`, 'info'); return; }
+      // Shared screen: no fade and no 'trans' freeze. The rat that used the pipe goes through alone
+      // (it ducks in, frozen and untouchable, and is moved by index); the others keep playing.
       const who = coop.active;
       P.lock = Math.max(P.lock || 0, 0.3); P.inv = Math.max(P.inv || 0, 0.5); P.vx = P.vz = 0;
       puff(P.x, P.y + 0.3, P.z, 0x3a3a3a, 10, 2);
-      setTimeout(() => { if (G.state === 'play' || G.state === 'paused') asPlayer(who, through); }, 240);
+      // If the exit lies past the leash from the lead, the leash would snap this rat straight back,
+      // so the whole party squeezes through together instead (still no fade).
+      const lead = coop.players.find(q => !(q.i === who ? P.downed : q.P.downed)) || coop.players[0];
+      const L = lead.i === who ? P : lead.P;
+      const all = lead.i !== who && Math.hypot(p.ex - L.x, p.ez - L.z) > TUNE.coop.leash;
+      setTimeout(() => {
+        if (G.state !== 'play' && G.state !== 'paused') return;
+        asPlayer(who, through);
+        if (all) for (const q of coop.players) if (q.i !== who) asPlayer(q.i, () => { through(); P.x += Math.sin(q.i * 1.7); P.z += Math.cos(q.i * 1.7); });
+      }, 240);
       return;
     }
     G.state = 'trans';
