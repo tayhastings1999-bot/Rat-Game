@@ -73,7 +73,7 @@ export function setupSecret(info) {
     run.secretT = T.time;
     run.spawnT = run.surgeT = run.lurkT = 1e9;
     const open = [];
-    for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !M.inside[k] && Math.hypot(toW(k % M.W) - P.x, toW((k / M.W) | 0) - P.z) < T.radius) open.push(k);
+    for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !M.inside[k] && floorY(toW(k % M.W), toW((k / M.W) | 0)) < 0.5 && Math.hypot(toW(k % M.W) - P.x, toW((k / M.W) | 0) - P.z) < T.radius) open.push(k);
     for (let i = 0; i < T.piles && open.length; i++) {
       const k = open.splice((Math.random() * open.length) | 0, 1)[0], x = toW(k % M.W), z = toW((k / M.W) | 0);
       for (let j = 0; j < T.perPile; j++) scrapDrop(x, floorY(x, z), z);
@@ -117,7 +117,10 @@ export function tickSecretDrain(dt, enterSecret) {
   if (!s) return;
   s.ring.rotation.y += dt * 1.5;
   s.swirl.material.opacity = 0.45 + 0.25 * Math.sin(G.time * 3);
-  if (Math.hypot(P.x - s.x, P.z - s.z) < 1.3 && Math.abs(P.y - s.y) < 1) {
+  // A treasure drain is a bonus, not a shortcut: it stays sealed (dim) until the level's boss is down.
+  const sealed = s.kind === 'treasure' && !run.bossDone;
+  if (sealed) s.swirl.material.opacity = 0.12;
+  if (!sealed && Math.hypot(P.x - s.x, P.z - s.z) < 1.3 && Math.abs(P.y - s.y) < 1) {
     puff(s.x, s.y + 0.4, s.z, 0xb070ff, 20, 3);
     fx('ring', s.x, s.y, s.z, 3, 0xb070ff, 0.5);
     dnum(P.x, P.y + 1.8, P.z, 'A hidden way down', 'info');
