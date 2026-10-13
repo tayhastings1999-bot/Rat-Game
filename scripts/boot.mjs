@@ -356,6 +356,9 @@ await check('co-op: only the lead takes the manhole; a pipe moves only the rat t
   await toPlay();
   const m = await S(() => { const s = __scurry, mh = s.G.manhole; if (!mh) return 'no manhole'; s.run.keys = 1; const layer = s.run.layer; s.asPlayer(1, () => { s.P.x = mh.x; s.P.z = mh.z; s.P.y = 0; s.pressE(); }); return { layer: s.run.layer === layer, keys: s.run.keys, st: s.G.state }; });
   if (typeof m === 'string' || !m.layer || m.keys !== 1 || m.st !== 'play') throw new Error('player 2 took the manhole ' + JSON.stringify(m));
+  // Co-op: even the lead holding a key can't open it before this level's boss falls.
+  const lead = await S(() => { const s = __scurry, mh = s.G.manhole; s.run.keys = 1; s.run.lvlBoss = false; const layer = s.run.layer; const x = s.P.x, z = s.P.z; s.P.x = mh.x; s.P.z = mh.z; s.P.y = 0; s.pressE(); const same = s.run.layer === layer && s.G.state === 'play'; s.P.x = x; s.P.z = z; return same; });
+  if (!lead) throw new Error('co-op lead opened the manhole before the boss fell');
   const p = await S(() => { const s = __scurry, pipe = s.W.pipes.find(p => p.link); if (!pipe) return null;
     s.asPlayer(1, () => { s.P.x = pipe.x; s.P.z = pipe.z; s.P.y = 0; s.pressE(); });
     const far = Math.hypot(pipe.link.ex - s.P.x, pipe.link.ez - s.P.z) > s.TUNE.coop.leash;
@@ -383,6 +386,100 @@ await check('co-op: a downed rat is revived by a partner, and the run ends only 
   await page.click('#again');
   await page.waitForSelector('[data-pn="1"]');
   await page.click('[data-pn="1"]');
+});
+/** Load a level by layer/index/secret (as the audit does) and simulate a beat. */
+const loadLevel = (layer, i, secret) => page.evaluate(([layer, i, secret]) => {
+  const s = __scurry, r = s.run; s.god(true);
+  r.layer = layer; r.secret = secret; if (layer === 'sewer') { r.sewerIdx = i; r.district = 0; } else r.district = i;
+  r.tier = layer === 'sewer' ? 2 * i + 1 : 2 * i; r.nests = 0; r.bossDone = false; r.lvlBoss = false; r.keys = 0; s.G.boss = null;
+  r.seed = s.levelSeed(); s.setupWorld(r.seed); s.G.state = 'play';
+  return s.dName();
+}, [layer, i, secret]);
+await check('keys drop only from bosses: elites, nests, chests and bins never drop one', async () => {
+  await S(() => { const s = __scurry; if (s.coop && s.coop.setup) s.coop.setup.n = 1; s.menu(); s.startRun('tank'); });
+  await toPlay();
+  await loadLevel('surface', 0, null);
+  const r = await S(() => {
+    const s = __scurry, R = Math.random; Math.random = () => 0; // every old drop roll would hit
+    try {
+      for (const e of s.W.enemies.filter(e => e.type === 'nest').slice(0, 2)) s.kill(e);
+      const m = s.spawnEnemy('mawling', s.P.x + 3, s.P.z, { elite: true, corrupt: 'haste', force: true }); if (m) s.kill(m);
+      const b = s.W.bins.find(b => !b.done && !b.mimic); if (b) s.rummage(b);
+      const c = s.W.chests.find(c => !c.locked && !c.open); if (c) { s.P.x = c.x + 1; s.P.z = c.z; s.P.y = c.y; s.pressE(); }
+    } finally { Math.random = R; }
+    const before = s.W.keys.length + s.run.keys;
+    s.spawnBoss(); s.killBoss();
+    return { before, after: s.W.keys.length + s.run.keys, shopKey: (() => { try { return s.shop.price('key') != null; } catch { return false; } })() };
+  });
+  if (r.before !== 0) throw new Error('a non-boss source dropped a key ' + JSON.stringify(r));
+  if (r.after !== 1) throw new Error('the boss did not drop exactly one key ' + JSON.stringify(r));
+  if (r.shopKey) throw new Error('the shop still sells a key');
+});
+await check('the manhole and hidden drains stay locked until the level boss falls; padlocks open after', async () => {
+  await loadLevel('surface', 0, null);
+  const r = await S(() => {
+    const s = __scurry, mh = s.G.manhole; if (!mh) return 'no manhole';
+    s.run.keys = 3; s.P.x = mh.x; s.P.z = mh.z; s.P.y = 0; s.pressE();
+    const early = s.run.layer, gate = s.W.gates.find(g => !g.open), gOpen0 = gate ? s.unlockGate(gate) : null;
+    s.spawnBoss(); s.killBoss(); s.qa.stepRaw(0.2);
+    const exitAfter = !!s.G.exitD, gOpen1 = gate ? s.unlockGate(gate) : null;
+    return { early, gOpen0, exitAfter, gOpen1, keys: s.run.keys, lvlBoss: s.run.lvlBoss };
+  });
+  if (typeof r === 'string') throw new Error(r);
+  if (r.early !== 'surface') throw new Error('manhole opened before the boss ' + JSON.stringify(r));
+  if (r.gOpen0 === true) throw new Error('a vault gate opened before the boss ' + JSON.stringify(r));
+  if (!r.exitAfter || !r.lvlBoss) throw new Error('no exit after the boss ' + JSON.stringify(r));
+  if (r.gOpen1 === false) throw new Error('vault gate still shut after the boss ' + JSON.stringify(r));
+  // the drain on Hollow Heights is sealed before the boss
+  await loadLevel('surface', 3, null);
+  const d = await S(() => { const s = __scurry, e = s.G.secretExit; if (!e) return 'no drain'; s.P.x = e.x; s.P.z = e.z; s.P.y = e.y; s.qa.stepRaw(0.3); return { secret: s.run.secret, still: !!s.G.secretExit }; });
+  if (typeof d === 'string') throw new Error(d);
+  if (d.secret || !d.still) throw new Error('drain let the rat out before the boss ' + JSON.stringify(d));
+});
+await check('every level has a boss that drops the key (Bone Garden included); only timed secret rooms have none', async () => {
+  const r = await S(() => {
+    const s = __scurry, L = s.LEVELS, out = [], r0 = { ...s.run };
+    const probe = (layer, i, secret) => { Object.assign(s.run, { layer, secret, district: layer === 'surface' ? i : 0, sewerIdx: layer === 'sewer' ? i : 0 }); const D = s.curD(); return { name: s.dName(), boss: D.boss, secret: D.secret }; };
+    L.CITY_LEVELS.forEach((_, i) => out.push(probe('surface', i, null)));
+    L.SEWER_LEVELS.forEach((_, i) => out.push(probe('sewer', i, null)));
+    for (const k of Object.keys(L.SECRET_LEVELS)) out.push(probe(k === 'garden' ? 'sewer' : 'surface', 0, k));
+    Object.assign(s.run, { layer: r0.layer, secret: r0.secret, district: r0.district, sewerIdx: r0.sewerIdx });
+    return out;
+  });
+  const timed = ['vault', 'run', 'treasure'];
+  const bad = r.filter(l => !l.boss && !timed.includes(l.secret));
+  if (bad.length) throw new Error('levels with no boss: ' + bad.map(l => l.name).join(', '));
+  if (!r.find(l => l.secret === 'garden' && l.boss)) throw new Error('Bone Garden has no boss');
+});
+await check('Bone Garden: the boss wakes when the Warrens fall; the way out opens only when she dies', async () => {
+  await loadLevel('sewer', 0, 'garden');
+  const r = await S(() => {
+    const s = __scurry;
+    for (const e of s.W.enemies) if (e.type === 'nest') s.kill(e);
+    for (let i = 0; i < 20 && !s.G.boss; i++) s.qa.stepRaw(0.1);
+    const boss = !!s.G.boss, exitEarly = !!s.G.exitD;
+    s.killBoss(); s.qa.stepRaw(0.3);
+    return { boss, exitEarly, exitAfter: !!s.G.exitD, keyDropped: s.W.keys.length + s.run.keys };
+  });
+  if (!r.boss) throw new Error('no boss woke in the Bone Garden ' + JSON.stringify(r));
+  if (r.exitEarly) throw new Error('the garden exit opened before the boss ' + JSON.stringify(r));
+  if (!r.exitAfter || r.keyDropped < 1) throw new Error('no exit or key after the boss ' + JSON.stringify(r));
+});
+await check('hidden lairs wake an elite guard pack (no mini-boss) and pay out when it is cleared', async () => {
+  let lv = null;
+  for (const [layer, i] of [['surface', 0], ['surface', 1], ['sewer', 0], ['surface', 2]]) { await loadLevel(layer, i, null); if (await S(() => __scurry.W.lairs.length > 0)) { lv = [layer, i]; break; } }
+  if (!lv) return; // no lair on these maps
+  const r = await S(() => {
+    const s = __scurry, L = s.W.lairs[0];
+    for (const e of s.W.enemies) if (!e.boss && e.type !== 'nest') e.dead = true;
+    s.P.x = (L.x + 0.5 - s.M.W / 2) * 4 + 2; s.P.z = (L.y + 0.5 - s.M.H / 2) * 4 + 2; s.P.y = 0; s.qa.stepRaw(0.1);
+    const g = (L.guards || []).filter(e => !e.dead), mini = s.W.enemies.some(e => e.mini && !e.dead);
+    const ch0 = s.W.chests.length; for (const e of g) s.kill(e); s.qa.stepRaw(0.1);
+    return { guards: g.length, elite: g.every(e => e.elite), mini, paid: !!L.paid, chests: s.W.chests.length - ch0 };
+  });
+  if (r.mini) throw new Error('a lair mini-boss still spawns');
+  if (r.guards < 1 || !r.elite) throw new Error('no elite guards in the lair ' + JSON.stringify(r));
+  if (!r.paid || r.chests < 1) throw new Error('lair hoard missing ' + JSON.stringify(r));
 });
 await check('old single-slot saves move into slot 1', async () => {
   // Park the main page so it is not burning the runner's CPU while the second page loads.

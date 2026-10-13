@@ -721,7 +721,7 @@ export const TRIALS = [
         for (const go of ['exitRoad', 'enterSewer', 'drain']) {
           await L.fresh({ level: go === 'drain' ? CITY(3) : CINDER, god: true });
           const r0 = await L.S(() => (__scurry.run.ranks || []).length);
-          await L.S(g => { const s = __scurry; if (g === 'drain') { const d = s.G.secretExit; if (d) { s.P.x = d.x; s.P.z = d.z; s.P.y = d.y; s.qa.stepRaw(0.1); } } else s[g](); }, go);
+          await L.S(g => { const s = __scurry; if (g === 'drain') { const d = s.G.secretExit; s.run.lvlBoss = true; if (d) { s.P.x = d.x; s.P.z = d.z; s.P.y = d.y; s.qa.stepRaw(0.1); } } else s[g](); }, go);
           await L.sleep(1400);
           if (await L.S(r0 => (__scurry.run.ranks || []).length > r0, r0)) n++;
         }

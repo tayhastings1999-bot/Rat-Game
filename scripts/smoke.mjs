@@ -162,6 +162,9 @@ await step('city interactions: chest, boards, climb, power line, key, manhole', 
   const mh = await S(() => { const m = __scurry.G.manhole; return m && { x: m.x, z: m.z }; });
   if (!mh) throw new Error('no manhole');
   await tp(mh.x + 0.6, mh.z); await wait(200);
+  await page.keyboard.press('KeyE'); await wait(600);
+  if ((await S(() => __scurry.run.layer)) !== 'surface') throw new Error('manhole opened before the boss fell');
+  await S(() => { __scurry.run.lvlBoss = true; }); // as if this level's boss is down
   await page.keyboard.press('KeyE'); await wait(1300);
   const s = await S(() => ({ layer: __scurry.run.layer, keys: __scurry.run.keys }));
   if (s.layer !== 'sewer') throw new Error('manhole did not descend ' + JSON.stringify(s));

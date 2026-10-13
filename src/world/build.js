@@ -21,7 +21,7 @@ import { M, T, DUCT_TOP, gi, inG, tAt, toW, floorY, topAt, waterFloor, waterSurf
 import { populateDucts, applyCutaway } from './ducts.js';
 import * as TEX from '../render/textures.js';
 const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
-import { curD, isSewer, FAMILIES } from '../data/world.js';
+import { curD, FAMILIES } from '../data/world.js';
 import { initNest, rollNest, nestCount } from '../game/nests.js';
 import { placeSecretDrain } from '../game/secrets.js';
 import { addGrave } from '../game/reaper.js';
@@ -618,26 +618,12 @@ function markSecrets() {
     W.secrets.push({ k, g });
   }
 }
-/** Mini-bosses waiting in hidden lairs; they wake when the rat walks in. */
-const MINI = {
-  surface: [
-    { name: 'Alley Tom', type: 'cat', corrupt: 'haste' },
-    { name: 'Scrap Brute', type: 'brute', corrupt: 'ward' },
-    { name: 'Crow Matriarch', type: 'crow', corrupt: 'leech' },
-  ],
-  sewer: [
-    { name: 'Bloated Queen', type: 'bloat', corrupt: 'split' },
-    { name: 'Ghoul Lord', type: 'ghoul', corrupt: 'fire' },
-    { name: 'Tick Hive', type: 'tick', corrupt: 'split' },
-  ],
-};
 function setupHidden(hidden, premium) {
   const bone = lam(0xcfc2a4);
   for (const h of hidden) {
     const cx = toW(h.x + (h.w - 1) / 2), cz = toW(h.y + (h.h - 1) / 2);
     if (h.lair) {
-      const pool = MINI[isSewer() ? 'sewer' : 'surface'], mb = pool[ri(0, pool.length - 1)];
-      W.lairs.push({ ...h, cx, cz, mini: mb, woke: false });
+      W.lairs.push({ ...h, cx, cz, woke: false }); // an elite guard pack wakes here (game/update.js updateHidden)
       for (let i = 0; i < 14; i++) {
         const b = mkMesh(Cy(0.07, 0.07, rr(0.5, 1.2), 5), bone, cx + rr(-h.w, h.w) * 1.6, 0.1, cz + rr(-h.h, h.h) * 1.6);
         b.rotation.set(rr(1.2, 1.9), rr(0, 3), 0);

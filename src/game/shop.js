@@ -60,7 +60,7 @@ export function applyShop() {
   st.salvage *= (1 + amount('pack')) * diffMods().gold;
   const p = meta.pack || {};
   run.vials = Math.min(TUNE.vials.max, run.vials + (p.vial || 0));
-  run.keys += p.key || 0;
+  // (The Skeleton Key supply is gone: keys drop only from bosses. A key still packed in an old save is ignored.)
   run.cheese = p.cheese || 0;
   run.tails = p.tail || 0;
   run.flasks = {}; // power-up key → count held

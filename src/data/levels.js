@@ -40,12 +40,14 @@ export const SEWER_LEVELS = [
   { id: 'toxic-d', base: 4, seed: 'meltdown', title: 'Toxic Refinery · Meltdown', haz: 'tides', fam: ['rot', 'vermin', 'wings'], boss: 'brood', bossV: 'frenzied', over: { ...deep, lamp: 0xa0ff20 } },
 ];
 
-/** Secret zones: no boss. The Vault and the Rat Run are timed loot dashes; the Bone Garden is a nest gauntlet. */
+/** Secret zones. The Vault, the Rat Run and the Treasure Room are timed loot dashes with no boss (their exit is open
+ *  from the start and the clock throws you out, so they cannot lock). The Bone Garden is a nest gauntlet with a boss:
+ *  The Brood Mother (and Brood) wakes when the Warrens fall, and her key opens the way out. */
 export const SECRET_LEVELS = {
   vault: { id: 'vault', kind: 'city', base: 1, seed: 'cheese-vault', title: 'The Cheese Vault', secret: 'vault', haz: null, fam: ['vermin'], over: { fog: 0x1e1408, sky: 0x2a1a08, lamp: 0xffd040, neon: [0xffd040, 0xffb020] } },
   run: { id: 'run', kind: 'city', base: 0, seed: 'rat-run', title: 'The Rat Run', secret: 'run', haz: null, fam: ['vermin'], over: { fog: 0x14100a, lamp: 0xffe080 } },
   treasure: { id: 'treasure', kind: 'city', base: 1, seed: 'treasure-room', title: 'Treasure Room', secret: 'treasure', haz: null, fam: ['vermin'], over: { fog: 0x2a1c06, sky: 0x3a2808, lamp: 0xffe060, neon: [0xffd040, 0xfff0a0] } },
-  garden: { id: 'garden', kind: 'sewer', base: 2, seed: 'bone-garden', title: 'The Bone Garden', secret: 'garden', haz: null, fam: ['vermin', 'wings', 'rot', 'prowl', 'guard'], over: { fog: 0x0c0a0e, lamp: 0xe0d8c0 } },
+  garden: { id: 'garden', kind: 'sewer', base: 2, seed: 'bone-garden', title: 'The Bone Garden', secret: 'garden', boss: 'brood', bossV: 'brood', haz: null, fam: ['vermin', 'wings', 'rot', 'prowl', 'guard'], over: { fog: 0x0c0a0e, lamp: 0xe0d8c0 } },
 };
 
 /** Boss variants for the remixes: a new name and a twist on the same body (numbers in TUNE.bossVariants). */

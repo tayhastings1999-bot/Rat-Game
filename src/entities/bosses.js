@@ -506,8 +506,9 @@ export function onBossDeath(e) {
   addXP(220);
   for (let i = 0; i < 30; i++) scrapDrop(e.x, gy, e.z);
   addChest(e.x, gy, e.z, isSewer());
-  dropKey(e.x + 1.5, gy, e.z + 1.5);
+  dropKey(e.x + 1.5, gy, e.z + 1.5); // the only source of keys
   run.bossDone = true;
+  run.lvlBoss = true; // unlocks the manhole (with the key), padlocked chests and vault gates on this level
   if (e.secretBoss) { run.secretDone = true; run.secretUp = false; meta.secretWins = (meta.secretWins || 0) + 1; }
   if (e.final) { run.finalDone = true; run.finalUp = false; meta.finalWins = (meta.finalWins || 0) + 1; }
   const gear = bossGear(e.kind);

@@ -87,12 +87,12 @@ export function tickSecret(dt, openGate, exitSecret) {
   const D = curD();
   if (!D.secret) return;
   run.evT = Math.max(run.evT || 0, 999); // no street events in a secret zone
-  if (!run.secretOpen && M.spawnTiles && M.spawnTiles.length && (D.secret !== 'garden' || run.nests <= 0)) {
+  if (!run.secretOpen && M.spawnTiles && M.spawnTiles.length && (D.secret !== 'garden' || run.bossDone)) {
     run.secretOpen = true;
-    openGate();
+    if (D.secret !== 'garden') openGate(); // the garden's way out opens from onBossDeath, like a regular level
     if (D.secret === 'garden') {
       for (let i = 0; i < TUNE.secrets.gardenChests; i++) addChest(P.x + Math.sin(i * 2.1) * 3, floorY(P.x, P.z), P.z + Math.cos(i * 2.1) * 3, true);
-      banner('The garden is quiet', 'Take the hoard · the way out is open');
+      banner('The garden is quiet', 'Take the hoard · the Brood Mother\'s key opens the way out');
       sfx('level');
     }
   }
@@ -106,7 +106,7 @@ export function tickSecret(dt, openGate, exitSecret) {
 export function secretText() {
   const D = curD();
   if (!D.secret) return null;
-  if (D.secret === 'garden') return run.nests > 0 ? `Secret · smash the Warrens · ${run.nests} left · the way out opens when they fall` : 'Secret · the way out is open';
+  if (D.secret === 'garden') return run.nests > 0 ? `Secret · smash the Warrens · ${run.nests} left · then the Brood Mother wakes` : run.bossDone ? 'Secret · the way out is open' : 'Secret · kill the Brood Mother · she has the key';
   if (D.secret === 'treasure') return `Treasure room · grab the gold · ${fmt(Math.max(0, run.secretT || 0))}`;
   return `Secret · grab what you can · ${fmt(Math.max(0, run.secretT || 0))} · the exit is already open`;
 }
@@ -117,8 +117,9 @@ export function tickSecretDrain(dt, enterSecret) {
   if (!s) return;
   s.ring.rotation.y += dt * 1.5;
   s.swirl.material.opacity = 0.45 + 0.25 * Math.sin(G.time * 3);
-  // A treasure drain is a bonus, not a shortcut: it stays sealed (dim) until the level's boss is down.
-  const sealed = s.kind === 'treasure' && !run.bossDone;
+  // Every hidden drain is a level exit, so it stays sealed (dim) until this level's boss is down (Taylor, 2026-10-13:
+  // no exit opens before the boss falls). It used to be a boss-skipping shortcut for all but treasure drains.
+  const sealed = !run.lvlBoss;
   if (sealed) s.swirl.material.opacity = 0.12;
   if (!sealed && Math.hypot(P.x - s.x, P.z - s.z) < 1.3 && Math.abs(P.y - s.y) < 1) {
     puff(s.x, s.y + 0.4, s.z, 0xb070ff, 20, 3);
