@@ -599,7 +599,7 @@ function reachRoofLoot() {
         if (!seen.has(j) && (t === 0 || t === 6) && Math.abs(M.hgt[j] - h0) <= TUNE.climb.hopUp) { seen.add(j); q.push(j); }
       }
     }
-    if (spot) { addClimb(spot); floodRoofs(); continue; }
+    if (spot) { addClimb(spot); floodRoofs(); if (!onRoof(o)) continue; } // the pipe may not reach this tile (roof steps up more than a hop): then set it down
     // No face for a pipe: set it down on the street at the foot of the building.
     const [nx, nz] = nearOpenSpot(o.x, o.z);
     o.x = nx; o.z = nz; o.y = 0;
@@ -970,9 +970,10 @@ export function populate(info) {
     shuffleR(others.slice()).slice(0, 4).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
   }
 
-  // Hidden areas and set dressing.
+  // Hidden areas and set dressing. (seedFrac: a stable 0-1 from a string, so it doesn't shift the level's rng stream.)
   setupHidden(info.hidden || [], !city);
   if (D.secretTo) placeSecretDrain(info.hidden || [], D.secretTo);
+  else if (!D.secret && seedFrac(String(run.seed) + ':treasure') < TUNE.treasure.drainOdds) placeSecretDrain(info.hidden || [], 'treasure'); // some levels hide a drain to a treasure room (seeded: always the same levels)
   markSecrets();
   if (city) { fireEscapes(8); deadEndLoot(info.alleys); }
   clutter(city);
@@ -1127,3 +1128,5 @@ export function applyLighting(D, city) {
   lantern.distance = blackout ? 18 : city ? 16 : 12;
   lampL.forEach(l => l.color.set(D.lamp));
 }
+
+function seedFrac(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }

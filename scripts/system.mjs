@@ -284,7 +284,7 @@ await check('22 levels with fixed seeds, remixes and boss variants', async () =>
     run.district = 0; run.tier = 0; s.setupWorld(s.levelSeed()); const c = hash();
     return { n, same: a === b, differs: a !== c, name, bossV: D.bossV, night: D.night };
   });
-  assert(r.n === 22, `${r.n} levels`);
+  assert(r.n === 23, `${r.n} levels`); // 22 fixed levels + the treasure room
   assert(r.same, 'the same level built twice came out different');
   assert(r.differs, 'a remix has the same layout as its original');
   assert(r.night && r.bossV && /After Dark/.test(r.name), 'remix not set up: ' + JSON.stringify(r));

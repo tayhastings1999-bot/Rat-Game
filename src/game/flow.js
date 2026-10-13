@@ -209,7 +209,17 @@ const leave = go => { if (G.state === 'play') showTally(go); };
 export function enterSewer() {
   leave(() => { meta.sewers = (meta.sewers || 0) + 1; transition(() => { run.layer = 'sewer'; run.tier++; }, () => 'Descending · ' + dName()); });
 }
+/** Now and then, leaving a level drops you into a treasure room first (then on to the next level as normal). */
+function treasureDetour() {
+  const T = TUNE.treasure;
+  if (run.secret || (run.tier || 0) < T.minZone || run.lastTreasure === run.tier || G.testNoTreasure || G.qa || Math.random() >= (G.forceTreasure ? 1 : T.odds)) return false;
+  run.lastTreasure = run.tier;
+  meta.treasures = (meta.treasures || 0) + 1;
+  leave(() => transition(() => { run.secret = 'treasure'; }, () => 'Treasure room!'));
+  return true;
+}
 export function exitRoad() {
+  if (treasureDetour()) return;
   leave(() => transition(() => { run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : '')));
 }
 /** Drop through a hidden drain into a secret zone (the level's boss is skipped). */
@@ -224,6 +234,7 @@ export function exitSecret() {
 export function exitLadder() {
   // A sewer-realm run (started from the hub) stays underground: sewer progress no longer waits on city loops.
   if (run.realm === 'sewer') { leave(() => transition(() => { run.sewerIdx++; run.tier++; }, () => 'Deeper · ' + dName())); return; }
+  if (treasureDetour()) return;
   leave(() => transition(() => { run.layer = 'surface'; run.district++; run.sewerIdx++; run.tier++; }, () => 'Back on the streets · ' + dName()));
 }
 
