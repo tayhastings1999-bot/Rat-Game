@@ -6,12 +6,13 @@ import { puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { toW, floorY } from '../world/grid.js';
 import { curD } from '../data/world.js';
-import { RUNES, GEAR, runeCount, finalOpen, FINAL_LEVEL } from '../data/runes.js';
+import { RUNES, GEAR, runeCount, finalOpen, FINAL_LEVEL, FRAGMENTS, fragCount, greatRune } from '../data/runes.js';
 import { banner } from '../ui/hud.js';
 
 /** Place this level's rune (if it has one this burrow hasn't taken) in the room farthest from the start. */
 export function placeRune(info) {
   W.runes = [];
+  placeFragment(info);
   const D = curD(), R = RUNES.find(r => r.level === D.level);
   if (!R || D.secret || (meta.runes && meta.runes[R.id])) return null;
   const rooms = info.byDist || [], r = rooms[rooms.length - 1];
@@ -31,7 +32,7 @@ export function tickRunes(dt) {
     o.g.rotation.y += dt * 2.5;
     o.g.position.y = o.y + 1 + Math.sin(G.time * 2.5) * 0.15;
     if (Math.hypot(P.x - o.x, P.z - o.z) > 1.2 || Math.abs(P.y - o.y) > 1.6) continue;
-    takeRune(o);
+    (o.frag ? takeFragment : takeRune)(o);
     W.runes.splice(i, 1);
   }
 }
@@ -55,3 +56,39 @@ export function bossGear(kind) {
 }
 /** The final boss rises in the Court after the Rat King falls, once every rune is held. */
 export const finalDue = kind => kind === 'ratking' && curD().level === FINAL_LEVEL && finalOpen(meta) && !run.finalDone && !run.finalUp;
+
+/** Where this level's fragment hides: a hidden courtyard (city), else a sewer pocket, else the farthest room. */
+export function fragmentSpot(info) {
+  const H = info.hidden || [], P0 = info.pockets || [];
+  // Prefer a guarded lair courtyard (the secret drain takes an unguarded one), and stand off-centre so the two never overlap.
+  const h = H.find(h => h.lair) || H[H.length - 1];
+  if (h) return { tx: h.x + Math.min(h.w - 1, (h.w >> 1) + 1), ty: h.y + Math.min(h.h - 1, (h.h >> 1) + 1), hidden: true };
+  const p = P0[P0.length - 1];
+  if (p) { const c = p[Math.min(p.length - 1, 2)]; return { tx: c[0], ty: c[1], hidden: true }; }
+  const r = (info.byDist || []).slice(-1)[0];
+  return r ? { tx: r.cx, ty: r.cy, hidden: false } : null;
+}
+/** One fragment per regular level, unless this save slot already holds it. */
+export function placeFragment(info) {
+  const D = curD(), F = FRAGMENTS.find(f => f.level === D.level);
+  if (!F || D.secret || (meta.fragments && meta.fragments[F.id])) return null;
+  const sp = fragmentSpot(info);
+  if (!sp) return null;
+  const x = toW(sp.tx), z = toW(sp.ty), y = floorY(x, z);
+  const g = new THREE.Mesh(new THREE.TetrahedronGeometry(0.35), new THREE.MeshBasicMaterial({ color: 0xff5ad8 }));
+  g.position.set(x, y + 1, z);
+  world.add(g);
+  const o = { id: F.id, name: 'Rune Fragment', frag: true, hidden: sp.hidden, x, y, z, g };
+  W.runes.push(o);
+  return o;
+}
+export function takeFragment(o) {
+  bury(o.g);
+  (meta.fragments || (meta.fragments = {}))[o.id] = true;
+  saveMeta();
+  puff(o.x, o.y + 1, o.z, 0xff5ad8, 30, 3);
+  sfx('level');
+  banner(greatRune(meta) ? 'The Great Rune' : 'Rune Fragment', greatRune(meta) ? 'The fragments fuse · something nameless waits beneath the Court' : `Fragments ${fragCount(meta)}/${FRAGMENTS.length}`);
+}
+/** The secret boss rises in the Court once the Great Rune is whole: after the King, or after The Crowned One when that fight is due. */
+export const secretDue = (e) => e.kind === 'ratking' && curD().level === FINAL_LEVEL && greatRune(meta) && !run.secretDone && !run.secretUp && !finalDue(e.kind) && !e.secretBoss;

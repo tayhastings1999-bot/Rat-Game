@@ -211,6 +211,28 @@ await check('runes: picking one up saves it; all of them raise The Crowned One a
   });
   if (!r.gear || r.again || !(r.st1 > r.st0) || !r.one) throw new Error(JSON.stringify(r));
 });
+await check('rune fragments: one per regular level in a hidden area, saved per slot; all of them summon The Nameless Rat', async () => {
+  const r = await S(() => {
+    const s = __scurry, m = s.meta, R = s.runes, keep = JSON.stringify(m.fragments || {});
+    const levels = [...s.LEVELS.CITY_LEVELS, ...s.LEVELS.SEWER_LEVELS].filter(L => !L.secret).map(L => L.id);
+    const covers = levels.every(id => R.FRAGMENTS.some(f => f.level === id)) && R.FRAGMENTS.length === levels.length;
+    m.fragments = {};
+    s.startRun('tank'); s.god(true); s.G.testNoTally = true;
+    const f = (s.W.runes || []).find(o => o.frag);
+    const placed = !!f, hidden = !!(f && f.hidden);
+    if (f) R.takeFragment(f);
+    const sl = s.save.slot, saved = !!(f && sl && (s.readSlot(sl).meta.fragments || {})[f.id]);
+    for (const F of R.FRAGMENTS) m.fragments[F.id] = true;
+    const whole = R.greatRune(m);
+    s.run.secretUp = true; s.G.boss = null; s.spawnBoss(); const b = s.G.boss;
+    const boss = b ? { name: b.name, secret: !!b.secretBoss, mul: b.maxHp } : null;
+    s.run.secretUp = false; s.G.boss = null; s.spawnBoss(); const base = s.G.boss ? s.G.boss.maxHp : 0;
+    m.fragments = JSON.parse(keep); s.saveMeta(); s.G.testNoTally = false; s.god(false); s.menu();
+    return { covers, placed, hidden, saved, whole, boss, ratio: boss && base ? boss.mul / base : 0, want: s.TUNE.runes.secretHp };
+  });
+  if (!r.covers || !r.placed || !r.hidden || !r.whole || !r.boss || !r.boss.secret || Math.abs(r.ratio - r.want) > 0.05) throw new Error(JSON.stringify(r));
+  if (!r.saved) throw new Error('fragment not saved to the slot ' + JSON.stringify(r));
+});
 await check('co-op: two rats, a gamepad moves player 2, party scaling applies', async () => {
   await page.click('[data-pn="2"]');
   for (let i = 0; i < 6 && !/Gamepad 1/.test(await page.textContent('[data-cin="1"]')); i++) await page.click('[data-cin="1"]');
