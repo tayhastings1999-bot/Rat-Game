@@ -272,8 +272,8 @@ export const TUNE = {
   },
   food: {
     // Health drains all the time; food is the only way back.
-    drainBase: 0.5, drainPerZone: 0.1, // HP per second = drainBase + drainPerZone × zone (zone 0 first)
-    drainZone0: 0.3, // the first zone drains gentler
+    drainBase: 0.3, drainPerZone: 0.06, // (was 0.5 + 0.1: levels are ~4x longer now) HP per second = drainBase + drainPerZone × zone (zone 0 first)
+    drainZone0: 0.2, // the first zone drains gentler (was 0.3)
     crumb: 25, wedge: 60, cache: 120, // HP each size restores
     mold: 0.12, moldSewer: 0.25, // chance a drop is moldy (surface, sewer)
     moldPoison: 5, // seconds of poison from eating moldy food
