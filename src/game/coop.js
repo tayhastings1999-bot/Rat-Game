@@ -368,6 +368,7 @@ export function coopDown() {
   P.reviveT = 0;
   P.downT = 0;
   run.hp = 0;
+  run.downs = (run.downs || 0) + 1; // shared party count (the lab's co-op trial reads it)
   P.vx = P.vz = 0;
   dnum(P.x, P.y + 1.8, P.z, 'Down! Stand next to them to revive', 'crit');
   bark(`${ratName()} is down! Get them up!`);

@@ -22,6 +22,7 @@ import { TUNE } from '../tuning.js';
 import { boltTarget } from '../world/setpieces.js';
 import { tryTurboMove } from '../game/turbo.js';
 import { puOn } from '../game/powerups.js';
+import { coop } from '../game/coop.js';
 
 export const keys = {};
 /** On-screen joystick (touch). x = right, y = forward, each -1..1. */
@@ -30,7 +31,8 @@ export const camBasis = () => ({ fx: Math.sin(G.camYaw), fz: Math.cos(G.camYaw),
 
 /** Movement input from keys or the touch stick: [right, forward, magnitude]. */
 function moveInput() {
-  if (stick.active && Math.hypot(stick.x, stick.y) > 0.18) return [stick.x, stick.y, Math.min(1, Math.hypot(stick.x, stick.y) * 1.25)];
+  // The on-screen stick belongs to player 1: in co-op the other rats move only by their own pad or keys.
+  if (stick.active && (!coop.on || coop.active === 0) && Math.hypot(stick.x, stick.y) > 0.18) return [stick.x, stick.y, Math.min(1, Math.hypot(stick.x, stick.y) * 1.25)];
   return [(keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), 1];
 }
 
