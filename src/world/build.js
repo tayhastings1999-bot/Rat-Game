@@ -681,7 +681,11 @@ function clutter(city) {
   shuffleR(open);
   // Clutter goes on open floor, clear of walls and of props already placed (no buried bins).
   const clear = (x, z) => DRY(tAt(Math.floor(x / T + M.W / 2), Math.floor(z / T + M.H / 2))) && !W.plats.some(p => Math.abs(p.x - x) < p.w / 2 + 0.9 && Math.abs(p.z - z) < p.d / 2 + 0.9 && p.y - p.th < 0.5);
+  // Counts below were tuned on the old maps (52-tile city, 40-tile sewer); scale them with floor area so a
+  // bigger map keeps the same density of clutter, and above all of rummageable bins (the main placed food).
+  const AF = (M.W * M.H) / (city ? 52 * 52 : 40 * 40);
   const place = (n, fn) => {
+    n = Math.round(n * AF);
     for (let i = 0; i < n && open.length; i++) {
       const k = open.pop();
       for (let t = 0; t < 4; t++) { const x = toW(k % M.W) + rr(-1.4, 1.4), z = toW((k / M.W) | 0) + rr(-1.4, 1.4); if (clear(x, z)) { fn(x, z); break; } }
