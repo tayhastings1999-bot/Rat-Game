@@ -11,24 +11,30 @@
 // the control tuning and with the idea's tuning, and the report says which one
 // scored higher in T3 (and by how much).
 //
-// Usage: node scripts/lab.mjs [--only=id,id] [--quick] [--no-ab]
+// Usage: node scripts/lab.mjs [--only=id,id] [--quick] [--no-ab] [--trials=path/to/draft.mjs]
+// (--trials runs a draft module's exported TRIALS instead of lab/trials.mjs, to debug a new trial.)
 // Writes scripts/out/lab/report.json and SCORES.md. Exits non-zero when a T1
 // gate fails or a trial scores under its floor (TRIAL.floor, default 60).
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
-import { TRIALS } from './lab/trials.mjs';
+import { TRIALS as ALL } from './lab/trials.mjs';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
 const args = process.argv.slice(2);
 const QUICK = args.includes('--quick');
 const NO_AB = args.includes('--no-ab');
 const ONLY = (args.find(a => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
+const DRAFT = (args.find(a => a.startsWith('--trials=')) || '').slice(9);
+const TRIALS = DRAFT ? (await import(pathToFileURL(resolve(DRAFT)).href)).TRIALS : ALL;
 const OUT = new URL('./out/lab/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
 const exe = process.env.CHROMIUM || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const CI = !!process.env.GITHUB_ACTIONS;
 
-const server = await createServer({ server: { port: 5193, strictPort: true }, logLevel: 'error' });
+const PORT = +process.env.LAB_PORT || 5193; // LAB_PORT lets a second lab run alongside
+const server = await createServer({ server: { port: PORT, strictPort: true }, logLevel: 'error' });
 await server.listen();
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 960, height: 560 } });
@@ -40,8 +46,48 @@ const sleep = ms => page.waitForTimeout(ms);
 const t0 = Date.now();
 const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0)}s]`, ...a);
 
-await page.goto('http://localhost:5193/?debug');
+await page.goto(`http://localhost:${PORT}/?debug`);
 await page.waitForFunction(() => window.__scurry && window.__scurry.qa && document.querySelector('#overlay h1'), null, { timeout: 60000 });
+
+// ---------------------------------------------------------------- pad bot (co-op partners)
+// A small gamepad AI for players 2-4. The co-op frame reads each partner's pad while that rat's
+// state is swapped into the singletons, so the getters below see the partner as __scurry.P.
+// Left stick, first match wins: away from a mob in its face; to a downed teammate (revive); back to
+// player 1 when hurt (under 35% HP); to food when under 60%; to the nearest nest, enemy, or player 1.
+// Right stick: aim at the nearest enemy in range, which also fires.
+await S(() => {
+  window.__padBot = () => {
+    const pick = () => {
+      const s = __scurry, P = s.P, yaw = s.G.camYaw, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw);
+      const stickOf = (x, z) => { const l = Math.hypot(x, z) || 1; x /= l; z /= l; return [x * rx + z * rz, -(x * fx + z * fz)]; };
+      const dist = q => Math.hypot(q.x - P.x, q.z - P.z);
+      let mob = null, md = 1e9, nest = null, nd = 1e9;
+      for (const e of s.W.enemies) {
+        if (e.dead || e.hidden || e.reaper || e.disguise) continue;
+        const d = dist(e);
+        if (e.type === 'nest') { if (d < nd) { nd = d; nest = e; } } else if (d < md) { md = d; mob = e; }
+      }
+      const lead = s.coop.players[0] && s.coop.players[0].P, axes = [0, 0, 0, 0], hpF = s.run.hp / Math.max(1, s.st.maxHp);
+      const down = s.coop.players.filter((p, i) => i !== s.coop.active && p.P && p.P.downed && !p.P.out).map(p => p.P).sort((a, b) => dist(a) - dist(b))[0];
+      const food = hpF < 0.6 ? (s.W.foods || []).filter(f => dist(f) < 15).sort((a, b) => dist(a) - dist(b))[0] : null;
+      let tx = null, tz = null;
+      const to = (q, stop) => { if (dist(q) > stop) { tx = q.x - P.x; tz = q.z - P.z; } };
+      if (mob && md < 3.5) { tx = P.x - mob.x; tz = P.z - mob.z; } // too close: back off
+      else if (down && dist(down) < 30) to(down, 0.8);
+      else if (hpF < 0.35 && lead && dist(lead) > 3) to(lead, 3);
+      else if (hpF < 0.35 && mob && md < 12) { tx = P.x - mob.x; tz = P.z - mob.z; }
+      else if (food) to(food, 0);
+      else if (nest && nd < 40) to(nest, 7);
+      else if (mob && md < 25) to(mob, 7);
+      else if (lead) to(lead, 5);
+      if (tx != null) [axes[0], axes[1]] = stickOf(tx, tz);
+      const aim = mob && md < 10 ? mob : nest && nd < 9 ? nest : null;
+      if (aim) [axes[2], axes[3]] = stickOf(aim.x - P.x, aim.z - P.z);
+      return axes;
+    };
+    return { get axes() { return pick(); }, buttons: [] };
+  };
+});
 
 // ---------------------------------------------------------------- lab context
 /** Every level in the game: [layer, index, secret]. */
@@ -55,15 +101,22 @@ const L = {
   S, sleep, page, QUICK, LEVELS, log,
   errors: () => errors.length,
   /** Start a clean run (no events, no street spawns, no story), on a level if given. */
-  async fresh({ cls = 'tank', level = null, god = false, quiet = true } = {}) {
-    await S(([c, g, q]) => {
+  async fresh({ cls = 'tank', level = null, god = false, quiet = true, players = 1, partners = ['slinger', 'warlock', 'sneak'], difficulty = 'normal', padBots = true } = {}) {
+    await S(([c, g, q, n, pc, d, bots]) => {
       const s = __scurry;
       s.qa.stop();
+      // Co-op (Phase 4): players 2-4 are on gamepads 1-3; with padBots they are driven by the lab's pad bot.
+      for (const k of Object.keys(s.fakePads)) delete s.fakePads[k];
+      s.coop.setup.n = n;
+      s.coop.setup.input = ['kb1', 'pad0', 'pad1', 'pad2'];
+      s.coop.setup.cls = [c, ...pc];
+      for (let i = 1; i < n; i++) s.fakePads[i - 1] = bots ? window.__padBot(i) : { axes: [0, 0, 0, 0], buttons: [] };
+      s.meta.difficulty = d;
       s.startRun(c);
       s.god(g);
       Object.assign(s.run, { scabSeen: true });
       if (q) { s.G.testNoRoles = true; Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); }
-    }, [cls, god, quiet]);
+    }, [cls, god, quiet, players, partners, difficulty, padBots]);
     for (let i = 0; i < 80; i++) { if (await S(() => __scurry.G.state === 'play' && __scurry.run.time >= 0.15)) break; await sleep(80); }
     if (level) {
       await L.level(...level);
@@ -97,7 +150,7 @@ const L = {
     }
     const out = await S(() => {
       const s = __scurry, T = s.qa.telemetry();
-      return { simTime: T.simTime, anomalies: T.anomalies.map(a => a.kind), hurt: T.hurt, dmgTaken: T.dmgTaken, deaths: T.deaths.length, kills: Object.values(T.kills).reduce((a, b) => a + b, 0), hp: s.run.hp, maxHp: s.st.maxHp, level: s.run.level, tier: s.run.tier };
+      return { simTime: T.simTime, anomalies: T.anomalies.map(a => a.kind), hurt: T.hurt, dmgTaken: T.dmgTaken, deaths: T.deaths.length, kills: Object.values(T.kills).reduce((a, b) => a + b, 0), hp: s.run.hp, maxHp: s.st.maxHp, level: s.run.level, tier: s.run.tier, gold: s.run.scrap || 0, downs: s.run.downs || 0, nestsLeft: s.W.enemies.filter(e => e.type === 'nest' && !e.dead).length };
     });
     await S(() => __scurry.qa.stop());
     return { ...out, status };
@@ -105,6 +158,24 @@ const L = {
   /** Set tuning values ({ 'group.key': value }); returns the old ones so they can be put back. */
   async tune(set) {
     return S(set => { const s = __scurry, old = {}; for (const [p, v] of Object.entries(set)) { old[p] = p.split('.').reduce((o, k) => o[k], s.TUNE); s.setTune(p, v); } return old; }, set);
+  },
+  /** Seed Math.random in the page (mulberry32), so A-vs-B fights share one random stream; unseed() puts it back. */
+  async seed(n) {
+    await S(n => {
+      window.__mathRandom ||= Math.random;
+      let a = n >>> 0;
+      Math.random = () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    }, n);
+  },
+  async unseed() { await S(() => { if (window.__mathRandom) Math.random = window.__mathRandom; }); },
+  /** Wipe every save slot and the active slot, so shop and slot trials don't leak into the others. */
+  async resetSaves() {
+    await S(async () => {
+      const st = await import('/src/core/state.js');
+      for (let i = 1; i <= st.SLOTS; i++) { st.loadSlot(i); st.deleteSlot(i); }
+      st.save.slot = 0;
+      __scurry.meta.difficulty = 'normal';
+    });
   },
   /** Static checks on every level (or the ones given): a list of { where, issues }. */
   async staticAll(levels = LEVELS) {
