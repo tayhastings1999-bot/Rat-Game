@@ -15,7 +15,8 @@
 // saved, change how Scab fights you, and decide which endings you can reach:
 // cutting Scab free needs a rat who has learned to go back for others
 // (bonds: freed cages, Pip, sparing Scab, saying sorry).
-import { G, run, st, meta, saveMeta } from '../core/state.js';
+import { G, P, W, run, st, meta, saveMeta } from '../core/state.js';
+import { TUNE } from '../tuning.js';
 import { sfx } from '../audio/audio.js';
 import { CLASSES } from '../data/classes.js';
 import { FACE, facePortrait } from '../entities/rat.js';
@@ -192,8 +193,22 @@ export function play(id, done) {
   queue.push({ id, done });
 }
 /** Called every frame while playing: opens the next queued scene when the game is free. */
+/**
+ * Scenes never open mid-combat: only with no boss fight on and no awake enemy within TUNE.story.calmR.
+ * A queued scene waits for that lull (or the next level start, which is quiet) and Esc still skips it.
+ */
+export function calm() {
+  if (G.boss && !G.boss.dead && G.boss.revealed) return false;
+  if (run.time - (run.dStart || 0) < 4) return true; // a level's first seconds are always quiet (the run/level intro beats)
+  const R = (TUNE.story && TUNE.story.calmR) || 16;
+  for (const e of W.enemies) {
+    if (e.dead || e.type === 'nest' || e.sleep || e.disguise || e.hidden || (e.pred && e.mode === 'patrol')) continue;
+    if (Math.hypot(e.x - P.x, e.z - P.z) < R) return false;
+  }
+  return true;
+}
 export function tickStory() {
-  if (cur || !queue.length || G.state !== 'play') return;
+  if (cur || !queue.length || G.state !== 'play' || !calm()) return;
   const q = queue.shift();
   open(q.id, q.done);
 }
@@ -383,4 +398,4 @@ export function journalHTML() {
 export function resetStory() { meta.story = null; S(); save(); }
 
 /** Debug/test handle. */
-export const storyApi = { play, advance, skip, choose, chapter, story: S, onBossDeath, onScabCaught, onCage, scabMode, inScene, resetStory, tickStory, setChapter(n) { S().ch = n; save(); } };
+export const storyApi = { play, advance, skip, choose, chapter, story: S, onBossDeath, onScabCaught, onCage, scabMode, inScene, resetStory, tickStory, calm, setChapter(n) { S().ch = n; save(); } };

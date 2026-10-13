@@ -10,6 +10,7 @@ import { near, hit, aoe } from './combat.js';
 import { TUNE } from '../tuning.js';
 import { breakFoodAt } from '../game/food.js';
 import { puOn } from '../game/powerups.js';
+import { coop } from '../game/coop.js';
 
 /** Melee step-in: close most of the gap to a target just outside reach. */
 function stepIn(t, R) {
@@ -56,7 +57,7 @@ export function shoot(x, y, z, dx, dy, dz, spd, dmg, pierce, src, o = {}) {
   W.pproj.push({
     x, y, z, vx: dx / d * spd, vy: dy / d * spd, vz: dz / d * spd, spd,
     life: (o.life || 0.75) * (pr ? st.range : 1), dmg, pierce, src, hs: new Set(), col: o.col || 0xf4efe6,
-    homing: o.homing || (pr && st.homing), split: pr && st.split && !o.child, size: o.size || 1 + (pr ? st.shotSize : 0) * (o.child ? 0.5 : 1), fx: pr, bounce: o.bounce || 0,
+    homing: o.homing || (pr && st.homing), split: pr && st.split && !o.child, size: o.size || 1 + (pr ? st.shotSize : 0) * (o.child ? 0.5 : 1), fx: pr, bounce: o.bounce || 0, who: coop.on ? coop.active : 0,
   });
   if (o.arc) { const p = W.pproj[W.pproj.length - 1]; p.vy += 2.2; p.g = 9; }
   // Splitclaw: every primary shot fans out three ways.

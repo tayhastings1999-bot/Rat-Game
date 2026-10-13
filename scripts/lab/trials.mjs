@@ -6,6 +6,8 @@
 //   ab  optional idea to compare against the control: { name, set: { 'tune.path': value } }
 // L is the lab context (fresh, level, play, tune, staticAll, S, sleep); see lab.mjs.
 
+import { TRIALS_P4 } from './trials-p4.mjs';
+
 // Levels by name, as [layer, index, secret] (data/levels.js).
 const CITY = i => ['surface', i, null], SEWER = i => ['sewer', i, null];
 const RUST_NIGHT = CITY(6), FROZEN = SEWER(3), CINDER = CITY(0), TOXIC = SEWER(4);
@@ -741,4 +743,5 @@ export const TRIALS = [
       bands: { meanScore: [30, 75], spread: [5, 50, 0.5] },
     },
   },
+  ...TRIALS_P4,
 ];
