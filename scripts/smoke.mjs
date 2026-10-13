@@ -61,7 +61,7 @@ await step('load menu', async () => {
   await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
   await page.click('[data-slot="1"]'); // save slot screen comes first
   await page.waitForSelector('.card[data-k="tank"]');
-  await S(() => { __scurry.G.testNoRoles = true; }); // placed lurkers and mimics would ambush scripted steps
+  await S(() => { __scurry.G.testNoRoles = true; __scurry.G.testNoTreasure = true; }); // treasure detours are random; placed lurkers and mimics would ambush scripted steps
   await wait(1500);
   await shot('01-menu');
 });
