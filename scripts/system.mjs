@@ -451,7 +451,7 @@ await check('the tally card dismisses itself in ~2.5 s with no key press', async
 });
 await check('story scenes wait for a lull: never open with an awake enemy close by', async () => {
   await fresh();
-  const r = await S(() => { const s = __scurry; const e = s.spawnEnemy('mawling', s.P.x + 3, s.P.z, { plain: true, force: true }); const busy = s.story.calm(); e.dead = true; e.hp = 0; const quiet = s.story.calm(); return { busy, quiet }; });
+  const r = await S(() => { const s = __scurry; s.run.dStart = s.run.time - 10; const e = s.spawnEnemy('mawling', s.P.x + 3, s.P.z, { plain: true, force: true }); const busy = s.story.calm(); e.dead = true; e.hp = 0; const quiet = s.story.calm(); return { busy, quiet }; });
   assert(r.busy === false && r.quiet === true, JSON.stringify(r));
   return 'gated';
 });

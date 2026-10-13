@@ -195,9 +195,10 @@ export function play(id, done) {
  */
 export function calm() {
   if (G.boss && !G.boss.dead && G.boss.revealed) return false;
+  if (run.time - (run.dStart || 0) < 4) return true; // a level's first seconds are always quiet (the run/level intro beats)
   const R = (TUNE.story && TUNE.story.calmR) || 16;
   for (const e of W.enemies) {
-    if (e.dead || e.type === 'nest' || e.disguise || e.hidden || (e.pred && e.mode === 'patrol')) continue;
+    if (e.dead || e.type === 'nest' || e.sleep || e.disguise || e.hidden || (e.pred && e.mode === 'patrol')) continue;
     if (Math.hypot(e.x - P.x, e.z - P.z) < R) return false;
   }
   return true;
