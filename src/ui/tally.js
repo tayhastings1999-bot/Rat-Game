@@ -2,8 +2,8 @@
 // secret drain) stops on a card that counts up what you did there: nests
 // smashed, the boss, the side job, secrets found, damage taken, time. They
 // add up to a score out of 100 and a grade (S, A, B, C or D, thresholds in
-// TUNE.tally), and the grade pays a gold bonus. Enter, Space, E or the button
-// moves on. Bots and test harnesses skip the card (G.qa / G.testNoTally).
+// TUNE.tally), and the grade pays a gold bonus. The card dismisses itself after
+// TUNE.tally.autoSecs (Enter, Space, E or the button skips it sooner). Bots and test harnesses skip the card (G.qa / G.testNoTally).
 import { fmt } from '../core/util.js';
 import { G, W, run, st } from '../core/state.js';
 import { show, hideOverlay } from './screens.js';
@@ -35,7 +35,7 @@ export function tallyCalc() {
 }
 
 const COL = { S: '#ffd040', A: '#9be06a', B: '#9ad0ff', C: '#d0b0ff', D: '#a89468' };
-let pending = null;
+let pending = null, autoT = null;
 
 /** Show the tally card, then call `next` (the level transition) when the player moves on. */
 export function showTally(next) {
@@ -59,8 +59,11 @@ export function showTally(next) {
       ${row('Time', fmt(t.time), t.part.time, TUNE.tally.wTime)}
     </table>
     <p class="px" style="font-size:13px;color:var(--dim)">${t.kills} kills · ${t.gold} gold picked up${t.foodLost ? ` · ${t.foodLost} food destroyed` : ''}</p>
-    <div class="btns"><button class="btn" id="tallyGo">Onward</button><span class="px" style="font-size:12px;color:var(--dim)">or press Enter</span></div></div>`);
+    <div class="tallybar" style="height:4px;background:#ffffff22;margin:8px 0"><i style="display:block;height:100%;background:var(--gold);width:100%;transition:width ${TUNE.tally.autoSecs}s linear"></i></div>
+    <div class="btns"><button class="btn" id="tallyGo">Onward</button><span class="px" style="font-size:12px;color:var(--dim)">Enter skips</span></div></div>`);
   document.getElementById('tallyGo').onclick = tallyContinue;
+  const bar = document.querySelector('.tallybar i'); requestAnimationFrame(() => requestAnimationFrame(() => { if (bar) bar.style.width = '0%'; }));
+  clearTimeout(autoT); autoT = setTimeout(tallyContinue, TUNE.tally.autoSecs * 1000); // a beat to read it, never a wall
   sfx('level');
   return t;
 }
@@ -70,6 +73,7 @@ export function tallyContinue() {
   if (G.state !== 'tally' || !pending) return;
   const next = pending;
   pending = null;
+  clearTimeout(autoT);
   hideOverlay();
   G.state = 'play';
   next();
