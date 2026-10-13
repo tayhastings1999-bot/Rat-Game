@@ -4,12 +4,6 @@
 const CITY = i => ['surface', i, null];
 
 const clearMobs = L => L.S(() => __scurry.W.enemies.forEach(e => { if (e.type !== 'nest') e.dead = true; }));
-/** A ring of mobs around the rat (types × counts), remembered with their starting HP in window.__ring. */
-const ring = (L, list) => L.S(list => {
-  const s = __scurry, P = s.P, all = list.flatMap(([t, n]) => Array(n).fill(t));
-  window.__ring = [];
-  all.forEach((t, i) => { const a = i / all.length * 6.283, r = 6 + (i % 3) * 2; const e = s.spawnEnemy(t, P.x + Math.sin(a) * r, P.z + Math.cos(a) * r, { plain: true, force: true }); if (e) { e.emT = 0; window.__ring.push([e, e.hp]); } });
-}, list);
 /** A ring of n mobs of one type around the rat (the art trial's crowd). */
 const horde = (L, n, type = 'mawling') => L.S(([n, type]) => {
   const s = __scurry, P = s.P;
@@ -286,10 +280,13 @@ export const TRIALS_P4 = [
           }, [k, spawn]);
           if (!on) notOpened++;
           // Right stick straight ahead (the camera looks down -z, so stick up is world +z): aim and fire.
+          // Damage taken is per second survived: a rat that dies mid-fight would otherwise cap the count at its HP.
           return L.S(() => {
-            const s = __scurry, h0 = s.run.dHurt || 0;
-            s.fakePads[0] = { axes: [0, 0, 0, 1], buttons: [] }; s.qa.stepRaw(6); delete s.fakePads[0]; s.qa.stepRaw(0.1);
-            return { hurt: (s.run.dHurt || 0) - h0, dealt: window.__ring.reduce((a, [e, hp0]) => a + hp0 - (e.dead ? 0 : Math.max(0, e.hp)), 0) };
+            const s = __scurry, h0 = s.run.dHurt || 0; let t = 0;
+            s.fakePads[0] = { axes: [0, 0, 0, 1], buttons: [] };
+            while (t < 6 && s.G.state === 'play') { s.qa.stepRaw(0.1); t += 0.1; }
+            delete s.fakePads[0];
+            return { hurt: Math.round(((s.run.dHurt || 0) - h0) / t), dealt: window.__ring.reduce((a, [e, hp0]) => a + hp0 - (e.dead ? 0 : Math.max(0, e.hp)), 0) };
           });
         };
         const hurt = { plain: [], iron: [] }, dealt = { plain: [], split: [] };
@@ -297,10 +294,10 @@ export const TRIALS_P4 = [
           for (const k of ['plain', 'iron']) hurt[k].push((await fight('sneak', k === 'plain' ? null : k, 'ring')).hurt);
           for (const k of ['plain', 'split']) dealt[k].push(Math.round((await fight('tank', k === 'plain' ? null : k, 'dummies')).dealt));
         }
-        L.log(`    fights · hurt plain ${hurt.plain} iron ${hurt.iron} · damage dealt plain ${dealt.plain} split ${dealt.split}${notOpened ? ` · ${notOpened} flask(s) failed to open` : ''}`);
+        L.log(`    fights · hurt per second plain ${hurt.plain} iron ${hurt.iron} · damage dealt plain ${dealt.plain} split ${dealt.split}${notOpened ? ` · ${notOpened} flask(s) failed to open` : ''}`);
         return { ironHurtRatio: med(hurt.iron) / Math.max(1, med(hurt.plain)), splitDmgRatio: med(dealt.split) / Math.max(1, med(dealt.plain)), plainHurt: med(hurt.plain), flasksOpened: notOpened ? 0 : 1 };
       },
-      bands: { ironHurtRatio: [0.25, 0.6], splitDmgRatio: [1.4, 2.6], plainHurt: [20, 1e4, 0.5], flasksOpened: [1, 1, 0.5] },
+      bands: { ironHurtRatio: [0.25, 0.6], splitDmgRatio: [1.4, 2.6], plainHurt: [3, 1e4, 0.5], flasksOpened: [1, 1, 0.5] },
     },
   },
 
@@ -351,21 +348,30 @@ export const TRIALS_P4 = [
       } },
     ],
     t3: {
-      // Per mode: the iron-hide ring fight (a tank in a zone-4 ring of brutes, spitters, ghouls and ticks,
-      // 20 s, no vial; the mean of several, since on Casual many fights take no hits at all) for how much harder
-      // each mode hits, and average bots on the first two levels for whether Normal and Casual are survivable.
-      // Single level runs swing too much to compare damage.
+      // Per mode: the flask trial's scripted stand-and-fight (a sneak in a zone-4 ring of mawlings and ticks that
+      // attack, holding the right stick to fight back, up to 6 s; damage per second survived, median of a few), which folds in each mode's damage,
+      // attack speed and enemy HP; plus average bots on the first two levels for whether Normal and Casual are
+      // survivable. (Free bot fights swing too much: means of four flipped Insane below Normal between runs.)
       async run(L) {
-        const n = L.QUICK ? 4 : 6, mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+        const n = L.QUICK ? 3 : 5, med = a => { const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
         const hurt = {}, deaths = {};
         for (const d of ['casual', 'normal', 'insane']) {
           hurt[d] = [];
           for (let i = 0; i < n; i++) {
-            await L.fresh({ cls: 'tank', level: CITY(4), difficulty: d });
+            await L.fresh({ cls: 'sneak', level: CITY(4), difficulty: d });
             await clearMobs(L);
-            await ring(L, [['brute', 3], ['spitter', 8], ['ghoul', 6], ['tick', 10]]);
-            await L.S(() => { __scurry.run.vials = 0; });
-            hurt[d].push((await L.play(20, { profile: 'average', goal: 'survive' })).dmgTaken);
+            for (let k = 0; k < 40 && !(await L.S(() => __scurry.G.state === 'play')); k++) await L.sleep(100);
+            hurt[d].push(await L.S(() => {
+              const s = __scurry, P = s.P;
+              for (let j = 0; j < 18; j++) { const a = j / 18 * 6.283, r = 2.5 + (j % 2); const e = s.spawnEnemy(j % 3 ? 'mawling' : 'tick', P.x + Math.sin(a) * r, P.z + Math.cos(a) * r, { plain: true, force: true }); if (e) e.emT = 0; }
+              s.run.vials = 0; P.inv = 0;
+              // Damage per second survived: a rat that dies mid-fight would otherwise cap the count at its HP.
+              const h0 = s.run.dHurt || 0; let t = 0;
+              s.fakePads[0] = { axes: [0, 0, 0, 1], buttons: [] };
+              while (t < 6 && s.G.state === 'play') { s.qa.stepRaw(0.1); t += 0.1; }
+              delete s.fakePads[0];
+              return Math.round(((s.run.dHurt || 0) - h0) / t);
+            }));
           }
         }
         for (const d of ['casual', 'normal']) {
@@ -377,10 +383,11 @@ export const TRIALS_P4 = [
           }
         }
         await L.fresh({});
-        const N = Math.max(1, mean(hurt.normal));
-        return { casualVsNormal: mean(hurt.casual) / N, insaneVsNormal: mean(hurt.insane) / N, normalHurt: Math.round(N), normalDeaths: deaths.normal, casualDeaths: deaths.casual };
+        L.log(`    fights · hurt per second casual ${hurt.casual} normal ${hurt.normal} insane ${hurt.insane}`);
+        const N = Math.max(1, med(hurt.normal));
+        return { casualVsNormal: med(hurt.casual) / N, insaneVsNormal: med(hurt.insane) / N, normalHurt: N, normalDeaths: deaths.normal, casualDeaths: deaths.casual };
       },
-      bands: { casualVsNormal: [0.35, 0.85], insaneVsNormal: [1.4, 2.8], normalHurt: [20, 1e4, 0.5], normalDeaths: [0, 0.5], casualDeaths: [0, 0.01] },
+      bands: { casualVsNormal: [0.35, 0.85], insaneVsNormal: [1.4, 2.8], normalHurt: [3, 1e4, 0.5], normalDeaths: [0, 0.5], casualDeaths: [0, 0.01] },
     },
     ab: { name: 'Insane hits ×1.4 instead of ×1.6', set: { 'difficulty.insane.dmg': 1.4 } },
   },
