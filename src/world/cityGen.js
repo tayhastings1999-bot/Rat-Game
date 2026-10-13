@@ -4,7 +4,7 @@
 import { seedRng, rng, ri, shuffleR } from '../core/util.js';
 import { M, TL, allocMap, gi, inG, tAt, bfs, OPEN, N4 } from './grid.js';
 
-const SIZE = 52;
+const SIZE = 72; // was 52: 10-20 min levels need room for more nests, side streets and hidden areas
 
 export function genCity(seed, D) {
   seedRng(seed);

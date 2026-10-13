@@ -390,9 +390,9 @@ const AI = {
   // The Brood Mother: skitters in bursts round to your back, webs your escape line, egg lobs, leaps and acid rain.
   brood(e, dt, dx, dz, d) {
     e.mvT -= dt;
-    if (e.mvT <= 0) { e.dashOn = !e.dashOn; e.mvT = e.dashOn ? rand(0.3, 0.6) : rand(0.2, 0.5); e.fl = flankPoint(e, 4); }
-    if (e.dashOn && e.fl) {
-      const vx = e.fl.x - e.x, vz = e.fl.z - e.z, l = Math.hypot(vx, vz) || 1, sp = e.spd * 2 * (brainOf(e).exposed > 0 ? 0.5 : 1);
+    if (e.mvT <= 0) { e.dashOn = !e.dashOn; e.mvT = e.dashOn ? rand(0.3, 0.6) : rand(0.2, 0.5); e.flankAt = flankPoint(e, 4); }
+    if (e.dashOn && e.flankAt) {
+      const vx = e.flankAt.x - e.x, vz = e.flankAt.z - e.z, l = Math.hypot(vx, vz) || 1, sp = e.spd * 2 * (brainOf(e).exposed > 0 ? 0.5 : 1);
       moveBody(e, dt, vx / l * sp, vz / l * sp);
       e.ang = Math.atan2(dx, dz);
     } else moveBody(e, dt, 0, 0);
