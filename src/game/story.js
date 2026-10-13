@@ -94,7 +94,8 @@ const SCENES = {
     lines: [
       ['pip', "Wick! I knew you'd come. Bram said you wouldn't."],
       ['you', 'Bram... talked to you?'],
-      ['pip', "He gave me his food. He coughs a lot. He said the King's men are coming with green dust, and that you never go back for anybody."],
+      ['pip', "He gave me his food. He coughs a lot. He said the King's men are coming with green dust."],
+      ['pip', "He said the Nest was next. He said you'd only come if you thought it was his fault."],
       ['you', 'He was wrong.'],
       ['pip', "Can I come with you? I'm small, but I bite."],
     ],
@@ -103,7 +104,8 @@ const SCENES = {
     lines: [
       ['drone', 'UNIT 7. TARGET LIST SUPPLIED BY: THE CROWNED ONE. NEXT TARGET: CINDER ROW. STATUS: EVACUATED (FIRE). RE-TASKING.'],
       ['scab', 'Now you know. The King sells the streets to that thing, one nest at a time, so his Court stays fed.'],
-      ['scab', "I heard them name Cinder Row. Nobody listens to a rat in a cage, so I lit the straw. Fire, you can run from. Poison, you can't."],
+      ['scab', "I'd been running scraps for the Court since the winter we starved. I heard them name Cinder Row."],
+      ['scab', "I told Moss. Nobody listens to a runt. So I lit the straw. Fire, you can run from. Poison, you can't."],
       ['you', 'You could have warned us!'],
       ['scab', "I did. Forty nests ran. Not one of them came back for me, either."],
       ['scab', 'The King dies. Then nobody sells anybody. Help me, or stay out of my way.'],
@@ -120,6 +122,7 @@ const SCENES = {
       ['you', "They can't move, Bram. That isn't a nest. It's a cage with fur."],
       ['scab', "It's a cage you can't fall out of. When I wear the crown, every rat in the city goes into the Knot. Pip. Moss. You."],
       ['scab', '...Me too. Especially me.'],
+      ['scab', "He's a monster, Wick. But nobody in the Knot burned."],
     ],
   },
   knot: {
@@ -163,6 +166,7 @@ const SCENES = {
       ['narr', 'You lift the cracked crown. It is lighter than it looks.'],
       ['you', 'Just until it\'s safe.'],
       ['narr', 'You tie the first tail yourself. Pip watches you the way Bram used to watch the King.'],
+      ['drone', 'UNIT 8. TARGET LIST RECEIVED. SUPPLIED BY: THE CROWNED ONE. SIGNED: WICK.'],
       ['narr', 'Long live the King.'],
     ],
   },
@@ -357,9 +361,9 @@ const BARKS = {
   1: ['Too slow!', 'Finders keepers!', 'That chest? Mine now.', 'Catch me if you can!'],
   2: ['Still running, Wick?', 'Did you tell Pip you heard me?', 'Mind the green stuff. I stole it fresh.', 'You never look back. I counted on that.'],
   3: ['Tick tock, Wick. Pip is waiting.', 'I left you a trail. Poison, mostly.', 'Faster alone, right?'],
-  4: ["How's Pip? Did you go back this time?", 'Still think I set that fire for fun?', 'The man in the yellow mask says hello.'],
+  4: ["How's Pip? Did you go back this time?", 'Still think I set that fire for fun?', 'The yellow mask says hello.'],
   5: ['Boys, say hello to my brother.', "You chose this, Wick.", 'Every chest you lose, the King gets fatter.'],
-  6: ['The Knot is waiting.', 'You could still join us.', "I'm doing this for you, too."],
+  6: ['The Knot is waiting.', 'You could still join us.', "I'm doing this for you, too.", 'When he drops the crown, don\'t touch it, Wick. Leave that to me.'],
 };
 export const scabBark = () => { const b = BARKS[Math.min(6, Math.max(1, S().ch))]; return b[(Math.random() * b.length) | 0]; };
 export const scabLossLine = () => (S().sorry ? "...You said sorry once. I haven't forgotten." : S().spite ? 'Take it, then. You always do.' : "This isn't over, Wick.");
