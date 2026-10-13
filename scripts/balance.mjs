@@ -21,7 +21,7 @@ const LEVELS = [1, 10, 25, 50, 75, 99];
 const rows = await page.evaluate(LEVELS => {
   const s = __scurry, out = [], rnd = Math.random;
   const zoneFor = lv => Math.min(7, Math.floor((lv - 1) / 12)); // ~12 levels per zone (pace.mjs)
-  for (const cls of ['brawler', 'slinger']) for (const shop of [0, 1]) for (const pu of [0, 1]) for (const lv of LEVELS) {
+  for (const cls of ['tank', 'slinger']) for (const shop of [0, 1]) for (const pu of [0, 1]) for (const lv of LEVELS) {
     s.meta.shop = shop ? { str: 3, arm: 3, spd: 3, mag: 3, hide: 5 } : {};
     s.meta.pack = {};
     s.startRun(cls);

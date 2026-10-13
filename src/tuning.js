@@ -96,13 +96,10 @@ export const TUNE = {
   },
   classes: {
     // Base HP, the four stats, and melee life-steal per hit.
-    brawler: { hp: 170, str: 8, spd: 5, arm: 6, mag: 3, leech: 0.3 },
-    plague: { hp: 120, str: 4, spd: 4, arm: 4, mag: 8, leech: 0 },
-    slinger: { hp: 120, str: 5, spd: 8, arm: 4, mag: 4, leech: 0 },
-    warlock: { hp: 100, str: 3, spd: 5, arm: 2, mag: 10, leech: 0 },
-    tank: { hp: 215, str: 6, spd: 3, arm: 9, mag: 4, leech: 0.6 },
+    tank: { hp: 195, str: 6, spd: 3, arm: 8, mag: 4, leech: 0.5 },
+    slinger: { hp: 115, str: 4, spd: 8, arm: 3, mag: 7, leech: 0 },
+    warlock: { hp: 110, str: 3, spd: 5, arm: 2, mag: 10, leech: 0 },
     sneak: { hp: 90, str: 6, spd: 9, arm: 2, mag: 5, leech: 0 },
-    roof: { hp: 95, str: 4, spd: 9, arm: 2, mag: 7, leech: 0 },
   },
   turbo: {
     // A 3-segment meter filled by damage you deal. Hold X + Q or X + G for the turbo
@@ -276,6 +273,7 @@ export const TUNE = {
     low: 0.3, crit: 0.12, // bark below these fractions of max HP
     rearm: 0.5, // re-arm once health is back above this
     showSecs: 2.6,
+    bossSecs: 2.5, // a boss intro is this quick bark and nothing else: no card, no slow-mo, no pause
   },
   sneak: {
     backstab: 1.8, // Shiv damage × from behind

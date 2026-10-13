@@ -32,7 +32,7 @@ export const PROFILES = {
   // Near-perfect reads, dodges through wind-ups, keeps its range, aims true.
   expert: { react: 0.12, dodge: 0.9, kite: 0.9, special: 0.9, sig: 0.9, heal: 0.85, loot: 0.9, aimErr: 0.15, jitter: 0.05, sniff: 0.9, eatAt: 0.6, vialCrowd: 8, turbo: 0.9 },
 };
-const RANGED = { slinger: 1, warlock: 1, plague: 1, roof: 1 };
+const RANGED = { slinger: 1, warlock: 1 };
 
 // ---------- plain-language goals ----------
 /** Turns "reach the manhole" / "kill the boss" / "fail the run" into a goal id. */

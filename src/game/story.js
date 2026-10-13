@@ -26,7 +26,7 @@ import { marks } from './stats.js';
 const LOOKS = {
   scab: { ...CLASSES.sneak, fur: 0x5a4a42, spike: 0x8a2a22, eye: 0xff3a20, gear: 0x4a2422, npc: true }, // a thief's hood
   king: { ...CLASSES.warlock, fur: 0x4a3c36, spike: 0x7a1a1a, eye: 0xff3a20, gear: 0xd8a830, npc: true }, // the cowl, gone gold
-  moss: { ...CLASSES.plague, fur: 0xd0ccc4, spike: 0x8a8478, eye: 0x9ad0ff, gear: 0x6a5a48, npc: true },
+  moss: { ...CLASSES.tank, bulk: 0.95, fur: 0xd0ccc4, spike: 0x8a8478, eye: 0x9ad0ff, gear: 0x6a5a48, npc: true },
   pip: { ...CLASSES.slinger, fur: 0xe0d0b8, spike: 0xb09878, eye: 0xffd070, gear: 0x7a5a3a, npc: true },
 };
 const WHO = {

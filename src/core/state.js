@@ -63,17 +63,43 @@ export const saveSettings = () => saveJSON('scurry.settings', settings);
 // `scurry.activeSlot` remembers the last one played. Settings stay global.
 // Saves from before slots (`scurry.meta`, `scurry.best`, or the v5 keys) move
 // into slot 1 the first time this build loads; the old keys are left in place.
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const SLOTS = 3;
 const slotKey = i => 'scurry.slot' + i;
-const META0 = () => ({ kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0, shop: {}, difficulty: 'normal' });
+const META0 = () => ({ cls: 'tank', coopCls: ['tank', 'slinger', 'warlock', 'sneak'], kills: 0, bosses: 0, maxDistrict: 0, maxSewer: -1, sewers: 0, skin: 0, salvage: 0, runs: 0, shop: {}, difficulty: 'normal' });
 const BEST0 = () => ({ time: 0, kills: 0, district: 0 });
+
+// The final four classes (Oct 2026). Brawler, Plaguebearer and Roof Rat were cut; a save
+// that still names one moves to the closest live role. Kept here (not in data/classes.js)
+// because classes.js imports from this file.
+export const LIVE_CLASSES = ['tank', 'slinger', 'warlock', 'sneak'];
+export const RETIRED_CLASS = { brawler: 'tank', plague: 'warlock', roof: 'slinger' };
+export const liveClassId = k => (LIVE_CLASSES.includes(k) ? k : RETIRED_CLASS[k] || 'tank');
 
 /** Bring any stored slot up to SAVE_VERSION. */
 function migrate(d) {
   if (!d || typeof d !== 'object') return null;
   if (!d.v) d = { v: 1, meta: d, best: BEST0() }; // a bare meta object
   if (d.v < 2) { d.meta = { ...d.meta, shop: d.meta.shop || {} }; d.v = 2; }
+  if (d.v < 3) {
+    // v3: four classes. The picked class (and any older alias for it), the co-op seats and
+    // per-class fur picks move onto a live class; unlock flags for a cut class carry over
+    // to its heir rather than vanishing (the u_ sweep below clears them all anyway now
+    // that every class is open, but a heir never ends up worse off than its cut class).
+    const m = d.meta;
+    m.cls = liveClassId(m.cls || m.lastCls || m.lastClass);
+    delete m.lastCls; delete m.lastClass;
+    if (Array.isArray(m.coopCls)) m.coopCls = m.coopCls.map(liveClassId);
+    if (m.furs && typeof m.furs === 'object') { // { cls: skin index } from older builds: keep the heir's own pick
+      const f = {};
+      for (const [k, v] of Object.entries(m.furs)) { const h = liveClassId(k); if (f[h] == null || k === h) f[h] = v; }
+      m.furs = f;
+    }
+    for (const [k, h] of Object.entries(RETIRED_CLASS)) if (m['u_' + k]) m['u_' + h] = 1;
+    d.v = 3;
+  }
+  d.meta.cls = liveClassId(d.meta.cls);
+  if (Array.isArray(d.meta.coopCls)) d.meta.coopCls = d.meta.coopCls.map(liveClassId);
   // Cut systems leave nothing behind in the save: Nest perks, shortcuts, bought classes,
   // dominance, class unlock flags, and the Daily Run / Ghost Trial boards and ghosts.
   for (const k of ['nest', 'bought', 'startAt', 'dominance', 'domTotal']) delete d.meta[k];

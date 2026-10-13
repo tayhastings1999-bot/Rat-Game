@@ -19,7 +19,7 @@ const calm = () => S(() => { const s = __scurry; s.god(true); Object.assign(s.ru
 const tp = (x, z, y = 0) => S(([x, z, y]) => { const P = __scurry.P; P.x = x; P.z = z; P.y = y; P.vx = P.vz = P.vy = 0; }, [x, z, y]);
 await page.goto('http://localhost:5195/?debug');
 await page.waitForFunction(() => window.__scurry && document.querySelector('#overlay h1'), null, { timeout: 30000 });
-await S(() => { __scurry.G.testNoRoles = true; __scurry.startRun('brawler'); });
+await S(() => { __scurry.G.testNoRoles = true; __scurry.startRun('tank'); });
 await page.waitForTimeout(800);
 for (let d = 0; d < 4; d++) {
   await calm();

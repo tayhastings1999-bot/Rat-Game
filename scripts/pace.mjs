@@ -6,7 +6,7 @@
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
 const MAXT = +(process.argv[2] || 600), PORT = 5194 + (+process.argv[4] || 0);
-const combos = (process.argv[3] || 'average:brawler,average:slinger,novice:brawler,expert:slinger').split(',').map(s => s.split(':'));
+const combos = (process.argv[3] || 'average:tank,average:slinger,novice:tank,expert:slinger').split(',').map(s => s.split(':'));
 const server = await createServer({ server: { port: PORT, strictPort: true }, logLevel: 'error' }); await server.listen();
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] });
 const p = await b.newPage();

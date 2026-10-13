@@ -42,7 +42,7 @@ await shot('01-title');
 await page.click('[data-slot="1"]');
 await page.waitForTimeout(1200);
 await shot('02-nest');
-await page.click('.card[data-k="brawler"]');
+await page.click('.card[data-k="tank"]');
 await page.waitForTimeout(2500);
 await playing(); await settle();
 await horde(10);

@@ -10,7 +10,8 @@ import { genSewer } from '../world/sewerGen.js';
 import { carveDucts } from '../world/ducts.js';
 import { buildWorld, populate, addExit } from '../world/build.js';
 import { curD, dName, isSewer, MODS, levelSeed } from '../data/world.js';
-import { CLASSES, SKINS } from '../data/classes.js';
+import { PRIM } from '../combat/arsenal.js';
+import { CLASSES, SKINS, DEFAULT_CLASS, liveClass } from '../data/classes.js';
 import { zoneScaling, diffMods } from '../combat/combat.js';
 import { need } from './progress.js';
 import { setRat, FACE } from '../entities/rat.js';
@@ -32,7 +33,7 @@ import { setupFinds } from './finds.js';
 import { showTally } from '../ui/tally.js';
 
 export function freshStats(k) {
-  const C = CLASSES[k], melee = C.prim === 'rake' || C.prim === 'gnash';
+  const C = CLASSES[k], melee = !!PRIM[C.prim].melee; // Gnash and Shiv
   return {
     ...derive(k), regen: 0, dmg: 1, area: C.area || 1,
     squeezeMul: 1,
@@ -40,6 +41,7 @@ export function freshStats(k) {
     homing: false, split: false, shotSize: 0, kb: 1, scentMax: 8,
     chew: 1, specCd: 1, foeSpd: 1, salvage: 1, foodMul: 1, healMul: 1,
     meleePrim: melee,
+    primMag: PRIM[C.prim].mag || 0,
   };
 }
 
@@ -79,10 +81,10 @@ export function menu() {
   G.state = 'menu';
   $('hud').style.display = 'none';
   $('bossWrap').style.display = 'none';
-  resetObj(run, { cls: 'brawler', tier: 0, time: 0, nests: 0, mods: [], level: 1, dmgBy: {}, layer: 'surface', district: 0, sewerIdx: 0 });
-  resetObj(st, freshStats('brawler'));
+  resetObj(run, { cls: DEFAULT_CLASS, tier: 0, time: 0, nests: 0, mods: [], level: 1, dmgBy: {}, layer: 'surface', district: 0, sewerIdx: 0 });
+  resetObj(st, freshStats(DEFAULT_CLASS));
   setupWorld('MENU');
-  setRat(CLASSES.brawler);
+  setRat(CLASSES[DEFAULT_CLASS]);
   G.camDist = 11;
   G.camPitch = 0.55;
   P.scent = false;
@@ -90,6 +92,8 @@ export function menu() {
 }
 
 export function startRun(k) {
+  k = liveClass(k); // an old save, link or test naming a cut class gets its heir
+  meta.cls = k; meta.coopCls = coop.setup.cls.map(liveClass); // remembered per burrow (save v3)
   const C = CLASSES[k];
   resetObj(run, {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, dmgBy: {},
@@ -99,7 +103,7 @@ export function startRun(k) {
   });
   resetObj(st, freshStats(k));
   applyShop();
-  Object.assign(P, { sig: null, grab: null, parry: 0, diveArm: 0, turboT: 0, turboArea: 1 });
+  Object.assign(P, { sig: null, parry: 0, turboT: 0, turboArea: 1 });
   G.turboHeld = G.turboKey = false;
   G.turboArmT = 0;
   run.hp = st.maxHp;

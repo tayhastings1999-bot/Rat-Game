@@ -1,17 +1,21 @@
-// Playable rats (all seven open from the start) and fur skins. HP and the four
+// Playable rats (the final four, all open from the start) and fur skins. HP and the four
 // stats (Strength, Speed, Armor, Magic) live in TUNE.classes (src/tuning.js).
-import { meta } from '../core/state.js';
+import { meta, RETIRED_CLASS, liveClassId } from '../core/state.js';
 
 // rc: menu-card accent only, from the palette (players are identified by player colour, not class).
 export const CLASSES = {
-  brawler: { name: 'Gutter Brawler', role: 'Melee', rc: '#ff7a1a', blurb: 'Iron-knuckled and stubborn. Lunges into the swarm, heals on every hit and gets faster with each kill.', prim: 'rake', special: 'slam', fur: 0xbab4a8, spike: 0xc9a860, eye: 0xffa040, gear: 0x6a6672 },
-  plague: { name: 'Plaguebearer', role: 'Area', rc: '#b6ff3b', blurb: 'Lobs blight and bursts it. Anything close starts to rot.', area: 1.2, prim: 'blight', special: 'nova', fur: 0x9a9e8a, spike: 0x8a9a50, eye: 0xc8f060, gear: 0x3e4a2c },
+  tank: { name: 'Sewer Rat', role: 'Tank', rc: '#c9d4e8', blurb: 'Scarred, heavy and nearly unkillable. Gnashes and shoves the horde back by brute force.', prim: 'gnash', special: 'bulwark', fur: 0x5e5044, spike: 0x8a7a60, eye: 0xff6a2a, gear: 0x4a4640, bulk: 1.18 },
   slinger: { name: 'Sewer Slinger', role: 'Ranged', rc: '#e8e4da', blurb: 'Quick feet, quicker stones. Kites the horde and never stops moving.', prim: 'stone', special: 'volley', fur: 0xa08870, spike: 0xa87a48, eye: 0xffc040, gear: 0x6a4a2c },
   warlock: { name: 'Rat Warlock', role: 'Magic', rc: '#7a3cff', blurb: 'Fragile, but the hex bolts find their mark. Blinks out of trouble.', prim: 'hex', special: 'blink', fur: 0x6e6874, spike: 0x8a6ab0, eye: 0xc080ff, gear: 0x2a2234 },
-  tank: { name: 'Sewer Rat', role: 'Tank', rc: '#c9d4e8', blurb: 'Scarred, heavy and nearly unkillable. Gnashes and shoves the horde back by brute force.', prim: 'gnash', special: 'bulwark', fur: 0x5e5044, spike: 0x8a7a60, eye: 0xff6a2a, gear: 0x4a4640, bulk: 1.18 },
   sneak: { name: 'Sewer Sneak', role: 'Evasive', rc: '#5c6474', blurb: 'Slight and quick. Stabs hardest from behind, chokes the horde in smoke, and steps through shadow to get there.', prim: 'shiv', special: 'smoke', fur: 0x4a5048, spike: 0x5a7a60, eye: 0x6affb0, gear: 0x2a3a30, bulk: 0.86 },
-  roof: { name: 'Roof Rat', role: 'Nimble', rc: '#3bf2ff', blurb: 'Light, fast and born on the rooftops. Double-jumps and rains darts from above.', jumps: 1, prim: 'darts', special: 'updraft', fur: 0x3a3438, spike: 0x6a6070, eye: 0x9ad8ff, gear: 0x2a3a4a, bulk: 0.9 },
 };
+
+/** The class a new run, the menu and co-op seats start on. */
+export const DEFAULT_CLASS = 'tank';
+/** Cut classes (Oct 2026) and their heirs: Brawler → Sewer Rat, Plaguebearer → Warlock, Roof Rat → Slinger. */
+export { RETIRED_CLASS };
+/** Any class id, mapped onto one of the four (unknown ids fall back to the default). */
+export const liveClass = liveClassId;
 
 export const SKINS = [
   { name: 'Sewer', over: {} },

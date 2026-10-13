@@ -6,7 +6,7 @@ import { SHOP } from '../data/shop.js';
 import { rank, price, buy, effectText, isPerm, cheatDeath, sellPrice, sell } from '../game/shop.js';
 import { SHOP_TABS } from '../data/shop.js';
 import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
-import { CLASSES, SKINS, skinOk } from '../data/classes.js';
+import { CLASSES, SKINS, skinOk, liveClass } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
 import { PRIM, SPECIALS } from '../combat/arsenal.js';
@@ -77,8 +77,9 @@ export function renderSlotSelect() {
 export function pickSlot(i) {
   if (i < 1 || i > SLOTS) return;
   loadSlot(i);
+  if (Array.isArray(meta.coopCls)) coop.setup.cls = coop.setup.cls.map((c, j) => liveClass(meta.coopCls[j] || c));
   refreshPortraits();
-  setRat(CLASSES.brawler);
+  setRat(CLASSES[liveClass(meta.cls)]);
   renderMenu();
 }
 
@@ -101,7 +102,7 @@ function shopHTML() {
 function coopHTML() {
   const S = coop.setup;
   const row = i => `<div class="cprow px"><b>P${i + 1}</b>
-    <button class="btn ghost" data-ccls="${i}" style="font-size:11px;padding:6px 10px">${CLASSES[S.cls[i]].name}</button>
+    <button class="btn ghost" data-ccls="${i}" style="font-size:11px;padding:6px 10px">${CLASSES[liveClass(S.cls[i])].name}</button>
     <button class="btn ghost" data-cin="${i}" style="font-size:11px;padding:6px 10px">${INPUTS[S.input[i]]}</button></div>`;
   return `<div class="btns" id="coopBtns"><span class="px" style="font-size:12px">Players</span>${[1, 2, 3, 4].map(n => `<button class="btn ${S.n === n ? 'on' : 'ghost'}" data-pn="${n}" style="font-size:11px;padding:8px 12px">${n}</button>`).join('')}
     ${S.n > 1 ? `<span class="px" style="font-size:11px;color:var(--dim)">Shared screen · no friendly fire · enemies get tougher per rat</span>` : ''}</div>
@@ -111,7 +112,7 @@ function bindCoop() {
   const S = coop.setup, ks = Object.keys(CLASSES), ins = Object.keys(INPUTS).filter(k => k !== 'kb1');
   const again = () => { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; };
   ov.querySelectorAll('[data-pn]').forEach(b => { b.onclick = () => { S.n = +b.dataset.pn; again(); }; });
-  ov.querySelectorAll('[data-ccls]').forEach(b => { b.onclick = () => { const i = +b.dataset.ccls; S.cls[i] = ks[(ks.indexOf(S.cls[i]) + 1) % ks.length]; again(); }; });
+  ov.querySelectorAll('[data-ccls]').forEach(b => { b.onclick = () => { const i = +b.dataset.ccls; S.cls[i] = ks[(ks.indexOf(liveClass(S.cls[i])) + 1) % ks.length]; again(); }; });
   ov.querySelectorAll('[data-cin]').forEach(b => { b.onclick = () => { const i = +b.dataset.cin; S.input[i] = ins[(ins.indexOf(S.input[i]) + 1) % ins.length]; again(); }; });
 }
 
@@ -149,7 +150,7 @@ export function renderMenu() {
       meta.skin = i;
       saveMeta();
       refreshPortraits();
-      setRat(CLASSES.brawler);
+      setRat(CLASSES[liveClass(meta.cls)]);
       renderMenu();
     };
   });

@@ -1,7 +1,7 @@
-// Personality: boss intro cards, a story told one line per district, and Scab,
+// Personality: boss intro barks, a story told one line per district, and Scab,
 // the rival rat who keeps turning up to steal your loot.
-import { rand, pick, $ } from '../core/util.js';
-import { G, P, W, run } from '../core/state.js';
+import { rand, pick } from '../core/util.js';
+import { P, W, run } from '../core/state.js';
 import { puff, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { M, gi, inG, toG, toW, tAt, floorY, bfs, OPEN, N8 } from '../world/grid.js';
@@ -11,9 +11,11 @@ import { thiefAI } from './objectives.js';
 import { dropLoot } from './progress.js';
 import { banner } from '../ui/hud.js';
 import { puddle } from '../combat/hazards.js';
+import { bark } from './announcer.js';
+import { TUNE } from '../tuning.js';
 import { scabMode, scabBark, scabLossLine, onScabCaught, tickStory } from './story.js';
 
-// ---------- boss intro cards ----------
+// ---------- boss intro barks ----------
 export const BOSS_LORE = {
   tabby: ['Queen of Cinder Row', '"Little thing. I can hear your heart from here."'],
   murder: ['Lord of a Thousand Wings', '"Every rooftop is mine. Every crumb is mine."'],
@@ -22,19 +24,13 @@ export const BOSS_LORE = {
   brood: ['Mother of the Cisterns', '"My children are so very hungry, little one."'],
   ratking: ['Crowned in Bone', '"You would climb to my throne? Then kneel on the way up."'],
 };
-let cardT = null;
 export function bossIntro(b) {
   const L = b.lore || BOSS_LORE[b.kind] || ['', ''];
-  const el = $('introCard');
-  el.innerHTML = `<div class="px kick">${b.loreKick || L[0]}</div><h1>${b.name}</h1><p>${L[1]}</p>`;
-  el.classList.remove('on');
-  void el.offsetWidth;
-  el.classList.add('on');
-  $('banner').classList.remove('on'); // the card owns the screen for a moment
-  G.slowMo = Math.max(G.slowMo || 0, 0.7);
+  // Taylor's call (Oct 2026): a boss arrives with one quick announcer bark (~2.5 s) and the
+  // fight is already on. No intro card, no slow-mo, no scene: nothing pauses or slows the game.
+  bark(`${b.name}, ${b.loreKick || L[0]}! ${L[1]}`.replace(/, !/, '!'), TUNE.announcer.bossSecs);
   sfx('boss');
-  clearTimeout(cardT);
-  cardT = setTimeout(() => el.classList.remove('on'), 2600);
+  run.bossIntros = (run.bossIntros || 0) + 1;
 }
 
 // ---------- the story, one beat per district ----------

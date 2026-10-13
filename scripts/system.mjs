@@ -41,7 +41,7 @@ const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, `${msg}: ${a} vs
 
 await page.goto('http://localhost:5189/?debug');
 await page.waitForFunction(() => window.__scurry && window.__scurry.qa && document.querySelector('#overlay h1'), null, { timeout: 60000 });
-const fresh = async (cls = 'brawler') => {
+const fresh = async (cls = 'tank') => {
   await S(c => { const s = __scurry; s.qa.stop(); s.G.testNoRoles = true; s.startRun(c); s.god(false); Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, scabSeen: true, lurkT: 1e9 }); s.W.enemies.forEach(e => { if (e.type !== 'nest') e.dead = true; }); }, cls);
   // Wait for play, and for a few frames of game time: the first frames of a fresh district
   // can stall on shader compiles, and spawn tiles and pickups only exist after an update.
@@ -189,14 +189,14 @@ await check('attacks fire only while held, toward the aim point', async () => {
 const gameWait = secs => S(t => new Promise(r => { const end = __scurry.run.time + t; const w = () => (__scurry.run.time >= end || __scurry.G.state !== 'play') ? r() : setTimeout(w, 50); w(); }), secs);
 await check('class stats turn into the numbers the game uses', async () => {
   const bad = [];
-  for (const k of ['brawler', 'plague', 'slinger', 'warlock', 'tank', 'sneak', 'roof']) {
+  for (const k of ['tank', 'slinger', 'warlock', 'sneak']) {
     await fresh(k);
     const r = await S(k => { const s = __scurry, T = s.TUNE, c = T.classes[k], S0 = T.stats; return { st: { hp: s.st.maxHp, sp: s.st.speed, pm: s.st.primMul, mm: s.st.magMul, cd: s.st.cd }, want: { hp: c.hp, sp: S0.spdBase + S0.spdPer * c.spd, pm: S0.strBase + S0.strPer * c.str, mm: S0.magBase + S0.magPer * c.mag, cd: Math.max(0.5, S0.rateBase - S0.ratePer * c.spd) } }; }, k);
     for (const f of ['hp', 'pm', 'mm', 'cd']) if (Math.abs(r.st[f] - r.want[f]) > 0.01) bad.push(`${k}.${f} ${r.st[f]} vs ${r.want[f]}`);
     if (Math.abs(r.st.sp - r.want.sp) > 0.6) bad.push(`${k}.speed ${r.st.sp} vs ${r.want.sp}`); // story marks may add 8%
   }
   assert(!bad.length, bad.join('; '));
-  return '7 classes';
+  return '4 classes';
 });
 await check('turbo: damage fills the meter, tap X blasts, X + Q fires a turbo special', async () => {
   await fresh();
@@ -210,7 +210,8 @@ await check('turbo: damage fills the meter, tap X blasts, X + Q fires a turbo sp
   await page.keyboard.down('KeyX'); await page.keyboard.press('KeyQ'); await page.keyboard.up('KeyX');
   await sleep(150);
   const q = await S(() => ({ t: __scurry.run.turbo, n: __scurry.run.turbos || 0, boosted: __scurry.P.turboT > 0 }));
-  assert(q.n === 1 && Math.abs(q.t - 0.5) < 0.05, `turbo special: ${JSON.stringify(q)}`);
+  // Spent one segment (1.5 → 0.5); the special's own hits (Bulwark's shove) may refill a little.
+  assert(q.n === 1 && q.t >= 0.45 && q.t < 0.75, `turbo special: ${JSON.stringify(q)}`);
   return `filled ${fill.toFixed(2)} segments`;
 });
 await check('Rot Vials: Z throws one, it hits everything around, and you carry at most the max', async () => {
@@ -408,7 +409,7 @@ await check('every level counts 3–6 secrets, and sniffing pings them', async (
   return `${r.m} secrets, ${r.lit} pinged`;
 });
 await check('a level-up grows the class stats and max HP', async () => {
-  await fresh('brawler');
+  await fresh('tank');
   const r = await S(() => { const s = __scurry, hp = s.st.maxHp, m = s.st.primMul; s.addXP(s.run.need + 1); return { lvl: s.run.level, hp: s.st.maxHp - hp, str: s.st.primMul - m }; });
   assert(r.lvl === 2 && r.hp > 0 && r.str > 0, JSON.stringify(r));
   return `+${r.hp} HP`;

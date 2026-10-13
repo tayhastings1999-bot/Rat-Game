@@ -68,6 +68,8 @@ export const nearest = R => {
 
 const MELEE = new Set(['claw', 'whip', 'bite']);
 const MAGIC_SRC = new Set(['special', 'turbo', 'vial']);
+/** The primary's stat multiplier: Strength, blended toward Magic by PRIM[..].mag (Sling Stone 0.5, Hex Bolt 1). */
+export const primScale = () => (st.primMul || 1) * (1 - (st.primMag || 0)) + (st.magMul || 1) * (st.primMag || 0);
 const isMelee = src => MELEE.has(src) || (src === 'primary' && st.meleePrim);
 
 // ---------- player → enemy ----------
@@ -82,8 +84,9 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
     e.bonk = 0.6;
     if (base >= 25) G.shake = Math.max(G.shake, 0.1 * settings.shake);
   }
-  // Strength scales the primary; Magic scales specials, signatures, turbo and vials.
-  let d = base * st.dmg * (src === 'primary' ? st.primMul : MAGIC_SRC.has(src) ? st.magMul : 1);
+  // Strength scales the primary (blended toward Magic by the weapon's `mag` share, st.primMag);
+  // Magic scales specials, signatures, turbo and vials.
+  let d = base * st.dmg * (src === 'primary' ? primScale() : MAGIC_SRC.has(src) ? st.magMul : 1);
   if (src === 'special' && P.turboT > 0) d *= TUNE.turbo.moveDmg;
   if (e.smokeT > 0) d *= TUNE.sneak.smokeVuln; // blinded inside a Smoke Bomb
   const crit = perfectCrit() || Math.random() < st.crit + (buffOn('glowcap') ? 0.25 : 0);
@@ -296,7 +299,7 @@ export function zoneScaling() {
  * start (records the baseline) and after every level-up / stat change.
  */
 export function powerScaling(reset) {
-  const B = TUNE.balance, off = ((st.primMul || 1) + (st.magMul || 1)) / 2, ehp = (st.maxHp || 1) / Math.max(0.05, st.taken || 1);
+  const B = TUNE.balance, off = (primScale() + (st.magMul || 1)) / 2, ehp = (st.maxHp || 1) / Math.max(0.05, st.taken || 1);
   if (reset || !run.pow0) run.pow0 = { off, ehp };
   run.powHp = Math.max(1, Math.pow(off / run.pow0.off, B.hpFollow));
   run.powDmg = Math.max(1, Math.pow(ehp / run.pow0.ehp, B.dmgFollow));

@@ -55,7 +55,7 @@ const L = {
   S, sleep, page, QUICK, LEVELS, log,
   errors: () => errors.length,
   /** Start a clean run (no events, no street spawns, no story), on a level if given. */
-  async fresh({ cls = 'brawler', level = null, god = false, quiet = true } = {}) {
+  async fresh({ cls = 'tank', level = null, god = false, quiet = true } = {}) {
     await S(([c, g, q]) => {
       const s = __scurry;
       s.qa.stop();

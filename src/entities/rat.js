@@ -91,19 +91,9 @@ export function makeRat(C, player = -1) {
     par = s;
   }
   // Class gear.
-  if (C.prim === 'rake') {
-    add(Sp(0.22, 6, 4), metal, 0.28, 0.22, 0.35, body, null, [1, 0.6, 1.1]);
-    add(Co(0.05, 0.25, 4), metal, 0.36, 0.4, 0.35, body, [0, 0, -0.5]);
-    add(Co(0.05, 0.25, 4), metal, 0.3, 0.42, 0.2, body, [0, 0, -0.3]);
-    for (const i of [0, 1]) { add(Bx(0.17, 0.15, 0.22), metal, 0, -0.33, 0.05, legs[i]); add(Co(0.03, 0.14, 3), metal, 0, -0.25, 0.18, legs[i], [PI2, 0, 0]); }
-  }
-  if (C.prim === 'blight' || C.prim === 'hex') {
-    add(Co(0.34, C.prim === 'hex' ? 0.6 : 0.55, 8), gear, 0, 0.16, -0.08, head, [-0.5, 0, 0]);
+  if (C.prim === 'hex') {
+    add(Co(0.34, 0.6, 8), gear, 0, 0.16, -0.08, head, [-0.5, 0, 0]);
     add(new THREE.SphereGeometry(0.5, 9, 6, 0, TAU, 0, Math.PI * 0.5), gear, 0, 0.05, -0.1, body, null, [0.9, 0.9, 1.4]);
-  }
-  if (C.prim === 'blight') {
-    add(Cy(0.01, 0.01, 0.35, 4), metal, 0.36, 0.55, 0.52);
-    add(Sp(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: 0xa8e060 }), 0.36, 0.34, 0.52);
   }
   if (C.prim === 'hex') {
     add(Cy(0.03, 0.035, 1.7, 5), L(0x2e2218), 0.42, 0.85, 0.35);
@@ -125,34 +115,8 @@ export function makeRat(C, player = -1) {
     add(Bx(0.22, 0.08, 0.3), metal, 0, -0.07, 0.24, jaw);
     add(Bx(0.02, 0.18, 0.02), L(0x3a1a1a), 0.08, 0.02, 0.3, head, [0, 0, 0.5]);
   }
-  if (C.prim === 'darts') {
-    // Goggles, a flowing scarf and a dart bandolier.
-    add(new THREE.TorusGeometry(0.08, 0.025, 4, 8), metal, -0.13, 0.08, 0.22, head, [0, 0.3, 0]);
-    add(new THREE.TorusGeometry(0.08, 0.025, 4, 8), metal, 0.13, 0.08, 0.22, head, [0, -0.3, 0]);
-    add(Bx(0.5, 0.04, 0.05), gear, 0, 0.13, 0.08, head);
-    add(new THREE.TorusGeometry(0.3, 0.06, 4, 10), L(0x9ad8ff), 0, -0.12, -0.05, head, [PI2, 0, 0]);
-    add(Bx(0.1, 0.02, 0.6), L(0x9ad8ff), 0.1, 0.3, -0.5, body, [-0.3, 0, 0.2]);
-    add(new THREE.TorusGeometry(0.42, 0.04, 4, 14), gear, 0, 0.05, 0.1, body, [0, PI2, -0.8]);
-    for (let i = 0; i < 5; i++) add(Co(0.02, 0.18, 3), L(0xd8e8ff), Math.sin(i * 0.4 - 0.8) * 0.4, 0.2 + Math.cos(i * 0.4 - 0.8) * 0.2, 0.1, body);
-  }
   // ---- signature silhouettes: one unmistakable shape per class ----
   const flames = [], glider = [];
-  if (C.prim === 'rake') {
-    // Gutter Brawler: a red bandana with trailing knots, and bottle-cap knuckles.
-    const red = L(0xc02a1a);
-    add(new THREE.TorusGeometry(0.24, 0.05, 4, 10), red, 0, 0.1, 0.0, head, [PI2 - 0.25, 0, 0]);
-    add(Bx(0.06, 0.04, 0.28), red, 0.06, 0.12, -0.32, head, [0.5, 0.25, 0]);
-    add(Bx(0.06, 0.04, 0.24), red, -0.05, 0.08, -0.3, head, [0.8, -0.3, 0]);
-    const cap = L(0xd8b040, { map: stoneTex });
-    for (const i of [0, 1]) for (let k = -1; k <= 1; k++) add(Cy(0.06, 0.06, 0.03, 8), cap, k * 0.07, -0.36, 0.17, legs[i], [PI2, 0, 0]);
-    body.scale.set(1.08, 1, 1);
-  }
-  if (C.prim === 'blight') {
-    // Plaguebearer: a bone-white beak mask and bubbling vials strapped on.
-    add(Co(0.13, 0.5, 5), L(0xe8e0cc), 0, -0.02, 0.48, head, [PI2 + 0.15, 0, 0]);
-    for (const s of [-1, 1]) { add(Cy(0.07, 0.07, 0.22, 6), L(0x4a6a2a), s * 0.2, 0.32, -0.25, body); add(Sp(0.07, 5, 4), new THREE.MeshBasicMaterial({ color: 0xb8f060 }), s * 0.2, 0.32, -0.25, body); }
-    flames.push(glow(0xa8e060, 0.4, body, 0.2, 0.48, -0.25, 0.7), glow(0xa8e060, 0.4, body, -0.2, 0.48, -0.25, 0.7));
-  }
   if (C.prim === 'hex') {
     // Rat Warlock: a crown of dripping candle stubs.
     add(new THREE.TorusGeometry(0.17, 0.03, 4, 10), L(0xe8dcc0), 0, 0.5, -0.12, head, [PI2, 0, 0]);
@@ -184,26 +148,6 @@ export function makeRat(C, player = -1) {
     for (let k = 0; k < 4; k++) add(Cy(0.27 - k * 0.05, 0.25 - k * 0.05, 0.16, 6), k % 2 ? sockB : sockA, 0, 0.12 - k * 0.04, -0.06 - k * 0.15, head, [PI2 - 0.4 - k * 0.15, 0, 0]);
     add(Sp(0.07, 5, 4), sockB, 0, -0.06, -0.7, head);
     add(Bx(0.42, 0.06, 0.1), L(0x101010), 0, 0.07, 0.18, head);
-  }
-  if (C.prim === 'darts') {
-    // Roof Rat: glider skin between the legs and a longer whip tail.
-    const skinM = L(0x5a4e5a);
-    for (const s of [-1, 1]) {
-      const m = add(Bx(0.36, 0.025, 0.8), skinM, s * 0.38, -0.12, 0.0, body, [0, 0, s * 0.15]);
-      glider.push(m);
-    }
-    let tp = tail[tail.length - 1];
-    for (let i = 0; i < 3; i++) {
-      const sg = new THREE.Group();
-      sg.position.z = -0.3;
-      const m = new THREE.Mesh(Cy(0.012, 0.016, 0.32, 4), tB);
-      m.rotation.x = PI2;
-      m.position.z = -0.15;
-      sg.add(m);
-      tp.add(sg);
-      tail.push(sg);
-      tp = sg;
-    }
   }
   // ---- wear: scars and a torn ear appear as the rat gets hurt ----
   const scarM = L(0x5a1a1a), wear = [];
