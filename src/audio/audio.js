@@ -3,7 +3,7 @@
 // rolls and a discordant synth bass. Intensity rises with combat and bosses.
 import { rand, chance, pick } from '../core/util.js';
 import { settings } from '../core/state.js';
-import { initStems, stemsOn, updateStems } from './stems.js';
+import { initStems, stemsOn, updateStems, stems, BAR } from './stems.js';
 
 let AC = null, master = null, sfxBus = null, musicBus = null, verb = null, noiseBuf = null, drumBus = null, bassBus = null, ambGain = null;
 const sfxLast = {};
@@ -432,7 +432,15 @@ function playBossStep(s, t, stepLen) {
 function scheduleMusic() {
   if (!AC || AC.state !== 'running') return;
   // Soundtrack v3: the stems carry the music; the procedural score only plays as the fallback.
-  if (stemsOn()) { updateStems(music.want, music.sewer, music.wantBoss, music.menu); music.intensity = music.want; return; }
+  if (stemsOn()) {
+    updateStems(music.want, music.sewer, music.wantBoss, music.menu);
+    // Keep the shared music state current (HUD/debug/tests read it): bars from the stem clock, boss from the wanted state.
+    music.intensity = music.want;
+    music.bar = Math.max(0, Math.floor((AC.currentTime - stems.t0) / BAR));
+    music.bossKind = music.wantBoss ? music.wantBoss.kind : null;
+    music.bossPhase = music.wantBoss ? music.wantBoss.phase : 0;
+    return;
+  }
   if (music.nextT < AC.currentTime - 0.5) music.nextT = AC.currentTime + 0.05;
   while (music.nextT < AC.currentTime + 0.14) {
     const stepLen = 60 / music.bpm / 4;
