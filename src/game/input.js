@@ -5,7 +5,7 @@ import { clamp } from '../core/util.js';
 import { G, P } from '../core/state.js';
 import { canvas } from '../render/renderer.js';
 import { audioInit } from '../audio/audio.js';
-import { CLASSES } from '../data/classes.js';
+import { pickerClasses, classOpen } from '../data/classes.js';
 import { keys, startRoll, toggleLock, useSpecial, pressE } from '../entities/player.js';
 import { startRun, menu } from './flow.js';
 import { toggleScent } from './scent.js';
@@ -52,8 +52,8 @@ export function initInput() {
       if (['Escape', 'KeyP', 'KeyM', 'Tab', 'Enter'].includes(e.code)) resume();
     } else if (s === 'menu') {
       const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'].indexOf(e.code);
-      const k = Object.keys(CLASSES)[i];
-      if (i >= 0 && k) startRun(k);
+      const k = pickerClasses()[i];
+      if (i >= 0 && k && classOpen(k)) startRun(k);
     } else if (s === 'slots') {
       const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
       if (i >= 0) pickSlot(i + 1);

@@ -92,7 +92,7 @@ export function menu() {
 }
 
 export function startRun(k) {
-  k = liveClass(k); // an old save, link or test naming a cut class gets its heir
+  k = liveClass(k); // locked, unknown or an old save, link or test naming a cut class gets its heir
   meta.cls = k; meta.coopCls = coop.setup.cls.map(liveClass); // remembered per burrow (save v3)
   const C = CLASSES[k];
   resetObj(run, {
