@@ -32,7 +32,7 @@ import { eatNearby, drainHealth } from './food.js';
 import { streakTick } from './swarm.js';
 import { useFlask, cycleFlask } from './shop.js';
 import { dnum } from '../fx/fx.js';
-import { callout } from './announcer.js';
+import { callout, bark } from './announcer.js';
 
 /** Co-op state. setup is chosen in the Nest; players exist only during a co-op run. */
 export const coop = {
