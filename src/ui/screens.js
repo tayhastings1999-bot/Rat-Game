@@ -6,7 +6,7 @@ import { SHOP } from '../data/shop.js';
 import { rank, price, buy, effectText, isPerm, cheatDeath, sellPrice, sell } from '../game/shop.js';
 import { SHOP_TABS } from '../data/shop.js';
 import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
-import { CLASSES, SKINS, skinOk, liveClass } from '../data/classes.js';
+import { CLASSES, SKINS, skinOk, liveClass, classOpen, pickerClasses, openClasses } from '../data/classes.js';
 import { MODS, dName } from '../data/world.js';
 import { M } from '../world/grid.js';
 import { PRIM, SPECIALS } from '../combat/arsenal.js';
@@ -109,7 +109,7 @@ function coopHTML() {
     ${S.n > 1 ? `<div class="cpset">${Array.from({ length: S.n - 1 }, (_, j) => row(j + 1)).join('')}</div>` : ''}`;
 }
 function bindCoop() {
-  const S = coop.setup, ks = Object.keys(CLASSES), ins = Object.keys(INPUTS).filter(k => k !== 'kb1');
+  const S = coop.setup, ks = openClasses(), ins = Object.keys(INPUTS).filter(k => k !== 'kb1');
   const again = () => { const y = ov.scrollTop; renderMenu(); ov.scrollTop = y; };
   ov.querySelectorAll('[data-pn]').forEach(b => { b.onclick = () => { S.n = +b.dataset.pn; again(); }; });
   ov.querySelectorAll('[data-ccls]').forEach(b => { b.onclick = () => { const i = +b.dataset.ccls; S.cls[i] = ks[(ks.indexOf(liveClass(S.cls[i])) + 1) % ks.length]; again(); }; });
@@ -129,7 +129,8 @@ export function renderMenu() {
     <div class="btns" id="diffBtns"><span class="px" style="font-size:12px">Difficulty</span>${Object.keys(TUNE.difficulty).map(d => `<button class="btn ${(meta.difficulty || 'normal') === d ? 'on' : 'ghost'}" data-diff="${d}" style="font-size:11px;padding:8px 12px">${d[0].toUpperCase() + d.slice(1)} · gold ×${TUNE.difficulty[d].gold}</button>`).join('')}</div>
     ${coopHTML()}
     <div class="kick px">Pick a rat to start${coop.setup.n > 1 ? ' (player 1)' : ''}</div>
-    <div class="cards">${Object.entries(CLASSES).map(([k, C], i) => `<button class="card" data-k="${k}" style="--rc:${C.rc}">
+    <div class="cards">${pickerClasses().map(k => [k, CLASSES[k]]).map(([k, C], i) => !classOpen(k) ? `<button class="card locked" data-locked="${k}" disabled style="--rc:${C.rc};opacity:.5">
+        <div class="row"><span class="key px">${i + 1}</span><span class="role">Locked</span></div><b>${C.name}</b><span class="d">${C.unlock.hint || '???'}</span></button>` : `<button class="card" data-k="${k}" style="--rc:${C.rc}">
         <div class="row"><span class="key px">${i + 1}</span><span class="role">${C.role}</span></div><img class="por" src="${PORT[k]}" alt="">
         <b>${C.name}</b><span class="d">${C.blurb}</span>
         <span class="s">${TUNE.classes[k].hp} HP · ${PRIM[C.prim].name}</span>

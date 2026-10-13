@@ -99,6 +99,21 @@ await check('every class card is present', async () => {
   const ks = await page.$$eval('.card[data-k]', els => els.map(e => e.dataset.k).join(','));
   if (n !== 4 || ks !== 'tank,slinger,warlock,sneak') throw new Error(`${n} class cards: ${ks}`);
 });
+await check('class unlock hook: secret rats stay hidden, locked rats show locked and cannot start', async () => {
+  const r = await S(() => {
+    const s = __scurry, C = s.CLASSES;
+    C.testrat = { ...C.tank, name: 'Test Rat', unlock: { req: () => false, hint: 'Find the thing' }, secret: true };
+    s.renderMenu();
+    const hidden = !document.querySelector('[data-locked="testrat"],[data-k="testrat"]');
+    C.testrat.secret = false; s.renderMenu();
+    const locked = !!document.querySelector('.card.locked[data-locked="testrat"]') && !document.querySelector('[data-k="testrat"]');
+    const ran = s.liveClass('testrat');
+    delete C.testrat; s.renderMenu();
+    return { hidden, locked, ran };
+  });
+  if (!r.hidden || !r.locked || r.ran !== 'tank') throw new Error(JSON.stringify(r));
+  await page.waitForSelector('.card[data-k="tank"]');
+});
 await check('start a run from the menu', async () => {
   await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
