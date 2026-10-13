@@ -178,8 +178,8 @@ export const TRIALS_P4 = [
       // tally's health part does score full, so its bonus can run one grade high). A permanent stat costs 2×.
       async run(L) {
         let gold = 0, levels = 0, secs = 0;
-        // Runs the average bot can finish: ranged bots stall at an Undersewer nest behind a wall, and a slinger
-        // needs ~8 min for the Murder King (17 HP/s against 8,187), so the tank carries the city runs.
+        // Runs the average bot can finish: ranged bots stalled at an Undersewer nest behind a wall and took many
+        // minutes over the Murder King (a flying boss) when this was written, so the tank carries the city runs.
         const runs = L.QUICK ? [[CITY(0), 'tank', 420]] : [[CITY(0), 'tank', 800], [CITY(0), 'slinger', 500], [CITY(2), 'tank', 600]];
         for (const [lv, cls, limit] of runs) {
           await L.fresh({ cls, level: lv, quiet: false, god: true });
