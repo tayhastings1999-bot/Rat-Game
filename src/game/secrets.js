@@ -67,6 +67,18 @@ export function setupSecret(info) {
     }
     for (let i = 0; i < S.runCaches; i++) { const [x, z] = at(i * 2); addCache(x, 0, z); }
     run.robT = 4; // thieves arrive almost at once
+  } else if (D.secret === 'treasure') {
+    // A short timed bonus room: gold everywhere, no enemies, no thieves. Grab and go.
+    const T = TUNE.treasure;
+    run.secretT = T.time;
+    run.spawnT = run.surgeT = run.lurkT = 1e9;
+    const open = [];
+    for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !M.inside[k] && floorY(toW(k % M.W), toW((k / M.W) | 0)) < 0.5 && Math.hypot(toW(k % M.W) - P.x, toW((k / M.W) | 0) - P.z) < T.radius) open.push(k);
+    for (let i = 0; i < T.piles && open.length; i++) {
+      const k = open.splice((Math.random() * open.length) | 0, 1)[0], x = toW(k % M.W), z = toW((k / M.W) | 0);
+      for (let j = 0; j < T.perPile; j++) scrapDrop(x, floorY(x, z), z);
+    }
+    for (let i = 0; i < T.chests; i++) { const [x, z] = at(i); addChest(x, 0, z, true); }
   } else run.secretT = 0; // the Bone Garden has no clock: the Warrens are the clock
 }
 
@@ -95,6 +107,7 @@ export function secretText() {
   const D = curD();
   if (!D.secret) return null;
   if (D.secret === 'garden') return run.nests > 0 ? `Secret · smash the Warrens · ${run.nests} left · the way out opens when they fall` : 'Secret · the way out is open';
+  if (D.secret === 'treasure') return `Treasure room · grab the gold · ${fmt(Math.max(0, run.secretT || 0))}`;
   return `Secret · grab what you can · ${fmt(Math.max(0, run.secretT || 0))} · the exit is already open`;
 }
 
@@ -104,7 +117,10 @@ export function tickSecretDrain(dt, enterSecret) {
   if (!s) return;
   s.ring.rotation.y += dt * 1.5;
   s.swirl.material.opacity = 0.45 + 0.25 * Math.sin(G.time * 3);
-  if (Math.hypot(P.x - s.x, P.z - s.z) < 1.3 && Math.abs(P.y - s.y) < 1) {
+  // A treasure drain is a bonus, not a shortcut: it stays sealed (dim) until the level's boss is down.
+  const sealed = s.kind === 'treasure' && !run.bossDone;
+  if (sealed) s.swirl.material.opacity = 0.12;
+  if (!sealed && Math.hypot(P.x - s.x, P.z - s.z) < 1.3 && Math.abs(P.y - s.y) < 1) {
     puff(s.x, s.y + 0.4, s.z, 0xb070ff, 20, 3);
     fx('ring', s.x, s.y, s.z, 3, 0xb070ff, 0.5);
     dnum(P.x, P.y + 1.8, P.z, 'A hidden way down', 'info');

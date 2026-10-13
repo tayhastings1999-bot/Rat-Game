@@ -23,7 +23,7 @@ export function dropVial(x, y, z) {
   g.add(body, cork);
   g.position.set(x + rand(-0.4, 0.4), y + 0.4, z + rand(-0.4, 0.4));
   world.add(g);
-  W.vials.push({ x: g.position.x, y, z: g.position.z, g });
+  W.vials.push({ x: g.position.x, y, z: g.position.z, g, t: G.time });
 }
 
 /** Walk over a flask to pick it up (unless your bandolier is full). */
@@ -72,10 +72,11 @@ export function burst(x, y, z, mul = 1) {
 }
 
 /** Your shots and swings set off Rot Vials lying on the floor (a trap you can spring from range). Returns how many. */
-export function popVialsAt(x, z, R, y = null) {
+export function popVialsAt(x, z, R, y = null, grace = 0) {
   let n = 0;
   for (let i = W.vials.length - 1; i >= 0; i--) {
     const v = W.vials[i];
+    if (grace && G.time - (v.t || 0) < grace) continue; // a vial that just dropped can't be set off by the same fight's next hit
     if (Math.hypot(v.x - x, v.z - z) > R + 0.35 || (y != null && Math.abs(v.y - y) > 2.5)) continue;
     bury(v.g);
     W.vials.splice(i, 1);

@@ -280,7 +280,7 @@ export function updateProjectiles(dt) {
     } else if (p.y < floorY(p.x, p.z) - 0.1 || solidAt(p.x, p.y, p.z)) { p.life = 0; spark(p.x, p.y, p.z, 0.7, p.col); continue; }
     // Your shots smash food they touch (and stop there).
     if (W.foods.length && breakFoodAt(p.x, p.z, 0.2, p.y)) { p.life = 0; foodShot(p.who); continue; }
-    if (W.vials.length && popVialsAt(p.x, p.z, 0.25, p.y)) { p.life = 0; continue; }
+    if (W.vials.length && popVialsAt(p.x, p.z, 0.25, p.y, TUNE.vials.popGrace)) { p.life = 0; continue; }
     for (const e of W.enemies) {
       if (e.dead || p.hs.has(e) || e.hidden) continue;
       const dx = e.x - p.x, dz = e.z - p.z, rr = e.r + 0.22 * p.size;
