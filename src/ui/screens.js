@@ -3,7 +3,7 @@ import { journalHTML, CHAPTERS, chapter } from '../game/story.js';
 import { fmt, commas, $, loadJSON } from '../core/util.js';
 import { G, run, meta, best, settings, saveMeta, saveSettings, saveBest, save, SLOTS, readSlot, loadSlot, deleteSlot } from '../core/state.js';
 import { SHOP } from '../data/shop.js';
-import { rank, price, buy, effectText, isPerm, cheatDeath, sellPrice, sell } from '../game/shop.js';
+import { rank, price, buy, effectText, isPerm, cheatDeath, sellPrice, sell, refundOldKeys } from '../game/shop.js';
 import { SHOP_TABS } from '../data/shop.js';
 import { coop, coopDown, coopEnd, INPUTS } from '../game/coop.js';
 import { CLASSES, SKINS, skinOk, liveClass, classOpen, pickerClasses, openClasses } from '../data/classes.js';
@@ -78,6 +78,7 @@ export function renderSlotSelect() {
 export function pickSlot(i) {
   if (i < 1 || i > SLOTS) return;
   loadSlot(i);
+  refundOldKeys(); // an old save's packed Skeleton Keys come back as gold
   if (Array.isArray(meta.coopCls)) coop.setup.cls = coop.setup.cls.map((c, j) => liveClass(meta.coopCls[j] || c));
   refreshPortraits();
   setRat(CLASSES[liveClass(meta.cls)]);

@@ -415,6 +415,10 @@ await check('keys drop only from bosses: elites, nests, chests and bins never dr
   if (r.after !== 1) throw new Error('the boss did not drop exactly one key ' + JSON.stringify(r));
   if (r.shopKey) throw new Error('the shop still sells a key');
 });
+await check('an old save with a packed Skeleton Key gets it back as gold at the shop price', async () => {
+  const r = await S(() => { const s = __scurry; s.meta.pack = { ...(s.meta.pack || {}), key: 2 }; const g0 = s.meta.salvage || 0; const got = s.shop.refundOldKeys(); return { got, d: (s.meta.salvage || 0) - g0, left: s.meta.pack.key, again: s.shop.refundOldKeys(), want: 2 * Math.round(0.2 * s.TUNE.shop.goldPerLevel / 5) * 5 }; });
+  if (r.got !== r.want || r.d !== r.want || r.left || r.again) throw new Error('key refund ' + JSON.stringify(r));
+});
 await check('the manhole and hidden drains stay locked until the level boss falls; padlocks open after', async () => {
   await loadLevel('surface', 0, null);
   const r = await S(() => {
