@@ -508,7 +508,6 @@ export function onBossDeath(e) {
   addChest(e.x, gy, e.z, isSewer());
   dropKey(e.x + 1.5, gy, e.z + 1.5); // the only source of keys
   run.bossDone = true;
-  run.lvlBoss = true; // unlocks the manhole (with the key), padlocked chests and vault gates on this level
   if (e.secretBoss) { run.secretDone = true; run.secretUp = false; meta.secretWins = (meta.secretWins || 0) + 1; }
   if (e.final) { run.finalDone = true; run.finalUp = false; meta.finalWins = (meta.finalWins || 0) + 1; }
   const gear = bossGear(e.kind);
@@ -517,6 +516,7 @@ export function onBossDeath(e) {
   run.bossHit = false;
   if (finalDue(e.kind)) { run.finalUp = true; run.bossDone = false; banner(e.name + ' falls', 'The runes burn… something wears the real crown'); return; } // spawnBoss runs again next step
   if (secretDue(e)) { run.secretUp = true; run.bossDone = false; banner(e.name + ' falls', 'The Great Rune flares… the floor of the Court splits open'); return; }
+  run.lvlBoss = true; // unlocks the manhole (with the key), padlocked chests, vault gates and drains: only once the last boss of the chain is down (Rat 7 P30-1)
   playSting('victory'); // soundtrack v3 "A-men": only on the last boss of the chain, not before The Crowned One / Nameless Rat rise (P25-1)
   openGate();
   const got = checkUnlocks();

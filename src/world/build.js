@@ -623,6 +623,7 @@ function setupHidden(hidden, premium) {
   for (const h of hidden) {
     const cx = toW(h.x + (h.w - 1) / 2), cz = toW(h.y + (h.h - 1) / 2);
     if (h.lair) {
+      ri(0, 2); // keep the level rng stream as it was when a mini-boss was rolled here, so layouts (props, drains, tokens) don't shift (Rat 7 P30-2)
       W.lairs.push({ ...h, cx, cz, woke: false }); // an elite guard pack wakes here (game/update.js updateHidden)
       for (let i = 0; i < 14; i++) {
         const b = mkMesh(Cy(0.07, 0.07, rr(0.5, 1.2), 5), bone, cx + rr(-h.w, h.w) * 1.6, 0.1, cz + rr(-h.h, h.h) * 1.6);
