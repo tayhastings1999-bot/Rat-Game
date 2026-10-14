@@ -442,7 +442,7 @@ function updateSolo(dt) {
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
   // Smashing every nest wakes the boss.
   // The boss wakes when the nests are gone, or after TUNE.nests.bossAfter seconds in the level regardless: nests are
-  // endless (they spawn until destroyed), so a level can't stall on one hidden nest. That caps a level at ~2-4 min.
+  // endless (they spawn until destroyed), so a level can't stall on one hidden nest. bossAfter is 600 s, a ~10 min fallback (P21-1).
   const lvlT = run.time - (run.dStart || 0);
   if (!run.bossDone && !G.boss && (run.nests <= 0 || lvlT > TUNE.nests.bossAfter) && M.spawnTiles.length && (!run.secret || run.secret === 'garden')) spawnBoss(); // the Bone Garden is the one secret zone with a boss
   tickSecret(dt, openGate, exitSecret);
