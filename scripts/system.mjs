@@ -295,7 +295,9 @@ await check('a secret drain leads to a secret zone and on to the next level', as
   const d = await S(() => { const s = __scurry; s.run.district = 3; s.run.tier = 3; s.setupWorld(s.levelSeed()); const e = s.G.secretExit; return e && { x: e.x, z: e.z, y: e.y, kind: e.kind }; });
   assert(d && d.kind === 'vault', 'no drain in Hollow Heights');
   // Sealed until the level's boss is down (keys and exits are boss-gated).
-  const sealed = await S(d => { const s = __scurry, P = s.P; P.x = d.x; P.z = d.z; P.y = d.y; P.vx = P.vz = 0; s.qa.stepRaw(0.3); return !s.run.secret; }, d);
+  await S(d => { const P = __scurry.P; P.x = d.x; P.z = d.z; P.y = d.y; P.vx = P.vz = 0; }, d);
+  await sleep(800); // the live loop runs (stepRaw would hold it)
+  const sealed = await S(() => !__scurry.run.secret && !!__scurry.G.secretExit);
   assert(sealed, 'the drain let the rat out before the boss fell');
   await S(d => { const s = __scurry, P = s.P; s.run.lvlBoss = true; P.x = d.x; P.z = d.z; P.y = d.y; P.vx = P.vz = 0; }, d);
   let sec = null;

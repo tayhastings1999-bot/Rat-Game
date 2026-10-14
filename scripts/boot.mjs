@@ -480,6 +480,7 @@ await check('hidden lairs wake an elite guard pack (no mini-boss) and pay out wh
   if (r.mini) throw new Error('a lair mini-boss still spawns');
   if (r.guards < 1 || !r.elite) throw new Error('no elite guards in the lair ' + JSON.stringify(r));
   if (!r.paid || r.chests < 1) throw new Error('lair hoard missing ' + JSON.stringify(r));
+  await S(() => { __scurry.G.qaHold = false; }); // hand the loop back (stepRaw holds it)
 });
 await check('old single-slot saves move into slot 1', async () => {
   // Park the main page so it is not burning the runner's CPU while the second page loads.
