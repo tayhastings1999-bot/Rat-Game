@@ -294,7 +294,12 @@ await check('a secret drain leads to a secret zone and on to the next level', as
   await fresh();
   const d = await S(() => { const s = __scurry; s.run.district = 3; s.run.tier = 3; s.setupWorld(s.levelSeed()); const e = s.G.secretExit; return e && { x: e.x, z: e.z, y: e.y, kind: e.kind }; });
   assert(d && d.kind === 'vault', 'no drain in Hollow Heights');
+  // Sealed until the level's boss is down (keys and exits are boss-gated).
   await S(d => { const P = __scurry.P; P.x = d.x; P.z = d.z; P.y = d.y; P.vx = P.vz = 0; }, d);
+  await sleep(800); // the live loop runs (stepRaw would hold it)
+  const sealed = await S(() => !__scurry.run.secret && !!__scurry.G.secretExit);
+  assert(sealed, 'the drain let the rat out before the boss fell');
+  await S(d => { const s = __scurry, P = s.P; s.run.lvlBoss = true; P.x = d.x; P.z = d.z; P.y = d.y; P.vx = P.vz = 0; }, d);
   let sec = null;
   for (let i = 0; i < 40 && !sec; i++) { await sleep(100); sec = await S(() => __scurry.G.state === 'play' && __scurry.run.secret); }
   assert(sec === 'vault', 'did not reach the vault');
@@ -314,13 +319,12 @@ await check('the first zone is gentler: slower drain, no Warrens before zone 2',
   assert(r.w === 0, `${r.w} Warrens in zones 0–1`);
   return `${r.rate} HP/s · 0 Warrens`;
 });
-await check('thieves grab a key first', async () => {
+await check('thieves leave keys alone (keys are boss-only) and grab a vial instead', async () => {
   await fresh();
   const r = await S(() => { const s = __scurry; s.run.keys = 1; s.run.vials = 1; s.run.robT = 0; s.run.robber = null; s.tickThieves(0.05); const e = s.run.robber; if (!e) return null; e.x = s.P.x + 0.4; e.z = s.P.z; e.y = s.P.y; s.robberAI(e, 0.02); const took = e.loot && e.loot.key; s.kill(e); return { took, keys: s.run.keys, vials: s.run.vials, back: s.W.keys.length }; });
   assert(r, 'no thief');
-  assert(r.took && r.keys === 0 && r.vials === 1, 'thief did not take the key: ' + JSON.stringify(r));
-  assert(r.back >= 1, 'key not dropped when the thief was caught');
-  return 'key stolen and recovered';
+  assert(!r.took && r.keys === 1, 'thief took the boss key: ' + JSON.stringify(r));
+  return 'key kept';
 });
 await check('a grave wakes the Reaper when you come close', async () => {
   await fresh();
@@ -378,7 +382,7 @@ await check('only marked pipes can be climbed, and each leads to a reachable roo
   assert(r.roofOK, 'a pipe leads to a roof marked unreachable');
   return `${r.n} pipes`;
 });
-await check('keys stack, and a padlocked chest takes one', async () => {
+await check('keys stack; a padlocked chest stays shut until the boss falls, then opens without spending a key', async () => {
   await fresh();
   const r = await S(() => {
     const s = __scurry; s.god(true);
@@ -387,13 +391,13 @@ await check('keys stack, and a padlocked chest takes one', async () => {
     const held = s.run.keys, c = s.W.chests.find(c => c.locked);
     if (!c) return { held };
     s.P.x = c.x + 1; s.P.z = c.z; s.P.y = c.y;
-    s.run.keys = 0; s.pressE(); const shut = !c.open;
-    s.run.keys = 1; s.pressE();
+    s.run.lvlBoss = false; s.pressE(); const shut = !c.open;
+    s.run.lvlBoss = true; s.pressE();
     return { held, shut, open: c.open, left: s.run.keys };
   });
   assert(r.held === 2, 'keys did not stack: ' + r.held);
-  assert(r.shut && r.open && r.left === 0, 'locked chest wrong: ' + JSON.stringify(r));
-  return 'stacked 2, one spent';
+  assert(r.shut && r.open && r.left === 2, 'locked chest wrong: ' + JSON.stringify(r));
+  return 'stacked 2, padlock opened by the boss key ring';
 });
 await check('power-ups run for 25 s and can overlap', async () => {
   await fresh();

@@ -11,7 +11,6 @@ import { floorY } from '../world/grid.js';
 import { warn } from './hazards.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { onBossDeath } from '../entities/bosses.js';
-import { addChest } from '../world/build.js';
 import { streakHit, streakBreak } from '../game/swarm.js';
 import { TUNE } from '../tuning.js';
 import { buffOn } from '../game/forage.js';
@@ -23,7 +22,6 @@ import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
 import { bountyKill } from '../game/events.js';
 import { thiefDown } from '../game/objectives.js';
 import { scabDown } from '../game/personality.js';
-import { banner } from '../ui/hud.js';
 import { die } from '../ui/screens.js';
 import { tryParry } from '../game/signature.js';
 import { turboGain } from '../game/turbo.js';
@@ -198,14 +196,6 @@ export function kill(e) {
   if (e.scab) scabDown(e);
   if (st.meleePrim && !e.boss) { run.blood = Math.min(6, (run.blood || 0) + 1); run.bloodT = 2.5; }
   if (e.corrupt) corruptDeath(e);
-  if (e.mini) {
-    const gy = floorY(e.x, e.z);
-    addChest(e.x, gy, e.z, true);
-    for (let i = 0; i < 12; i++) scrapDrop(e.x, gy, e.z);
-    if (Math.random() < TUNE.keys.miniOdds) dropKey(e.x + 1.2, gy, e.z);
-    banner(e.name + ' slain', 'Its hoard is yours');
-    G.hitStop = Math.max(G.hitStop, 0.2);
-  }
 
   if (e.rival) { addXP(40); rivalDeath(e, scrapDrop); return; }
   if (e.type === 'nest') {
@@ -215,7 +205,6 @@ export function kill(e) {
     addXP(e.xp || 20);
     for (let i = 0; i < 10; i++) scrapDrop(e.x, e.y, e.z);
     if (Math.random() < 0.6) dropFood(e.x, e.y, e.z, 'wedge');
-    if (Math.random() < TUNE.keys.nestOdds) dropKey(e.x + 1, e.y, e.z);
     dnum(e.x, e.y + 2, e.z, 'Nest destroyed', 'info');
     G.shake = 0.35;
     return;
@@ -238,7 +227,6 @@ function corruptDeath(e) {
   if (Math.random() < TUNE.vials.eliteOdds) dropVial(e.x, floorY(e.x, e.z), e.z);
   for (let i = 0; i < 5; i++) scrapDrop(e.x, e.y, e.z);
   for (let i = 0; i < 3; i++) scrapDrop(e.x, e.y, e.z);
-  if (Math.random() < TUNE.keys.eliteOdds) dropKey(e.x, e.y, e.z);
   if (e.corrupt === 'split') {
     for (let i = 0; i < 3; i++) spawnEnemy(e.type, e.x + rand(-1, 1), e.z + rand(-1, 1), { plain: true, sc: 0.75 });
   }

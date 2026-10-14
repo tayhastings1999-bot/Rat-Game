@@ -5,11 +5,11 @@ import { scene, bury } from '../render/renderer.js';
 import { puff, spark, boom, dnum, shieldM } from '../fx/fx.js';
 import { sfx, setMusic } from '../audio/audio.js';
 import { M, G as GRAV, DUCT_TOP, gi, inG, toG, toW, tAt, tileAt, topAt, floorY, solidFor, bfs, nearOpen, OPEN, DRY, forPlatsNear } from '../world/grid.js';
-import { syncObj, pitMat } from '../world/build.js';
-import { isSewer } from '../data/world.js';
+import { syncObj, pitMat, addChest } from '../world/build.js';
+import { isSewer, curD, FAMILIES } from '../data/world.js';
 import { OBJ } from '../data/props.js';
 import { shoot, flasks } from '../combat/arsenal.js';
-import { near, hit, kill, aoe, hurtP } from '../combat/combat.js';
+import { near, hit, kill, aoe, hurtP, scrapDrop } from '../combat/combat.js';
 import { puddle, tickHaz } from '../combat/hazards.js';
 import { stepPlayer, primary, keys, chewTarget, doChew, tickInteractives } from '../entities/player.js';
 import { spawnTick, updateEnemies, spawnEnemy } from '../entities/mobs.js';
@@ -102,21 +102,35 @@ function updateZones(dt) {
   }
 }
 
-/** Hidden lairs wake their mini-boss when the rat steps inside; secret walls show while sniffing. */
+/** Hidden lairs wake an elite guard pack when the rat steps inside (the old lair mini-bosses are gone);
+ *  the hoard drops when the last guard falls. Secret walls show while sniffing. */
 function updateHidden() {
   for (const s of W.secrets) s.g.visible = (P.scent || puOn('glow')) && M.grid[s.k] === 3;
   const gx = toG(P.x), gz = toG(P.z);
   for (const L of W.lairs) {
     if (L.woke || gx < L.x || gz < L.y || gx >= L.x + L.w || gz >= L.y + L.h) continue;
     L.woke = true;
-    const mb = L.mini;
-    const e = spawnEnemy(mb.type, L.cx, L.cz, { elite: true, corrupt: mb.corrupt, sc: 2.1, hpMul: 9 + run.tier * 3, mini: true, name: mb.name });
-    if (e) { e.dmg *= 1.4; e.bar = true; }
-    for (let i = 0; i < 3; i++) spawnEnemy(mb.type === 'brute' ? 'mawling' : mb.type, L.cx + rand(-3, 3), L.cz + rand(-3, 3), { plain: true });
-    banner('Hidden lair · ' + mb.name, 'Kill it for a premium hoard');
-    sfx('boss');
-    G.shake = 0.4;
+    const fams = curD().fam || ['vermin'], F = FAMILIES[fams[randi(0, fams.length - 1)]] || FAMILIES.vermin;
+    L.guards = [];
+    for (let i = 0; i < 4; i++) {
+      const e = spawnEnemy(F.types[Math.min(2, 1 + (i % 2))], L.cx + rand(-3, 3), L.cz + rand(-3, 3), { elite: true, force: true });
+      if (e) L.guards.push(e);
+    }
+    banner('Hidden lair', 'Its guards wake · beat them for the hoard');
+    sfx('screech');
+    G.shake = 0.3;
   }
+  for (const L of W.lairs) {
+    if (!L.woke || L.paid || !L.guards || L.guards.some(e => !e.dead)) continue;
+    L.paid = true;
+    const gy = floorY(L.cx, L.cz);
+    lairHoard(L.cx, gy, L.cz);
+    banner('Lair cleared', 'Its hoard is yours');
+  }
+}
+function lairHoard(x, y, z) {
+  addChest(x, y, z, true);
+  for (let i = 0; i < 12; i++) scrapDrop(x, y, z);
 }
 
 function updateMods(dt) {
@@ -369,7 +383,7 @@ export function updatePickups(dt) {
       run.keys++;
       run.keysGot = (run.keysGot || 0) + 1;
       sfx('key');
-      banner('Sewer key', 'The manhole will open for you · M to find it');
+      banner('Boss key', isSewer() ? 'Padlocks and vault gates open for you now' : 'The manhole will open for you · M to find it');
       return false;
     }
     return true;
@@ -428,9 +442,9 @@ function updateSolo(dt) {
   const cap = spawnTick(dt * (G.boss ? 0.6 : 1) * (carryingWheel() ? 2 : 1));
   // Smashing every nest wakes the boss.
   // The boss wakes when the nests are gone, or after TUNE.nests.bossAfter seconds in the level regardless: nests are
-  // endless (they spawn until destroyed), so a level can't stall on one hidden nest. That caps a level at ~2-4 min.
+  // endless (they spawn until destroyed), so a level can't stall on one hidden nest. bossAfter is 600 s, a ~10 min fallback (P21-1).
   const lvlT = run.time - (run.dStart || 0);
-  if (!run.bossDone && !G.boss && (run.nests <= 0 || lvlT > TUNE.nests.bossAfter) && M.spawnTiles.length && !run.secret) spawnBoss();
+  if (!run.bossDone && !G.boss && (run.nests <= 0 || lvlT > TUNE.nests.bossAfter) && M.spawnTiles.length && (!run.secret || run.secret === 'garden')) spawnBoss(); // the Bone Garden is the one secret zone with a boss
   tickSecret(dt, openGate, exitSecret);
   tickSecretDrain(dt, enterSecret);
   G.spawnCap = cap;

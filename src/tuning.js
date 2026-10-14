@@ -206,8 +206,9 @@ export const TUNE = {
     hp: 4, // max HP per level
   },
   keys: {
-    // Keys stack (HUD count) and open locks: locked chests, locked gates, the manhole.
-    eliteOdds: 0.3, miniOdds: 0.7, chestOdds: 0.2, binOdds: 0.05, nestOdds: 0.15, // drop chances (bosses always drop one)
+    // Keys drop ONLY from bosses (Taylor, 2026-10-13): every level's boss drops one, nothing else does.
+    // The manhole takes a key and opens only after this level's boss is down. Padlocked chests and vault
+    // gates need no key: they open once the level's boss is dead (its key ring opens every lock on the map).
     lockedChests: 2, // chests per level with a padlock (premium loot and a power-up inside)
     gates: 1, // dead ends per level behind a locked gate (a vault: premium chest, power-up, cache)
     lockedGold: 1.5, // locked chests hold this × a premium chest's gold
@@ -263,7 +264,7 @@ export const TUNE = {
     first: 45, every: 80, // seconds until the first thief, then between thieves (±20%)
     speed: 1.6, // × a mawling's speed
     hpMul: 4,
-    takesKeys: 1, // 1 = a key is the first thing a thief grabs
+    takesKeys: 0, // keys are boss-only now, so thieves leave them alone (they take a vial, else gold)
     goldFrac: 0.2, goldMin: 10, // share of carried gold taken when there's no key or vial
     escape: 12, // seconds of fleeing before it's gone for good
     bonus: 12, // extra gold when you catch it

@@ -108,12 +108,12 @@ export const TRIALS_P4 = [
         const r = await L.S(async () => {
           const st = await import('/src/core/state.js'), s = __scurry, T = s.TUNE;
           st.loadSlot(1); s.meta.salvage = 1e6;
-          for (const id of ['hide', 'pack', 'vial', 'key', 'cheese', 'tail', 'fIron']) s.shop.buy(id);
+          for (const id of ['hide', 'pack', 'vial', 'cheese', 'tail', 'fIron']) s.shop.buy(id); // (no Skeleton Key: keys are boss-only)
           s.startRun('tank');
           const out = { hp: s.st.maxHp, wantHp: T.classes.tank.hp + T.shop.hpPer, str: s.run.growth.str, wantStr: s.shop.rank('str') * T.shop.statPer, vials: s.run.vials, keys: s.run.keys, cheese: s.run.cheese, tails: s.run.tails, iron: s.run.flasks.iron, pack: Object.keys(s.meta.pack || {}).filter(k => s.meta.pack[k]).length };
           return out;
         });
-        const ok = Math.abs(r.hp - r.wantHp) < 1e-6 && Math.abs(r.str - r.wantStr) < 1e-6 && r.keys >= 1 && r.cheese === 1 && r.tails === 1 && r.iron === 1 && r.pack === 0;
+        const ok = Math.abs(r.hp - r.wantHp) < 1e-6 && Math.abs(r.str - r.wantStr) < 1e-6 && r.keys === 0 && r.cheese === 1 && r.tails === 1 && r.iron === 1 && r.pack === 0;
         return { ok, detail: JSON.stringify(r) };
       } },
       { name: 'packed items sell back at 75%; permanent upgrades can’t be sold', async run(L) {

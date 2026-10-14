@@ -49,10 +49,10 @@ export function renderSlots() {
 }
 
 function objective() {
-  const key = !isSewer() ? (run.keys ? ' · Manhole unlocked: descend into the sewer' : ' · Manhole locked') : '';
+  const key = !isSewer() ? (run.keys && run.lvlBoss ? ' · Manhole unlocked: descend into the sewer' : ' · Manhole locked until the boss falls') : '';
   const ot = objText(), sec = secretText();
   if (sec) return sec;
-  if (G.exitD) return isSewer() ? 'A ladder leads up to the streets · F to sniff it out' : `The road to ${nextSurfaceName()} is open · F to sniff it out${run.keys ? ' · or take the manhole down' : ''}`;
+  if (G.exitD) return isSewer() ? 'A ladder leads up to the streets · F to sniff it out' : `The road to ${nextSurfaceName()} is open · F to sniff it out${run.keys && run.lvlBoss ? ' · or take the manhole down' : ''}`;
   if (G.boss) return G.boss.revealed ? 'Boss awake' : 'Something big is awake · F to sniff it out';
   if (ot) return ot + ` · Nests left ${run.nests}`;
   return `Smash the nests · ${run.nests} left · clearing them wakes the boss${key}`;

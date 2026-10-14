@@ -121,7 +121,7 @@ export function startRun(k, opt = {}) {
     cls: k, tier: 0, level: 1, xp: 0, need: need(1), kills: 0, dmg: 0, scrap: 0, scrapSpent: 0, time: 0, dmgBy: {},
     specT: 0, primT: 0, lowWarned: false, hp: 0, nests: 0, mods: [], layer: 'surface', district: 0, sewerIdx: 0,
     dStart: 0, bossDone: false, tideT: 0, moonT: 0, moon: false, spawnT: 1.5, surgeT: 55, lullT: 0, seenMobs: {},
-    players: Math.max(1, Math.min(4, coop.setup.n | 0)), growth: shopGrowth(), keys: 0, bosses: 0, minis: 0, turbo: 0, vials: Math.max(0, TUNE.vials.start + (diffMods().vials || 0)), evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, streak: 0, streakT: 0, buffs: {}, forage: 0,
+    players: Math.max(1, Math.min(4, coop.setup.n | 0)), growth: shopGrowth(), keys: 0, lvlBoss: false, bosses: 0, minis: 0, turbo: 0, vials: Math.max(0, TUNE.vials.start + (diffMods().vials || 0)), evT: 50, events: [], lastEv: null, perfects: 0, bossHit: false, streak: 0, streakT: 0, buffs: {}, forage: 0,
   });
   resetObj(st, freshStats(k));
   applyShop();
@@ -182,6 +182,7 @@ function transition(apply, title) {
     run.reaper = run.robber = null; // their meshes go with the old district
     run.reaperT = run.robT = null;
     run.bossDone = false;
+    run.lvlBoss = false; // this level's boss is not down yet: manhole, padlocks and vault gates stay shut
     run.evT = 45;
     run.scabSeen = false;
     run.dStart = run.time;
