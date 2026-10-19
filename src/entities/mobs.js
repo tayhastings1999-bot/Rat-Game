@@ -597,6 +597,8 @@ export function updateEnemies(dt0, cap) {
     if (e.robber) { robberAI(e, dt); continue; }
     if (e.scab) continue; // personality.js runs Scab
     if (e.corrupt) tickCorrupt(e, dt);
+    // Swarm prototype bait: lured mobs chase the thrown rats instead of you.
+    if (e.lureT > 0) { e.lureT -= dt; if (!e.boss && !e.pred && Math.hypot(e.lureX - e.x, e.lureZ - e.z) > 0.6) { seekPoint(e, dt, e.lureX, e.lureZ, e.spd * 1.1); continue; } }
     const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz) || 1;
     let custom = false;
     if (e.boss) custom = bossAI(e, dt, dx, dz, d);

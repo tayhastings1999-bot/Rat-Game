@@ -11,6 +11,7 @@ import { rummage } from './game/loot.js';
 import { die, pause, HOWTO, pickSlot, renderMenu } from './ui/screens.js';
 import { buy, rank, price, sellPrice, useFlask, cycleFlask, selFlask, refundOldKeys } from './game/shop.js';
 import { coop, fakePads, asPlayer } from './game/coop.js';
+import { colony, colonyAim, colonyBait, colonySpend, colonyPlace, ratCount } from './game/colony.js';
 import { save, loadSlot, readSlot, settings, saveMeta } from './core/state.js';
 import { stems, mixFor, stemsOn, updateStems, nextBar, BAR } from './audio/stems.js';
 import { callName, callout, foodShot, CALLOUTS } from './game/announcer.js';
@@ -94,7 +95,7 @@ export function debugApi(state) {
       return null;
     },
     cutY: () => cutPlane.constant,
-    hurtP, zoneScaling, powerScaling, objDone, openCage,
+    hurtP, zoneScaling, powerScaling, objDone, openCage, colony, colonyAim, colonyBait, colonySpend, colonyPlace, ratCount,
     forceObjective(k) { setupObjective(state.G.objInfo, k); },
     /** Fire a district event on the next tick. */
     forceEvent(k) { state.run.forceEv = k; state.run.evT = 0; state.run.events.length = 0; },

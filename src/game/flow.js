@@ -32,6 +32,7 @@ import { derive } from './stats.js';
 import { setupFinds } from './finds.js';
 import { showTally } from '../ui/tally.js';
 import { placeRune } from './runes.js';
+import { colony, colonyPlace } from './colony.js';
 
 export function freshStats(k) {
   const C = CLASSES[k], melee = !!PRIM[C.prim].melee; // Gnash and Shiv
@@ -73,6 +74,7 @@ export function setupWorld(seed) {
   P.vx = P.vy = P.vz = 0;
   P.safe = { x: P.x, z: P.z, y: P.y };
   placeRoles(); // after the rat is at the start, so ambushers keep their distance
+  colonyPlace(); // the swarm prototype (?swarm): the colony comes along
   P.poisonT = 0; P.roll = 0; P.rollCd = 0; P.scent = false; P.scentE = st.scentMax; P.carry = null; P.bulwark = 0;
   G.camPos.set(P.x, 12, P.z + 12);
   G.flowT = 0;
@@ -86,6 +88,7 @@ export function menu() {
   resetObj(run, { cls: DEFAULT_CLASS, tier: 0, time: 0, nests: 0, mods: [], level: 1, dmgBy: {}, layer: 'surface', district: 0, sewerIdx: 0 });
   resetObj(st, freshStats(DEFAULT_CLASS));
   setupWorld('MENU');
+  colony.rats.length = 0; // no colony behind the menu
   setRat(CLASSES[DEFAULT_CLASS]);
   G.camDist = 11;
   G.camPitch = 0.55;
@@ -112,6 +115,7 @@ export function checkpoint() {
  * stays underground (ladders lead to the next sewer level). opt.cont resumes meta.cont.
  */
 export function startRun(k, opt = {}) {
+  if (colony.on) coop.setup.n = 1; // the swarm prototype is solo for now
   const cont = opt.cont && meta.cont ? meta.cont : null;
   if (cont) k = cont.cls;
   k = liveClass(k); // locked, unknown or an old save, link or test naming a cut class gets its heir
