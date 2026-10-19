@@ -1,5 +1,6 @@
 // Player movement (run, dodge, climb, squeeze), manual aim and attack with the
 // class primary, specials, lock-on and every E-key interaction.
+import { colony, colonyLeads, colonyAim, colonyBait, colonySpend } from '../game/colony.js';
 import * as THREE from 'three';
 import { angD, $ } from '../core/util.js';
 import { coop, asPlayer, isLead, leadNum } from '../game/coop.js';
@@ -137,6 +138,7 @@ function coneTarget() {
 }
 /** Attack held (mouse button, J, or the touch button), or the arrow keys: fire the primary where you aim. */
 export function primary(dt) {
+  if (colonyLeads()) { colonyAim(); return; } // the swarm prototype: attack surges the colony (with no rats left, the king fights alone)
   run.primT -= dt;
   if (run.primT > 0 || (P.squeeze && !P.inDuct) || P.chewing) return;
   const PR = PRIM[CLASSES[run.cls].prim];
@@ -198,6 +200,7 @@ export function toggleLock() {
 }
 
 export function useSpecial() {
+  if (colony.on) { colonyBait(); return; } // the swarm prototype: Q throws bait
   if (P.squeeze) return;
   const S = SPECIALS[CLASSES[run.cls].special];
   if (tryTurboMove('special', () => S.use())) return; // X held: the turbo version, no cooldown
@@ -254,6 +257,7 @@ export function chewTarget() {
 }
 export function pressE() {
   if (P.carry) { dropCarry(); return; }
+  if (colony.on && colonySpend()) return; // the swarm prototype: send rats to chew a gnaw point
   const u = useTarget();
   // When something to use and something to gnaw are both in reach, E goes to whichever is closer
   // (the wall you're facing counts as very close). The manhole always wins.

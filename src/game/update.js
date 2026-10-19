@@ -1,4 +1,5 @@
 // One simulation step of a running district.
+import { colonyTick } from './colony.js';
 import { rand, randi, clamp, keep, TAU } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene, bury } from '../render/renderer.js';
@@ -432,6 +433,7 @@ function updateSolo(dt) {
   tickSecretDrain(dt, enterSecret);
   G.spawnCap = cap;
   { const back = coopSplit('enemies'); updateEnemies(dt, cap); back(); }
+  colonyTick(dt); // the swarm prototype (?swarm): after the enemies move, so pinned ones stay put
   tickForage(dt);
   streakTick(dt);
   if (G.state !== 'play') return;

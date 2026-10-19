@@ -101,10 +101,11 @@ const L = {
   S, sleep, page, QUICK, LEVELS, log,
   errors: () => errors.length,
   /** Start a clean run (no events, no street spawns, no story), on a level if given. */
-  async fresh({ cls = 'tank', level = null, god = false, quiet = true, players = 1, partners = ['slinger', 'warlock', 'sneak'], difficulty = 'normal', padBots = true } = {}) {
-    await S(([c, g, q, n, pc, d, bots]) => {
+  async fresh({ cls = 'tank', level = null, god = false, quiet = true, players = 1, partners = ['slinger', 'warlock', 'sneak'], difficulty = 'normal', padBots = true, colony = false } = {}) {
+    await S(([c, g, q, n, pc, d, bots, col]) => {
       const s = __scurry;
       s.qa.stop();
+      s.colony.on = col; // the swarm prototype (?swarm)
       // Co-op (Phase 4): players 2-4 are on gamepads 1-3; with padBots they are driven by the lab's pad bot.
       for (const k of Object.keys(s.fakePads)) delete s.fakePads[k];
       s.coop.setup.n = n;
@@ -116,7 +117,7 @@ const L = {
       s.god(g);
       Object.assign(s.run, { scabSeen: true });
       if (q) { s.G.testNoRoles = true; Object.assign(s.run, { evT: 1e9, spawnT: 1e9, surgeT: 1e9, lurkT: 1e9 }); }
-    }, [cls, god, quiet, players, partners, difficulty, padBots]);
+    }, [cls, god, quiet, players, partners, difficulty, padBots, colony]);
     for (let i = 0; i < 80; i++) { if (await S(() => __scurry.G.state === 'play' && __scurry.run.time >= 0.15)) break; await sleep(80); }
     if (level) {
       await L.level(...level);

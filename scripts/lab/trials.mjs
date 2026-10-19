@@ -7,6 +7,7 @@
 // L is the lab context (fresh, level, play, tune, staticAll, S, sleep); see lab.mjs.
 
 import { TRIALS_P4 } from './trials-p4.mjs';
+import { TRIALS_SWARM } from './trials-swarm.mjs';
 
 // Levels by name, as [layer, index, secret] (data/levels.js).
 const CITY = i => ['surface', i, null], SEWER = i => ['sewer', i, null];
@@ -744,4 +745,5 @@ export const TRIALS = [
     },
   },
   ...TRIALS_P4,
+  ...TRIALS_SWARM,
 ];
