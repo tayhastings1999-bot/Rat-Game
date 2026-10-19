@@ -10,6 +10,19 @@ This is the production build of the **Scurry v5** design from Claude Design, plu
 
 Also hosted on claude.ai: https://claude.ai/artifact/Jfhgbb7RbS6iHANvSRPUoD (private to the owner until shared from the page's Share menu). Click a rat to start. Keyboard and mouse, or a gamepad. Touch play is off for now: a phone or tablet shows a notice instead of on-screen controls.
 
+## Swarm prototype
+
+**Play it:** https://tayhastings1999-bot.github.io/Rat-Game/?swarm (or `?swarm` on any local URL). The direction under test: *you are the swarm; the city is your weapon.*
+
+You are the rat king and your colony is your health, your weapon and your currency:
+
+- **It shields you.** A hit on you kills rats near you instead (one per 10 damage). With none near, you take it.
+- **It fights for you.** Hold attack (mouse, J, or the right stick) to surge it at the aim point. Rats latch on, pin anything they outnumber and bite until it drops. Let go and they come home.
+- **You spend it on the city.** Q throws three rats as bait (whatever was on you, and anything near where they land, chases them). E near a gnaw point sends six rats to chew it through: cables drop into puddles, scaffolds and loads come down.
+- **It breeds and it starves.** Kills and food breed rats; past 20, a big colony slowly loses rats to hunger, so its size follows how much you fight and eat. Lose every rat and you fight alone with your class attack.
+
+Nests spawn faster and keep more alive in swarm mode (×2.5 and ×3), so there's a horde to eat. All numbers are in `TUNE.colony` (and the `?debug` panel). Solo only for now; the code is in `src/game/colony.js` and its lab trial in `scripts/lab/trials-swarm.mjs`.
+
 ## Run it
 
 ```bash
@@ -265,7 +278,7 @@ src/
   ui/                HUD, screens (menu, pause, map, death, endings), tally.js (exit tally), debugPanel.js, icons
 scripts/boot.mjs     stage 1 boot gate; system.mjs stage 2 UI sweep, math checks, fuzzing
 scripts/smoke.mjs    headless end-to-end test
-scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs and trials-p4.mjs (src/qa/ holds the bots and level checks)
+scripts/lab.mjs      stage 3 feature lab; trials in scripts/lab/trials.mjs, trials-p4.mjs and trials-swarm.mjs (src/qa/ holds the bots and level checks)
 scripts/baseline.mjs per-phase baseline capture; pace.mjs leveling-pace tool
 scripts/gallery.mjs  animation gallery + frame-cost probe; rats.mjs class line-up; places.mjs set-piece tour
 ```
@@ -274,6 +287,7 @@ Game state lives in a few mutable singletons (`G`, `P`, `W`, `run`, `st`, `meta`
 
 ## Known gaps
 
+- The swarm prototype is solo only; flying enemies can't be engulfed (the colony shields you from them), bosses aren't tuned for it, and rats don't climb (ones left behind scurry back to you).
 - Touch play is off for now (`TOUCH_CONTROLS` in `src/ui/touch.js`). When it was on, the controls suited landscape phones and tablets; portrait was cramped.
 - Phase 4 first pass: three save slots, the Nest (a menu hub between runs) and its gold shop (permanent upgrades, supplies for the next run, power-up flasks). The Nest is a screen, not yet a walkable place.
 - Turbo moves use the normal move's animation with an added pose, aura and class flourish; there are no fully bespoke turbo animations.
