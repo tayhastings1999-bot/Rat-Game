@@ -140,7 +140,7 @@ export function ping(warm = 0) {
   tone(f * 1.5, f * 1.46, 0.3, 'sine', 0.05, true, t + 0.16);
 }
 
-const GAP = { bark: 600, bell: 500, clank: 70, rattle: 400, heal: 300, hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
+const GAP = { squeak: 70, bark: 600, bell: 500, clank: 70, rattle: 400, heal: 300, hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
 export function sfx(n) {
   if (!audioReady()) return;
   const now = performance.now();
@@ -148,6 +148,7 @@ export function sfx(n) {
   sfxLast[n] = now;
   switch (n) {
     case 'hit': nz(rand(800, 1300), 1.4, 0.07, 0.22); break;
+    case 'squeak': tone(rand(2300, 3300), rand(1700, 2500), 0.06, 'square', 0.025); break;
     case 'kill': nz(rand(260, 420), 0.9, 0.18, 0.32); tone(170, 55, 0.16, 'square', 0.05); break;
     case 'slash': nz(2800, 0.6, 0.13, 0.14, 'highpass'); break;
     case 'shoot': tone(560, 260, 0.08, 'square', 0.035); break;

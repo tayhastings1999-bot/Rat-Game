@@ -200,6 +200,27 @@ export const TUNE = {
     outAt: 2.5, outR: 2,
     hpFollow: 0.35, dmgFollow: 0.35,
   },
+  colony: {
+    // The swarm prototype (?swarm in the URL; game/colony.js): you are the rat king and your colony
+    // shields you, fights for you and is what you spend on the city.
+    start: 12, max: 180, // rats at the start of a run; most you can lead
+    spd: 9, // a rat's top speed (the king runs about 7)
+    ring: 0.62, // formation: rat i sits ring·√(i+1) from the king (a sunflower spiral)
+    catchup: 20, // a rat further than this from the king scurries back to it (through the walls)
+    surgeR: 4.5, surgeRange: 16, // surge: rats engulf enemies within surgeR of the aim point; aim point at most surgeRange away
+    latchPer: 6, // most rats on one enemy, × its size (radius / 0.45); bosses ×3
+    biteDps: 7, biteTick: 0.25, // damage per latched rat per second, dealt in ticks
+    pinPer: 3, // latched rats per unit of enemy mass that pin it in place
+    shakeT: 1.1, // seconds between an engulfed enemy's shake-offs (faster with its attack speed)
+    ratHp: 10, // each rat soaks this much: a shake-off or a shielded hit kills ceil(damage / ratHp)
+    shieldR: 4, shieldInv: 0.25, // rats this close to you take hits for you (then this many seconds of grace); none close and you take it
+    breed: 0.5, // rats bred per point of enemy XP killed (fractions carry over)
+    upkeep: 0.005, upkeepFree: 20, // a hungry colony: rats beyond the first upkeepFree wander off at this rate each (per second)
+    feed: 0.12, // rats bred per HP of food eaten
+    spawnMul: 2.5, kidsMul: 3, // nests spawn faster and keep more alive: a real horde, and more to eat
+    bait: 3, baitT: 4, baitR: 12, baitPull: 8, baitCd: 1.5, // Q throws this many rats; enemies within baitR of where they land, or baitPull of you, chase them for baitT seconds
+    gnaw: 6, gnawR: 6, // E sends this many rats to chew a gnaw point within gnawR (they don't come back)
+  },
   growth: {
     // Stat growth on level-up (game/stats.js growStats): points split by the class's own stats.
     perLevel: 0.45, // stat points per level (Strength + Speed + Armor + Magic)

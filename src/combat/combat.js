@@ -1,4 +1,5 @@
 // Damage in both directions, deaths, drops, and zone difficulty scaling.
+import { colony, colonyShield, colonyKill } from '../game/colony.js';
 import * as THREE from 'three';
 import { rand } from '../core/util.js';
 import { G, P, W, run, st, meta, settings } from '../core/state.js';
@@ -141,6 +142,7 @@ export function hurtP(d, from, raw) {
   if (!raw && P.inv > 0) { tryPerfectDodge(); return; }
   if (!raw && G.boss && G.boss.revealed) run.bossHit = true;
   if (G.god) return; // debug god mode (?debug): no damage at all (the 1-HP floor below used to chip through)
+  if (!raw && colonyShield(d, from)) return; // the swarm prototype: rats near the king take the hit
   if (P.bulwark > 0) {
     d *= 0.3;
     if (from && from.hp != null && !from.dead) hit(from, 30, Math.atan2(from.x - P.x, from.z - P.z), 14, 'special');
@@ -170,6 +172,7 @@ export function hurtP(d, from, raw) {
 export function kill(e) {
   if (e.dead) return;
   e.dead = true;
+  colonyKill(e);
   if (G.qa) G.qa.kill(e);
   run.kills++;
   meta.kills++;
@@ -289,6 +292,7 @@ export function zoneScaling() {
   run.bossHpM = D.bossHp * (1 + xp * PP.bossHp);
   run.bossDmgM = D.bossDmg || 1; // boss hits relative to the difficulty's dmg (Insane keeps bosses beatable)
   run.kidsM = 1 + xp * PP.nestKids; // children each nest keeps alive
+  if (colony.on) { run.spawnM *= TUNE.colony.spawnMul; run.kidsM *= TUNE.colony.kidsMul; } // the swarm prototype: more to eat
   run.drainM = D.drain;
   run.foodM = D.food;
   run.atkM *= D.atk || 1;

@@ -24,6 +24,13 @@ export function mkIM(geo, mat, cap, col = true) {
   return m;
 }
 
+// The swarm prototype's rats (game/colony.js): the ratling model as built, before the enemy
+// grade below, so they keep their fur and red (player 1) eyes.
+export const SWARM_CAP = 200;
+const swarmBody = GEO.ratling.body.clone(), swarmGlow = GEO.ratling.glow.clone();
+rigGeo(swarmBody, 'ratling');
+rigGeo(swarmGlow, 'ratling');
+
 export const IMB = {}, IMG = {}, IMO = {};
 for (const k in GEO) { gradeBody(GEO[k].body); gradeGlow(GEO[k].glow); rigGeo(GEO[k].body, k); rigGeo(GEO[k].glow, k); }
 for (const k of MOB_GEOS) {
@@ -37,6 +44,15 @@ for (const k of MOB_GEOS) {
   IMO[k].count = 0;
   scene.add(IMO[k]);
 }
+
+export const swarmIM = mkIM(swarmBody, rigMat(bodyMat(), 'ratling'), SWARM_CAP);
+export const swarmGlowIM = mkIM(swarmGlow, rigMat(new THREE.MeshBasicMaterial({ vertexColors: true }), 'ratling'), SWARM_CAP, false);
+rigPool(swarmIM, swarmGlowIM, SWARM_CAP);
+export const swarmIMO = new THREE.InstancedMesh(swarmBody, rigMat(outlineMat(TUNE.art.outline), 'ratling'), SWARM_CAP);
+swarmIMO.instanceMatrix = swarmIM.instanceMatrix;
+swarmIMO.frustumCulled = false;
+swarmIMO.count = 0;
+scene.add(swarmIMO);
 
 /**
  * A single rigged creature mesh (bosses, owls, patrol cats): body plus glow
