@@ -541,21 +541,20 @@ export const TRIALS = [
       } },
     ],
     t3: {
-      // Bots play a level: keys turn up at a steady rate, enough to open a lock or two.
+      // Keys are boss-only (#30): bots playing a level before its boss falls should pick up none (Rat 7 re-QA:
+      // the old 0.25-1.5 keys/min band measured elite/chest/bin/nest drops that no longer exist).
       async run(L) {
-        const m = { keysPerMin: 0 };
+        const m = { keysBeforeBoss: 0 };
         const runs = [[CITY(1), 'tank'], [SEWER(1), 'slinger']];
         for (const [lv, cls] of runs) {
           await L.fresh({ cls, level: lv, quiet: false });
-          const r = await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
-          const got = await L.S(() => __scurry.run.keysGot || 0);
-          m.keysPerMin += got / Math.max(0.25, r.simTime / 60) / runs.length;
+          await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
+          m.keysBeforeBoss += await L.S(() => (__scurry.run.lvlBoss ? 0 : __scurry.run.keysGot || 0));
         }
         return m;
       },
-      bands: { keysPerMin: [0.25, 1.5] },
+      bands: { keysBeforeBoss: [0, 0] },
     },
-    ab: { name: 'elites drop keys more often (40%)', set: { 'keys.eliteOdds': 0.4 } },
   },
 
   // ------------------------------------------------------------------ P3: eight timed power-ups
