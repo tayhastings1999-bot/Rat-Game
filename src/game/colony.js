@@ -38,9 +38,12 @@ function addRat(x, z, y) {
   colony.rats.push(r);
   return r;
 }
+/** A surging rat gives up the place it had reserved on its target. */
+const unbind = r => { if (r.mode === 'surge' && r.tgt) r.tgt.colBound = Math.max(0, (r.tgt.colBound || 1) - 1); r.tgt = null; };
 function killRat(r, quiet) {
   const i = colony.rats.indexOf(r);
   if (i < 0) return;
+  unbind(r);
   colony.rats.splice(i, 1);
   run.ratsLost = (run.ratsLost || 0) + 1;
   if (quiet) return;
@@ -204,7 +207,7 @@ export function colonyTick(dt) {
   for (const r of rats.slice()) {
     const idx = i++;
     if (r.mode === 'follow' && at) { r.mode = 'surge'; r.t = -(idx % 30) * 0.012; r.tgt = null; }
-    if (r.mode === 'surge' && !at) { r.mode = 'follow'; if (r.tgt) r.tgt.colBound = Math.max(0, (r.tgt.colBound || 1) - 1); r.tgt = null; }
+    if (r.mode === 'surge' && !at) { unbind(r); r.mode = 'follow'; }
     if (r.y < -3) { killRat(r, true); continue; } // into a pit
     switch (r.mode) {
       case 'follow': {
@@ -217,7 +220,7 @@ export function colonyTick(dt) {
       case 'surge': {
         r.t += dt;
         if (r.t < 0) { move(r, ...slot(idx, rats.length), T.spd, dt); break; }
-        if (r.tgt && (r.tgt.dead || !canLatch(r.tgt))) r.tgt = null;
+        if (r.tgt && (r.tgt.dead || !canLatch(r.tgt))) unbind(r);
         if (!r.tgt && cands) { const e = cands.find(c => c.colRoom > 0); if (e) { r.tgt = e; e.colRoom--; e.colBound = (e.colBound || 0) + 1; } }
         if (r.tgt) {
           const e = r.tgt;
