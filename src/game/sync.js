@@ -1,5 +1,6 @@
 // Pushes simulation state into the scene every frame: instanced mobs,
 // pickups, projectiles, particles, gibs, health bars, and the rat + camera.
+import { syncColony } from './colony.js';
 import * as THREE from 'three';
 import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
@@ -176,6 +177,7 @@ export function sync(dt) {
     IMB[c.type].userData.rB.setXYZW(i, 0, 0, Math.sin(c.t * 30) * 0.6, c.t * 30);
     return true;
   });
+  syncColony(dt); // the swarm prototype's rats
   let onScreenMobs = 0;
   for (const k in cnt) onScreenMobs += cnt[k];
   for (const k in IMB) {

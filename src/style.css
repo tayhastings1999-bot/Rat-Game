@@ -271,3 +271,12 @@ body.combat #contracts{opacity:.25}
 /* the plate keeps abilities + turbo; name/portrait/HP moved to the top panel */
 #plate #portrait,#plate #clsName,#plate .brow:has(#hpFill){display:none}
 @media (max-width:900px){#pbar .pp:nth-child(n+3):not(.on){display:none}#pbar .meta{display:none}}
+/* ---- the swarm prototype's colony count (game/colony.js) ---- */
+#colonyHud{position:fixed;left:calc(14px + env(safe-area-inset-left,0px));top:118px;z-index:5;display:flex;align-items:baseline;gap:8px;pointer-events:none;color:var(--bone);text-shadow:0 2px 0 var(--void),0 0 8px var(--void)}
+#colonyHud b{font-family:Bungee,sans-serif;font-size:44px;line-height:1;color:var(--p1)}
+#colonyHud span{font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+#colonyHud.up b{animation:colUp .35s ease-out}
+#colonyHud.down b{animation:colDown .3s ease-out}
+@keyframes colUp{0%{transform:scale(1.35);color:var(--p4)}100%{transform:scale(1)}}
+@keyframes colDown{0%{transform:translateX(-4px);color:#fff}50%{transform:translateX(4px)}100%{transform:none}}
+body:not(.playing) #colonyHud{display:none}

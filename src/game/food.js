@@ -3,6 +3,7 @@
 // crumbs, cheese wedges and whole caches (TUNE.food). Your own attacks destroy
 // food, so watch where you aim. Some food is moldy: it looks the same, but
 // eating it poisons you instead. Sniff (F) and moldy food shows green.
+import { colonyFeed } from './colony.js';
 import * as THREE from 'three';
 import { rand, angD } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
@@ -92,6 +93,7 @@ function eat(kind, mold, x, y, z) {
   const h = Math.round(heal(kind) * st.foodMul * st.healMul * (run.foodM || 1));
   run.hp = Math.min(st.maxHp, run.hp + h);
   run.eaten = (run.eaten || 0) + 1;
+  colonyFeed(h, x, y, z); // the swarm prototype: the colony eats too
   dnum(P.x, P.y + 1.6, P.z, '+' + h, 'heal');
   sfx('heal');
 }
