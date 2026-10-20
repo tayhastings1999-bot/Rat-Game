@@ -55,12 +55,25 @@ export function shopGrowth() {
   return { str: amount('str'), spd: amount('spd'), arm: amount('arm'), mag: amount('mag'), hp: amount('hide') };
 }
 
+/** The old Skeleton Key supply's shop price (x 0.2 × goldPerLevel, rounded to 5). Keys are boss-only now. */
+export const OLD_KEY_PRICE = () => Math.round(0.2 * TUNE.shop.goldPerLevel / 5) * 5;
+/** An old save with Skeleton Keys still packed gets them back as banked gold, at the shop price (Rat 7 P30-6). */
+export function refundOldKeys() {
+  const n = (meta.pack && meta.pack.key) | 0;
+  if (!n) return 0;
+  const g = n * OLD_KEY_PRICE();
+  meta.salvage = (meta.salvage || 0) + g;
+  delete meta.pack.key;
+  saveMeta();
+  return g;
+}
+
 /** Called by startRun after run and st are reset: upgrades apply, the pack is unpacked. */
 export function applyShop() {
   st.salvage *= (1 + amount('pack')) * diffMods().gold;
   const p = meta.pack || {};
   run.vials = Math.min(TUNE.vials.max, run.vials + (p.vial || 0));
-  run.keys += p.key || 0;
+  refundOldKeys(); // (no Skeleton Key supply any more: keys drop only from bosses; a packed one comes back as gold)
   run.cheese = p.cheese || 0;
   run.tails = p.tail || 0;
   run.flasks = {}; // power-up key → count held

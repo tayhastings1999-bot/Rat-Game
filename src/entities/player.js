@@ -213,16 +213,16 @@ export function useSpecial() {
 export function useTarget() {
   for (const c of W.chests) {
     if (c.open || Math.hypot(c.x - P.x, c.z - P.z) >= 1.9 || Math.abs(c.y - P.y) >= 1.3) continue;
-    return { kind: 'chest', o: c, label: c.locked ? (run.keys ? `Unlock the chest (uses a key · ${run.keys} held)` : 'Locked chest (needs a key)') : 'Open chest' };
+    return { kind: 'chest', o: c, label: c.locked ? (run.lvlBoss ? 'Unlock the chest (the boss\'s key ring)' : 'Locked chest (the boss carries the key ring)') : 'Open chest' };
   }
-  for (const g of W.gates) if (!g.open && Math.hypot(g.x - P.x, g.z - P.z) < 2.2 && P.y < 1.5) return { kind: 'gate', o: g, label: run.keys ? `Unlock the gate (uses a key · ${run.keys} held)` : 'Locked gate (needs a key)' };
+  for (const g of W.gates) if (!g.open && Math.hypot(g.x - P.x, g.z - P.z) < 2.2 && P.y < 1.5) return { kind: 'gate', o: g, label: run.lvlBoss ? 'Unlock the gate (the boss\'s key ring)' : 'Locked gate (the boss carries the key ring)' };
   for (const p of W.pipes) if (Math.hypot(p.x - P.x, p.z - P.z) < 1.8 && P.y < 1.2) return { kind: 'pipe', o: p, label: 'Squeeze into pipe' };
   for (const b of W.bins) if (!b.done && Math.hypot(b.x - P.x, b.z - P.z) < b.r + 1 && P.y < 2) return { kind: 'bin', o: b, label: b.kind === 'dumpster' ? 'Rummage the dumpster' : b.kind === 'bin' ? 'Rummage the trash can' : 'Dig through the junk heap' };
   for (const s of W.uses) if (!s.done && Math.hypot(s.x - P.x, s.z - P.z) < s.r && Math.abs((s.y || 0) - P.y) < 1.6) return { kind: 'set', o: s, label: s.label };
   const bt = boltTarget();
   if (bt) return { kind: 'bolt', o: bt, label: 'Unbolt the back door (a shortcut out)' };
   const mh = G.manhole;
-  if (mh && Math.hypot(mh.x - P.x, mh.z - P.z) < 2 && P.y < 0.6) return { kind: 'manhole', o: mh, label: run.keys ? 'Unlock the manhole — descend into the sewer' : 'Manhole (locked — it takes a key)' };
+  if (mh && Math.hypot(mh.x - P.x, mh.z - P.z) < 2 && P.y < 0.6) return { kind: 'manhole', o: mh, label: run.lvlBoss && run.keys ? 'Unlock the manhole — descend into the sewer' : 'Manhole (locked — the boss carries the key)' };
   return null;
 }
 export function grabTarget() {
@@ -303,8 +303,7 @@ export function doUse(u) {
   if (u.kind === 'chest') {
     const c = u.o;
     if (c.locked) {
-      if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, chests and bosses', 'info'); sfx('clank'); return; }
-      run.keys--;
+      if (!run.lvlBoss) { dnum(P.x, P.y + 1.6, P.z, 'Locked · the boss carries the key ring', 'info'); sfx('clank'); return; }
       run.unlocked = (run.unlocked || 0) + 1;
       c.locked = false;
       c.wasLocked = true;
@@ -359,7 +358,7 @@ export function doUse(u) {
   if (u.kind === 'manhole') {
     // Co-op: like the road, ladder and drain, only the lead takes the party down (the leash brings the rest).
     if (!isLead()) { dnum(P.x, P.y + 1.6, P.z, `P${leadNum()} leads the way down`, 'info'); return; }
-    if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, nests, chests and bosses', 'info'); return; }
+    if (!run.lvlBoss || !run.keys) { dnum(P.x, P.y + 1.6, P.z, run.lvlBoss ? 'Locked · pick up the boss key' : 'Locked · beat this level\'s boss for the key', 'info'); return; }
     run.keys--;
     enterSewer();
   }
@@ -367,8 +366,7 @@ export function doUse(u) {
 
 /** Spend a key on a locked gate: the bars swing up and the vault is open. */
 export function unlockGate(g) {
-  if (!run.keys) { dnum(P.x, P.y + 1.6, P.z, 'Locked · keys drop from elites, chests and bosses', 'info'); sfx('clank'); return false; }
-  run.keys--;
+  if (!run.lvlBoss) { dnum(P.x, P.y + 1.6, P.z, 'Locked · the boss carries the key ring', 'info'); sfx('clank'); return false; }
   run.unlocked = (run.unlocked || 0) + 1;
   g.open = true;
   g.g.position.y = 2.6; // up into the lintel

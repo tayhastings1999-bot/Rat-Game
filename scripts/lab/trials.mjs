@@ -489,7 +489,7 @@ export const TRIALS = [
         const n = await L.S(() => { const s = __scurry; for (let i = 0; i < 3; i++) s.dropKey(s.P.x, s.P.y, s.P.z); s.qa.stepRaw(0.3); return s.run.keys; });
         return { ok: n === 3, detail: `${n} held` };
       } },
-      { name: 'a locked gate blocks the vault until a key opens it', async run(L) {
+      { name: 'a locked gate blocks the vault until the level boss is down, then opens free', async run(L) {
         const r = await L.S(() => {
           const s = __scurry, g = s.W.gates[0];
           if (!g) return null;
@@ -499,22 +499,24 @@ export const TRIALS = [
           s.P.x = out.x; s.P.z = out.z; s.P.y = 0; s.P.vx = -g.nx * 9; s.P.vz = -g.nz * 9;
           for (let i = 0; i < 10; i++) { s.P.vx = -g.nx * 9; s.P.vz = -g.nz * 9; s.qa.stepRaw(0.05); }
           const blocked = Math.hypot(s.P.x - cx, s.P.z - cz) > 2.2;
-          s.run.keys = 1;
+          s.run.keys = 0; s.run.lvlBoss = false;
           s.P.x = out.x; s.P.z = out.z;
-          const opened = s.unlockGate(g);
+          const early = s.unlockGate(g); // keys are boss-only: no gate before the boss falls
+          s.run.lvlBoss = true;
+          const opened = !early && s.unlockGate(g);
           return { blocked, opened, keys: s.run.keys, plat: s.W.plats.includes(g.plat) };
         });
         if (!r) return { ok: false, detail: 'no gate on Cinder Row' };
         return { ok: r.blocked && r.opened && r.keys === 0 && !r.plat, detail: JSON.stringify(r) };
       } },
-      { name: 'a locked chest stays shut without a key, and opens with one (with a power-up inside)', async run(L) {
+      { name: 'a locked chest stays shut until the level boss is down, then opens free (with a power-up inside)', async run(L) {
         const r = await L.S(() => {
           const s = __scurry, c = s.W.chests.find(c => c.locked);
           if (!c) return null;
-          s.run.keys = 0; s.P.x = c.x + 1; s.P.z = c.z; s.P.y = c.y;
+          s.run.keys = 1; s.run.lvlBoss = false; s.P.x = c.x + 1; s.P.z = c.z; s.P.y = c.y;
           s.pressE();
-          const shut = !c.open;
-          s.run.keys = 1;
+          const shut = !c.open; // even holding a key: padlocks open only after this level's boss
+          s.run.keys = 0; s.run.lvlBoss = true;
           const p0 = s.W.pups.length;
           s.pressE();
           return { shut, open: c.open, keys: s.run.keys, pup: s.W.pups.length > p0 };
@@ -540,21 +542,20 @@ export const TRIALS = [
       } },
     ],
     t3: {
-      // Bots play a level: keys turn up at a steady rate, enough to open a lock or two.
+      // Keys are boss-only (#30): bots playing a level before its boss falls should pick up none (Rat 7 re-QA:
+      // the old 0.25-1.5 keys/min band measured elite/chest/bin/nest drops that no longer exist).
       async run(L) {
-        const m = { keysPerMin: 0 };
+        const m = { keysBeforeBoss: 0 };
         const runs = [[CITY(1), 'tank'], [SEWER(1), 'slinger']];
         for (const [lv, cls] of runs) {
           await L.fresh({ cls, level: lv, quiet: false });
-          const r = await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
-          const got = await L.S(() => __scurry.run.keysGot || 0);
-          m.keysPerMin += got / Math.max(0.25, r.simTime / 60) / runs.length;
+          await L.play(L.QUICK ? 90 : 150, { profile: 'average', goal: 'nests' });
+          m.keysBeforeBoss += await L.S(() => (__scurry.run.lvlBoss ? 0 : __scurry.run.keysGot || 0));
         }
         return m;
       },
-      bands: { keysPerMin: [0.25, 1.5] },
+      bands: { keysBeforeBoss: [0, 0] },
     },
-    ab: { name: 'elites drop keys more often (40%)', set: { 'keys.eliteOdds': 0.4 } },
   },
 
   // ------------------------------------------------------------------ P3: eight timed power-ups
@@ -722,7 +723,7 @@ export const TRIALS = [
         for (const go of ['exitRoad', 'enterSewer', 'drain']) {
           await L.fresh({ level: go === 'drain' ? CITY(3) : CINDER, god: true });
           const r0 = await L.S(() => (__scurry.run.ranks || []).length);
-          await L.S(g => { const s = __scurry; if (g === 'drain') { const d = s.G.secretExit; if (d) { s.P.x = d.x; s.P.z = d.z; s.P.y = d.y; s.qa.stepRaw(0.1); } } else s[g](); }, go);
+          await L.S(g => { const s = __scurry; if (g === 'drain') { const d = s.G.secretExit; s.run.lvlBoss = true; if (d) { s.P.x = d.x; s.P.z = d.z; s.P.y = d.y; s.qa.stepRaw(0.1); } } else s[g](); }, go);
           await L.sleep(1400);
           if (await L.S(r0 => (__scurry.run.ranks || []).length > r0, r0)) n++;
         }

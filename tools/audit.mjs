@@ -74,7 +74,7 @@ async function structural(lv) {
     const s = __scurry, G = s.G, W = s.W;
     for (const e of W.enemies.filter(e => e.type === 'nest' && !e.dead)) s.kill(e);
     let t = 0;
-    while (t < 20 && !G.boss && !s.run.secret && !G.exitD) { s.qa.stepRaw(0.5); t += 0.5; }
+    while (t < 20 && !G.boss && (!s.run.secret || s.run.secret === 'garden') && !G.exitD) { s.qa.stepRaw(0.5); t += 0.5; } // the Bone Garden has a boss now (wakes when the Warrens fall): wait for it, then kill it (P30-5)
     const boss = G.boss ? { name: G.boss.name, how: eval('(' + SRC + ')')().how(G.boss), fly: !!G.boss.fly } : null;
     if (G.boss) { G.boss.revealed = true; s.kill(G.boss); }
     for (let i = 0; i < 8; i++) s.qa.stepRaw(0.25);

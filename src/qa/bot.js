@@ -218,7 +218,7 @@ function chooseTarget() {
     for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1 && !B.banned.has((k % M.W) + ',' + ((k / M.W) | 0))) return { x: toW(k % M.W), z: toW((k / M.W) | 0), kind: 'interior' };
   }
   if (B.goal === 'explore') return exploreTarget();
-  if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.keys > 0))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
+  if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
   if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestMust(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
@@ -552,7 +552,7 @@ function goalMet() {
     case 'boss': return run.bossDone;
     case 'nests': return !W.enemies.some(e => e.type === 'nest' && !e.dead);
     case 'interior': return !!P.inBldg;
-    case 'loot': return !W.chests.some(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.keys > 0) && reachable(c));
+    case 'loot': return !W.chests.some(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss) && reachable(c));
     case 'die': return G.state === 'dead';
     default: return false;
   }

@@ -8,7 +8,7 @@ import { scene } from '../render/renderer.js';
 import { fx, puff, spark, blood, dnum, swipeFx } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { banner } from '../ui/hud.js';
-import { M, G as GRAV, toW, tileAt, floorY, solidFor, flowDir, collideBody, freeSpot, nearFree } from '../world/grid.js';
+import { M, G as GRAV, toW, tileAt, floorY, solidFor, flowDir, collideBody, DRY, freeSpot, nearFree } from '../world/grid.js';
 import { EN, isSewer } from '../data/world.js';
 import { CORRUPT } from '../data/items.js';
 import { glob } from '../combat/arsenal.js';
@@ -81,7 +81,8 @@ export function spawnEnemy(type, x, z, o = {}) {
   if (enemyTotal() >= 220 && !o.force) return null; // story-critical spawns (thief, champion, bounty) ignore the cap
   const D = EN[type], r0 = Math.min(1.2, (D.r || 0.5) * (o.sc || 1));
   // A walker that would appear inside a car, crate or bin on the street steps out to the nearest clear floor.
-  if (!D.fly && !o.roof && !freeSpot(x, z, r0)) { const f = nearFree(x, z, r0, o.force ? 8 : 4); if (f) [x, z] = f; else if (!o.force) return null; }
+  // Dry floor only: freeSpot rejects every wet tile and hole, so checking those moved water and pit spawns onto dry floor (P30-4).
+  if (!D.fly && !o.roof && DRY(tileAt(x, z)) && !freeSpot(x, z, r0)) { const f = nearFree(x, z, r0, o.force ? 8 : 4); if (f) [x, z] = f; else if (!o.force) return null; }
   const gy = floorY(x, z);
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
