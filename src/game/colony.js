@@ -7,7 +7,7 @@
 import { G, P, W, run } from '../core/state.js';
 import { TUNE } from '../tuning.js';
 import { rand, angD } from '../core/util.js';
-import { collideBody, floorY, G as GRAV } from '../world/grid.js';
+import { collideBody, floorY, solidFor, tileAt, G as GRAV } from '../world/grid.js';
 import { hit } from '../combat/combat.js';
 import { swarmIM, swarmGlowIM, swarmIMO, SWARM_CAP, dummy, tmpC } from '../render/pools.js';
 import { animTick, writePose } from '../render/rig.js';
@@ -32,9 +32,13 @@ export const ratCount = () => colony.rats.length;
 export const colonyLeads = () => colony.on && colony.rats.length > 0;
 
 // ---------- rats ----------
+const walled = (x, z, y) => solidFor(tileAt(x, z), false) && y < floorY(x, z) - 0.3;
 function addRat(x, z, y) {
   if (colony.rats.length >= C().max) return null;
   const r = { x: x + rand(-0.3, 0.3), z: z + rand(-0.3, 0.3), y: y ?? floorY(x, z), vy: 0, kx: 0, kz: 0, r: 0.2, h: 0.3, ang: rand(0, 6.28), mode: 'follow', tgt: null, t: 0, ph: rand(0, 6.28), sc: rand(0.6, 0.72), tint: rand(0.85, 1.1) };
+  // A slot or corpse spot inside a building would leave the rat stuck in the wall (collideBody only pushes it to the
+  // next tile edge): put it at the spot itself, or with the king, instead (Rat 7 P30-8).
+  if (walled(r.x, r.z, r.y)) { if (!walled(x, z, r.y)) { r.x = x; r.z = z; } else { r.x = P.x; r.z = P.z; r.y = P.y; } }
   colony.rats.push(r);
   return r;
 }
@@ -181,11 +185,13 @@ function move(r, tx, tz, sp, dt) {
   const dx = tx - r.x, dz = tz - r.z, d = Math.hypot(dx, dz), s = Math.min(sp, d * 5);
   let vx = d > 0.05 ? dx / d * s : 0, vz = d > 0.05 ? dz / d * s : 0;
   vx += Math.sin(G.time * 7 + r.ph) * 0.5; vz += Math.cos(G.time * 6 + r.ph * 1.3) * 0.5; // scurry
+  const ox = r.x, oz = r.z;
   r.x += vx * dt; r.z += vz * dt;
   const py = r.y;
   r.vy -= GRAV * dt;
   r.y += r.vy * dt;
   collideBody(r, py, r.r, r.h, false);
+  if (walled(r.x, r.z, r.y)) { r.x = ox; r.z = oz; } // never step (or get pushed) into a building
   if (s > 0.4) r.ang += angD(Math.atan2(vx, vz), r.ang) * Math.min(1, dt * 14);
 }
 export function colonyTick(dt) {
@@ -213,7 +219,7 @@ export function colonyTick(dt) {
       case 'follow': {
         const [x, z] = slot(idx, rats.length);
         const far = Math.hypot(r.x - P.x, r.z - P.z);
-        if (far > T.catchup || (P.y - r.y > 1.2 && far < 4 && (r.t += dt) > 0.6)) { const [sx, sz] = slot(idx, rats.length); r.x = sx; r.z = sz; r.y = P.y; r.vy = 0; r.t = 0; puff(r.x, r.y + 0.2, r.z, 0x8a8478, 2, 1.5); break; }
+        if (far > T.catchup || (P.y - r.y > 1.2 && far < 4 && (r.t += dt) > 0.6)) { const [sx, sz] = slot(idx, rats.length); [r.x, r.z] = walled(sx, sz, P.y) ? [P.x, P.z] : [sx, sz]; r.y = P.y; r.vy = 0; r.t = 0; puff(r.x, r.y + 0.2, r.z, 0x8a8478, 2, 1.5); break; }
         move(r, x, z, Math.max(T.spd, Math.hypot(P.vx || 0, P.vz || 0) + 2), dt);
         break;
       }
