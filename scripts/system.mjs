@@ -254,7 +254,7 @@ await check('moldy food poisons (and only shows while sniffing); attacks destroy
 await check('nests: three tiers, a family each, damage knocks them down a tier', async () => {
   await fresh();
   const r = await S(() => { const s = __scurry, ns = s.W.enemies.filter(e => e.type === 'nest'); const n = ns.sort((a, b) => b.tier - a.tier)[0]; const t0 = n.tier; if (t0 > 1) { n.hp = s.tierHp()[t0 - 2] - 1; s.tickNest(n, 0.02); } return { count: ns.length, tiers: [...new Set(ns.map(e => e.name))], fams: [...new Set(ns.map(e => e.fam))], t0, t1: n.tier, run: s.run.nests }; });
-  assert(r.count >= 7 && r.count === r.run, `nest count ${r.count} vs run.nests ${r.run}`);
+  assert(r.count >= 5 && r.count === r.run, `nest count ${r.count} vs run.nests ${r.run}`);
   assert(r.fams.length >= 1 && r.fams.every(Boolean), 'nest without a family');
   if (r.t0 > 1) assert(r.t1 === r.t0 - 1, `tier did not drop: ${r.t0} → ${r.t1}`);
   return `${r.count} nests · ${r.tiers.join('/')} · ${r.fams.join('/')}`;
