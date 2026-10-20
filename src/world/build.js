@@ -681,7 +681,11 @@ function clutter(city) {
   shuffleR(open);
   // Clutter goes on open floor, clear of walls and of props already placed (no buried bins).
   const clear = (x, z) => DRY(tAt(Math.floor(x / T + M.W / 2), Math.floor(z / T + M.H / 2))) && !W.plats.some(p => Math.abs(p.x - x) < p.w / 2 + 0.9 && Math.abs(p.z - z) < p.d / 2 + 0.9 && p.y - p.th < 0.5);
+  // Counts below were tuned on the old maps (52-tile city, 40-tile sewer); scale them with floor area so a
+  // bigger map keeps the same density of clutter, and above all of rummageable bins (the main placed food).
+  const AF = (M.W * M.H) / (city ? 52 * 52 : 40 * 40);
   const place = (n, fn) => {
+    n = Math.round(n * AF);
     for (let i = 0; i < n && open.length; i++) {
       const k = open.pop();
       for (let t = 0; t < 4; t++) { const x = toW(k % M.W) + rr(-1.4, 1.4), z = toW((k / M.W) | 0) + rr(-1.4, 1.4); if (clear(x, z)) { fn(x, z); break; } }
@@ -993,8 +997,12 @@ export function populate(info) {
   // Each one sits on clear floor: never in a wall, a car, a crate or a bin, and
   // never on top of a chest or another nest. A room with no such spot is skipped.
   const nests = [], away = (x, z) => !nests.some(([a, b]) => Math.hypot(a - x, b - z) < 7) && ![...W.chests, ...(W.caches || []), ...W.bins].some(o => Math.hypot(o.x - x, o.z - z) < 2.6) && !W.climbs.some(c => Math.hypot(c.x - x, c.z - z) < 3.2);
-  for (let j = 0, i = 0, want = nestCount(); i < want && j < byDist.length; j++) {
-    const spot = shuffleR(roomTiles(byDist[j]).slice()).map(([x, y]) => [toW(x), toW(y)]).find(([x, z]) => away(x, z) && freeSpot(x, z, 1.7));
+  // byDist runs nearest-first, so with ~20 nests they used to fill the rooms around the start and the rat
+  // woke up inside spawn range of half a dozen of them (Toxic Refinery: dead in 1-2 min). Keep a quiet start:
+  // no nest within TUNE.nests.startClear tiles of walking distance, unless the map runs out of rooms.
+  const far = byDist.filter(r => (dist[gi(r.cx, r.cy)] ?? 99) >= TUNE.nests.startClear), order = far.length >= nestCount() / 2 ? far : byDist;
+  for (let j = 0, i = 0, want = nestCount(); i < want && j < order.length; j++) {
+    const spot = shuffleR(roomTiles(order[j]).slice()).map(([x, y]) => [toW(x), toW(y)]).find(([x, z]) => away(x, z) && freeSpot(x, z, 1.7));
     if (!spot) continue;
     const n = rollNest(i++);
     addNest(spot[0], spot[1], n.tier, n.fam);

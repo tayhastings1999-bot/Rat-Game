@@ -71,7 +71,7 @@ export function creatureMesh(k) {
   return mesh;
 }
 
-export const scrapIM = mkIM(new THREE.TorusGeometry(0.14, 0.06, 4, 6), new THREE.MeshLambertMaterial({ color: 0xa8b0b8, emissive: 0x202830, flatShading: true }), 300, false);
+export const scrapIM = mkIM(new THREE.TorusGeometry(0.14, 0.06, 4, 6), new THREE.MeshLambertMaterial({ color: 0xa8b0b8, emissive: 0x202830, flatShading: true }), 600, false); // bigger maps carry ~2x the scrap
 export const pprojIM = mkIM(new THREE.IcosahedronGeometry(0.13, 0), new THREE.MeshBasicMaterial(), 320);
 export const eprojIM = mkIM(new THREE.IcosahedronGeometry(0.19, 0), new THREE.MeshBasicMaterial(), 320);
 export const partIM = mkIM(Bx(0.12, 0.12, 0.12), new THREE.MeshBasicMaterial(), 700);

@@ -190,7 +190,7 @@ export function sync(dt) {
   }
   let n = 0;
   for (const g of W.scraps) {
-    if (n >= 300) break;
+    if (n >= 600) break;
     dummy.position.set(g.x, g.y + 0.3 + Math.sin(G.time * 3 + g.ph) * 0.06, g.z);
     dummy.rotation.set(PI2 * 0.6, G.time * 2 + g.ph, 0);
     dummy.scale.setScalar(1);

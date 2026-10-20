@@ -75,11 +75,16 @@ export const TRIALS_SWARM = [{
       const r = await L.S(() => {
         const s = __scurry, t = s.W.traps.find(q => !q.sprung);
         if (!t) return { none: true };
-        s.P.x = t.gx + 5.5; s.P.z = t.gz; s.P.y = t.gy; s.colonyPlace(); s.qa.stepRaw(0.5);
+        // Stand on open floor inside gnawR of the cable. (A fixed +5.5 offset landed inside a wall on the bigger
+        // 72-tile maps, and the stuck-rescue threw the rat back to a safe spot ~35 units away, out of range.)
+        let spot = null;
+        for (let d = 2; d <= 5 && !spot; d += 0.5) for (let i = 0; i < 16 && !spot; i++) { const a = i / 16 * 6.283, x = t.gx + Math.sin(a) * d, z = t.gz + Math.cos(a) * d; if (s.freeSpot(x, z, 0.8)) spot = [x, z]; }
+        if (!spot) return { nospot: true };
+        s.P.x = spot[0]; s.P.z = spot[1]; s.P.y = t.gy; s.colonyPlace(); s.qa.stepRaw(0.5);
         const n = s.ratCount(); s.pressE(); s.qa.stepRaw(3);
-        return { kind: t.kind, sprung: t.sprung, spent: n - s.ratCount(), want: s.TUNE.colony.gnaw };
+        return { oldSpotFree: s.freeSpot(t.gx + 5.5, t.gz, 0.6), kind: t.kind, sprung: t.sprung, spent: n - s.ratCount(), want: s.TUNE.colony.gnaw };
       });
-      return { ok: !r.none && r.sprung && r.spent >= r.want, detail: JSON.stringify(r) };
+      return { ok: !r.none && !r.nospot && r.sprung && r.spent >= r.want, detail: JSON.stringify(r) };
     } },
     { name: 'with the colony gone, the king fights with his own attack', async run(L) {
       await L.fresh({ colony: true });

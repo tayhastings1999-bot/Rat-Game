@@ -5,11 +5,11 @@ import { M, allocMap, gi, inG, tAt, bfs, OPEN, N4, WH } from './grid.js';
 
 export function genSewer(seed, D) {
   seedRng(seed);
-  allocMap(40, 'sewer');
+  allocMap(56, 'sewer'); // was 40 (15 rooms): sized for 10-20 min levels
   const GW = M.W, GH = M.H, grid = M.grid;
   M.hgt.fill(WH);
   const rooms = [];
-  for (let a = 0; a < 700 && rooms.length < 15; a++) {
+  for (let a = 0; a < 1400 && rooms.length < 26; a++) {
     const w = ri(4, 8), h = ri(4, 7), x = ri(2, GW - w - 2), y = ri(2, GH - h - 2);
     if (rooms.some(r => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y)) continue;
     rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1) });
