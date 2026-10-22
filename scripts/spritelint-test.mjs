@@ -28,7 +28,9 @@ t('D2 wrong canvas fails', fails(run({ 'mob_roach_move_e_00.png': [30, 32, body(
 t('D2 ghoul 48x48 exception passes [Q8]', !fails(run({ 'mob_ghoul_move_e_00.png': [48, 48, body(48, 48, PALETTE.enemy, 8, 8)] })).some(f => f.startsWith('D2')));
 t('D3 partial alpha fails', fails(run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => body(32, 32, PALETTE.enemy, 8, 18)(x, y) ? [PALETTE.enemy, 128] : null] })).some(f => f.includes('partial alpha')));
 t('D3 orphan pixel fails', fails(run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => x === 2 && y === 2 ? [PALETTE.enemy] : body(32, 32, PALETTE.enemy, 8, 18)(x, y)] })).some(f => f.includes('islands')));
-t('D4 low hero mask fails', fails(run({ ...heroOK, 'hero_tank_idle_s_00_m.png': [48, 64, (x, y) => x > 4 && x < 10 && y > 20 && y < 24 ? ['FF0000'] : ['000000']] })).some(f => f.includes('< 20%')));
+const maskRows = n => [48, 64, (x, y) => x > 4 && x < 43 && y >= 20 && y < 20 + n ? ['FF0000'] : ['000000']];
+t('D4 hero mask 14.7% passes (≥12%, guide v1.4)', !fails(run({ ...heroOK, 'hero_tank_idle_s_00_m.png': maskRows(9) })).some(f => f.startsWith('D4')));
+t('D4 hero mask 8.2% fails (<12%)', fails(run({ ...heroOK, 'hero_tank_idle_s_00_m.png': maskRows(5) })).some(f => f.includes('< 12%')));
 t('D4 missing hero mask fails', fails(run({ 'hero_tank_idle_s_00.png': heroOK['hero_tank_idle_s_00.png'] })).some(f => f.includes('no _m')));
 t('D6 mob brighter than hero fails', fails(run({ 'hero_tank_idle_s_00.png': [48, 64, body(48, 64, PALETTE.slate)], 'hero_tank_idle_s_00_m.png': heroOK['hero_tank_idle_s_00_m.png'], 'mob_roach_move_e_00.png': [32, 32, body(32, 32, PALETTE.chromeHi, 8, 18)] })).some(f => f.startsWith('D6')));
 t('D11 player red on a mob fails', fails(run({ 'mob_roach_move_e_00.png': [32, 32, body(32, 32, 'FF3B30', 8, 18)] })).some(f => f.startsWith('D11')));
@@ -37,6 +39,7 @@ const atl = (frames) => { writeFileSync(join(dir, 'atlas_t.json'), JSON.stringif
 t('D13 atlas with ai fields passes', fails(atl({ hero_tank_idle_s_00: { frame: { x: 0, y: 0, w: 48, h: 64 }, anchor: { x: 24, y: 60 }, ai: false, aiTool: null } })).length === 0);
 t('D13 missing ai fails', fails(atl({ hero_tank_idle_s_00: { anchor: { x: 24, y: 60 } } })).some(f => f.startsWith('D13')));
 t('D13 ai:true without tool fails', fails(atl({ hero_tank_idle_s_00: { anchor: { x: 24, y: 60 }, ai: true, aiTool: null } })).some(f => f.includes('needs aiTool')));
+t('D2 hero anchor (24,60) kept', !fails(atl({ hero_tank_idle_s_00: { anchor: { x: 24, y: 60 }, ai: false, aiTool: null } })).some(f => f.startsWith('D2')));
 t('D2 atlas anchor mismatch fails', fails(atl({ hero_tank_idle_s_00: { anchor: { x: 24, y: 58 }, ai: false, aiTool: null } })).some(f => f.startsWith('D2')));
 t('empty dir passes (nothing to lint)', lintDirs([join(dir, 'nope')]).summary.failed === 0);
 rmSync(dir, { recursive: true, force: true });

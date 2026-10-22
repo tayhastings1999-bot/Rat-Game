@@ -6,7 +6,7 @@
 //   D1  palette: every opaque albedo colour is in the 27-colour sprite palette (player hues never painted)
 //   D2  canvas size per group (§4) incl. GAD exceptions: ghoul 48×48 [Q8], ghoulLord 192×192 [Q9]; atlas anchors
 //   D3  alpha is 0/255 only; no orphan 1-px islands (eye/glint colours excepted)
-//   D4  hero player-mask coverage ≥ 20% of opaque px, every frame; mask only on painted px (§2.3.2)
+//   D4  hero player-mask coverage ≥ 12% of opaque px (guide v1.4; was 20%), every frame; mask only on painted px (§2.3.2)
 //   D6  value: hero max luminance > every mob max luminance (eyes and mask-G emissive excluded)
 //   D11 no red / player hue in enemy, prop or world pixels; no player mask on mobs
 //   D13 every atlas frame has ai (boolean) and aiTool (string when ai:true) — Steam disclosure (§9.1)
@@ -31,6 +31,8 @@ const EXCEPT = { // GAD rulings: [canvas, anchor]
   mob_ghoul: [[48, 48], [24, 45]], // Q8 heavy-grunt exception
   boss_ghoulLord: [[192, 192], [96, 187]], // Q9
 };
+/** D4 minimum hero player-mask coverage (PIXEL_STYLE_GUIDE v1.4: 12%, lowered from 20%). */
+export const HERO_MASK_MIN = 0.12;
 const NAME = /^(hero|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_([A-Za-z0-9]+)_(s|se|e|ne|n)_(\d{2})(_n|_m)?\.png$/;
 const hex = (r, g, b) => ((r << 16 | g << 8 | b) >>> 0).toString(16).toUpperCase().padStart(6, '0');
 const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
@@ -70,7 +72,7 @@ export function lintFrame(file, img, mask) {
   if (isl) fails.push(`D3 ${isl} orphan 1-px islands`);
   if (mskStray) fails.push(`D4 mask on ${mskStray} unpainted px (§2.3.2)`);
   const pct = opq ? msk / opq : 0;
-  if (group === 'hero') { if (!mask) fails.push('D4 hero frame has no _m mask'); else if (pct < 0.2) fails.push(`D4 mask ${(pct * 100).toFixed(1)}% < 20%`); }
+  if (group === 'hero') { if (!mask) fails.push('D4 hero frame has no _m mask'); else if (pct < HERO_MASK_MIN) fails.push(`D4 mask ${(pct * 100).toFixed(1)}% < ${HERO_MASK_MIN * 100}%`); }
   else if (msk && !(group === 'swarm')) fails.push(`D11 player mask on a ${group} sprite`);
   if (red) fails.push(`D11 ${red} red/player-hue px on a ${group} sprite`);
   return { file: basename(file), group, id, fails, stats: { W, H, opaque: opq, maskPct: +(pct * 100).toFixed(1), maxLum: +mx.toFixed(3) } };
