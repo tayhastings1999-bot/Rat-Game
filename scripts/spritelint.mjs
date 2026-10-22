@@ -29,19 +29,25 @@ export const PALETTE = {
 export const BILE_EYE = '9EAE2C';
 export const PLAYER = { p1: 'FF3B30', p2: '2F8CFF', p3: 'FFD21F', p4: '5CF2A0' };
 const EYES = new Set([BILE_EYE, PALETTE.orange, PALETTE.purple, PALETTE.cyan, PALETTE.lime, PALETTE.bone]); // eyes, glints, pustules
-export const CANVAS = { hero: [48, 64], mob: [32, 32], elite: [64, 64], boss: [128, 128], swarm: [16, 16], cast: [48, 64], ui: null, prop: null };
-export const ANCHOR = { hero: [24, 60], mob: [16, 29], elite: [32, 61], boss: [64, 123], swarm: [8, 14], cast: [24, 60] };
+export const CANVAS = { hero: [48, 64], mob: [32, 32], horde: [32, 32], elite: [64, 64], boss: [128, 128], swarm: [16, 16], cast: [48, 64], ui: null, prop: null };
+export const ANCHOR = { hero: [24, 60], mob: [16, 29], horde: [16, 29], elite: [32, 61], boss: [64, 123], swarm: [8, 14], cast: [24, 60] };
 const EXCEPT = { // GAD rulings: [canvas, anchor]
   mob_ghoul: [[48, 48], [24, 45]], // Q8 heavy-grunt exception
   boss_ghoulLord: [[192, 192], [96, 187]], // Q9
 };
 /** D4 minimum hero player-mask coverage (PIXEL_STYLE_GUIDE v1.4: 12%, lowered from 20%). */
 export const HERO_MASK_MIN = 0.12;
-const NAME = /^(hero|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_([A-Za-z0-9]+)_(s|se|e|ne|n)_(\d{2})(_n|_m)?\.png$/;
+const NAME = /^(hero|horde|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_([A-Za-z0-9]+)_(s|se|e|ne|n)_(\d{2})(_n|_m)?\.png$/;
 const hex = (r, g, b) => ((r << 16 | g << 8 | b) >>> 0).toString(16).toUpperCase().padStart(6, '0');
 const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
 const lum = (r, g, b) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-const ENEMY = new Set(['mob', 'elite', 'boss']);
+const ENEMY = new Set(['mob', 'horde', 'elite', 'boss']);
+// WARN-ONLY rules (Taylor ruling 21 Oct: match mockup B), pending the slice-1 palette update in
+// scurry-art/slice1/. These report warnings and never fail the run:
+//   W1 enemy sprite without a Void outline; W2 warm enemy eye colours (amber / orange-red) other than
+//   Bile Eye, up to EYE_WARN_MAX of opaque px; W3 mob/horde canvases larger than 32×32, up to 48×56.
+export const EYE_WARN_MAX = 0.03, HORDE_MAX = [48, 56], OUTLINE_MIN = 0.8;
+const warmEye = (r, g, b) => { const [h, s, v] = hsv(r, g, b); return (h < 50 || h > 345) && s > 0.5 && v > 0.35; };
 const OK = new Set(Object.values(PALETTE)), PL = new Set(Object.values(PLAYER));
 function hsv(r, g, b) {
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
@@ -54,11 +60,15 @@ export const expectFor = (group, id) => EXCEPT[`${group}_${id}`] || [CANVAS[grou
 
 /** Lint one albedo frame (+ optional mask). Returns { file, group, id, fails:[], stats }. */
 export function lintFrame(file, img, mask) {
-  const m = NAME.exec(basename(file)), [, group, id] = m, { width: W, height: H, data: a } = img, fails = [];
+  const m = NAME.exec(basename(file)), [, group, id] = m, { width: W, height: H, data: a } = img, fails = [], warns = [];
   const [can] = expectFor(group, id);
-  if (can && (W !== can[0] || H !== can[1])) fails.push(`D2 canvas ${W}x${H} ≠ ${can[0]}x${can[1]}`);
+  if (can && (W !== can[0] || H !== can[1])) {
+    if ((group === 'mob' || group === 'horde') && !EXCEPT[`${group}_${id}`] && W <= HORDE_MAX[0] && H <= HORDE_MAX[1]) warns.push(`W3 canvas ${W}x${H} ≠ ${can[0]}x${can[1]} (allowed up to ${HORDE_MAX.join('x')} pending palette/spec update)`);
+    else fails.push(`D2 canvas ${W}x${H} ≠ ${can[0]}x${can[1]}`);
+  }
   if (mask && (mask.width !== W || mask.height !== H)) { fails.push('mask size ≠ albedo size'); mask = null; }
-  let off = 0, nonbin = 0, isl = 0, opq = 0, msk = 0, mskStray = 0, red = 0, mx = 0;
+  let off = 0, nonbin = 0, isl = 0, opq = 0, msk = 0, mskStray = 0, red = 0, mx = 0, eyeW = 0, edge = 0, edgeVoid = 0;
+  const eyeCols = new Set();
   const offCols = new Set(), A = (x, y) => x >= 0 && y >= 0 && x < W && y < H && a[(y * W + x) * 4 + 3] === 255;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = (y * W + x) * 4, r = a[i], g = a[i + 1], b = a[i + 2], al = a[i + 3], c = hex(r, g, b);
@@ -66,12 +76,20 @@ export function lintFrame(file, img, mask) {
     if (al !== 0 && al !== 255) nonbin++;
     if (al !== 255) { if (mr || mg) mskStray++; continue; }
     opq++;
-    if (c === BILE_EYE && ENEMY.has(group)) { /* allowed: enemy eye */ } else if (!OK.has(c)) { off++; if (offCols.size < 6) offCols.add('#' + c); }
-    if (group !== 'hero' && group !== 'cast' && (PL.has(c) || reddish(r, g, b)) && !(group === 'prop' && c === PLAYER.p3)) red++;
+    const enemy = ENEMY.has(group), eye = enemy && c !== BILE_EYE && !PL.has(c) && !OK.has(c) && warmEye(r, g, b);
+    if (eye) { eyeW++; if (eyeCols.size < 6) eyeCols.add('#' + c); }
+    else if (c === BILE_EYE && enemy) { /* allowed: enemy eye */ } else if (!OK.has(c)) { off++; if (offCols.size < 6) offCols.add('#' + c); }
+    if (!eye && group !== 'hero' && group !== 'cast' && (PL.has(c) || reddish(r, g, b)) && !(group === 'prop' && c === PLAYER.p3)) red++;
+    if (enemy && (!A(x + 1, y) || !A(x - 1, y) || !A(x, y + 1) || !A(x, y - 1))) { edge++; if (c === PALETTE.void) edgeVoid++; }
     if (mr) msk++;
     if (!EYES.has(c) && !mg) mx = Math.max(mx, lum(r, g, b));
     if (!EYES.has(c) && !A(x + 1, y) && !A(x - 1, y) && !A(x, y + 1) && !A(x, y - 1)) isl++;
   }
+  if (eyeW) {
+    const msg = `${eyeW} warm eye px (${[...eyeCols].join(' ')}) outside Bile Eye`;
+    if (eyeW <= Math.max(1, opq * EYE_WARN_MAX)) warns.push('W2 ' + msg); else fails.push(`D1 ${msg}, over ${EYE_WARN_MAX * 100}% of opaque px`);
+  }
+  if (edge && edgeVoid / edge < OUTLINE_MIN) warns.push(`W1 enemy outline: only ${(100 * edgeVoid / edge).toFixed(0)}% of edge px are Void`);
   if (off) fails.push(`D1 ${off} off-palette px (${[...offCols].join(' ')})`);
   if (nonbin) fails.push(`D3 ${nonbin} px with partial alpha`);
   if (isl) fails.push(`D3 ${isl} orphan 1-px islands`);
@@ -80,7 +98,7 @@ export function lintFrame(file, img, mask) {
   if (group === 'hero') { if (!mask) fails.push('D4 hero frame has no _m mask'); else if (pct < HERO_MASK_MIN) fails.push(`D4 mask ${(pct * 100).toFixed(1)}% < ${HERO_MASK_MIN * 100}%`); }
   else if (msk && !(group === 'swarm')) fails.push(`D11 player mask on a ${group} sprite`);
   if (red) fails.push(`D11 ${red} red/player-hue px on a ${group} sprite`);
-  return { file: basename(file), group, id, fails, stats: { W, H, opaque: opq, maskPct: +(pct * 100).toFixed(1), maxLum: +mx.toFixed(3) } };
+  return { file: basename(file), group, id, fails, warns, stats: { W, H, opaque: opq, maskPct: +(pct * 100).toFixed(1), maxLum: +mx.toFixed(3) } };
 }
 
 /** D13 + D2 anchors for an atlas frame table. */
@@ -91,7 +109,7 @@ export function lintAtlas(file, j) {
     if (typeof f.ai !== 'boolean') fails.push(`D13 ${k}: ai missing`);
     else if (f.ai && !f.aiTool) fails.push(`D13 ${k}: ai:true needs aiTool`);
     if (!('aiTool' in f)) fails.push(`D13 ${k}: aiTool missing`);
-    const m = /^(hero|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_/.exec(k);
+    const m = /^(hero|horde|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_/.exec(k);
     if (m && f.anchor) { const [, an] = expectFor(m[1], m[2]); if (an && (f.anchor.x !== an[0] || f.anchor.y !== an[1])) fails.push(`D2 ${k}: anchor (${f.anchor.x},${f.anchor.y}) ≠ (${an})`); }
   }
   return { file: basename(file), fails };
@@ -114,8 +132,8 @@ export function lintDirs(dirs) {
   const mobs = frames.filter(r => ['mob', 'elite', 'boss', 'swarm'].includes(r.group));
   const d6 = [];
   if (heroMax && mobs.length) for (const r of mobs) if (r.stats.maxLum >= heroMax) d6.push(`D6 ${r.file} max lum ${r.stats.maxLum} ≥ hero max ${heroMax}`);
-  const all = [...frames, ...atlases, ...bad], failed = all.filter(r => r.fails.length).length + (d6.length ? 1 : 0);
-  return { frames, atlases, names: bad, D6: d6, D5: 'skipped (needs the §5.2 frame table)', summary: { files: all.length, failed, heroMaxLum: heroMax } };
+  const all = [...frames, ...atlases, ...bad], warned = frames.filter(r => r.warns?.length).length, failed = all.filter(r => r.fails.length).length + (d6.length ? 1 : 0);
+  return { frames, atlases, names: bad, D6: d6, D5: 'skipped (needs the §5.2 frame table)', summary: { files: all.length, failed, warned, heroMaxLum: heroMax } };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -123,8 +141,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const out = ji >= 0 ? args[ji + 1] : null, dirs = args.filter((a, i) => !a.startsWith('--') && (ji < 0 || i !== ji + 1));
   const rep = lintDirs(dirs.length ? dirs : ['public/sprites']);
   if (out) writeFileSync(out, JSON.stringify(rep, null, 1));
-  for (const r of [...rep.frames, ...rep.atlases, ...rep.names]) if (r.fails.length || !quiet) console.log(`${r.fails.length ? 'FAIL' : 'ok  '} ${r.file}${r.fails.length ? ': ' + r.fails.join('; ') : ''}`);
+  for (const r of [...rep.frames, ...rep.atlases, ...rep.names]) {
+    if (r.fails.length || !quiet) console.log(`${r.fails.length ? 'FAIL' : 'ok  '} ${r.file}${r.fails.length ? ': ' + r.fails.join('; ') : ''}`);
+    for (const w of r.warns || []) console.log(`WARN ${r.file}: ${w}`);
+  }
   for (const d of rep.D6) console.log('FAIL ' + d);
-  console.log(`spritelint: ${rep.summary.files} file(s), ${rep.summary.failed} failing${rep.summary.files ? '' : ' (nothing to lint)'}; D5 ${rep.D5}`);
+  console.log(`spritelint: ${rep.summary.files} file(s), ${rep.summary.failed} failing, ${rep.summary.warned} with warnings${rep.summary.files ? '' : ' (nothing to lint)'}; D5 ${rep.D5}`);
   process.exit(rep.summary.failed ? 1 : 0);
 }

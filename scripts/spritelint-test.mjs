@@ -28,7 +28,14 @@ const eyed = (W, H, col) => (x, y) => x === 14 && y === 22 ? ['9EAE2C'] : body(W
 t('Bile Eye on a mob passes', !fails(run({ 'mob_roach_move_e_00.png': [32, 32, eyed(32, 32, PALETTE.enemy)] })).some(f => f.startsWith('D1')));
 t('Bile Eye on a hero fails', fails(run({ 'hero_tank_idle_s_00.png': [48, 64, (x, y) => x === 20 && y === 20 ? ['9EAE2C'] : body(48, 64, PALETTE.grimeL1)(x, y)], 'hero_tank_idle_s_00_m.png': heroOK['hero_tank_idle_s_00_m.png'] })).some(f => f.startsWith('D1')));
 t('old enemy tone #4A4656 now off-palette', fails(run({ 'mob_roach_move_e_00.png': [32, 32, body(32, 32, '4A4656', 8, 18)] })).some(f => f.startsWith('D1')));
-t('D2 wrong canvas fails', fails(run({ 'mob_roach_move_e_00.png': [30, 32, body(30, 32, PALETTE.enemy, 8, 18)] })).some(f => f.startsWith('D2')));
+const warnsOf = r => r.frames.flatMap(x => x.warns || []);
+const amber = (x, y) => (x === 14 || x === 17) && y === 22 ? ['FFB020'] : body(32, 32, PALETTE.enemy, 8, 18)(x, y);
+{ const r = run({ 'mob_roach_move_e_00.png': [32, 32, amber] }); t('W2 amber eyes warn, not fail', fails(r).length === 0 && warnsOf(r).some(w => w.startsWith('W2'))); }
+{ const r = run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => body(32, 32, PALETTE.enemy, 8, 18)(x, y) ? ['FF5A1A'] : null] }); t('warm colour over 3% still fails', fails(r).some(f => f.startsWith('D1'))); }
+{ const r = run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => x >= 8 && x < 24 && y >= 18 && y < 30 ? [PALETTE.enemy] : null] }); t('W1 missing enemy outline warns, not fail', fails(r).length === 0 && warnsOf(r).some(w => w.startsWith('W1'))); }
+{ const r = run({ 'horde_mawling_move_e_00.png': [48, 56, body(48, 56, PALETTE.enemy, 8, 18)] }); t('W3 horde 48x56 warns, not fail', fails(r).length === 0 && warnsOf(r).some(w => w.startsWith('W3'))); }
+{ const r = run({ 'mob_roach_move_e_00.png': [48, 60, body(48, 60, PALETTE.enemy, 8, 18)] }); t('mob canvas over 48x56 still fails', fails(r).some(f => f.startsWith('D2'))); }
+t('D2 wrong canvas fails (elite)', fails(run({ 'elite_mawling_move_e_00.png': [60, 64, body(60, 64, PALETTE.enemy, 8, 18)] })).some(f => f.startsWith('D2')));
 t('D2 ghoul 48x48 exception passes [Q8]', !fails(run({ 'mob_ghoul_move_e_00.png': [48, 48, body(48, 48, PALETTE.enemy, 8, 8)] })).some(f => f.startsWith('D2')));
 t('D3 partial alpha fails', fails(run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => body(32, 32, PALETTE.enemy, 8, 18)(x, y) ? [PALETTE.enemy, 128] : null] })).some(f => f.includes('partial alpha')));
 t('D3 orphan pixel fails', fails(run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => x === 2 && y === 2 ? [PALETTE.enemy] : body(32, 32, PALETTE.enemy, 8, 18)(x, y)] })).some(f => f.includes('islands')));
