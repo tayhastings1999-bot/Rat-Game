@@ -20,6 +20,8 @@
     "perf:compare": "node scripts/perf-compare.mjs",
     "balance": "node scripts/balance.mjs",
     "insane": "node scripts/insane.mjs",
+    "lint:sprites": "node scripts/spritelint.mjs public/sprites",
+    "test:spritelint": "node scripts/spritelint-test.mjs",
     "test:sprites": "node scripts/sprites-test.mjs"
   },
   "dependencies": {
