@@ -19,7 +19,8 @@
     "shots": "node scripts/shots.mjs",
     "perf:compare": "node scripts/perf-compare.mjs",
     "balance": "node scripts/balance.mjs",
-    "insane": "node scripts/insane.mjs"
+    "insane": "node scripts/insane.mjs",
+    "test:sprites": "node scripts/sprites-test.mjs"
   },
   "dependencies": {
     "@fontsource/alegreya-sans": "^5.3.0",
