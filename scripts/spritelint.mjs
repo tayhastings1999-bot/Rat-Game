@@ -3,7 +3,8 @@
 //   dir: folders of exported frames named {group}_{id}_{action}_{dir}_{nn}{_n|_m}.png (guide §9)
 //        and/or atlas frame tables atlas_<group>.json. Default: public/sprites.
 // Checks (⚙ rows of §11):
-//   D1  palette: every opaque albedo colour is in the 27-colour sprite palette (player hues never painted)
+//   D1  palette: every opaque albedo colour is in the sprite palette (player hues never painted);
+//       Bile Eye #9EAE2C is allowed on mob/elite/boss sprites only (enemy eyes)
 //   D2  canvas size per group (§4) incl. GAD exceptions: ghoul 48×48 [Q8], ghoulLord 192×192 [Q9]; atlas anchors
 //   D3  alpha is 0/255 only; no orphan 1-px islands (eye/glint colours excepted)
 //   D4  hero player-mask coverage ≥ 12% of opaque px (guide v1.4; was 20%), every frame; mask only on painted px (§2.3.2)
@@ -20,11 +21,14 @@ export const PALETTE = {
   void: '0B0A10', slate: '1E2230', concrete: '3A4052', grime: '5C6474', bone: 'E8E4DA',
   lime: 'B6FF3B', purple: '7A3CFF', orange: 'FF7A1A', cyan: '3BF2FF', chromeHi: 'C9D4E8', chromeLo: '4A5470',
   slateS1: '191C28', concreteS1: '2E3242', concreteL1: '5D616D', grimeS1: '484E5B', grimeL1: '787E88', boneS1: 'B1AEA8',
-  chromeHiS1: '9AA2B2', chromeLoS1: '3A4258', chromeLoL1: '6A7185', enemy: '4A4656', enemyS1: '3A3744', enemyL1: '6A6670',
+  chromeHiS1: '9AA2B2', chromeLoS1: '3A4258', chromeLoL1: '6A7185', enemy: '4A3E58', enemyS1: '3A3248', // enemy ramp v1.4 (was 4A4656 / 3A3744)
+  enemyL1: '6A6670',
   flesh: 'B0786C', // TD-8 default: yes, sprite-only
 };
+/** Bile Eye: enemy eye pixels only (never on heroes, cast, props or world). */
+export const BILE_EYE = '9EAE2C';
 export const PLAYER = { p1: 'FF3B30', p2: '2F8CFF', p3: 'FFD21F', p4: '5CF2A0' };
-const EYES = new Set([PALETTE.orange, PALETTE.purple, PALETTE.cyan, PALETTE.lime, PALETTE.bone]); // eyes, glints, pustules
+const EYES = new Set([BILE_EYE, PALETTE.orange, PALETTE.purple, PALETTE.cyan, PALETTE.lime, PALETTE.bone]); // eyes, glints, pustules
 export const CANVAS = { hero: [48, 64], mob: [32, 32], elite: [64, 64], boss: [128, 128], swarm: [16, 16], cast: [48, 64], ui: null, prop: null };
 export const ANCHOR = { hero: [24, 60], mob: [16, 29], elite: [32, 61], boss: [64, 123], swarm: [8, 14], cast: [24, 60] };
 const EXCEPT = { // GAD rulings: [canvas, anchor]
@@ -37,6 +41,7 @@ const NAME = /^(hero|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_([A-Za-z0
 const hex = (r, g, b) => ((r << 16 | g << 8 | b) >>> 0).toString(16).toUpperCase().padStart(6, '0');
 const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
 const lum = (r, g, b) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+const ENEMY = new Set(['mob', 'elite', 'boss']);
 const OK = new Set(Object.values(PALETTE)), PL = new Set(Object.values(PLAYER));
 function hsv(r, g, b) {
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
@@ -61,7 +66,7 @@ export function lintFrame(file, img, mask) {
     if (al !== 0 && al !== 255) nonbin++;
     if (al !== 255) { if (mr || mg) mskStray++; continue; }
     opq++;
-    if (!OK.has(c)) { off++; if (offCols.size < 6) offCols.add('#' + c); }
+    if (c === BILE_EYE && ENEMY.has(group)) { /* allowed: enemy eye */ } else if (!OK.has(c)) { off++; if (offCols.size < 6) offCols.add('#' + c); }
     if (group !== 'hero' && group !== 'cast' && (PL.has(c) || reddish(r, g, b)) && !(group === 'prop' && c === PLAYER.p3)) red++;
     if (mr) msk++;
     if (!EYES.has(c) && !mg) mx = Math.max(mx, lum(r, g, b));

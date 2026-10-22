@@ -24,6 +24,10 @@ const heroOK = { 'hero_tank_idle_s_00.png': [48, 64, body(48, 64, PALETTE.grimeL
 const mobOK = { 'mob_roach_move_e_00.png': [32, 32, body(32, 32, PALETTE.enemy, 8, 18)] };
 t('clean hero + mob pass', fails(run({ ...heroOK, ...mobOK })).length === 0);
 t('D1 off-palette fails', fails(run({ ...heroOK, 'mob_roach_move_e_00.png': [32, 32, body(32, 32, '123456', 8, 18)] })).some(f => f.startsWith('D1')));
+const eyed = (W, H, col) => (x, y) => x === 14 && y === 22 ? ['9EAE2C'] : body(W, H, col, 8, 18)(x, y);
+t('Bile Eye on a mob passes', !fails(run({ 'mob_roach_move_e_00.png': [32, 32, eyed(32, 32, PALETTE.enemy)] })).some(f => f.startsWith('D1')));
+t('Bile Eye on a hero fails', fails(run({ 'hero_tank_idle_s_00.png': [48, 64, (x, y) => x === 20 && y === 20 ? ['9EAE2C'] : body(48, 64, PALETTE.grimeL1)(x, y)], 'hero_tank_idle_s_00_m.png': heroOK['hero_tank_idle_s_00_m.png'] })).some(f => f.startsWith('D1')));
+t('old enemy tone #4A4656 now off-palette', fails(run({ 'mob_roach_move_e_00.png': [32, 32, body(32, 32, '4A4656', 8, 18)] })).some(f => f.startsWith('D1')));
 t('D2 wrong canvas fails', fails(run({ 'mob_roach_move_e_00.png': [30, 32, body(30, 32, PALETTE.enemy, 8, 18)] })).some(f => f.startsWith('D2')));
 t('D2 ghoul 48x48 exception passes [Q8]', !fails(run({ 'mob_ghoul_move_e_00.png': [48, 48, body(48, 48, PALETTE.enemy, 8, 8)] })).some(f => f.startsWith('D2')));
 t('D3 partial alpha fails', fails(run({ 'mob_roach_move_e_00.png': [32, 32, (x, y) => body(32, 32, PALETTE.enemy, 8, 18)(x, y) ? [PALETTE.enemy, 128] : null] })).some(f => f.includes('partial alpha')));
