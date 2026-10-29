@@ -1,15 +1,18 @@
 // Sprite lint (PIXEL_STYLE_GUIDE v1.3 §11 drift checks; RENDERER_MIGRATION_PLAN PR 2).
+// v1.9 §4.2 LOCKED hero spec: heroes 128×160, anchor (64,150), soft painted (no palette lock, D1 off-palette
+//   skipped for heroes), player colour painted on cloth (D11 n/a to heroes), mask cloth-only, min HERO_MASK_MIN 2%.
 // Usage: node scripts/spritelint.mjs [dir ...] [--json report.json] [--quiet]
 //   dir: folders of exported frames named {group}_{id}_{action}_{dir}_{nn}{_n|_m}.png (guide §9)
 //        and/or atlas frame tables atlas_<group>.json. Default: public/sprites.
 // Checks (⚙ rows of §11):
 //   D1  palette: every opaque albedo colour is in the sprite palette (player hues never painted);
+//       heroes exempt (v1.9 §4.2 soft painted, no palette lock; player colour painted on cloth)
 //       Bile Eye #9EAE2C is allowed on mob/elite/boss sprites only (enemy eyes)
 //   D2  canvas size per group (§4) incl. GAD exceptions: ghoul 48×48 [Q8], ghoulLord 192×192 [Q9]; atlas anchors
-//   D3  alpha is 0/255 only; no orphan 1-px islands (eye/glint colours excepted)
-//   D4  hero player-mask coverage ≥ 12% of opaque px (guide v1.4; was 20%), every frame; mask only on painted px (§2.3.2)
+//   D3  alpha is 0/255 only; no orphan 1-px islands (eye/glint colours excepted; heroes: 8-connected, §4.2)
+//   D4  hero player-mask coverage ≥ HERO_MASK_MIN (2%, guide v1.9 §4.2 cloth-only; was 12%/20%), every frame; mask only on painted px (§2.3.2)
 //   D6  value: hero max luminance > every mob max luminance (eyes and mask-G emissive excluded)
-//   D11 no red / player hue in enemy, prop or world pixels; no player mask on mobs
+//   D11 no red / player hue in enemy, prop or world pixels; no player mask on mobs (heroes exempt, §4.2)
 //   D13 every atlas frame has ai (boolean) and aiTool (string when ai:true) — Steam disclosure (§9.1)
 // D5 (frame counts) needs Rat 6's §5.2 table in machine form and is reported as "skipped" for now.
 // Exit code 1 on any failure. No sprite content ships with this tool.
@@ -29,14 +32,14 @@ export const PALETTE = {
 export const BILE_EYE = '9EAE2C';
 export const PLAYER = { p1: 'FF3B30', p2: '2F8CFF', p3: 'FFD21F', p4: '5CF2A0' };
 const EYES = new Set([BILE_EYE, PALETTE.orange, PALETTE.purple, PALETTE.cyan, PALETTE.lime, PALETTE.bone]); // eyes, glints, pustules
-export const CANVAS = { hero: [48, 64], mob: [32, 32], horde: [32, 32], elite: [64, 64], boss: [128, 128], swarm: [16, 16], cast: [48, 64], ui: null, prop: null };
-export const ANCHOR = { hero: [24, 60], mob: [16, 29], horde: [16, 29], elite: [32, 61], boss: [64, 123], swarm: [8, 14], cast: [24, 60] };
+export const CANVAS = { hero: [128, 160], mob: [32, 32], horde: [32, 32], elite: [64, 64], boss: [128, 128], swarm: [16, 16], cast: [48, 64], ui: null, prop: null };
+export const ANCHOR = { hero: [64, 150], mob: [16, 29], horde: [16, 29], elite: [32, 61], boss: [64, 123], swarm: [8, 14], cast: [24, 60] };
 const EXCEPT = { // GAD rulings: [canvas, anchor]
   mob_ghoul: [[48, 48], [24, 45]], // Q8 heavy-grunt exception
   boss_ghoulLord: [[192, 192], [96, 187]], // Q9
 };
-/** D4 minimum hero player-mask coverage (PIXEL_STYLE_GUIDE v1.4: 12%, lowered from 20%). */
-export const HERO_MASK_MIN = 0.12;
+/** D4 minimum hero player-mask coverage (PIXEL_STYLE_GUIDE v1.9 §4.2: 2%; was 12% v1.4, 20% before). */
+export const HERO_MASK_MIN = 0.02; // v1.9 §4.2: painted heroes, cloth-only masks (Warlock rope ≈3.6%)
 const NAME = /^(hero|horde|mob|elite|boss|cast|swarm|prop|ui)_([A-Za-z0-9]+)_([A-Za-z0-9]+)_(s|se|e|ne|n)_(\d{2})(_n|_m)?\.png$/;
 const hex = (r, g, b) => ((r << 16 | g << 8 | b) >>> 0).toString(16).toUpperCase().padStart(6, '0');
 const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
@@ -78,12 +81,14 @@ export function lintFrame(file, img, mask) {
     opq++;
     const enemy = ENEMY.has(group), eye = enemy && c !== BILE_EYE && !PL.has(c) && !OK.has(c) && warmEye(r, g, b);
     if (eye) { eyeW++; if (eyeCols.size < 6) eyeCols.add('#' + c); }
-    else if (c === BILE_EYE && enemy) { /* allowed: enemy eye */ } else if (!OK.has(c)) { off++; if (offCols.size < 6) offCols.add('#' + c); }
+    else if (c === BILE_EYE && enemy) { /* allowed: enemy eye */ } else if (group !== 'hero' && !OK.has(c)) { off++; if (offCols.size < 6) offCols.add('#' + c); }
     if (!eye && group !== 'hero' && group !== 'cast' && (PL.has(c) || reddish(r, g, b)) && !(group === 'prop' && c === PLAYER.p3)) red++;
     if (enemy && (!A(x + 1, y) || !A(x - 1, y) || !A(x, y + 1) || !A(x, y - 1))) { edge++; if (c === PALETTE.void) edgeVoid++; }
     if (mr) msk++;
     if (!EYES.has(c) && !mg) mx = Math.max(mx, lum(r, g, b));
-    if (!EYES.has(c) && !A(x + 1, y) && !A(x - 1, y) && !A(x, y + 1) && !A(x, y - 1)) isl++;
+    const iso4 = !A(x + 1, y) && !A(x - 1, y) && !A(x, y + 1) && !A(x, y - 1);
+    // v1.9 §4.2: painted heroes draw 1-px diagonal tails/cords, so a hero island has no 8-neighbour
+    if (!EYES.has(c) && iso4 && (group !== 'hero' || (!A(x + 1, y + 1) && !A(x - 1, y - 1) && !A(x + 1, y - 1) && !A(x - 1, y + 1)))) isl++;
   }
   if (eyeW) {
     const msg = `${eyeW} warm eye px (${[...eyeCols].join(' ')}) outside Bile Eye`;

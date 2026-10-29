@@ -4,7 +4,10 @@ import { syncColony } from './colony.js';
 import * as THREE from 'three';
 import { rand, clamp, angD, keep, TAU, PI2, $ } from '../core/util.js';
 import { G, P, W, run, st, settings } from '../core/state.js';
-import { camera, sun, lantern, lampL, post, renderer } from '../render/renderer.js';
+import { camera, sun, lantern, lampL, post, renderer, useOrtho, setOrthoWidth, orthoCam, perspCam } from '../render/renderer.js';
+import { pickStep, orthoRadiusPx } from '../render/camstep.js';
+import { heroSprite, beginHeroes, drawHero, endHeroes } from '../render/heroSprites.js';
+import { heroAnimState, camBasis } from '../entities/player.js';
 import { IMB, IMG, IMO, MOB_CAP, shadowIM, scrapIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
 import { animTick, writePose, rigTime } from '../render/rig.js';
@@ -335,14 +338,22 @@ export function sync(dt) {
 
 export function animate(dt) {
   if (!G.rat) return;
+  beginHeroes();
+  heroI = 0;
   poseRat(dt, blob);
   coopAnimate(dt, poseRat);
   animateCamera(dt);
+  endHeroes(camera);
 }
 
 /** Pose the active rat's model and its blob shadow (co-op runs this once per rat). */
+let heroI = 0;
 function poseRat(dt, shadow) {
-  const rat = G.rat;
+  const rat = G.rat, hi = heroI++;
+  // Sprite path (TUNE.sprite.mode mixed/sprite + a loaded "heroes" atlas with this class): billboard
+  // sprite instead of the mesh. Without an atlas this is skipped and the mesh path below is untouched.
+  if (heroSprite(run.cls) && spriteRat(rat, hi, shadow)) return;
+  if (rat.g.userData.spriteHid) { rat.g.userData.spriteHid = false; rat.g.visible = true; }
   const t = G.time, bulk = rat.bulk || 1;
   rat.g.position.set(P.x, P.y, P.z);
   rat.g.rotation.y += angD(P.facing, rat.g.rotation.y) * (1 - Math.exp(-18 * dt));
@@ -408,6 +419,21 @@ function poseRat(dt, shadow) {
   if (shadow.children[0]) shadow.children[0].scale.setScalar(1 + TUNE.art.ringPulse * Math.sin(t * 6));
 }
 
+/** Draw the active rat as a sprite. False (mesh fallback) when the atlas lacks a usable frame. */
+function spriteRat(rat, hi, shadow) {
+  const s = heroAnimState(P), b = camBasis();
+  // World facing (sin f, cos f) → screen angle: x along camera right, y along camera forward (up-screen).
+  const fx = Math.sin(s.facing), fz = Math.cos(s.facing), ang = Math.atan2(fx * b.fx + fz * b.fz, fx * b.rx + fz * b.rz);
+  const blink = P.inv > 0 && P.roll <= 0 && G.state === 'play' && Math.floor(G.time * 24) % 2 === 1;
+  const ok = !blink ? drawHero(run.cls, s, ang, G.time, P.x, P.y, P.z, TUNE.coop.colors?.[hi] ?? null, 0, P.squeeze ? 1.2 : 1, P.squeeze ? 0.7 : 1) : true;
+  if (!ok) return false;
+  rat.g.position.set(P.x, P.y, P.z);
+  rat.g.visible = false; rat.g.userData.spriteHid = true;
+  shadow.position.set(P.x, floorY(P.x, P.z, true) + 0.03, P.z);
+  return true;
+}
+
+let zoomStep = null;
 function animateCamera(dt) {
 
   // Camera: a fixed angle that follows the rat. Walls in the way get a dithered see-through
@@ -417,8 +443,11 @@ function animateCamera(dt) {
   const lv = Math.hypot(P.vx, P.vz) * C.lead, lk = lv > C.leadMax ? C.leadMax / lv : 1;
   lead.x += ((play ? P.vx * C.lead * lk : 0) - lead.x) * Math.min(1, dt * 3);
   lead.z += ((play ? P.vz * C.lead * lk : 0) - lead.z) * Math.min(1, dt * 3);
+  // TD-3: orthographic in play (and paused/map over play); perspective for menus, nest and cinematics.
+  const ortho = C.ortho && (play || G.state === 'paused' || G.state === 'map');
+  useOrtho(ortho);
   const fov = C.fov + (P.slam ? 7 : 0) + (P.roll > 0 ? 2 : 0);
-  if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
+  if (!ortho && Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); }
   tgt.set(P.x + G.camOff.x + (P.inDuct || P.inBldg ? 0 : lead.x), P.y + 1, P.z + G.camOff.z + (P.inDuct || P.inBldg ? 0 : lead.z));
   // Co-op: frame every standing rat, pulling back as they spread out (TUNE.coop.cam*).
   const cf = play ? coopFrame() : null;
@@ -428,8 +457,20 @@ function animateCamera(dt) {
   const base = G.state === 'menu' ? G.camPitch : C.pitch, pitch = base + (C.cutPitch - base) * camFix;
   // In play the camera is sized by how many world units it shows across (TUNE.camera.width);
   // co-op widens it to the box around every standing rat plus padding. Menus keep G.camDist.
-  const across = 2 * Math.tan(C.fov * Math.PI / 360) * camera.aspect;
-  const wantW = cf ? clamp(Math.max(cf.spanX, cf.spanZ * camera.aspect) + 2 * TUNE.coop.camPad, Math.max(C.minWidth, G.camWidth || C.width), C.maxWidth) : (G.camWidth || C.width);
+  const across = 2 * Math.tan(C.fov * Math.PI / 360) * perspCam.aspect;
+  let wantW;
+  if (ortho) {
+    // Stepped zoom: the player's step, or for co-op the smallest step that fits every rat (with hysteresis).
+    const aspect = (orthoCam.right - orthoCam.left) / (orthoCam.top - orthoCam.bottom);
+    const own = G.camWidth || C.width;
+    const need = cf ? Math.max(cf.spanX, cf.spanZ * aspect) + 2 * TUNE.coop.camPad : 0;
+    zoomStep = cf ? Math.max(own, pickStep(need, C.steps, zoomStep, C.stepHyst)) : own;
+    wantW = zoomStep;
+    // Ortho has no FOV: the slam/roll punch is a small width change instead.
+    const punch = 1 + (P.slam ? 0.12 : 0) + (P.roll > 0 ? 0.03 : 0), cur = orthoCam.right - orthoCam.left;
+    setOrthoWidth(cur + (wantW * punch - cur) * Math.min(1, dt * 6));
+  } else wantW = cf ? clamp(Math.max(cf.spanX, cf.spanZ * perspCam.aspect) + 2 * TUNE.coop.camPad, Math.max(C.minWidth, G.camWidth || C.width), C.maxWidth) : (G.camWidth || C.width);
+  // Ortho keeps the same eye distance (near/far, fog and the fade hole read it); size comes from the frustum.
   const dist = G.state === 'menu' ? G.camDist : wantW / across;
   want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   G.camPos.lerp(want, 1 - Math.exp(-10 * dt));
@@ -465,6 +506,7 @@ function syncFade() {
   renderer.getSize(_sz);
   _fv.copy(fadeU.fadeRat.value).project(camera);
   const dist = camera.position.distanceTo(fadeU.fadeRat.value);
-  const rPx = C.fadeRadius / (dist * Math.tan(camera.fov * Math.PI / 360)) * (_sz.y / 2);
+  const rPx = camera.isOrthographicCamera ? orthoRadiusPx(C.fadeRadius, camera.top, _sz.y)
+    : C.fadeRadius / (dist * Math.tan(camera.fov * Math.PI / 360)) * (_sz.y / 2);
   fadeU.fadeScr.value.set((_fv.x * 0.5 + 0.5) * _sz.x, (_fv.y * 0.5 + 0.5) * _sz.y, rPx);
 }

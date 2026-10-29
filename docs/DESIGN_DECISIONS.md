@@ -95,3 +95,17 @@ A running log of decisions about Scurry's direction, with the reasons for them. 
 | 2026-10-19 | **Swarm prototype rules.** Rats within 4 of the king take his hits (one rat per 10 damage); with none near he takes them, so surging everything leaves you exposed. Latched rats bite for 7/s each and pin anything they outnumber three to one per unit of mass; engulfed enemies shake rats off every ~1.1 s. Kills breed 0.5 rats per XP point, food 0.12 per HP; rats past 20 starve at 0.5% each per second. Nests spawn ×2.5 faster and keep ×3 children. With no rats left, the king's class attack comes back. | Measured with the QA bot on Cinder Row and Neon Market: about 55–95 kills a minute (the hero game managed 27–50), an average colony of 60–80 rats that reaches the 180 cap in under 7% of samples, and kings usually alive. Without upkeep the colony hit the cap within 100 s and stayed there, with no tension. |
 | 2026-10-20 | **Swarm gnaw trial stands on open floor.** The lab trial put the rat at a fixed +5.5 from the frayed cable. On the 72-tile maps that spot is inside a wall, so the stuck-rescue moved the rat back to a safe spot ~35 units away, out of gnaw range, and E did nothing. The trial now picks open floor 2–5 units from the cable (`freeSpot`). The game's gnaw logic was fine. |
 | 2026-10-20 | **Colony rats never end up inside buildings (Rat 7 P30-8).** New rats (breeding slots, corpse spots) and catch-up teleports now check whether the spot is inside a solid tile below its top. If it is, the rat goes to the spot itself or to the king instead. A rat's step that would end inside a building is undone, because `collideBody` only pushes a body to the next tile edge, which is still inside a large building. The swarm lab had found up to 9 rats in walls on Neon Market. |
+
+## TD-3 camera + hero sprite wiring (Oct 29, 2026)
+- In sprite mode only (`?sprites=1`/`mixed`/`sprite`) the play camera is orthographic (TD-3): 20 world units across (was 22, perspective), zoom steps 20/30 only;
+  the wheel snaps one step per ~150 ms. 18 is reserved for cinematics. Co-op framing picks the smallest step that
+  fits every rat plus padding, dropping back to a smaller step only once the span fits 85% of it. Menus, the nest
+  and cinematics keep the perspective camera. Default/mesh mode keeps main's perspective
+  camera (22 across, free zoom 18–30), per Taylor Oct 29. `?persp` forces perspective even with sprites.
+- `TUNE.sprite.mode` = 'mesh' (default) | 'mixed' | 'sprite'; `?sprites=1` → mixed. In mixed/sprite, a hero whose
+  class has frames in `public/sprites/atlas_heroes.json` draws from one SpriteBatch and its mesh is hidden; no
+  atlas, no frames for that class, or no frame for the action → the procedural mesh as before (any non-idle action
+  plays idle). Mesh mode never fetches the atlas.
+- First art: heroes_v2 idle-only package (4 heroes × 16 frames, 128×160, anchor 64,150, south-facing only, ai:true →
+  Steam AI disclosure). Drawn at `TUNE.sprite.heroPpu` 80. spritelint updated to v1.9 §4.2 hero rules.
+  Walks, attacks, normals, rings, mobs, bosses and sprite lighting are later slices.

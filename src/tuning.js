@@ -4,6 +4,14 @@
 // systems read from here; older numbers move in as their systems are rebuilt.
 import { PLAYER } from './render/palette.js';
 
+// ?sprites=1 or ?sprites=mixed → mixed, ?sprites=sprite → sprite, otherwise mesh.
+const SPRITE_MODE = (() => {
+  const m = typeof location !== 'undefined' && /[?&]sprites(?:=(\w+))?/.exec(location.search);
+  return !m ? 'mesh' : m[1] === 'sprite' ? 'sprite' : m[1] === 'mesh' || m[1] === '0' ? 'mesh' : 'mixed';
+})();
+// TD-3 ortho play camera is gated behind sprite mode; mesh/default keeps main's perspective camera.
+const ORTHO = SPRITE_MODE !== 'mesh' && !(typeof location !== 'undefined' && /[?&]persp\b/.test(location.search));
+
 export const TUNE = {
   enemies: {
     cap: 200, // live enemies at once (nests pulse and hold at the cap)
@@ -66,12 +74,29 @@ export const TUNE = {
     // food and fewer power-ups), but the rules and telegraphs are the same as Normal.
     insane: { hp: 1.3, dmg: 1.6, spawn: 1.3, elite: 2, bossHp: 1.15, bossDmg: 0.7, drain: 1.4, food: 0.6, gold: 1.75, atk: 1.25, spd: 1.08, pu: 0.5, vials: -1 },
   },
+  sprite: {
+    // Pixel-sprite renderer (RENDERER_MIGRATION_PLAN §7). 'mesh' = procedural meshes only (unchanged);
+    // 'mixed' = sprites where an atlas has the key, mesh elsewhere; 'sprite' = same, for full sprite runs.
+    // ?sprites=1 or ?sprites=mixed → mixed, ?sprites=sprite → sprite. Missing atlases always fall back to mesh.
+    mode: SPRITE_MODE,
+    ppu: 32, // sprite pixels per world unit
+    heroPpu: 80, // heroes_v2 art is 128×160 per frame; 80 px/unit draws a hero 1.6 × 2 units
+    heroCap: 8,
+  },
   camera: {
     // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9
     // (Gauntlet shows the room, not just the hero). Walls in the way get a see-through hole.
     pitch: 1.08, // radians above the horizon (~62°)
-    width: 22, // world units visible across at the target; the wheel zooms between minWidth and maxWidth
-    minWidth: 18,
+    // TD-3 (PIXEL_STYLE_GUIDE): ONLY in sprite mode (?sprites=1/mixed/sprite) the play camera is
+    // orthographic, 20 units across (32 px/unit), zoom steps 20/30; 18 is cinematics only. Default/mesh
+    // mode keeps the perspective camera at 22 across with free wheel zoom 18–30. ?persp forces perspective.
+    ortho: ORTHO,
+    width: ORTHO ? 20 : 22, // world units visible across at the target
+    steps: [20, 30], // wheel / pad zoom and co-op framing snap to these
+    stepHyst: 0.85, // co-op: drop back to a smaller step only once the span fits in 85% of it
+    stepDebounce: 0.15, // s between wheel zoom steps
+    cineWidth: 18, // cinematics only
+    minWidth: ORTHO ? 20 : 18,
     maxWidth: 30,
     fov: 35,
     lead: 0.16, // look ahead by this × velocity…

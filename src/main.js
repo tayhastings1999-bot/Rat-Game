@@ -4,7 +4,8 @@ import './style.css';
 
 import { $ } from './core/util.js';
 import { G, P, W, run, st, meta } from './core/state.js';
-import { renderFrame, adaptResolution } from './render/renderer.js';
+import { renderFrame, adaptResolution, scene } from './render/renderer.js';
+import { preloadHeroes } from './render/heroSprites.js';
 import { setMusic } from './audio/audio.js';
 import { refreshPortraits } from './entities/rat.js';
 import { update } from './game/update.js';
@@ -21,6 +22,9 @@ refreshPortraits();
 initInput();
 initTouch();
 menu();
+// Hero sprites (TUNE.sprite.mode mixed/sprite only): a missing public/sprites/atlas_heroes.json resolves
+// false and every hero keeps its procedural mesh. Mode 'mesh' (default) skips the fetch entirely.
+preloadHeroes(scene).catch(e => console.warn('[sprites] hero preload failed, mesh fallback', e));
 
 let hudT = 0, mapT = 0;
 function loop(now) {

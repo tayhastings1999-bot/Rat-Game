@@ -25,6 +25,28 @@ export function pixelTex(tex, kind = 'albedo') {
   return tex;
 }
 
+/** Accept the art team's TexturePacker-style export too (heroes_v2, PIXEL_STYLE_GUIDE v1.9 §4.2):
+ * meta.size {w,h} → [w,h]; meta.image/meta.mask → one page; actions "<grp>_<id>_<action>_<dir>" with a
+ * frames list + ms[] → also "<id>_<action>" { fps, hold, dirs, frames } as this module expects. Pure. */
+export function normalizeAtlasJson(j) {
+  if (!j || !j.meta) return j;
+  const m = j.meta;
+  if (m.size && !Array.isArray(m.size)) m.size = [m.size.w, m.size.h];
+  if (m.image && !m.files) m.files = { albedo: m.image, mask: m.mask || null };
+  const acts = j.actions || {};
+  for (const [k, a] of Object.entries({ ...acts })) {
+    if (!Array.isArray(a.frames)) continue;
+    const p = k.split('_'); if (p.length < 4) continue;
+    const dir = p.pop(), action = p.pop(), id = p.slice(1).join('_'), key = `${id}_${action}`;
+    const ms = a.ms || [], m0 = Math.min(...ms.filter(Boolean)), base = Number.isFinite(m0) ? m0 : 100;
+    const prev = acts[key];
+    acts[key] = { fps: 1000 / base, hold: ms.map(v => (v || base) / base), frames: a.frames.length, loop: a.loop !== false,
+      dirs: [...new Set([...(prev?.dirs || []), dir])] };
+  }
+  j.actions = acts;
+  return j;
+}
+
 /** Validate a frame table; returns a list of problems (empty = ok). Shared with scripts/spritelint.mjs. */
 export function checkAtlasJson(j) {
   const errs = [];
@@ -68,10 +90,16 @@ export async function loadAtlas(group, { maps = ['albedo', 'mask'], url = base()
     if (!res.ok) throw new Error(res.status);
     j = await res.json();
   } catch { warnOnce(`no atlas for "${group}", using mesh fallback`); return null; }
+  normalizeAtlasJson(j);
   const errs = checkAtlasJson(j);
   if (errs.length) { warnOnce(`atlas "${group}" invalid: ${errs.slice(0, 3).join('; ')}`); return null; }
   const at = buildFrames(j), loader = new THREE.TextureLoader(), sfx = { albedo: '', normal: '_n', mask: '_m' };
-  at.pages = await Promise.all((j.meta.pages || [0]).map(async p => {
+  const files = j.meta.files;
+  at.pages = files ? [await (async () => {
+    const page = {};
+    for (const m of maps) if (files[m]) page[m] = pixelTex(await loader.loadAsync(url + files[m]), m);
+    return page;
+  })()] : await Promise.all((j.meta.pages || [0]).map(async p => {
     const page = {};
     for (const m of maps) page[m] = pixelTex(await loader.loadAsync(`${url}atlas_${group}_${p}${sfx[m]}.png`), m);
     return page;

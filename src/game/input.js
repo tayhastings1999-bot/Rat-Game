@@ -18,6 +18,7 @@ import { TUNE } from '../tuning.js';
 import { turboDown, turboUp } from './turbo.js';
 import { throwVial } from './vials.js';
 import { tallyContinue } from '../ui/tally.js';
+import { stepFrom } from '../render/camstep.js';
 
 /** Attack is held while the mouse button, J or the touch button is down. */
 const held = { mouse: false, key: false };
@@ -92,7 +93,17 @@ export function initInput() {
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', () => { held.mouse = false; syncAttack(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
-  canvas.addEventListener('wheel', e => { e.preventDefault(); G.camWidth = clamp((G.camWidth || TUNE.camera.width) + e.deltaY * 0.015, TUNE.camera.minWidth, TUNE.camera.maxWidth); }, { passive: false });
+  // TD-3: with the ortho camera the wheel snaps between TUNE.camera.steps (one notch per ~150 ms).
+  let wheelT = 0;
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const C = TUNE.camera;
+    if (!C.ortho) { G.camWidth = clamp((G.camWidth || C.width) + e.deltaY * 0.015, C.minWidth, C.maxWidth); return; }
+    const now = performance.now();
+    if (!e.deltaY || now - wheelT < C.stepDebounce * 1000) return;
+    wheelT = now;
+    G.camWidth = stepFrom(G.camWidth || C.width, C.steps, e.deltaY);
+  }, { passive: false });
   addEventListener('pointerdown', audioInit);
   addEventListener('mousemove', e => {
     if (G.touch) return;
