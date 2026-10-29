@@ -48,5 +48,9 @@ ok('heroes_v2 frame keys match frameKey', buildFrames(HJ).frames.has(frameKey('h
 globalThis.location = { search: '' };
 const { TUNE } = await import('../src/tuning.js');
 ok('TUNE.sprite defaults: mesh, ppu 32', TUNE.sprite.mode === 'mesh' && TUNE.sprite.ppu === 32);
-ok('TUNE.camera TD-3: ortho, width 20, steps 20/30, cine 18', TUNE.camera.ortho === true && TUNE.camera.width === 20 && TUNE.camera.steps.join() === '20,30' && TUNE.camera.cineWidth === 18);
+ok('TUNE.camera default (mesh): perspective, width 22, min 18', TUNE.camera.ortho === false && TUNE.camera.width === 22 && TUNE.camera.minWidth === 18);
+globalThis.location = { search: '?sprites=1' };
+const { TUNE: TS } = await import('../src/tuning.js?sprites');
+ok('TUNE.camera TD-3 with ?sprites=1: ortho, width 20, steps 20/30, cine 18', TS.sprite.mode === 'mixed' && TS.camera.ortho === true && TS.camera.width === 20 && TS.camera.steps.join() === '20,30' && TS.camera.cineWidth === 18);
+delete globalThis.location;
 process.exit(fail ? 1 : 0);

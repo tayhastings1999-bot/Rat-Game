@@ -97,10 +97,11 @@ A running log of decisions about Scurry's direction, with the reasons for them. 
 | 2026-10-20 | **Colony rats never end up inside buildings (Rat 7 P30-8).** New rats (breeding slots, corpse spots) and catch-up teleports now check whether the spot is inside a solid tile below its top. If it is, the rat goes to the spot itself or to the king instead. A rat's step that would end inside a building is undone, because `collideBody` only pushes a body to the next tile edge, which is still inside a large building. The swarm lab had found up to 9 rats in walls on Neon Market. |
 
 ## TD-3 camera + hero sprite wiring (Oct 29, 2026)
-- Play camera is orthographic (TD-3): default 20 world units across (was 22, perspective), zoom steps 20/30 only;
+- In sprite mode only (`?sprites=1`/`mixed`/`sprite`) the play camera is orthographic (TD-3): 20 world units across (was 22, perspective), zoom steps 20/30 only;
   the wheel snaps one step per ~150 ms. 18 is reserved for cinematics. Co-op framing picks the smallest step that
   fits every rat plus padding, dropping back to a smaller step only once the span fits 85% of it. Menus, the nest
-  and cinematics keep the perspective camera. `?persp` restores the old perspective play camera for comparison.
+  and cinematics keep the perspective camera. Default/mesh mode keeps main's perspective
+  camera (22 across, free zoom 18–30), per Taylor Oct 29. `?persp` forces perspective even with sprites.
 - `TUNE.sprite.mode` = 'mesh' (default) | 'mixed' | 'sprite'; `?sprites=1` → mixed. In mixed/sprite, a hero whose
   class has frames in `public/sprites/atlas_heroes.json` draws from one SpriteBatch and its mesh is hidden; no
   atlas, no frames for that class, or no frame for the action → the procedural mesh as before (any non-idle action
