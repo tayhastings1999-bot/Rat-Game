@@ -30,4 +30,23 @@ const act = { frames: 4, fps: 10, hold: [1, 3, 1, 1] };
 ok('frameAt honours holds', frameAt(act, 0.05) === 0 && frameAt(act, 0.15) === 1 && frameAt(act, 0.35) === 1 && frameAt(act, 0.45) === 2);
 ok('frameAt loops', frameAt(act, 0.6 + 0.05) === 0);
 ok('frameAt clamps when not looping', frameAt(act, 9, false) === 3);
+
+// TD-3 stepped zoom (render/camstep.js), heroes_v2 atlas format, tuning defaults.
+const { pickStep, stepFrom, orthoRadiusPx } = await import('../src/render/camstep.js');
+ok('pickStep smallest fitting step', pickStep(12, [20, 30]) === 20 && pickStep(24, [20, 30]) === 30 && pickStep(99, [20, 30]) === 30);
+ok('pickStep hysteresis holds 30 until span < 85% of 20', pickStep(18, [20, 30], 30) === 30 && pickStep(16, [20, 30], 30) === 20);
+ok('stepFrom wheel notches', stepFrom(20, [20, 30], 1) === 30 && stepFrom(30, [20, 30], -1) === 20 && stepFrom(30, [20, 30], 1) === 30);
+ok('ortho fade radius px', orthoRadiusPx(2.6, 5.625, 360) === 2.6 / 5.625 * 180);
+const { has, normalizeAtlasJson } = await import('../src/render/atlas.js');
+ok('no heroes atlas loaded → has() false (mesh fallback)', !has('tank_idle', 'heroes') && !has('tank_idle'));
+const { readFileSync } = await import('node:fs');
+const HJ = normalizeAtlasJson(JSON.parse(readFileSync(new URL('../public/sprites/atlas_heroes.json', import.meta.url))));
+ok('heroes_v2 atlas validates after normalize', checkAtlasJson(HJ).length === 0);
+ok('heroes_v2 idle actions for all four classes', ['tank', 'slinger', 'warlock', 'sneak'].every(c => HJ.actions[`${c}_idle`]?.frames === 16 && HJ.actions[`${c}_idle`].dirs.join() === 's'));
+ok('heroes_v2 idle loop 2.4 s', Math.abs(16 / HJ.actions.tank_idle.fps - 2.4) < 1e-9);
+ok('heroes_v2 frame keys match frameKey', buildFrames(HJ).frames.has(frameKey('hero', 'sneak', 'idle', 's', 15)));
+globalThis.location = { search: '' };
+const { TUNE } = await import('../src/tuning.js');
+ok('TUNE.sprite defaults: mesh, ppu 32', TUNE.sprite.mode === 'mesh' && TUNE.sprite.ppu === 32);
+ok('TUNE.camera TD-3: ortho, width 20, steps 20/30, cine 18', TUNE.camera.ortho === true && TUNE.camera.width === 20 && TUNE.camera.steps.join() === '20,30' && TUNE.camera.cineWidth === 18);
 process.exit(fail ? 1 : 0);

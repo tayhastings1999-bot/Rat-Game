@@ -16,7 +16,27 @@ renderer.localClippingEnabled = true;
 export const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e4);
 
 export const scene = new THREE.Scene();
-export const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 190);
+/** Perspective camera: menus, the nest, transitions and cinematics (TD-3). */
+export const perspCam = new THREE.PerspectiveCamera(55, 1, 0.1, 190);
+/** Orthographic play camera (TD-3). Frustum is sized each frame by sync.js (setOrthoWidth). */
+export const orthoCam = new THREE.OrthographicCamera(-11, 11, 6, -6, 0.1, 190);
+/** The camera in use. A live binding: importers always see the current one (useOrtho). */
+export let camera = perspCam;
+/** Switch between the ortho play camera and the perspective camera. Returns true if it changed. */
+export function useOrtho(on) {
+  const next = on ? orthoCam : perspCam;
+  if (next === camera) return false;
+  next.position.copy(camera.position); next.quaternion.copy(camera.quaternion);
+  camera = next;
+  return true;
+}
+/** Size the ortho frustum to show `width` world units across at the current aspect. */
+export function setOrthoWidth(width) {
+  const hw = width / 2, hh = hw / (perspCam.aspect || 1);
+  if (Math.abs(orthoCam.right - hw) < 1e-4 && Math.abs(orthoCam.top - hh) < 1e-4) return;
+  Object.assign(orthoCam, { left: -hw, right: hw, top: hh, bottom: -hh });
+  orthoCam.updateProjectionMatrix();
+}
 /** Everything that belongs to the current district; cleared on regeneration. */
 export const world = new THREE.Group();
 /**
@@ -92,8 +112,9 @@ export function resize() {
   rt.setSize(w, h);
   post.uniforms.res.value.set(w, h);
   ps1Snap.value.set(w * 0.75, h * 0.75); // ~480×270 at 360 lines: a subtle wobble, not a swim
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+  perspCam.aspect = w / h;
+  perspCam.updateProjectionMatrix();
+  setOrthoWidth(orthoCam.right - orthoCam.left);
 }
 /** Called once per frame with the real frame time (seconds). */
 export function adaptResolution(frameDt) {
