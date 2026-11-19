@@ -16,7 +16,7 @@
 
 const night = { fog: 0x0a0a16, sky: 0x0c0a1c };
 export const CITY_LEVELS = [
-  { id: 'cinder', base: 0, seed: 'cinder', map: 96, blockGap: 16, hiddenExtra: 3, alleyOdds: 0.22 }, // try 2: a little more walk (try 1 median 9.3); still no extra nests (target ~11)
+  { id: 'cinder', base: 0, seed: 'cinder', map: 92, blockGap: 14, hiddenExtra: 3, alleyOdds: 0.28 }, // try 1 knobs kept: median 9.3 was closer to ~11 than try 2's 7.9
   { id: 'neon', base: 1, seed: 'neon', map: 90, blockGap: 17, hiddenExtra: 3, alleyOdds: 0.16 }, // try 2: pull back from try 1 median 14.0 (target ~11)
   { id: 'rust', base: 2, seed: 'rust', hiddenExtra: 2, alleyOdds: 0.85 }, // longer B2 crane-yard loop + extra hidden yards (Rat 3: target ~12 min, no extra nests)
   { id: 'hollow', base: 3, seed: 'hollow', grave: true, secretTo: 'vault' },
