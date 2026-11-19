@@ -22,8 +22,24 @@ const scale = () => Math.min(N().hpCap, (1 + (run.tier || 0) * N().hpPerZone) * 
 export const tierHp = () => [N().hp1, N().hp2, N().hp3].map(h => h * scale());
 export const tierName = t => NEST_NAMES[t - 1] || 'Nest';
 
-/** How many nests this zone gets. */
-export const nestCount = () => { const s = curD().secret; return s === 'garden' ? TUNE.secrets.gardenNests : s ? 0 : Math.min(N().countMax, Math.round(N().count + N().countPerZone * (run.tier || 0))); };
+/** How many nests the zone formula asks for (and an optional per-level cap on curD().nests). Garden keeps its own count. */
+export const nestCount = () => {
+  const D = curD(), s = D.secret;
+  if (s === 'garden') return TUNE.secrets.gardenNests;
+  if (s) return 0;
+  const base = Math.min(N().countMax, Math.round(N().count + N().countPerZone * (run.tier || 0)));
+  return D.nests != null ? Math.min(N().countMax, D.nests, base) : base;
+};
+/** Sewer cap: no more than sewerFrac × eligible rooms, at least sewerFree rooms nest-free, never above countMax. City uses nestCount() (global 28). */
+export function nestBudget(eligible, rooms) {
+  let want = nestCount();
+  if (isSewer() && !curD().secret) {
+    const cap = Math.round(eligible * (N().sewerFrac ?? 0.65));
+    const free = N().sewerFree ?? 4;
+    want = Math.min(want, N().countMax, cap, Math.max(0, rooms - free));
+  }
+  return Math.max(0, want);
+}
 
 /** Seeded tier and family for the i-th nest of the zone. */
 export function rollNest(i) {
