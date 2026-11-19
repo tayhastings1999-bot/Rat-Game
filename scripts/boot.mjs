@@ -328,7 +328,7 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
   await toPlay();
-  const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: 1 + __scurry.TUNE.coop.perPlayer.bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
+  const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: __scurry.TUNE.coop.party[2].bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
   if (!s0.on || s0.n !== 2 || s0.rp !== 2) throw new Error('co-op not on ' + JSON.stringify(s0));
   if (Math.abs(s0.boss - s0.want) > 1e-6) throw new Error('boss HP scale ' + s0.boss);
   if (!(s0.hp > 0)) throw new Error('player 2 has no HP');

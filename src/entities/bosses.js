@@ -74,7 +74,8 @@ export function spawnBoss() {
   // The secret boss (the Great Rune whole): The Nameless Rat, built to be nearly impossible.
   // Its ×6 replaces the co-op boss-HP multiplier rather than stacking on it (difficulty bossHp still applies).
   if (run.secretUp) {
-    const coopM = 1 + Math.max(0, (run.players || 1) - 1) * TUNE.coop.perPlayer.bossHp;
+    const nP = Math.max(1, Math.min(4, run.players || 1));
+    const coopM = (TUNE.coop.party && TUNE.coop.party[nP] && TUNE.coop.party[nP].bossHp) || 1;
     const S = TUNE.runes;
     Object.assign(b, { name: 'The Nameless Rat', final: false, secretBoss: true, hp: b.hp * S.secretHp / coopM, maxHp: b.maxHp * S.secretHp / coopM, dmg: b.dmg * S.secretDmg, spd: b.spd * S.secretSpd, armored: S.secretTaken, lore: ['Under the Court, under the crown', '"You found every piece of me. Now I am whole."'] });
     mesh.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(new THREE.Color(0xff5ad8), 0.6); });
