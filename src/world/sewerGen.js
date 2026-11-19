@@ -67,10 +67,27 @@ export function genSewer(seed, D) {
     if (a !== b) links.push([a, b]);
   }
   const pw = D.water ?? 0.28, pa = D.acid ?? 0.22;
+  // The pump-hall beat: send the longest vertical MST link along the map edge and stamp a hall there.
+  let pump = null, pumpD = -1;
+  if (D.pumpHall) {
+    for (const [a, b] of links) {
+      const d = Math.abs(a.cy - b.cy);
+      if (d > pumpD) { pumpD = d; pump = [a, b]; }
+    }
+  }
   for (const [a, b] of links) {
     const q = rng.next();
     const t = q < pw ? 2 : q < pw + pa ? 4 : 1;
-    if (D.detour) {
+    if (pump && a === pump[0] && b === pump[1]) {
+      const edge = 2;
+      carve(a.cx, a.cy, edge, a.cy, t);
+      carve(edge, a.cy, edge, b.cy, t);
+      carve(edge, b.cy, b.cx, b.cy, t);
+      const midy = Math.round((a.cy + b.cy) / 2);
+      for (let y = midy - 2; y <= midy + 2; y++)
+        for (let x = 2; x <= 7; x++)
+          if (inG(x, y) && (grid[gi(x, y)] === 0 || grid[gi(x, y)] === t)) grid[gi(x, y)] = 1;
+    } else if (D.detour) {
       // A longer B2 path: dog-leg through a waypoint instead of a short L-tunnel (the bot has to walk it between nests).
       const mx = Math.round((a.cx + b.cx) / 2), my = Math.round((a.cy + b.cy) / 2);
       const ox = a.cy === b.cy ? 0 : (rng.next() < 0.5 ? 6 : -6);

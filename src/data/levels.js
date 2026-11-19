@@ -27,7 +27,7 @@ export const CITY_LEVELS = [
 ];
 const deep = { fog: 0x080608 };
 export const SEWER_LEVELS = [
-  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 76, spread: 5, detour: true, spine: true, cuts: 0 }, // winding pump-hall spine; gentle first sewer (target ~11 min)
+  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 72, spread: 5, detour: true, spine: true, cuts: 0, pumpHall: true }, // winding spine + one edge pump-hall; gentle first sewer (target ~11 min)
   { id: 'cistern', base: 1, seed: 'cisterns' },
   { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 2, map: 72, spread: 4, detour: true }, // cold-store side rooms + longer drains (target ~13 min, no extra nests)
   { id: 'frozen', base: 3, seed: 'frozen-pipeworks', secretTo: 'garden' },
