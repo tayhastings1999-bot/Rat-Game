@@ -6,7 +6,7 @@
 //  - hold:   stand in the beacon's ring until it's lit, under waves of flyers.
 //  - hunt:   a gold thief rat runs off with your gold. Catch it three times.
 import * as THREE from 'three';
-import { rand, pick, PI2 } from '../core/util.js';
+import { rand, pick, rng, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { world, bury } from '../render/renderer.js';
 import { Bx, Cy } from '../render/models.js';
@@ -40,7 +40,7 @@ function glow(col, s, par, y) {
 /** A clear spot in a room for an objective item: never inside a car, a crate or a wall. */
 const spot = r => {
   const tl = roomTiles(r).map(([x, z]) => [toW(x), toW(z)]);
-  for (let i = tl.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [tl[i], tl[j]] = [tl[j], tl[i]]; }
+  for (let i = tl.length - 1; i > 0; i--) { const j = (rng.next() * (i + 1)) | 0; [tl[i], tl[j]] = [tl[j], tl[i]]; }
   const ok = tl.find(([x, z]) => freeSpot(x, z, 1.3));
   if (ok) return { x: ok[0], z: ok[1] };
   const [x, z] = tl[0] || [toW(r.cx), toW(r.cy)], f = nearFree(x, z, 1, 6) || [x, z];

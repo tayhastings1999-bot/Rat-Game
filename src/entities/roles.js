@@ -10,7 +10,7 @@
 //    purple acid volleys. Close the gap or break line of sight.
 // Plus pack behaviour: flankers, retreat-when-hurt, rage when an elite falls,
 // and creature rivalries (cats eat mawlings, the shriek scatters birds).
-import { rand, randi, angD } from '../core/util.js';
+import { rand, randi, ri, angD } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { fx, puff, spark, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -228,7 +228,7 @@ export function catHunt(e, dt, d) {
 /** A floor tile next to a wall, some distance from the rat; returns a point tucked against the wall. */
 function crackSpot(lo, hi, facing) {
   for (let i = 0; i < 80; i++) {
-    const gx = randi(3, M.W - 4), gz = randi(3, M.H - 4);
+    const gx = ri(3, M.W - 4), gz = ri(3, M.H - 4);
     if (!DRY(tAt(gx, gz))) continue;
     const x0 = toW(gx), z0 = toW(gz), d = Math.hypot(x0 - P.x, z0 - P.z);
     if (d < lo || d > hi) continue;

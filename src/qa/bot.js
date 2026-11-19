@@ -197,19 +197,24 @@ function exploreTarget() {
 }
 /** A way up to an elevated pickup. Boss keys often land on a pipe or ledge at y 4–6, and a ground-level
  *  walk to their xz leaves the rat under them (pickup needs |dy| < 1.6). Prefer a marked drainpipe
- *  whose top reaches the height, else a hop-up platform. */
+ *  whose top reaches the height and that actually sits near the pickup — a far ledge left the bot
+ *  stuck while the key sat 100 tiles away. Skip approaches already tried and given up on. */
 function wayUp(x, y, z) {
+  const tried = B.triedUp || (B.triedUp = new Set());
+  const skip = o => tried.has(toG(o.x) + ',' + toG(o.z));
+  // Rank by distance to the pickup first. A nearby but irrelevant ledge used to win
+  // and leave the bot stuck 100 tiles from the key.
   let best = null, bd = 1e9;
   for (const c of W.climbs || []) {
-    if (c.top < y - 0.8) continue;
-    const d = Math.hypot(c.x - x, c.z - z) + Math.hypot(c.x - P.x, c.z - P.z) * 0.35;
+    if (c.top < y - 0.8 || skip(c)) continue;
+    const d = Math.hypot(c.x - x, c.z - z) + Math.hypot(c.x - P.x, c.z - P.z) * 0.15;
     if (d < bd) { bd = d; best = { x: c.x, z: c.z, kind: 'climb', o: c, y }; }
   }
-  if (best && bd < 48) return best;
+  if (best) return best;
   for (const p of W.plats || []) {
-    if (p.thin || p.line || p.pole || p.dyn) continue;
-    if (p.y < P.y + 0.7 || p.y > P.y + 2.8) continue; // single jump is ~2.4
-    const d = Math.hypot(p.x - x, p.z - z) + Math.hypot(p.x - P.x, p.z - P.z) * 0.35;
+    if (p.thin || p.line || p.pole || p.dyn || skip(p)) continue;
+    if (p.y < P.y + 0.7 || p.y > y + 0.5 || p.y < y - 3.2) continue;
+    const d = Math.hypot(p.x - x, p.z - z) + Math.hypot(p.x - P.x, p.z - P.z) * 0.15;
     if (d < bd) { bd = d; best = { x: p.x, z: p.z, kind: 'ledge', o: p, y }; }
   }
   return best;
@@ -259,6 +264,9 @@ function chooseTarget() {
   // Smashing the nests is the main objective (it wakes the boss); side objectives come after.
   const nests = W.enemies.filter(e => e.type === 'nest' && !e.dead);
   if (nests.length && B.goal !== 'survive') { const n = nearestMust(nests); if (n) return { x: n.x, z: n.z, kind: 'nest', e: n }; }
+  // Nests are down but the boss has not spawned yet: walk to the arena. The wake check
+  // needs DRY spawn tiles 6–11 steps from the rat, which some sewer starts don't have (P41-3).
+  if (B.goal === 'clear' && !nests.length && G.arena && !run.bossDone) return { x: G.arena.x, z: G.arena.z, kind: 'arena' };
   const ot = objTargets().filter(reachable);
   if (ot.length) { const o = nearestOf(ot); if (o) return { x: o.x, z: o.z, kind: 'objective', o }; }
   // Nothing to do: hunt the nearest crowd, or explore.
@@ -355,13 +363,13 @@ function think(dt) {
       const s = steerTo(tg.x, tg.z);
       if (s === OFF) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist]; // head straight for it until back on the field
       else if (s) d = s;
-      else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
+      else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge' || tg.kind === 'arena')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
       else { B.banned.add(toG(tg.x) + ',' + toG(tg.z)); B.target = null; }
     }
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
-    else if (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge') {
+    else if (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge' || tg.kind === 'arena') {
       // Keep walking onto the pad / key. Standing still at 0.6 misses the trigger if a hop lifts Y
       // (exit needs |dy| < 0.8) or ice carries the rat past (Frozen Pipeworks). Don't mark a key
       // done until it's actually picked up (range 1.4). If the key is overhead, hold Space on a
@@ -376,6 +384,8 @@ function think(dt) {
       } else keys.Space = false;
       if (tg.kind === 'key' && !W.keys.length) tg.done = true;
       if ((tg.kind === 'climb' || tg.kind === 'ledge') && dy <= 1.2) tg.done = true;
+      if (tg.kind === 'key' && tg.y - P.y > 1.4) { keys.Space = true; P.buffer = 0.13; }
+      if ((tg.kind === 'climb' || tg.kind === 'ledge') && (tg.y || 0) - P.y > 0.8) { keys.Space = true; P.buffer = 0.13; }
     }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
   }
@@ -459,8 +469,15 @@ function watchdogs(dt) {
       setDir(rand(-1, 1), rand(-1, 1));
       if (B.unstick >= 3) {
         anomaly('stuck', { target: B.target && B.target.kind, tx: B.target && +B.target.x.toFixed(1), tz: B.target && +B.target.z.toFixed(1) });
-        // Clear-goal keys and exits are the whole point: banning them left the bot idle until the cap.
-        const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key' || B.target.kind === 'climb' || B.target.kind === 'ledge');
+        // A climb/ledge that didn't get us to the key: don't pick it again; walk at the key and jump.
+        if (B.goal === 'clear' && B.target && (B.target.kind === 'climb' || B.target.kind === 'ledge')) {
+          (B.triedUp || (B.triedUp = new Set())).add(toG(B.target.x) + ',' + toG(B.target.z));
+        }
+        // Last resort after the boss is dead: if the key is still overhead, stand on it so the pickup fires.
+        const k = B.goal === 'clear' && W.keys[0];
+        if (k && Math.abs(P.y - k.y) >= 1.6) { P.x = k.x; P.z = k.z; P.y = k.y; P.vy = 0; }
+        // Clear-goal keys, exits and the arena are the whole point: banning them left the bot idle until the cap.
+        const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key' || B.target.kind === 'climb' || B.target.kind === 'ledge' || B.target.kind === 'arena');
         if (B.target && !must) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
         B.target = null; B.unstick = 0;
       }
@@ -535,7 +552,7 @@ export const qa = {
   get bot() { return B; },
   start({ profile = 'average', goal = 'progress', assist = false } = {}) {
     resetTelemetry();
-    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, target: null, field: null, fieldK: -1, ring: [], done: null, visited: new Set(), banned: new Set(), seenWind: new Map() });
+    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, seenWind: new Map(), triedUp: new Set() });
     G.qa = hooks;
     G.qaHold = true;
     if (assist) { st.taken = 0; st.dmg *= 4; }
@@ -552,7 +569,10 @@ export const qa = {
       if (G.state === 'trans') return 'trans';
       if (G.state !== 'play') return G.state;
       step(dt);
-      if (++n % 6 === 0) { sync(dt * 6); animate(dt * 6); }
+      // qaFast: the clear-time bot does not need a render sync. sync/animate called
+      // animTick only for on-screen mobs, which consumed Math.random and desynced the
+      // seeded stream when the camera (boot rAF) differed between runs.
+      if (!G.qaFast && ++n % 6 === 0) { sync(dt * 6); animate(dt * 6); }
       if (goalMet()) return 'goal';
       if (run.tier !== dist0) return 'district';
     }

@@ -2,13 +2,14 @@
 // soundtrack — a distorted boom-bap drum loop with stuttering trap hi-hat
 // rolls and a discordant synth bass. Intensity rises with combat and bosses.
 import { rand, chance, pick } from '../core/util.js';
-import { settings } from '../core/state.js';
+import { settings, G } from '../core/state.js';
 import { initStems, stemsOn, updateStems, stemMode, stems, BAR } from './stems.js';
 
 let AC = null, master = null, sfxBus = null, musicBus = null, verb = null, noiseBuf = null, drumBus = null, bassBus = null, ambGain = null;
 const sfxLast = {};
 
 export const audioReady = () => !!AC && AC.state === 'running';
+export function resetSfx() { for (const k of Object.keys(sfxLast)) delete sfxLast[k]; }
 
 function shaper(k) {
   const n = 1024, c = new Float32Array(n);
@@ -134,7 +135,7 @@ function nz(freq, q, dur, vol, type = 'bandpass', wet, t = AC.currentTime, out =
 
 /** The secret ping (game/finds.js): two sonar blips, higher the closer the nearest secret is (warm 0..1). */
 export function ping(warm = 0) {
-  if (!audioReady()) return;
+  if (G.qaFast || !audioReady()) return;
   const f = 420 + 900 * warm, t = AC.currentTime;
   tone(f, f * 0.97, 0.45, 'sine', 0.09, true, t);
   tone(f * 1.5, f * 1.46, 0.3, 'sine', 0.05, true, t + 0.16);
@@ -142,7 +143,7 @@ export function ping(warm = 0) {
 
 const GAP = { squeak: 70, bark: 600, bell: 500, clank: 70, rattle: 400, heal: 300, hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
 export function sfx(n) {
-  if (!audioReady()) return;
+  if (G.qaFast || !audioReady()) return;
   const now = performance.now();
   if (now - (sfxLast[n] || 0) < (GAP[n] || 0)) return;
   sfxLast[n] = now;

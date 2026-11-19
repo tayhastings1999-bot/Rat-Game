@@ -50,6 +50,7 @@ let barkT;
  * VO when shipped, else web-only speech); opt.color tints the line (a player's colour).
  */
 export function bark(text, secs = TUNE.announcer.showSecs, opt = {}) {
+  if (G.qaFast) return;
   if (typeof secs === 'object') { opt = secs; secs = TUNE.announcer.showSecs; }
   const el = $('bark');
   if (el) {
@@ -88,6 +89,7 @@ const LINES = {
 export const CALLOUTS = LINES;
 /** Say a callout of `kind` about player i (default: the active rat). `extra` is appended. */
 export function callout(kind, i = coop.on ? coop.active : 0, extra = '') {
+  if (G.qaFast) return;
   const pool = coop.on ? LINES[kind] : LINES[kind].filter(l => !/^ann_coop_/.test(l[0])) ;
   const [vo, t] = pick(pool.length ? pool : LINES[kind]);
   bark(t.replace('{rat}', callName(i)) + extra, { vo, color: tint(i) });
@@ -104,6 +106,7 @@ export function lowHealth() {
 let foodT = 0;
 /** A player's shot smashed food (rate-limited so a volley is one call). */
 export function foodShot(i) {
+  if (G.qaFast) return;
   const now = performance.now();
   if (now - foodT < 4000) return;
   foodT = now;
