@@ -81,15 +81,29 @@ export function genSewer(seed, D) {
     const t = q < pw ? 2 : q < pw + pa ? 4 : 1;
     const pi = pumpLinks.findIndex(p => p[0] === a && p[1] === b);
     if (pi >= 0) {
-      const edge = pi % 2 === 0 ? 2 : GW - 3;
-      carve(a.cx, a.cy, edge, a.cy, t);
-      carve(edge, a.cy, edge, b.cy, t);
-      carve(edge, b.cy, b.cx, b.cy, t);
-      const midy = Math.round((a.cy + b.cy) / 2);
-      const x0 = edge <= 2 ? 2 : GW - 8, x1 = edge <= 2 ? 7 : GW - 3;
-      for (let y = midy - 2; y <= midy + 2; y++)
-        for (let x = x0; x <= x1; x++)
-          if (inG(x, y) && (grid[gi(x, y)] === 0 || grid[gi(x, y)] === t)) grid[gi(x, y)] = 1;
+      if (D.pumpWrap) {
+        // A long unique C-shaped hall around the rim so the spine crossing cannot be shortcut.
+        const left = 2, right = GW - 3, top = 2;
+        carve(a.cx, a.cy, left, a.cy, t);
+        carve(left, a.cy, left, top, t);
+        carve(left, top, right, top, t);
+        carve(right, top, right, b.cy, t);
+        carve(right, b.cy, b.cx, b.cy, t);
+        const midx = Math.round(GW / 2);
+        for (let y = 2; y <= 6; y++)
+          for (let x = midx - 3; x <= midx + 3; x++)
+            if (inG(x, y) && (grid[gi(x, y)] === 0 || grid[gi(x, y)] === t)) grid[gi(x, y)] = 1;
+      } else {
+        const edge = pi % 2 === 0 ? 2 : GW - 3;
+        carve(a.cx, a.cy, edge, a.cy, t);
+        carve(edge, a.cy, edge, b.cy, t);
+        carve(edge, b.cy, b.cx, b.cy, t);
+        const midy = Math.round((a.cy + b.cy) / 2);
+        const x0 = edge <= 2 ? 2 : GW - 8, x1 = edge <= 2 ? 7 : GW - 3;
+        for (let y = midy - 2; y <= midy + 2; y++)
+          for (let x = x0; x <= x1; x++)
+            if (inG(x, y) && (grid[gi(x, y)] === 0 || grid[gi(x, y)] === t)) grid[gi(x, y)] = 1;
+      }
     } else if (D.detour) {
       // A longer B2 path: dog-leg through a waypoint instead of a short L-tunnel (the bot has to walk it between nests).
       const mx = Math.round((a.cx + b.cx) / 2), my = Math.round((a.cy + b.cy) / 2);

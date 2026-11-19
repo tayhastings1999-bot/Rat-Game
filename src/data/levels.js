@@ -17,7 +17,7 @@
 const night = { fog: 0x0a0a16, sky: 0x0c0a1c };
 export const CITY_LEVELS = [
   { id: 'cinder', base: 0, seed: 'cinder' },
-  { id: 'neon', base: 1, seed: 'neon', map: 84, blockGap: 13 }, // wider stall/arcade blocks (Rat 3: target ~11 min, no extra nests)
+  { id: 'neon', base: 1, seed: 'neon', map: 84, blockGap: 16, hiddenExtra: 2 }, // wider stall/arcade blocks + hidden yards (Rat 3: target ~11 min, no extra nests)
   { id: 'rust', base: 2, seed: 'rust', hiddenExtra: 2, alleyOdds: 0.85 }, // longer B2 crane-yard loop + extra hidden yards (Rat 3: target ~12 min, no extra nests)
   { id: 'hollow', base: 3, seed: 'hollow', grave: true, secretTo: 'vault' },
   { id: 'cinder-n', base: 0, seed: 'cinder-night', title: 'Cinder Row · After Dark', night: true, haz: 'blackout', fam: ['prowl', 'vermin', 'wings'], boss: 'tabby', bossV: 'frenzied', over: { ...night, lamp: 0x9ab0ff, neon: [0xff3a6a, 0x6a3aff] } },
@@ -27,7 +27,7 @@ export const CITY_LEVELS = [
 ];
 const deep = { fog: 0x080608 };
 export const SEWER_LEVELS = [
-  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 72, spread: 5, detour: true, spine: true, cuts: 0, pumpHall: true, pumpHalls: 2 }, // winding spine + two edge pump-halls; gentle first sewer (target ~11 min)
+  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 72, spread: 5, spine: true, cuts: 0, pumpHall: true, pumpWrap: true }, // winding spine + a unique rim pump-hall (no detour shortcuts); gentle first sewer (target ~11 min)
   { id: 'cistern', base: 1, seed: 'cisterns', loops: 2, map: 72, spread: 4, detour: true, pumpHall: true }, // pillar-cistern loop so the near exit still lands in 10–20
   { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 2, map: 72, spread: 4, pumpHall: true }, // cold-store side rooms + one hook-gallery hall (target ~13 min; random detours were getting the bot lost)
   { id: 'frozen', base: 3, seed: 'frozen-pipeworks', secretTo: 'garden' },
