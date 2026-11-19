@@ -8,8 +8,9 @@ const SIZE = 72; // was 52: 10-20 min levels need room for more nests, side stre
 
 export function genCity(seed, D) {
   seedRng(seed);
-  allocMap(SIZE, 'city');
-  const W = SIZE, grid = M.grid, hgt = M.hgt;
+  const size = D.map || SIZE;
+  allocMap(size, 'city');
+  const W = size, grid = M.grid, hgt = M.hgt;
   grid.fill(TL.WALL);
   hgt.fill(12);
   const set = (x, y, t, h) => { if (inG(x, y)) { grid[gi(x, y)] = t; if (h != null) hgt[gi(x, y)] = h; } };

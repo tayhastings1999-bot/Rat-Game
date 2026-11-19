@@ -17,7 +17,7 @@
 const night = { fog: 0x0a0a16, sky: 0x0c0a1c };
 export const CITY_LEVELS = [
   { id: 'cinder', base: 0, seed: 'cinder' },
-  { id: 'neon', base: 1, seed: 'neon' },
+  { id: 'neon', base: 1, seed: 'neon', map: 84 }, // covered-arcade stretch (Rat 3: target ~11 min, no extra nests)
   { id: 'rust', base: 2, seed: 'rust', hiddenExtra: 2, alleyOdds: 0.85 }, // longer B2 crane-yard loop + extra hidden yards (Rat 3: target ~12 min, no extra nests)
   { id: 'hollow', base: 3, seed: 'hollow', grave: true, secretTo: 'vault' },
   { id: 'cinder-n', base: 0, seed: 'cinder-night', title: 'Cinder Row · After Dark', night: true, haz: 'blackout', fam: ['prowl', 'vermin', 'wings'], boss: 'tabby', bossV: 'frenzied', over: { ...night, lamp: 0x9ab0ff, neon: [0xff3a6a, 0x6a3aff] } },
@@ -29,12 +29,12 @@ const deep = { fog: 0x080608 };
 export const SEWER_LEVELS = [
   { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 72, spread: 5, detour: true, spine: true, cuts: 0, pumpHall: true }, // winding spine + one edge pump-hall; gentle first sewer (target ~11 min)
   { id: 'cistern', base: 1, seed: 'cisterns' },
-  { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 2, map: 72, spread: 4, detour: true }, // cold-store side rooms + longer drains (target ~13 min, no extra nests)
+  { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 2, map: 72, spread: 4, pumpHall: true }, // cold-store side rooms + one hook-gallery hall (target ~13 min; random detours were getting the bot lost)
   { id: 'frozen', base: 3, seed: 'frozen-pipeworks', secretTo: 'garden' },
   { id: 'toxic', base: 4, seed: 'toxic-refinery' },
   { id: 'court', base: 5, seed: 'rat-kings-court', grave: true },
   { id: 'under-d', base: 0, seed: 'deep-undersewer', title: 'The Deep Undersewer', haz: 'decay', fam: ['rot', 'prowl'], boss: 'maw', bossV: 'frenzied', over: { ...deep, lamp: 0xff8040 } },
-  { id: 'cistern-d', base: 1, seed: 'undertow', title: 'Flooded Cisterns · Undertow', haz: 'currents', fam: ['wings', 'rot', 'vermin'], boss: 'brood', bossV: 'brood', over: { ...deep, lamp: 0x40c0ff } },
+  { id: 'cistern-d', base: 1, seed: 'undertow', title: 'Flooded Cisterns · Undertow', loops: 2, map: 72, pumpHall: true, haz: 'currents', fam: ['wings', 'rot', 'vermin'], boss: 'brood', bossV: 'brood', over: { ...deep, lamp: 0x40c0ff } },
   { id: 'butcher-d', base: 2, seed: 'bloodworks', title: "Butcher's Drain · Bloodworks", haz: 'bloodmoon', fam: ['guard', 'vermin'], boss: 'ratking', bossV: 'armored', grave: true, rooms: 22, nests: 14, over: { ...deep, lamp: 0xff2a20 } }, // ceiling: ≤22 rooms, ≤14 nests (Rat 3); trim variant only if still over 20
   { id: 'frozen-d', base: 3, seed: 'black-ice', title: 'Frozen Pipeworks · Black Ice', haz: 'gravity', fam: ['wings', 'guard', 'prowl'], boss: 'maw', bossV: 'armored', over: { ...deep, lamp: 0x60a0ff } },
   { id: 'toxic-d', base: 4, seed: 'meltdown', title: 'Toxic Refinery · Meltdown', loops: 2, map: 72, spread: 4, detour: true, haz: 'tides', fam: ['rot', 'vermin', 'wings'], boss: 'brood', bossV: 'frenzied', over: { ...deep, lamp: 0xa0ff20 } },
