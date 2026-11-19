@@ -1,0 +1,4 @@
+{
+    "_doc": "Pre-approved pixel changes to golden art. Each entry: file (glob, repo-relative to /workspace/scurry-art or basename), region [x0,y0,x1,y1] inclusive or regions [[...],...], reason, date YYYY-MM-DD, requested_by (Taylor). Optional max_pixels. A change passes only if every changed pixel is inside a listed region. Remove entries once the new version is approved with golden.py approve.",
+    "changes": []
+}

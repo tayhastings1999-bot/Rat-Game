@@ -1,0 +1,211 @@
+# The QA pipeline on every push and pull request, cheapest checks first:
+#   1. boot gate       build, launch the production bundle, menu, start a run
+#   2. system          scripted smoke test + UI sweep, math checks and fuzzing
+#   3. feature lab     every new feature, level, mob or idea scored out of 100:
+#                      T1 Works (gate) · T2 Holds up · T3 Plays well, with
+#                      A/B ideas played against the control (scripts/lab.mjs)
+# Each stage only runs if the one before passed. There is no nightly or soak
+# run: bots only play when they are testing something new.
+#
+# Art lane (LOW_OVERSIGHT_SPEC §a, runs beside the stages above):
+#   art-gate     spritelint + golden diff + bleed + budget + guard selftest
+#                (scripts/art/gate.sh, goldens in art/golden/). Runs on every
+#                push/PR so it can be a required check; ~1 min.
+#   art-preview  on PRs that touch sprites or goldens: animated GIFs of every
+#                changed frame set + before/after frames for golden changes,
+#                posted (and updated in place) as one PR comment.
+#   Auto-merge of art-only PRs lives in art-automerge.yml (workflow_run on this
+#   workflow), so it always runs main's copy and a PR can't rewrite its own
+#   merge rules.
+name: QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: 0 · Changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      art: ${{ steps.files.outputs.art }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            : > changed.txt; echo "art=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # New and old names, so a rename into or out of an art folder is seen.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)' | sort -u > changed.txt
+          cat changed.txt
+          if grep -qE '^(public/sprites/|art/golden/|docs/art/|scripts/art/|scripts/spritelint\.mjs$)' changed.txt; then
+            echo "art=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "art=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v4
+        with: { name: changed-files, path: changed.txt }
+
+  art-gate:
+    name: art-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: America/New_York
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/art/requirements.txt
+      - run: pip install -r scripts/art/requirements.txt
+      - name: Art gate (spritelint, golden, bleed, budget, selftest)
+        run: bash scripts/art/gate.sh
+      - if: always()
+        run: |
+          { echo '```'; cat scripts/out/art/summary.txt 2>/dev/null || echo 'gate did not produce a summary'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: art-gate-report, path: scripts/out/art/ }
+
+  art-preview:
+    name: art-preview
+    needs: [changes, art-gate]
+    # Runs even when the gate fails (the comment shows why). Same-repo PRs only:
+    # fork PRs get a read-only token and can't post.
+    if: >-
+      always() && github.event_name == 'pull_request' &&
+      needs.changes.outputs.art == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # push images to the art-previews branch
+      pull-requests: write   # post / update the preview comment
+    concurrency:
+      group: art-preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      TZ: America/New_York
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      BASE: ${{ github.event.pull_request.base.ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/art/requirements.txt
+      - run: pip install -r scripts/art/requirements.txt
+      - uses: actions/download-artifact@v4
+        with: { name: changed-files, path: scripts/out/art/ci }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with: { name: art-gate-report, path: scripts/out/art/gate }
+      - name: Build GIF previews + before/after frames
+        run: |
+          DEST="pr-$PR/${SHA::7}"
+          echo "DEST=$DEST" >> "$GITHUB_ENV"
+          python3 scripts/art/pr_preview.py \
+            --changed scripts/out/art/ci/changed.txt --base "origin/$BASE" \
+            --summary scripts/out/art/gate/summary.txt --out scripts/out/art/pr \
+            --url-prefix "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/art-previews/$DEST"
+      - name: Publish images to the art-previews branch
+        run: |
+          set -euo pipefail
+          OUT="$PWD/scripts/out/art/pr"
+          ls "$OUT"/*.gif "$OUT"/*.png >/dev/null 2>&1 || { echo "no images"; exit 0; }
+          W="$RUNNER_TEMP/previews"; mkdir -p "$W"; cd "$W"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for try in 1 2 3; do
+            if git fetch -q --depth 1 origin art-previews; then git checkout -q -B art-previews FETCH_HEAD
+            else git checkout -q --orphan art-previews; git rm -rqf . 2>/dev/null || true; fi
+            mkdir -p "$DEST"; cp "$OUT"/*.gif "$OUT"/*.png "$DEST"/ 2>/dev/null || true
+            git add -A
+            git diff --cached --quiet || git commit -qm "art previews for #$PR @ ${SHA::7}"
+            git push -q origin HEAD:art-previews && exit 0
+            echo "push raced another PR, retrying ($try)"; sleep $((try * 3))
+          done
+          exit 1
+      - name: Post or update the PR comment
+        run: |
+          set -euo pipefail
+          BODY=scripts/out/art/pr/comment.md
+          ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- art-gate-preview -->"))) | .id' | tail -n 1)
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$ID" -F "body=@$BODY" > /dev/null
+          else
+            gh pr comment "$PR" --body-file "$BODY"
+          fi
+
+  boot:
+    name: 1 · Boot gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test:boot
+
+  system:
+    name: 2 · System, UI and fuzz
+    needs: boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - name: Smoke test (scripted end to end)
+        run: npm run smoke
+      - name: UI sweep, math checks, fuzzing
+        run: npm run test:system
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: system-results, path: scripts/out/system/ }
+
+  lab:
+    name: 3 · Feature lab (tiered scores)
+    needs: system
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run lab -- --quick
+      - if: always()
+        run: cat scripts/out/lab/SCORES.md >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: lab-report, path: scripts/out/lab/ }

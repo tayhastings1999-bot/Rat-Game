@@ -1,0 +1,80 @@
+# Auto-merge for ART-ONLY PRs (LOW_OVERSIGHT_SPEC §a.3; Taylor approved 18 Nov 2026).
+#
+# Runs after the QA workflow finishes on a PR. Because it is triggered by
+# workflow_run, GitHub always runs the copy of this file on main, so a PR
+# cannot change its own merge rules (and this file does nothing until it is
+# merged to main).
+#
+# A PR qualifies ONLY when ALL of these hold:
+#   * every changed path (new and old names of renames) is under
+#       public/sprites/**   or   docs/art/**
+#     Anything else never qualifies, explicitly including art/golden/**
+#     (a golden refresh), allowed_changes.json, scripts/**, src/**,
+#     .github/** and package files. Those always wait for Taylor.
+#   * the whole QA run for the PR's current head commit succeeded:
+#     boot gate, system/smoke, feature lab, art-gate (spritelint, golden,
+#     bleed, budget, selftest) and art-preview
+#   * same-repo PR into main, not a draft, no `no-automerge` label
+# Then it runs: gh pr merge --auto --squash --match-head-commit <sha>
+#
+# Repo settings this needs: "Allow auto-merge" on. Optional secret
+# ART_AUTOMERGE_TOKEN (fine-grained PAT, contents + pull requests: write):
+# a merge made with the default GITHUB_TOKEN does not start other workflows,
+# so without it an auto-merged art PR would not trigger the Pages deploy or
+# the QA run on main.
+name: Art auto-merge
+
+on:
+  workflow_run:
+    workflows: [QA]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: art-automerge-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  art-automerge:
+    name: art-automerge
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.ART_AUTOMERGE_TOKEN || github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Decide whether this PR is art-only, then queue the squash merge
+        run: |
+          set -euo pipefail
+          # The open PR whose CURRENT head is the commit QA just passed.
+          PRS=$(gh api "repos/$REPO/commits/$HEAD_SHA/pulls" \
+            --jq "[.[] | select(.state == \"open\" and .head.sha == \"$HEAD_SHA\" and .base.ref == \"main\" and .head.repo.full_name == \"$REPO\")] | map(.number) | join(\" \")")
+          read -r -a NUMS <<<"$PRS" || true
+          if [ "${#NUMS[@]}" -ne 1 ]; then echo "No single open same-repo PR into main at $HEAD_SHA ($PRS); nothing to do."; exit 0; fi
+          PR=${NUMS[0]}
+          pr=$(gh api "repos/$REPO/pulls/$PR")
+          if [ "$(jq -r .draft <<<"$pr")" = "true" ]; then echo "#$PR is a draft; skip."; exit 0; fi
+          if jq -e '.labels[] | select(.name == "no-automerge")' <<<"$pr" > /dev/null; then echo "#$PR has no-automerge; skip."; exit 0; fi
+          N=$(jq -r .changed_files <<<"$pr")
+          gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)' | sort -u > files.txt
+          LISTED=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' | wc -l)
+          echo "#$PR changes $N file(s):"; cat files.txt
+          if [ "$N" -lt 1 ] || [ "$LISTED" -ne "$N" ]; then echo "File list incomplete ($LISTED of $N); Taylor merges."; exit 0; fi
+          # Hard deny first (belt and braces), then the allow-list.
+          if grep -nE '\.\./|(^|/)art/golden/|(^|/)allowed_changes\.json$|(^|/)golden_manifest\.json$' files.txt; then
+            echo "#$PR touches goldens / allowed changes; never auto-merged. Taylor merges."; exit 0
+          fi
+          if grep -vE '^(public/sprites|docs/art)/' files.txt; then
+            echo "#$PR touches files outside public/sprites/** and docs/art/**; Taylor merges."; exit 0
+          fi
+          echo "#$PR is art-only and QA passed at $HEAD_SHA; queueing squash auto-merge."
+          gh pr merge "$PR" --repo "$REPO" --auto --squash --match-head-commit "$HEAD_SHA"

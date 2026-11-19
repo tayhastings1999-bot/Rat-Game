@@ -1,0 +1,2560 @@
+{
+ "version": 1,
+ "spec": "PIXEL_STYLE_GUIDE v1.9 \u00a74.2",
+ "updated": "2026-11-18",
+ "files": {
+  "public/sprites/atlas_heroes.png": {
+   "path": "public/sprites/atlas_heroes.png",
+   "sha256": "455a309ce2d7233cf836c760cf6ce2ad8345ee4c8f9fa3a367d1ba59d8720695",
+   "kind": "atlas",
+   "hero": null,
+   "pixel_sha": "cc980cb90cf8ad35241d3df9e17e73b081923d0b27278895bc1011628e5304cd",
+   "size": [
+    2048,
+    1024
+   ],
+   "snapshot": "art/golden/snapshots/cc980cb90cf8ad35241d3df9.png",
+   "opaque_px": 182891,
+   "colours": 7274,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/atlas_heroes_m.png": {
+   "path": "public/sprites/atlas_heroes_m.png",
+   "sha256": "2461b8f82efe20ba775769b6f2f2e0937a494b5f4787d5ebbf19e1226f7f5444",
+   "kind": "atlas_mask",
+   "hero": null,
+   "pixel_sha": "92336dff0808e1fd2beea2ac94456855d9e94a6e6347ebb1656e916236459e0d",
+   "size": [
+    2048,
+    1024
+   ],
+   "snapshot": "art/golden/snapshots/92336dff0808e1fd2beea2ac.png",
+   "opaque_px": 27087,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_00.png": {
+   "path": "public/sprites/hero_slinger_idle_s_00.png",
+   "sha256": "8a359516f3b7ea3a339e6407f9e8d790ebf2ddc513c746aa93eda979ac6e00d9",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "2529d4a7d0eb8ef2a9ad49c539e5a2245e1a3f0e6731f2bb0710fa7dce9c6b57",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/2529d4a7d0eb8ef2a9ad49c5.png",
+   "opaque_px": 1713,
+   "colours": 1606,
+   "cloth_mask": "art/golden/masks/2529d4a7d0eb8ef2a9ad49c5_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.191,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_00_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_00_m.png",
+   "sha256": "a858f11f28b733257389b67e80c0a126481e800471cb44d051ae8e8cea302ee2",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "f03a0df8b77836ec6fcbe3573f1ed1701fd665b3f13a9db5a1b43900825b5aa2",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f03a0df8b77836ec6fcbe357.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_01.png": {
+   "path": "public/sprites/hero_slinger_idle_s_01.png",
+   "sha256": "72e04dcefd684add866c017f13bbf0ba70b3200c05f755c947f9e4796830bc20",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "036b6c701018364e48ac358ea77824304b13b0c039e7276d6e87b9baacf058d4",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/036b6c701018364e48ac358e.png",
+   "opaque_px": 1715,
+   "colours": 1607,
+   "cloth_mask": "art/golden/masks/036b6c701018364e48ac358e_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.166,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_01_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_01_m.png",
+   "sha256": "a858f11f28b733257389b67e80c0a126481e800471cb44d051ae8e8cea302ee2",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "f03a0df8b77836ec6fcbe3573f1ed1701fd665b3f13a9db5a1b43900825b5aa2",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f03a0df8b77836ec6fcbe357.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_02.png": {
+   "path": "public/sprites/hero_slinger_idle_s_02.png",
+   "sha256": "ac333b9d373413bff37b89b778cf580be365aee67f93b2dec7ead526671edc14",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "cce9cc774c4d7392b355fbac8b1bf041631b30fe9b09b14b560c6e565cfb83f9",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/cce9cc774c4d7392b355fbac.png",
+   "opaque_px": 1714,
+   "colours": 1606,
+   "cloth_mask": "art/golden/masks/cce9cc774c4d7392b355fbac_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.179,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_02_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_02_m.png",
+   "sha256": "a858f11f28b733257389b67e80c0a126481e800471cb44d051ae8e8cea302ee2",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "f03a0df8b77836ec6fcbe3573f1ed1701fd665b3f13a9db5a1b43900825b5aa2",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f03a0df8b77836ec6fcbe357.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_03.png": {
+   "path": "public/sprites/hero_slinger_idle_s_03.png",
+   "sha256": "16a25abe11fd732a9994baa1bcb346f51d9d619106c29a5ecef6a3afdbb6c306",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "087b0b025af067d56c0144ba2fca665b4f53d620e745c0c8839868eca149c489",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/087b0b025af067d56c0144ba.png",
+   "opaque_px": 1721,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/087b0b025af067d56c0144ba_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.092,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_03_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_03_m.png",
+   "sha256": "f403e18d0567690e76204a5d84c438929cf7e97407345b9afc7fc241a5515487",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "42936405b19fb54b0a2c3bc3982850b031891593ae0c922c5d78e2e943b7552c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/42936405b19fb54b0a2c3bc3.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_04.png": {
+   "path": "public/sprites/hero_slinger_idle_s_04.png",
+   "sha256": "76dbd522888a3ec354642f300b326dad3a3f639e3806ea05129a4647f81a6292",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "9ab0c551bc0b138f5e112541ef46306bf044f215d71e0bdc1f432a2084d4eaa2",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/9ab0c551bc0b138f5e112541.png",
+   "opaque_px": 1714,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/9ab0c551bc0b138f5e112541_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.179,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_04_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_04_m.png",
+   "sha256": "f403e18d0567690e76204a5d84c438929cf7e97407345b9afc7fc241a5515487",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "42936405b19fb54b0a2c3bc3982850b031891593ae0c922c5d78e2e943b7552c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/42936405b19fb54b0a2c3bc3.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_05.png": {
+   "path": "public/sprites/hero_slinger_idle_s_05.png",
+   "sha256": "f0b9ded9d646b6a85bfde85f02ca0b29d8483fe0e3b71810c0a4eb7c22361944",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "c6178df58909a63fe4f67559c188baeae667b73212c2334f8ce40d8e56ac95da",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/c6178df58909a63fe4f67559.png",
+   "opaque_px": 1714,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/c6178df58909a63fe4f67559_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.179,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_05_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_05_m.png",
+   "sha256": "f403e18d0567690e76204a5d84c438929cf7e97407345b9afc7fc241a5515487",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "42936405b19fb54b0a2c3bc3982850b031891593ae0c922c5d78e2e943b7552c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/42936405b19fb54b0a2c3bc3.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_06.png": {
+   "path": "public/sprites/hero_slinger_idle_s_06.png",
+   "sha256": "fb53adef8db908c22177b0796c6e6252b6c52f46f77399dc82ca0803bf578eab",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "f957180bd92ff54771f3b4ed6216c9b4e6041bba85f969f711028d3f5120ec3e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f957180bd92ff54771f3b4ed.png",
+   "opaque_px": 1728,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/f957180bd92ff54771f3b4ed_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.007,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_06_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_06_m.png",
+   "sha256": "f403e18d0567690e76204a5d84c438929cf7e97407345b9afc7fc241a5515487",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "42936405b19fb54b0a2c3bc3982850b031891593ae0c922c5d78e2e943b7552c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/42936405b19fb54b0a2c3bc3.png",
+   "opaque_px": 363,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_07.png": {
+   "path": "public/sprites/hero_slinger_idle_s_07.png",
+   "sha256": "7c6e14f076ed41f8e9e5ac08af49f83e76d574d6457f17a46615e1178a164747",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "864523df72f04627908ab2a758a6501219f981079513934da380b3fed290d85d",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/864523df72f04627908ab2a7.png",
+   "opaque_px": 1732,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/864523df72f04627908ab2a7_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.42,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_07_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_07_m.png",
+   "sha256": "f7bd4bc2e607d2d6e73bd9a27b03236977e8616763c7a68581c4c11122f5537e",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "1e3d07be6ff05677ac89164a3fbffaa7df0d15c13f6a63aa8403df4c2da7ff7b",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/1e3d07be6ff05677ac89164a.png",
+   "opaque_px": 371,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_08.png": {
+   "path": "public/sprites/hero_slinger_idle_s_08.png",
+   "sha256": "a3853cc1884cfb55e6324677108df4c3317e6916e091a69863bd51ab4aaa655d",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "4552780eebc8c7643fba0ba998b481c5801504bbb1259a60de2b51e1668972a7",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4552780eebc8c7643fba0ba9.png",
+   "opaque_px": 1731,
+   "colours": 1613,
+   "cloth_mask": "art/golden/masks/4552780eebc8c7643fba0ba9_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.433,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_08_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_08_m.png",
+   "sha256": "f7bd4bc2e607d2d6e73bd9a27b03236977e8616763c7a68581c4c11122f5537e",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "1e3d07be6ff05677ac89164a3fbffaa7df0d15c13f6a63aa8403df4c2da7ff7b",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/1e3d07be6ff05677ac89164a.png",
+   "opaque_px": 371,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_09.png": {
+   "path": "public/sprites/hero_slinger_idle_s_09.png",
+   "sha256": "c2cfc6d208f325d7afc740dc44f8a25a5392f1ac818982f687415eee609358ce",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "e7dcdb76a9cd6c29e22ac6841bd25ba2ec1631e8b8077a3ecf159b9d5a6db655",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/e7dcdb76a9cd6c29e22ac684.png",
+   "opaque_px": 1734,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/e7dcdb76a9cd6c29e22ac684_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.742,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_09_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_09_m.png",
+   "sha256": "5bf6078bd01a9dbc44fa84a6eb36697903ba4749789a7b4b3910d9d5af3d14d0",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "b52006918fdd4841e33e019812df2f87257b489018ec4be32883c7c480381eb8",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/b52006918fdd4841e33e0198.png",
+   "opaque_px": 377,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_10.png": {
+   "path": "public/sprites/hero_slinger_idle_s_10.png",
+   "sha256": "a01d02474d2b31ba1b2875caf6b947f4a7c5c7eb251522c15e117cfe2f1b437e",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "4a3b4761d7bac1b8a4ba7d5188fdeace65479d6619eae413649769f84796efb9",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4a3b4761d7bac1b8a4ba7d51.png",
+   "opaque_px": 1737,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/4a3b4761d7bac1b8a4ba7d51_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.704,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_10_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_10_m.png",
+   "sha256": "ec7487e715e142561a0e1a6afd9cf34706704462342b326ac267f5a9f052e355",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "27a6e7a974e769a5995445dd09919d2a874b9cae34db9cc4008eef981034ac6e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/27a6e7a974e769a5995445dd.png",
+   "opaque_px": 377,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_11.png": {
+   "path": "public/sprites/hero_slinger_idle_s_11.png",
+   "sha256": "af17d9002f82815a3dff863f1495e8dbb518a94b2a4458fdc191090b6acd2301",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "d2102206758fcaeb2b966b51b8b8661fa08739e9307ef969f4f47d8caf0ec231",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/d2102206758fcaeb2b966b51.png",
+   "opaque_px": 1737,
+   "colours": 1608,
+   "cloth_mask": "art/golden/masks/d2102206758fcaeb2b966b51_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.704,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_11_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_11_m.png",
+   "sha256": "ec7487e715e142561a0e1a6afd9cf34706704462342b326ac267f5a9f052e355",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "27a6e7a974e769a5995445dd09919d2a874b9cae34db9cc4008eef981034ac6e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/27a6e7a974e769a5995445dd.png",
+   "opaque_px": 377,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_12.png": {
+   "path": "public/sprites/hero_slinger_idle_s_12.png",
+   "sha256": "b82874964ac010a23ec58d3402e9503858114b564306599ad5d9a98e03a7c5df",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "5bd8c51bb01e21b1daac6422cd0608f6af4785159ea4a95c70eef88019b6da1e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/5bd8c51bb01e21b1daac6422.png",
+   "opaque_px": 1737,
+   "colours": 1614,
+   "cloth_mask": "art/golden/masks/5bd8c51bb01e21b1daac6422_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.704,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_12_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_12_m.png",
+   "sha256": "ec7487e715e142561a0e1a6afd9cf34706704462342b326ac267f5a9f052e355",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "27a6e7a974e769a5995445dd09919d2a874b9cae34db9cc4008eef981034ac6e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/27a6e7a974e769a5995445dd.png",
+   "opaque_px": 377,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_13.png": {
+   "path": "public/sprites/hero_slinger_idle_s_13.png",
+   "sha256": "d158faf9668037d2ce59e1039a9a53b94a6711d89c128654fd5595be3a45aba2",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "bec29f1f5f0c1f160a0f42067e8570162b20929a8c1d53a11998f2b4965616ff",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bec29f1f5f0c1f160a0f4206.png",
+   "opaque_px": 1733,
+   "colours": 1607,
+   "cloth_mask": "art/golden/masks/bec29f1f5f0c1f160a0f4206_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.754,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_13_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_13_m.png",
+   "sha256": "5bf6078bd01a9dbc44fa84a6eb36697903ba4749789a7b4b3910d9d5af3d14d0",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "b52006918fdd4841e33e019812df2f87257b489018ec4be32883c7c480381eb8",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/b52006918fdd4841e33e0198.png",
+   "opaque_px": 377,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_14.png": {
+   "path": "public/sprites/hero_slinger_idle_s_14.png",
+   "sha256": "7fef5566da0f215e2f22a94316efe64cbcc50ec6e83c9d5a368ec1dc34466ef1",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "5bad5510b5b6ca543dabb72368f5d0dfe68088d7213d12f0db87a201bb17ac01",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/5bad5510b5b6ca543dabb723.png",
+   "opaque_px": 1732,
+   "colours": 1612,
+   "cloth_mask": "art/golden/masks/5bad5510b5b6ca543dabb723_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.767,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_14_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_14_m.png",
+   "sha256": "5bf6078bd01a9dbc44fa84a6eb36697903ba4749789a7b4b3910d9d5af3d14d0",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "b52006918fdd4841e33e019812df2f87257b489018ec4be32883c7c480381eb8",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/b52006918fdd4841e33e0198.png",
+   "opaque_px": 377,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_15.png": {
+   "path": "public/sprites/hero_slinger_idle_s_15.png",
+   "sha256": "c9077d5d599b2416516eba2be3bfe4224b6da39deee18f3fa4d1fd59b235158f",
+   "kind": "frame",
+   "hero": "slinger",
+   "pixel_sha": "0d89b981d8dd436054d50c1f09e35c346133b01dbb4f4ea204a966f0cec63901",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0d89b981d8dd436054d50c1f.png",
+   "opaque_px": 1732,
+   "colours": 1605,
+   "cloth_mask": "art/golden/masks/0d89b981d8dd436054d50c1f_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 21.42,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_slinger_idle_s_15_m.png": {
+   "path": "public/sprites/hero_slinger_idle_s_15_m.png",
+   "sha256": "f7bd4bc2e607d2d6e73bd9a27b03236977e8616763c7a68581c4c11122f5537e",
+   "kind": "mask",
+   "hero": "slinger",
+   "pixel_sha": "1e3d07be6ff05677ac89164a3fbffaa7df0d15c13f6a63aa8403df4c2da7ff7b",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/1e3d07be6ff05677ac89164a.png",
+   "opaque_px": 371,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_00.png": {
+   "path": "public/sprites/hero_sneak_idle_s_00.png",
+   "sha256": "0f9653d869cc5f6a823186e3db621af393046dc4206ba4952e769b2345bd4acd",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "6d9022638f7d7b63de3a317b29fb48c006d553d9e89ebb8af1af5416f7f9dc54",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/6d9022638f7d7b63de3a317b.png",
+   "opaque_px": 2465,
+   "colours": 1986,
+   "cloth_mask": "art/golden/masks/6d9022638f7d7b63de3a317b_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.677,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_00_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_00_m.png",
+   "sha256": "b2e2fd6bb2b8a52493d7d9a973430020c60841ff5e3132de89f9fdeb86d191f0",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "0be117fea0e3dc732059058deb72fc038459c634d6fa189b0b6bb272bdccd286",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0be117fea0e3dc732059058d.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_01.png": {
+   "path": "public/sprites/hero_sneak_idle_s_01.png",
+   "sha256": "743b3ddb66c321bb8727b62f6bcbf2de04a1eaae2937b3521a64ad6452734dd4",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "bc6aa1629796afbf295dee5765b75cb7b05d78e8f713ed8d70be8501171b92a5",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bc6aa1629796afbf295dee57.png",
+   "opaque_px": 2502,
+   "colours": 1982,
+   "cloth_mask": "art/golden/masks/bc6aa1629796afbf295dee57_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.382,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_01_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_01_m.png",
+   "sha256": "47c0533010cd2ca8dc5b57e4b06351eaf57a083ceb8de88748650d67489581a6",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "cd89f106045c014c4a8ea376593afe3e9bbb5fcc99ea28b3e171b98785a658d7",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/cd89f106045c014c4a8ea376.png",
+   "opaque_px": 560,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_02.png": {
+   "path": "public/sprites/hero_sneak_idle_s_02.png",
+   "sha256": "de99f3ff6c6f41d159b3ccad1b99842787e4e561ba51201427d0bbd04a912aae",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "2d2b3520f02c5537a85bd4c432ce5149f4ce3af1663f4cbf755787272295389b",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/2d2b3520f02c5537a85bd4c4.png",
+   "opaque_px": 2509,
+   "colours": 1994,
+   "cloth_mask": "art/golden/masks/2d2b3520f02c5537a85bd4c4_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.28,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_02_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_02_m.png",
+   "sha256": "f56480139cf3d4dd2cc214d3f929746ab7484262ab611eed1069a05af19cd601",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "3295467a68c89ff79ba9a18256c68a273f9e0e599e9b24fc974e855a2eaea916",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/3295467a68c89ff79ba9a182.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_03.png": {
+   "path": "public/sprites/hero_sneak_idle_s_03.png",
+   "sha256": "a4e46706377b93adf9a984ec0c3ae2c4afa96376fddb2962b008e612c4f837c6",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "9cc090d52fe8fafaeea2c23bd5668780f1deec757889a14eaf1531d53191df86",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/9cc090d52fe8fafaeea2c23b.png",
+   "opaque_px": 2511,
+   "colours": 1985,
+   "cloth_mask": "art/golden/masks/9cc090d52fe8fafaeea2c23b_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.461,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_03_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_03_m.png",
+   "sha256": "313d2b0fc9fdfa9e1f7ac12ec0587389a2b62e4f494699be96efb50c2aa5ca49",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "bfb52a8315718b5b14ee428635acf84506e24984ea0959843d8d95b5b4441f6f",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bfb52a8315718b5b14ee4286.png",
+   "opaque_px": 564,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_04.png": {
+   "path": "public/sprites/hero_sneak_idle_s_04.png",
+   "sha256": "45a2ca46fc6b982bd53e60c0eef32b32acf4fc0559b9078fce2d86fd7438f351",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "64debe0b9ef2ac2b0dfca9ecb5df0831ea5fce7f4934821b7c220794334c1a60",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/64debe0b9ef2ac2b0dfca9ec.png",
+   "opaque_px": 2479,
+   "colours": 1996,
+   "cloth_mask": "art/golden/masks/64debe0b9ef2ac2b0dfca9ec_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.549,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_04_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_04_m.png",
+   "sha256": "5c883690db1e4cc278d5bbfaf7d3aea37354b5bd5e26ac1d1502cfde2e5ff456",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "d5cb59f6bf05510a14e45eaceca2301f9cc46c2b6c05d9272f8f7830cd7e9162",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/d5cb59f6bf05510a14e45eac.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_05.png": {
+   "path": "public/sprites/hero_sneak_idle_s_05.png",
+   "sha256": "75bc48c8eb6226fddf9bf24df4136e446b08bacd73fb6eadbb2bbab60388c20d",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "5f43a8ab687b7084aea1eff112077a5891ecf1606636f5478563cff16b3c06d0",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/5f43a8ab687b7084aea1eff1.png",
+   "opaque_px": 2487,
+   "colours": 2002,
+   "cloth_mask": "art/golden/masks/5f43a8ab687b7084aea1eff1_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.477,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_05_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_05_m.png",
+   "sha256": "5c883690db1e4cc278d5bbfaf7d3aea37354b5bd5e26ac1d1502cfde2e5ff456",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "d5cb59f6bf05510a14e45eaceca2301f9cc46c2b6c05d9272f8f7830cd7e9162",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/d5cb59f6bf05510a14e45eac.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_06.png": {
+   "path": "public/sprites/hero_sneak_idle_s_06.png",
+   "sha256": "d733d4df4085a611671542dc5463e534a8ddb905ff09b0909684ba74fc4339dd",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "41fdc2e37b65226bec1562a28710842c39e819eb0bf9f7a649cf034408ba8626",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/41fdc2e37b65226bec1562a2.png",
+   "opaque_px": 2482,
+   "colours": 1997,
+   "cloth_mask": "art/golden/masks/41fdc2e37b65226bec1562a2_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.522,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_06_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_06_m.png",
+   "sha256": "5c883690db1e4cc278d5bbfaf7d3aea37354b5bd5e26ac1d1502cfde2e5ff456",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "d5cb59f6bf05510a14e45eaceca2301f9cc46c2b6c05d9272f8f7830cd7e9162",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/d5cb59f6bf05510a14e45eac.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_07.png": {
+   "path": "public/sprites/hero_sneak_idle_s_07.png",
+   "sha256": "e9c0e69e472bbda099c24d201b095a34b4ed7a04fa5a7d9b75f99e0b0572dd0a",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "7b9f16eb46129f9bfb26c07e742f661b4a14403c613eb1d7796f95fe456c5cbf",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7b9f16eb46129f9bfb26c07e.png",
+   "opaque_px": 2493,
+   "colours": 2005,
+   "cloth_mask": "art/golden/masks/7b9f16eb46129f9bfb26c07e_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.423,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_07_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_07_m.png",
+   "sha256": "f5f5fffcda680116282328d6b8e526a9f3352bbcd472a09e1e0d5cb3129182da",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "6a683e8b467aedb2dec87740dbc0e700f373c5e083e871441f19309ba5fc2f24",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/6a683e8b467aedb2dec87740.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_08.png": {
+   "path": "public/sprites/hero_sneak_idle_s_08.png",
+   "sha256": "3f254e8a91629f77c49c4f44fefb2335a0089ba443c00b2c9a6f9e5a8952ed43",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "bcf36e046d87879e15df2e6c61a195fdc0a8425622836367a485220dfca3ad23",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bcf36e046d87879e15df2e6c.png",
+   "opaque_px": 2441,
+   "colours": 1982,
+   "cloth_mask": "art/golden/masks/bcf36e046d87879e15df2e6c_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.9,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_08_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_08_m.png",
+   "sha256": "5c81a8313252d6fb34439211bb2ff8f6306acd2de0657a596bd4e7aaf085a203",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "19002efc3c3e74f06037ab07de273a9b9cff62231d6ead5dc0fbbe45273264b5",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/19002efc3c3e74f06037ab07.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_09.png": {
+   "path": "public/sprites/hero_sneak_idle_s_09.png",
+   "sha256": "c8396effab80c2333bc22ca744cf9e8eabece0d9b5f83fd6a4649737a80ec980",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "958c2368b637c31603fe50ed21efe6eaf073dd0dbc3533bbca727619decfd669",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/958c2368b637c31603fe50ed.png",
+   "opaque_px": 2441,
+   "colours": 1982,
+   "cloth_mask": "art/golden/masks/958c2368b637c31603fe50ed_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.9,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_09_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_09_m.png",
+   "sha256": "5c81a8313252d6fb34439211bb2ff8f6306acd2de0657a596bd4e7aaf085a203",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "19002efc3c3e74f06037ab07de273a9b9cff62231d6ead5dc0fbbe45273264b5",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/19002efc3c3e74f06037ab07.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_10.png": {
+   "path": "public/sprites/hero_sneak_idle_s_10.png",
+   "sha256": "e597203a880d256f8ab28590c09fe87bf1d75e4397c09afc0649ffbd2969a618",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "5e8882bb95c1787636b2b3b17ee595d5ff833b1cf268db8d2b3168e67d6ae206",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/5e8882bb95c1787636b2b3b1.png",
+   "opaque_px": 2497,
+   "colours": 1999,
+   "cloth_mask": "art/golden/masks/5e8882bb95c1787636b2b3b1_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.387,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_10_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_10_m.png",
+   "sha256": "f5f5fffcda680116282328d6b8e526a9f3352bbcd472a09e1e0d5cb3129182da",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "6a683e8b467aedb2dec87740dbc0e700f373c5e083e871441f19309ba5fc2f24",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/6a683e8b467aedb2dec87740.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_11.png": {
+   "path": "public/sprites/hero_sneak_idle_s_11.png",
+   "sha256": "468e6154f320fa1789501b438b3b5135f5a9a83290f35a160b2c7f7110ba2f7a",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "1da79a068aea16d0a736dcf072c2c49d341cb31983c8b07715fee93e36fda9bf",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/1da79a068aea16d0a736dcf0.png",
+   "opaque_px": 2517,
+   "colours": 2005,
+   "cloth_mask": "art/golden/masks/1da79a068aea16d0a736dcf0_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.408,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_11_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_11_m.png",
+   "sha256": "313d2b0fc9fdfa9e1f7ac12ec0587389a2b62e4f494699be96efb50c2aa5ca49",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "bfb52a8315718b5b14ee428635acf84506e24984ea0959843d8d95b5b4441f6f",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bfb52a8315718b5b14ee4286.png",
+   "opaque_px": 564,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_12.png": {
+   "path": "public/sprites/hero_sneak_idle_s_12.png",
+   "sha256": "5d2b3dbd8be8bc79863e222ca95b75fe59b928eb618c35877cbef85b9db95d8e",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "c5be60b47329378ae569f529ff3bce882ad6219e0dbdbdbec90dad5f80bc7e2a",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/c5be60b47329378ae569f529.png",
+   "opaque_px": 2508,
+   "colours": 1999,
+   "cloth_mask": "art/golden/masks/c5be60b47329378ae569f529_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.488,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_12_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_12_m.png",
+   "sha256": "313d2b0fc9fdfa9e1f7ac12ec0587389a2b62e4f494699be96efb50c2aa5ca49",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "bfb52a8315718b5b14ee428635acf84506e24984ea0959843d8d95b5b4441f6f",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bfb52a8315718b5b14ee4286.png",
+   "opaque_px": 564,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_13.png": {
+   "path": "public/sprites/hero_sneak_idle_s_13.png",
+   "sha256": "d5fba34720f4a79392005bbbea467c6b28fbf0d711361226a1cb76e5633778bf",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "131f6958d915c1592f765035c7bebb69ab2e040c04357d3543270da82f3cd5a1",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/131f6958d915c1592f765035.png",
+   "opaque_px": 2508,
+   "colours": 1993,
+   "cloth_mask": "art/golden/masks/131f6958d915c1592f765035_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.289,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_13_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_13_m.png",
+   "sha256": "f56480139cf3d4dd2cc214d3f929746ab7484262ab611eed1069a05af19cd601",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "3295467a68c89ff79ba9a18256c68a273f9e0e599e9b24fc974e855a2eaea916",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/3295467a68c89ff79ba9a182.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_14.png": {
+   "path": "public/sprites/hero_sneak_idle_s_14.png",
+   "sha256": "33c619a97bc6f32e162f5ea497d8b15e722747f1a32c5d9fd600a4eea5b6362d",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "7996dd62cbbef96a5e8b2e5c53158cf6ae51a1cae663ea9dd63e0a4b76925180",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7996dd62cbbef96a5e8b2e5c.png",
+   "opaque_px": 2509,
+   "colours": 1990,
+   "cloth_mask": "art/golden/masks/7996dd62cbbef96a5e8b2e5c_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.28,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_14_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_14_m.png",
+   "sha256": "927ed8594488f6bf9c0aa6b2fa434f9a5ab3135aaf432a95218c7cb57332a531",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "8e96dfcbc0dcca6f6d88ce60a6fcdae9ad09cc0ec188dff855b7b5380da46658",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/8e96dfcbc0dcca6f6d88ce60.png",
+   "opaque_px": 559,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_15.png": {
+   "path": "public/sprites/hero_sneak_idle_s_15.png",
+   "sha256": "f9c904374ca0d4601721bab6801e8790a9436bb5dac85d0fb047804f71b6c31e",
+   "kind": "frame",
+   "hero": "sneak",
+   "pixel_sha": "4737fe579ca7daccf5f1a4fcf80a07ae766142e6d5342d525848de4d544b977a",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4737fe579ca7daccf5f1a4fc.png",
+   "opaque_px": 2505,
+   "colours": 1981,
+   "cloth_mask": "art/golden/masks/4737fe579ca7daccf5f1a4fc_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 22.355,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_sneak_idle_s_15_m.png": {
+   "path": "public/sprites/hero_sneak_idle_s_15_m.png",
+   "sha256": "c1aa2faec76bbc186b6e634fd1e515150dc1ff06c45743f121dc01e59988df0e",
+   "kind": "mask",
+   "hero": "sneak",
+   "pixel_sha": "dca0836a732eaa59efe65f21298cfc358ae5fbcaf0ae308bb1ffcda6a16b74fd",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/dca0836a732eaa59efe65f21.png",
+   "opaque_px": 560,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_00.png": {
+   "path": "public/sprites/hero_tank_idle_s_00.png",
+   "sha256": "07162b5898c72c2371ab7d6d272962ff8f39671645cbb3997c460611c65b9c22",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "f317085dc4eca223cacf76f7a6d820d787f626f6df95de6253803c8b3a7ec52c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f317085dc4eca223cacf76f7.png",
+   "opaque_px": 4318,
+   "colours": 2843,
+   "cloth_mask": "art/golden/masks/f317085dc4eca223cacf76f7_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_00_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_00_m.png",
+   "sha256": "5635f7c17cd4bba36021eabd6099c5deceb572e658f83b8b38be442106d51c49",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "7f8756a9d0f7a3f5dac8980de10896880b91f23a5a8b061ac77327585e1cc80e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7f8756a9d0f7a3f5dac8980d.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_01.png": {
+   "path": "public/sprites/hero_tank_idle_s_01.png",
+   "sha256": "9648a7ebe22ce8ff970b08677f8b439a386af138bd444151095c7be44d015993",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "803861c4539a8cdea51f8be59c16a258408bb4482b2426cafe84610fe6e53d18",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/803861c4539a8cdea51f8be5.png",
+   "opaque_px": 4318,
+   "colours": 2843,
+   "cloth_mask": "art/golden/masks/803861c4539a8cdea51f8be5_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_01_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_01_m.png",
+   "sha256": "5635f7c17cd4bba36021eabd6099c5deceb572e658f83b8b38be442106d51c49",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "7f8756a9d0f7a3f5dac8980de10896880b91f23a5a8b061ac77327585e1cc80e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7f8756a9d0f7a3f5dac8980d.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_02.png": {
+   "path": "public/sprites/hero_tank_idle_s_02.png",
+   "sha256": "4ca6911ba1bb9a64d0cefde9f31a9f3d828acace7adb28f7a952661fc3b8a67d",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "4eb3992e931d22e839d2c643ec6fce7c5c83168b8848104cb51b2e69fe0184ed",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4eb3992e931d22e839d2c643.png",
+   "opaque_px": 4335,
+   "colours": 2843,
+   "cloth_mask": "art/golden/masks/4eb3992e931d22e839d2c643_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.04,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_02_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_02_m.png",
+   "sha256": "5635f7c17cd4bba36021eabd6099c5deceb572e658f83b8b38be442106d51c49",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "7f8756a9d0f7a3f5dac8980de10896880b91f23a5a8b061ac77327585e1cc80e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7f8756a9d0f7a3f5dac8980d.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_03.png": {
+   "path": "public/sprites/hero_tank_idle_s_03.png",
+   "sha256": "aa6a0533603591d765041d56ce738406cedec492c9a495e358f7fd6c5120c489",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "e0e0e580d453e33f98743de0d09f97d2a6bef3eb1442da267ca2aabc0f347a0e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/e0e0e580d453e33f98743de0.png",
+   "opaque_px": 4358,
+   "colours": 2843,
+   "cloth_mask": "art/golden/masks/e0e0e580d453e33f98743de0_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.122,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_03_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_03_m.png",
+   "sha256": "f7ccefd8da34ee4da15e38272c619506fe7e3ee815cfbd2d90f6995d0810e201",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "c77d73aa50ac6b7ac2442649fbf25d2666ecafcfd7d255fd58ce1d1174166952",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/c77d73aa50ac6b7ac2442649.png",
+   "opaque_px": 659,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_04.png": {
+   "path": "public/sprites/hero_tank_idle_s_04.png",
+   "sha256": "27fb6a63296bc82060efc60f172e4626b2299d391d9463fe69351ea0ec85529f",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "3dcbcaf9ec7c556af1602ce4ecbc1b4588133ed6791a70e32dd1a931360e7bbf",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/3dcbcaf9ec7c556af1602ce4.png",
+   "opaque_px": 4356,
+   "colours": 2838,
+   "cloth_mask": "art/golden/masks/3dcbcaf9ec7c556af1602ce4_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.129,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_04_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_04_m.png",
+   "sha256": "f7ccefd8da34ee4da15e38272c619506fe7e3ee815cfbd2d90f6995d0810e201",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "c77d73aa50ac6b7ac2442649fbf25d2666ecafcfd7d255fd58ce1d1174166952",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/c77d73aa50ac6b7ac2442649.png",
+   "opaque_px": 659,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_05.png": {
+   "path": "public/sprites/hero_tank_idle_s_05.png",
+   "sha256": "1c558b44ae362675fadf333329305e96d5143d2811591847336406bd08130945",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "c96e91a176149877a200045e64cfce75c9046b184074a18c24fc8eb7d0816002",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/c96e91a176149877a200045e.png",
+   "opaque_px": 4389,
+   "colours": 2838,
+   "cloth_mask": "art/golden/masks/c96e91a176149877a200045e_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 14.855,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_05_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_05_m.png",
+   "sha256": "fde8bc03232f1b0d4a1e313b93e6de9ff2d1190bbf6a5975c3a05d824fdc23ad",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "4b5928b26fe8b69c38b54e657a7ada8869753987df4a5c63b8545e58bc9bf3a9",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4b5928b26fe8b69c38b54e65.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_06.png": {
+   "path": "public/sprites/hero_tank_idle_s_06.png",
+   "sha256": "05d800ee8e563da8ec916baa6b890e7ab24feea73bf6779c6da607bcbf244359",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "14f9b4d7061415a1337fe99627b9e6d980d0a8a8933e96134f22d779e27e2323",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/14f9b4d7061415a1337fe996.png",
+   "opaque_px": 4384,
+   "colours": 2832,
+   "cloth_mask": "art/golden/masks/14f9b4d7061415a1337fe996_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 14.918,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_06_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_06_m.png",
+   "sha256": "e74f850e8fac5f3c7699a1415f8e4f398f4d7d5c801a40bb17157e654cd6c992",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "b0cd9e44eb87005e2bd3c1d1aced6f484fc733dcd8bfbd0c83c17df3f64547d0",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/b0cd9e44eb87005e2bd3c1d1.png",
+   "opaque_px": 654,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_07.png": {
+   "path": "public/sprites/hero_tank_idle_s_07.png",
+   "sha256": "467e05dc386fe377849b39875ea78d27d278d48a31797e343a630006e0440ee5",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "97505319f2350de7172d59ff911d9971a930ad8d430fa413ec046237d010b579",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/97505319f2350de7172d59ff.png",
+   "opaque_px": 4382,
+   "colours": 2822,
+   "cloth_mask": "art/golden/masks/97505319f2350de7172d59ff_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 14.925,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_07_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_07_m.png",
+   "sha256": "e74f850e8fac5f3c7699a1415f8e4f398f4d7d5c801a40bb17157e654cd6c992",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "b0cd9e44eb87005e2bd3c1d1aced6f484fc733dcd8bfbd0c83c17df3f64547d0",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/b0cd9e44eb87005e2bd3c1d1.png",
+   "opaque_px": 654,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_08.png": {
+   "path": "public/sprites/hero_tank_idle_s_08.png",
+   "sha256": "fd2be20cca04ecc57365ade456328568d63c4402090514d26587d418d7340896",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "6e76f86bc086318f89d8f073141c3b502742129fbe3c79a1d811bdd197ae6a27",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/6e76f86bc086318f89d8f073.png",
+   "opaque_px": 4384,
+   "colours": 2832,
+   "cloth_mask": "art/golden/masks/6e76f86bc086318f89d8f073_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 14.918,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_08_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_08_m.png",
+   "sha256": "e74f850e8fac5f3c7699a1415f8e4f398f4d7d5c801a40bb17157e654cd6c992",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "b0cd9e44eb87005e2bd3c1d1aced6f484fc733dcd8bfbd0c83c17df3f64547d0",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/b0cd9e44eb87005e2bd3c1d1.png",
+   "opaque_px": 654,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_09.png": {
+   "path": "public/sprites/hero_tank_idle_s_09.png",
+   "sha256": "2d0bd97d385b4460f744730484a75894a1d850902f95729411452e625da45395",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "91f75cef46aaf8fd1709b91b9961a549399d3b78f2c1e4697749de613260c271",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/91f75cef46aaf8fd1709b91b.png",
+   "opaque_px": 4384,
+   "colours": 2830,
+   "cloth_mask": "art/golden/masks/91f75cef46aaf8fd1709b91b_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 14.872,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_09_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_09_m.png",
+   "sha256": "fde8bc03232f1b0d4a1e313b93e6de9ff2d1190bbf6a5975c3a05d824fdc23ad",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "4b5928b26fe8b69c38b54e657a7ada8869753987df4a5c63b8545e58bc9bf3a9",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4b5928b26fe8b69c38b54e65.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_10.png": {
+   "path": "public/sprites/hero_tank_idle_s_10.png",
+   "sha256": "6b05be3ec618297531969753c87551e0c07ee1a4939d6108fb9bdf7b4ff592a2",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "fa02e70841163bb05bf5c69036c3ef4c14f79242ca1dcd395cb28186b2cb0243",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/fa02e70841163bb05bf5c690.png",
+   "opaque_px": 4385,
+   "colours": 2840,
+   "cloth_mask": "art/golden/masks/fa02e70841163bb05bf5c690_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 14.869,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_10_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_10_m.png",
+   "sha256": "fde8bc03232f1b0d4a1e313b93e6de9ff2d1190bbf6a5975c3a05d824fdc23ad",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "4b5928b26fe8b69c38b54e657a7ada8869753987df4a5c63b8545e58bc9bf3a9",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4b5928b26fe8b69c38b54e65.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_11.png": {
+   "path": "public/sprites/hero_tank_idle_s_11.png",
+   "sha256": "92013999d6bf001de7b8e7ee7b16154fb08c00345ca219c3ef1ee3397b30d1df",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "7803a355410655b16c8e14f74ad491d1fe5bd38c880b57536046e7dd48fe4243",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7803a355410655b16c8e14f7.png",
+   "opaque_px": 4353,
+   "colours": 2813,
+   "cloth_mask": "art/golden/masks/7803a355410655b16c8e14f7_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.116,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_11_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_11_m.png",
+   "sha256": "5d4f40911424fe3972d747f3a9c0f955e786bba04f730bd94fcdf2e31e9f1061",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "ffd420d5b3fac2254d9dbe04083025d39d82a26f2e9820019dbea1b49a0c5c1c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/ffd420d5b3fac2254d9dbe04.png",
+   "opaque_px": 658,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_12.png": {
+   "path": "public/sprites/hero_tank_idle_s_12.png",
+   "sha256": "b0b57cf5e4382a39b0a959859434ca4a5407ae4ee820df3b0978d050a706825e",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "0435e19a5e3a0b04dd20471fae68333f5f517ddd85a05d5ab3dbe4a114fdfea7",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0435e19a5e3a0b04dd20471f.png",
+   "opaque_px": 4324,
+   "colours": 2819,
+   "cloth_mask": "art/golden/masks/0435e19a5e3a0b04dd20471f_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.056,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_12_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_12_m.png",
+   "sha256": "256c327ea40eafe1d0008f1b1dde1943c8813b77f35dcca75a8105f98f79dbbc",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "037c9e1b1e38dc02a03a940eeb2188541de0bcfd8039b5ecfada7fd8e46fa41f",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/037c9e1b1e38dc02a03a940e.png",
+   "opaque_px": 651,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_13.png": {
+   "path": "public/sprites/hero_tank_idle_s_13.png",
+   "sha256": "9d69aedf69ffc9767577e26d2e5a48d2c745721490a9eca91bc983efb13dea8f",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "cf7907fcde24a29167f8ff7e223a775f47c99c886f3a02f15a6ea4bbaccc13bb",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/cf7907fcde24a29167f8ff7e.png",
+   "opaque_px": 4323,
+   "colours": 2837,
+   "cloth_mask": "art/golden/masks/cf7907fcde24a29167f8ff7e_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.082,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_13_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_13_m.png",
+   "sha256": "dab2b9fd0da7086bbaccbd1c891cba8ce25a1a272d2c29931582e1302713f479",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "4e42ce341436de4774afd4e91cbd8d0987a37b21490a010cdf15732f1ca5bd6a",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4e42ce341436de4774afd4e9.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_14.png": {
+   "path": "public/sprites/hero_tank_idle_s_14.png",
+   "sha256": "5ee559a72544932344ac10ed6092d58463455a23384f3c504c591ee628181829",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "88e799cdd6fc60100bad2f13ffbc8f63faf4c6a7d907dffb09303b57592b47fb",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/88e799cdd6fc60100bad2f13.png",
+   "opaque_px": 4328,
+   "colours": 2839,
+   "cloth_mask": "art/golden/masks/88e799cdd6fc60100bad2f13_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.065,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_14_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_14_m.png",
+   "sha256": "dab2b9fd0da7086bbaccbd1c891cba8ce25a1a272d2c29931582e1302713f479",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "4e42ce341436de4774afd4e91cbd8d0987a37b21490a010cdf15732f1ca5bd6a",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/4e42ce341436de4774afd4e9.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_15.png": {
+   "path": "public/sprites/hero_tank_idle_s_15.png",
+   "sha256": "cebfafbd1ae34482c932d8f3b5263262c22bce8414ae9a956dc8b0d3e6464ea4",
+   "kind": "frame",
+   "hero": "tank",
+   "pixel_sha": "6e2782e563260b0b4e5a3932ec294b66a49d207cfe488da7749a17469e370641",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/6e2782e563260b0b4e5a3932.png",
+   "opaque_px": 4325,
+   "colours": 2843,
+   "cloth_mask": "art/golden/masks/6e2782e563260b0b4e5a3932_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 15.075,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_tank_idle_s_15_m.png": {
+   "path": "public/sprites/hero_tank_idle_s_15_m.png",
+   "sha256": "5635f7c17cd4bba36021eabd6099c5deceb572e658f83b8b38be442106d51c49",
+   "kind": "mask",
+   "hero": "tank",
+   "pixel_sha": "7f8756a9d0f7a3f5dac8980de10896880b91f23a5a8b061ac77327585e1cc80e",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7f8756a9d0f7a3f5dac8980d.png",
+   "opaque_px": 652,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_00.png": {
+   "path": "public/sprites/hero_warlock_idle_s_00.png",
+   "sha256": "540dbdf6f18137b92a11e928ba03c87c1023af7494944a95e9bfdbeca7e01c4e",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "bc1600d9662e39f77c624332566da20bfb0b21049409b4a3d5a677cb490fb857",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/bc1600d9662e39f77c624332.png",
+   "opaque_px": 2865,
+   "colours": 1135,
+   "cloth_mask": "art/golden/masks/bc1600d9662e39f77c624332_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.805,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_00_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_00_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_01.png": {
+   "path": "public/sprites/hero_warlock_idle_s_01.png",
+   "sha256": "23ddb7a5c02a38cc9cc25340b0b37e9b38155f0f327fe2f35bd1d7d3635bffed",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "73ca8a6c3ac19eda7764188b645e89f91ead7bafaf7dceee6d4eedc2ae77247a",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/73ca8a6c3ac19eda7764188b.png",
+   "opaque_px": 2877,
+   "colours": 1138,
+   "cloth_mask": "art/golden/masks/73ca8a6c3ac19eda7764188b_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.789,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_01_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_01_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_02.png": {
+   "path": "public/sprites/hero_warlock_idle_s_02.png",
+   "sha256": "51b4f1d5f2122976aea6ce7074529f75328b8d4796e5c23145a5a8ff36c455da",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "df6ee4c65665bb102ee2e9994dd5b15fa6a1435b66e8980e33427404b2fe7257",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/df6ee4c65665bb102ee2e999.png",
+   "opaque_px": 2877,
+   "colours": 1133,
+   "cloth_mask": "art/golden/masks/df6ee4c65665bb102ee2e999_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.928,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_02_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_02_m.png",
+   "sha256": "e2c700de36550d56add5216a59494bcb5917dbfd150205ac5d4ef884bb7d8924",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "a19208924df0320802640fa1e222d0b6a63e590b8e97985b58bb70e91c8a1541",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/a19208924df0320802640fa1.png",
+   "opaque_px": 113,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_03.png": {
+   "path": "public/sprites/hero_warlock_idle_s_03.png",
+   "sha256": "eaf6c1ef0e5a8c60ec29138ceca5c049fdd7eeb6e3a2a495d4242d0f301543e5",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "db62ae33ca8ce74ab15483fec03c7a5f7f4b8b1192c62b7113c0c472ae5abf12",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/db62ae33ca8ce74ab15483fe.png",
+   "opaque_px": 2878,
+   "colours": 1132,
+   "cloth_mask": "art/golden/masks/db62ae33ca8ce74ab15483fe_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.926,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_03_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_03_m.png",
+   "sha256": "e2c700de36550d56add5216a59494bcb5917dbfd150205ac5d4ef884bb7d8924",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "a19208924df0320802640fa1e222d0b6a63e590b8e97985b58bb70e91c8a1541",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/a19208924df0320802640fa1.png",
+   "opaque_px": 113,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_04.png": {
+   "path": "public/sprites/hero_warlock_idle_s_04.png",
+   "sha256": "7aedd1928ef3e6696074f80b8551e8ce0db010faf78873414e5ebd18b3cbf06e",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "d3fb120713b133078df411010614ea20afe5ddb586e41539881da03a7584689b",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/d3fb120713b133078df41101.png",
+   "opaque_px": 2877,
+   "colours": 1133,
+   "cloth_mask": "art/golden/masks/d3fb120713b133078df41101_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.928,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_04_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_04_m.png",
+   "sha256": "e2c700de36550d56add5216a59494bcb5917dbfd150205ac5d4ef884bb7d8924",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "a19208924df0320802640fa1e222d0b6a63e590b8e97985b58bb70e91c8a1541",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/a19208924df0320802640fa1.png",
+   "opaque_px": 113,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_05.png": {
+   "path": "public/sprites/hero_warlock_idle_s_05.png",
+   "sha256": "50c4ef1bdf93a1b85c92bd5cc49bc2e2f5a2885e8782df49f359b9454a2ac200",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "a569b61cd789a7d2f63dda64c9717aaffea50d296530e8aa5007d6ad51c43f79",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/a569b61cd789a7d2f63dda64.png",
+   "opaque_px": 2880,
+   "colours": 1139,
+   "cloth_mask": "art/golden/masks/a569b61cd789a7d2f63dda64_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.785,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_05_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_05_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_06.png": {
+   "path": "public/sprites/hero_warlock_idle_s_06.png",
+   "sha256": "e063f16901e0c62afe9fb35de28cdd261c5aa0a646da27a5a341ebcfb5fde25f",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "fad32751a52698b5d3bbb2b44bf5c329db275a25d428f20c5ffec77fba9c22a0",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/fad32751a52698b5d3bbb2b4.png",
+   "opaque_px": 2879,
+   "colours": 1141,
+   "cloth_mask": "art/golden/masks/fad32751a52698b5d3bbb2b4_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.786,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_06_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_06_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_07.png": {
+   "path": "public/sprites/hero_warlock_idle_s_07.png",
+   "sha256": "9589a58ff183e4d049270077813482225d2b29aaf17e17b37d323df34e62b467",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "be1bfa4a4b708caf5e2d402fd5396e94f5793257ce9645834053b6e06d15de14",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/be1bfa4a4b708caf5e2d402f.png",
+   "opaque_px": 2869,
+   "colours": 1142,
+   "cloth_mask": "art/golden/masks/be1bfa4a4b708caf5e2d402f_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.799,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_07_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_07_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_08.png": {
+   "path": "public/sprites/hero_warlock_idle_s_08.png",
+   "sha256": "09d469a2eee97a74a9375c2f2026e578aca7a90518d8553a00017be716c7b419",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "fc5a9b2e55aa3b2ae8f4b8b8ff067e78c4c0dd97e4e203fc6796815fba6e41ca",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/fc5a9b2e55aa3b2ae8f4b8b8.png",
+   "opaque_px": 2843,
+   "colours": 1139,
+   "cloth_mask": "art/golden/masks/fc5a9b2e55aa3b2ae8f4b8b8_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.799,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_08_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_08_m.png",
+   "sha256": "2134971352c7ccadb2728c844924e8e116b302180e8370adb61e726d1cd1b938",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "22696dffd8cf34609605a773987cea14c5a4d8a848a1b6949dac7a2d76c8ea9d",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/22696dffd8cf34609605a773.png",
+   "opaque_px": 108,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_09.png": {
+   "path": "public/sprites/hero_warlock_idle_s_09.png",
+   "sha256": "139f77751390a81d2d06ea7f57cefb3fedc6bc55d759d6b3f38792becd21fe6e",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "ae5e8af2f06e92492864836eaa48ba22ab18960ee62d03beb9f0d11dd0f9fe6c",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/ae5e8af2f06e92492864836e.png",
+   "opaque_px": 2843,
+   "colours": 1135,
+   "cloth_mask": "art/golden/masks/ae5e8af2f06e92492864836e_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.799,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_09_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_09_m.png",
+   "sha256": "2134971352c7ccadb2728c844924e8e116b302180e8370adb61e726d1cd1b938",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "22696dffd8cf34609605a773987cea14c5a4d8a848a1b6949dac7a2d76c8ea9d",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/22696dffd8cf34609605a773.png",
+   "opaque_px": 108,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_10.png": {
+   "path": "public/sprites/hero_warlock_idle_s_10.png",
+   "sha256": "5dba5847cc207b37fa4994621ac32efb79cb8156a55b7bab07a477b5c5e4613b",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "8f6a547033a78eedeb45ae458cf380a8bbee285d5e26cfb63e4f446292574913",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/8f6a547033a78eedeb45ae45.png",
+   "opaque_px": 2843,
+   "colours": 1139,
+   "cloth_mask": "art/golden/masks/8f6a547033a78eedeb45ae45_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.799,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_10_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_10_m.png",
+   "sha256": "2134971352c7ccadb2728c844924e8e116b302180e8370adb61e726d1cd1b938",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "22696dffd8cf34609605a773987cea14c5a4d8a848a1b6949dac7a2d76c8ea9d",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/22696dffd8cf34609605a773.png",
+   "opaque_px": 108,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_11.png": {
+   "path": "public/sprites/hero_warlock_idle_s_11.png",
+   "sha256": "deb4184878e857477502895e7d8b3b5a03d535f45c6dcd73d9136e0427348627",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "dcc2b0977970954d0436bdf236a9a8e89f0695b9e429ae540616542d8cda6467",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/dcc2b0977970954d0436bdf2.png",
+   "opaque_px": 2846,
+   "colours": 1137,
+   "cloth_mask": "art/golden/masks/dcc2b0977970954d0436bdf2_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.83,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_11_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_11_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_12.png": {
+   "path": "public/sprites/hero_warlock_idle_s_12.png",
+   "sha256": "fdd9aeb7012c88414bccf9d341d31ab2a12853ed54fa26a1fbb6ddb4134d2e9c",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "f7984a9eab896da51d6bc833629a20eb40a30e08e7512a974165bccf89c2d846",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f7984a9eab896da51d6bc833.png",
+   "opaque_px": 2839,
+   "colours": 1139,
+   "cloth_mask": "art/golden/masks/f7984a9eab896da51d6bc833_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.839,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_12_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_12_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_13.png": {
+   "path": "public/sprites/hero_warlock_idle_s_13.png",
+   "sha256": "e9caf5c7efd438ef9d4399401d73b79d1b03da67ed844c3eacd937a7c7e54cfd",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "7dc8c90f6394f5d8fc5096fb1f681a8aad3fb1228aa3764cdf4286bc85150a92",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/7dc8c90f6394f5d8fc5096fb.png",
+   "opaque_px": 2840,
+   "colours": 1138,
+   "cloth_mask": "art/golden/masks/7dc8c90f6394f5d8fc5096fb_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.838,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_13_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_13_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_14.png": {
+   "path": "public/sprites/hero_warlock_idle_s_14.png",
+   "sha256": "aa208ee5556fe2e8c9cc835436f811ddd97ec0b8aa1c2310a31ff27b57413714",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "0bf87977da221c363594bb79167f7ec2250d4fa00ca64e39aa87491181481c58",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0bf87977da221c363594bb79.png",
+   "opaque_px": 2845,
+   "colours": 1129,
+   "cloth_mask": "art/golden/masks/0bf87977da221c363594bb79_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.831,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_14_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_14_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_15.png": {
+   "path": "public/sprites/hero_warlock_idle_s_15.png",
+   "sha256": "c44b71a793a4c2211087c5a546687ab5618e59a19b9caa9ec34c9557fa0ed294",
+   "kind": "frame",
+   "hero": "warlock",
+   "pixel_sha": "f705fe2f4cf4b67693fe3a709da02fefc933210aad8c851984e7cf6df54e39a9",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/f705fe2f4cf4b67693fe3a70.png",
+   "opaque_px": 2866,
+   "colours": 1137,
+   "cloth_mask": "art/golden/masks/f705fe2f4cf4b67693fe3a70_cloth.png",
+   "cloth_mask_source": "export _m map",
+   "cloth_cov_pct": 3.803,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/hero_warlock_idle_s_15_m.png": {
+   "path": "public/sprites/hero_warlock_idle_s_15_m.png",
+   "sha256": "15116923efeb1f0cd811e8107561ae2c923ff34f311dee91ad593f70862b35e4",
+   "kind": "mask",
+   "hero": "warlock",
+   "pixel_sha": "0ad1cb1d1b705c8e4cc0e584f43f7d71b0f38d3d9d086ad749d875a6686184c3",
+   "size": [
+    128,
+    160
+   ],
+   "snapshot": "art/golden/snapshots/0ad1cb1d1b705c8e4cc0e584.png",
+   "opaque_px": 109,
+   "colours": 1,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Idle-only export package (spritelint-green 29 Oct 2026); handed to OverLord"
+  },
+  "public/sprites/atlas_heroes.json": {
+   "path": "public/sprites/atlas_heroes.json",
+   "sha256": "06e62a33126b70acb2c420f03ea95d3e371e5794214c393fb7e631a0fb7f41f4",
+   "kind": "file",
+   "hero": null,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Atlas frame table (sha only)"
+  },
+  "scripts/spritelint.mjs": {
+   "path": "scripts/spritelint.mjs",
+   "sha256": "00a5ad480811242744bcc0c51023d6575493975064836669f297551ee08a406b",
+   "kind": "file",
+   "hero": null,
+   "status": "approved",
+   "approved_by": "Taylor",
+   "approved_on": "2026-11-18",
+   "note": "Patched spritelint (v1.9 \u00a74.2) - sha pinned so the lint cannot be weakened silently"
+  }
+ },
+ "_doc": "Rat-Game copy of scurry-art/pipeline/golden_manifest.json (export entries only). Paths mapped: sprites/heroes_v2/export/X -> X, pipeline/golden/ -> art/golden/. Refresh only with scripts/art/golden.py approve after Taylor approves."
+}
