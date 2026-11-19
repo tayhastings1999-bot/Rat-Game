@@ -27,7 +27,7 @@ export const CITY_LEVELS = [
 ];
 const deep = { fog: 0x080608 };
 export const SEWER_LEVELS = [
-  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 84, spread: 5, spine: true, cuts: 0, pumpHall: true, pumpWrap: true }, // larger spine + unique rim pump-hall, no detour shortcuts; gentle first sewer (target ~11 min)
+  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 0, map: 86, spread: 5, spine: true, cuts: 0, pumpHall: true, pumpWrap: true }, // larger spine + unique rim pump-hall, no detour shortcuts; gentle first sewer (target ~11 min)
   { id: 'cistern', base: 1, seed: 'cisterns', loops: 2, map: 72, spread: 4, detour: true, pumpHall: true }, // pillar-cistern loop so the near exit still lands in 10–20
   { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 2, map: 72, spread: 4, pumpHall: true }, // cold-store side rooms + one hook-gallery hall (target ~13 min; random detours were getting the bot lost)
   { id: 'frozen', base: 3, seed: 'frozen-pipeworks', secretTo: 'garden' },
