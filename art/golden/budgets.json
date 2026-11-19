@@ -1,0 +1,331 @@
+{
+ "_doc": "Machine-readable art budgets for Scurry heroes (PIXEL_STYLE_GUIDE v1.9 \u00a74.2, \u00a75.2, \u00a79; FRAME_TIMING v0.5; Taylor rulings in DECISIONS.md). Enforced by pipeline/budget_check.py. Human version: BUDGETS.md.",
+ "version": "1.0 (2026-11-18)",
+ "hero": {
+  "canvas": [
+   128,
+   160
+  ],
+  "anchor": [
+   64,
+   150
+  ],
+  "pivot": [
+   0.5,
+   0.9375
+  ],
+  "alpha_values": [
+   0,
+   255
+  ],
+  "heights": {
+   "slinger": 100,
+   "tank": 88,
+   "warlock": 84,
+   "sneak": 74
+  },
+  "height_tol_px": {
+   "still": 0,
+   "idle": 1,
+   "fidget": 1,
+   "run": 3,
+   "walk": 1,
+   "attack": 3,
+   "special": 3,
+   "dodge": 4,
+   "squeeze": 4,
+   "hurt": 3,
+   "death": 40,
+   "victory": 4,
+   "taunt": 4
+  },
+  "bottom_row": {
+   "tank": 149,
+   "slinger": 149,
+   "warlock": 149,
+   "sneak": 150
+  },
+  "bottom_row_constant_actions": [
+   "still",
+   "idle",
+   "fidget"
+  ],
+  "directions_drawn": [
+   "S",
+   "SE",
+   "E",
+   "NE",
+   "N"
+  ],
+  "directions_shipped_now": [
+   "S"
+  ],
+  "player_colour_on_cloth_only": {
+   "tank": "red scarf + loincloth",
+   "slinger": "blue scarf + loin sash",
+   "sneak": "green neck bandana + small loincloth ONLY",
+   "warlock": "thin yellow rope belt + knot ONLY (behind the arm, no lapel, no strap, no block)"
+  }
+ },
+ "actions": {
+  "idle": {
+   "frames": 16,
+   "ms": 150,
+   "loop": true,
+   "loopMs": 2400,
+   "status": "LOCKED - Taylor approved Sewer Rat v4g (22 Oct 2026)",
+   "note": "Overrides FRAME_TIMING v0.5 idle row (4 @ 150). Timed to ratAnim.js sin(t*2.6) ~2.42 s."
+  },
+  "fidget": {
+   "frames": 12,
+   "ms": 130,
+   "loop": false,
+   "heroes": [
+    "tank"
+   ],
+   "status": "LOCKED - Taylor approved belly-scratch v1",
+   "play_rule": {
+    "min_idle_loops": 3,
+    "chance_per_loop": 0.35,
+    "forced_at_loops": 5,
+    "never_during": [
+     "move",
+     "attack",
+     "hurt"
+    ],
+    "abort_on_input": true
+   }
+  },
+  "run": {
+   "frames": 6,
+   "loop": true,
+   "ms_formula": "clamp(1000*stride/(6*v), 50, 133)",
+   "ms_range": [
+    50,
+    133
+   ],
+   "stride_u": {
+    "tank": 2.2,
+    "slinger": 2.3,
+    "warlock": 2.0,
+    "sneak": 2.0
+   },
+   "idle_below_u_s": 0.15,
+   "status": "FINAL in FRAME_TIMING v0.5 (AD); upright 6-frame rule (TD-2)"
+  },
+  "walk": {
+   "frames": 6,
+   "loop": true,
+   "ms_range": [
+    50,
+    133
+   ],
+   "status": "OPEN",
+   "note": "Guide \u00a75.2 has no separate hero walk: slow movement plays the 6-frame upright run at a lower rate. A distinct walk set is budget-checked as 6 frames @ 50-133 ms and flagged for Rat Leader/Taylor."
+  },
+  "attack": {
+   "frames": 5,
+   "ms": {
+    "tank": [
+     50,
+     33,
+     83,
+     83,
+     100
+    ]
+   },
+   "loop": false,
+   "status": "frames [G \u00a75.2]; ms [P] Rat 6 proposal (tank only so far)",
+   "rule": "player wind-up <= 50 ms incl. held anticipation"
+  },
+  "special": {
+   "frames": 6,
+   "ms": {
+    "tank": [
+     183,
+     67,
+     83,
+     83,
+     83,
+     117
+    ]
+   },
+   "loop": false,
+   "status": "frames [G]; ms [P]"
+  },
+  "dodge": {
+   "frames": 4,
+   "ms": 75,
+   "loop": false,
+   "status": "frames [G]; ms = TUNE rollTime 0.3"
+  },
+  "squeeze": {
+   "frames": 2,
+   "ms": 125,
+   "loop": true,
+   "status": "[P]"
+  },
+  "hurt": {
+   "frames": 1,
+   "ms": 100,
+   "loop": false,
+   "status": "[P]"
+  },
+  "death": {
+   "frames": 4,
+   "ms": [
+    83,
+    83,
+    100,
+    0
+   ],
+   "loop": false,
+   "status": "[P] last frame held + 400 ms fade"
+  },
+  "victory": {
+   "frames": 6,
+   "ms": 100,
+   "loop": false,
+   "directions": [
+    "S"
+   ],
+   "status": "[P]"
+  },
+  "taunt": {
+   "frames": 4,
+   "ms": 125,
+   "loop": true,
+   "directions": [
+    "S"
+   ],
+   "status": "[P]"
+  }
+ },
+ "mask_coverage_pct": {
+  "_doc": "R=player cloth share of opaque px, idle S, from export/export_report.json min-1 .. max+1 pp. Other poses may need their own range (taste call).",
+  "tank": [
+   13.86,
+   16.13
+  ],
+  "slinger": [
+   20.01,
+   22.77
+  ],
+  "warlock": [
+   2.78,
+   4.93
+  ],
+  "sneak": [
+   21.28,
+   23.9
+  ]
+ },
+ "atlas": {
+  "max_page": [
+   2048,
+   2048
+  ],
+  "power_of_two": true,
+  "frame_fields_required": [
+   "frame",
+   "anchor",
+   "pivot",
+   "ms",
+   "ai",
+   "aiTool"
+  ],
+  "groups": [
+   "heroes",
+   "fam_vermin",
+   "fam_wings",
+   "fam_rot",
+   "fam_prowl",
+   "fam_guard",
+   "boss_<key>",
+   "cast",
+   "props_<zone>",
+   "ui"
+  ]
+ },
+ "rings": {
+  "size": [
+   88,
+   24
+  ],
+  "status": "OPEN - preview files are 128x160 canvases (~106x31 footprint) and must be re-cut before export",
+  "files": [
+   "sprites/heroes_v2/painted/red_ring.png",
+   "sprites/heroes_v2/painted/blue_ring.png",
+   "sprites/heroes_v2/painted/green_ring.png",
+   "sprites/heroes_v2/painted/yellow_ring.png"
+  ]
+ },
+ "other_canvases": {
+  "grunt": {
+   "canvas": [
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    29
+   ]
+  },
+  "elite": {
+   "canvas": [
+    64,
+    64
+   ],
+   "anchor": [
+    32,
+    61
+   ]
+  },
+  "boss": {
+   "canvas": [
+    128,
+    128
+   ],
+   "anchor": [
+    64,
+    123
+   ]
+  },
+  "swarm": {
+   "canvas": [
+    16,
+    16
+   ],
+   "anchor": [
+    8,
+    14
+   ]
+  },
+  "portrait": {
+   "canvas": [
+    48,
+    48
+   ]
+  },
+  "pickup": {
+   "canvas": [
+    16,
+    16
+   ],
+   "anchor": [
+    8,
+    14
+   ]
+  },
+  "glyph": {
+   "canvas": [
+    9,
+    9
+   ]
+  },
+  "tile_px": 128,
+  "wall_px": 144,
+  "_note": "Mob/boss canvases are guide \u00a74 [PD]; not yet re-scaled for the 128x160 hero density - open."
+ },
+ "frame_budget_total_est": 3240
+}
