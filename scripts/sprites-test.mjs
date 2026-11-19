@@ -52,7 +52,7 @@ ok('TUNE.camera default (mesh): perspective, width 22, min 18', TUNE.camera.orth
 globalThis.location = { search: '?sprites=1' };
 const { TUNE: TS } = await import('../src/tuning.js?sprites');
 ok('TUNE.camera TD-3 with ?sprites=1: ortho, width 20, steps 20/30, cine 18', TS.sprite.mode === 'mixed' && TS.camera.ortho === true && TS.camera.width === 20 && TS.camera.steps.join() === '20,30' && TS.camera.cineWidth === 18);
-ok('TUNE.sprite walk timing defaults', TUNE.sprite.walkProfile === 'base_run' && TUNE.sprite.walkMs == null);
+ok('TUNE.sprite walk timing defaults', TUNE.sprite.walkProfile === 'base_run' && TUNE.sprite.walkMs == null && TUNE.sprite.idleBelow === 0.15);
 ok('heroes walk actions for all four classes', ['tank', 'slinger', 'warlock', 'sneak'].every(c => HJ.actions[`${c}_walk`]?.frames === 6 && HJ.actions[`${c}_walk`].dirs.join() === 's'));
 ok('heroes walk default ms 65/68/60/60', Math.abs(1000 / HJ.actions.tank_walk.fps - 65) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 68) < 1e-9 && Math.abs(1000 / HJ.actions.warlock_walk.fps - 60) < 1e-9 && Math.abs(1000 / HJ.actions.sneak_walk.fps - 60) < 1e-9);
 ok('heroes walk frame keys match frameKey', buildFrames(HJ).frames.has(frameKey('hero', 'tank', 'walk', 's', 5)) && buildFrames(HJ).frames.has(frameKey('hero', 'sneak', 'walk', 's', 0)));

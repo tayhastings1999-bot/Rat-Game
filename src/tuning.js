@@ -88,6 +88,10 @@ export const TUNE = {
     // a number for every class, or { tank, slinger, warlock, sneak }.
     walkProfile: 'base_run',
     walkMs: null,
+    // Sprite path only: switch walk → idle below this speed (u/s). Matches the walk JSON
+    // idle_below_u_s of 0.15, so a sliding slowdown keeps playing walk. The mesh path
+    // never reads this (animateRat is distance-driven and ignores heroAnimState).
+    idleBelow: 0.15,
   },
   camera: {
     // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9
