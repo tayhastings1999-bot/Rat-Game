@@ -12,11 +12,28 @@ export function genSewer(seed, D) {
   const GW = M.W, GH = M.H, grid = M.grid;
   M.hgt.fill(WH);
   const rooms = [];
-  for (let a = 0; a < 1800 && rooms.length < maxRooms; a++) {
-    const w = ri(4, 8), h = ri(4, 7), x = ri(2, GW - w - 2), y = ri(2, GH - h - 2);
-    const gap = D.spread || 2;
-    if (rooms.some(r => x < r.x + r.w + gap && x + w + gap > r.x && y < r.y + r.h + gap && y + h + gap > r.y)) continue;
-    rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1) });
+  if (D.spine) {
+    // Serpentine room placement so the MST is a long winding hall (Undersewer's pump-hall beat), not a tight cluster.
+    const cols = 5, rows = 5;
+    const cellW = Math.floor((GW - 4) / cols), cellH = Math.floor((GH - 4) / rows);
+    for (let i = 0; i < maxRooms && i < cols * rows; i++) {
+      const row = Math.floor(i / cols);
+      let col = i % cols;
+      if (row % 2) col = cols - 1 - col;
+      const innerW = Math.max(4, cellW - 2), innerH = Math.max(4, cellH - 2);
+      const w = ri(4, Math.min(8, innerW)), h = ri(4, Math.min(7, innerH));
+      const ox = Math.max(0, cellW - w), oy = Math.max(0, cellH - h);
+      const x = 2 + col * cellW + (ox ? ri(0, ox) : 0);
+      const y = 2 + row * cellH + (oy ? ri(0, oy) : 0);
+      rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1) });
+    }
+  } else {
+    for (let a = 0; a < 1800 && rooms.length < maxRooms; a++) {
+      const w = ri(4, 8), h = ri(4, 7), x = ri(2, GW - w - 2), y = ri(2, GH - h - 2);
+      const gap = D.spread || 2;
+      if (rooms.some(r => x < r.x + r.w + gap && x + w + gap > r.x && y < r.y + r.h + gap && y + h + gap > r.y)) continue;
+      rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1) });
+    }
   }
   for (const r of rooms) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) grid[gi(x, y)] = 1;
 
@@ -108,8 +125,10 @@ export function genSewer(seed, D) {
     if (a != null && dist[a] >= 0 && dist[b] >= 0 && Math.abs(dist[a] - dist[b]) > 10) cand.push(gi(x, y));
   }
   shuffleR(cand);
-  cand.slice(0, 7).forEach(k => { grid[k] = 3; });
-  cand.slice(7, 12).forEach(k => { grid[k] = 5; });
+  const nCut = D.cuts != null ? D.cuts : 12;
+  const nDry = Math.min(7, nCut), nCrev = Math.max(0, nCut - nDry);
+  cand.slice(0, nDry).forEach(k => { grid[k] = 3; });
+  cand.slice(nDry, nDry + nCrev).forEach(k => { grid[k] = 5; });
   // Sealed pockets behind drywall hold caches and chests.
   const pockets = [];
   for (const r of shuffleR(rooms.filter(r => r !== startRoom && !r.metal)).slice(0, 6)) {
