@@ -195,6 +195,25 @@ function exploreTarget() {
   }
   return b;
 }
+/** A way up to an elevated pickup. Boss keys often land on a pipe or ledge at y 4–6, and a ground-level
+ *  walk to their xz leaves the rat under them (pickup needs |dy| < 1.6). Prefer a marked drainpipe
+ *  whose top reaches the height, else a hop-up platform. */
+function wayUp(x, y, z) {
+  let best = null, bd = 1e9;
+  for (const c of W.climbs || []) {
+    if (c.top < y - 0.8) continue;
+    const d = Math.hypot(c.x - x, c.z - z) + Math.hypot(c.x - P.x, c.z - P.z) * 0.35;
+    if (d < bd) { bd = d; best = { x: c.x, z: c.z, kind: 'climb', o: c, y }; }
+  }
+  if (best && bd < 48) return best;
+  for (const p of W.plats || []) {
+    if (p.thin || p.line || p.pole || p.dyn) continue;
+    if (p.y < P.y + 0.7 || p.y > P.y + 2.8) continue; // single jump is ~2.4
+    const d = Math.hypot(p.x - x, p.z - z) + Math.hypot(p.x - P.x, p.z - P.z) * 0.35;
+    if (d < bd) { bd = d; best = { x: p.x, z: p.z, kind: 'ledge', o: p, y }; }
+  }
+  return best;
+}
 function chooseTarget() {
   const pr = B.profile, foods = W.foods;
   if (B.goal === 'die') {
@@ -222,7 +241,17 @@ function chooseTarget() {
   }
   if (B.goal === 'explore') return exploreTarget();
   if (!clearing && (B.goal === 'loot' || Math.random() < pr.loot * 0.2)) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
-  if (B.goal === 'clear' && W.keys.length) { const k = nearestMust(W.keys); if (k) return { x: k.x, z: k.z, kind: 'key' }; } // grab the boss key before the exit
+  if (B.goal === 'clear' && W.keys.length) {
+    const k = nearestMust(W.keys);
+    if (k) {
+      // If the key is above the rat, climb a pipe or hop a ledge first; standing under it never picks it up.
+      if (k.y - P.y > 1.4) {
+        const up = wayUp(k.x, k.y, k.z);
+        if (up && Math.hypot(up.x - P.x, up.z - P.z) > 1.0) return { x: up.x, z: up.z, kind: up.kind, y: k.y, key: k };
+      }
+      return { x: k.x, z: k.z, kind: 'key', y: k.y };
+    }
+  } // grab the boss key before the exit
   if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestMust(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
@@ -326,19 +355,27 @@ function think(dt) {
       const s = steerTo(tg.x, tg.z);
       if (s === OFF) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist]; // head straight for it until back on the field
       else if (s) d = s;
-      else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
+      else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
       else { B.banned.add(toG(tg.x) + ',' + toG(tg.z)); B.target = null; }
     }
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
-    else if (tg.kind === 'exit' || tg.kind === 'key') {
+    else if (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge') {
       // Keep walking onto the pad / key. Standing still at 0.6 misses the trigger if a hop lifts Y
       // (exit needs |dy| < 0.8) or ice carries the rat past (Frozen Pipeworks). Don't mark a key
-      // done until it's actually picked up (range 1.4).
+      // done until it's actually picked up (range 1.4). If the key is overhead, hold Space on a
+      // drainpipe (or hop a ledge) instead of standing under it.
+      const ty = tg.y ?? (W.keys[0] && tg.kind !== 'exit' ? W.keys[0].y : P.y);
+      const dy = ty - P.y;
       d = [(tg.x - P.x) / (dist || 1), (tg.z - P.z) / (dist || 1)];
-      keys.Space = false;
+      if (dy > 1.2) {
+        const up = wayUp(tg.x, ty, tg.z);
+        if (up && Math.hypot(up.x - P.x, up.z - P.z) > 1.0) d = [up.x - P.x, up.z - P.z];
+        keys.Space = true; P.buffer = 0.13;
+      } else keys.Space = false;
       if (tg.kind === 'key' && !W.keys.length) tg.done = true;
+      if ((tg.kind === 'climb' || tg.kind === 'ledge') && dy <= 1.2) tg.done = true;
     }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
   }
@@ -423,7 +460,7 @@ function watchdogs(dt) {
       if (B.unstick >= 3) {
         anomaly('stuck', { target: B.target && B.target.kind, tx: B.target && +B.target.x.toFixed(1), tz: B.target && +B.target.z.toFixed(1) });
         // Clear-goal keys and exits are the whole point: banning them left the bot idle until the cap.
-        const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key');
+        const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key' || B.target.kind === 'climb' || B.target.kind === 'ledge');
         if (B.target && !must) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
         B.target = null; B.unstick = 0;
       }
