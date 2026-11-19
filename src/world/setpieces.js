@@ -197,7 +197,7 @@ function buildTram(info) {
   for (const s of [-1, 1]) glowSprite(0xfff0c0, 3, g, 0, 1.4, s * 5.6, 0.9);
   g.visible = false;
   world.add(g);
-  W.tram = { axis: best.axis, c, a0: a0 - 12, a1: a1 + 12, mesh: g, lights, state: 'idle', t: rand(35, 50), pos: 0, dir: 1, first: true, pass: 1 };
+  W.tram = { axis: best.axis, c, a0: a0 - 12, a1: a1 + 12, mesh: g, lights, state: 'idle', t: rr(35, 50), pos: 0, dir: 1, first: true, pass: 1 };
 }
 function tickTram(dt) {
   const tr = W.tram;
@@ -421,15 +421,18 @@ function rainOn(on) {
   if (!rainIM) {
     rainIM = new THREE.InstancedMesh(Bx(0.03, 0.9, 0.03), new THREE.MeshBasicMaterial({ color: 0x9ab0d0, transparent: true, opacity: 0.45, depthWrite: false }), RAIN_N);
     rainIM.frustumCulled = false;
-    rainIM.userData.drops = Array.from({ length: RAIN_N }, () => ({ x: rand(-22, 22), y: rand(0, 18), z: rand(-22, 22) }));
+    rainIM.userData.drops = Array.from({ length: RAIN_N }, () => ({ x: rr(-22, 22), y: rr(0, 18), z: rr(-22, 22) }));
     scene.add(rainIM);
   }
   rainIM.visible = on;
 }
 const _d = new THREE.Object3D();
 function tickRain(dt) {
+  // qaFast: raindrops recycled off the unsynced camera and consumed the seeded
+  // combat/bot stream; skip the cosmetic tick during clear-bot sims.
+  if (G.qaFast) return;
   if (!rainIM || !rainIM.visible) return;
-  const cx = P.x, cz = P.z, cyb = camera.position.y;
+  const cx = P.x, cz = P.z, cyb = 12;
   rainIM.userData.drops.forEach((d, i) => {
     d.y -= 26 * dt;
     if (d.y < 0) { d.y = Math.max(cyb, 8) + rand(2, 10); d.x = rand(-22, 22); d.z = rand(-22, 22); if (i % 6 === 0) W.parts.push({ x: cx + d.x, y: floorY(cx + d.x, cz + d.z) + 0.1, z: cz + d.z, vx: 0, vy: 1.2, vz: 0, life: 0.15, c: 0xb0c8e0, s: 0.4, ng: true }); }
@@ -454,7 +457,7 @@ const ARENA = {
     // A dead tree and perches, heavy with nests.
     mkMesh(Cy(0.5, 0.8, 9, 6), lam(0x3a2e26, { map: furTex }), x, 4.5, z);
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, b = mkMesh(Cy(0.12, 0.2, 4, 5), lam(0x3a2e26), x + Math.sin(a) * 1.6, 7 + (i % 2), z + Math.cos(a) * 1.6); b.rotation.set(Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9); mkMesh(Sp(0.5, 6, 4), lam(0x2a221a, { map: furTex }), x + Math.sin(a) * 3, 8.4 + (i % 2), z + Math.cos(a) * 3); }
-    for (let i = 0; i < 20; i++) mkMesh(Bx(0.3, 0.02, 0.1), lam(0x101014), x + rr(-6, 6), 0.03, z + rr(-6, 6)).rotation.y = rand(0, TAU);
+    for (let i = 0; i < 20; i++) mkMesh(Bx(0.3, 0.02, 0.1), lam(0x101014), x + rr(-6, 6), 0.03, z + rr(-6, 6)).rotation.y = rr(0, TAU);
   },
   exterm(x, z) {
     // A gassed-out warehouse floor: four vents that blow during the fight.
@@ -463,19 +466,19 @@ const ARENA = {
       const vx = x + sx * 6, vz = z + sz * 6;
       mkMesh(Bx(1.8, 0.1, 1.8), lam(0x4a4e54, { map: metalTex }), vx, 0.05, vz);
       for (let i = 0; i < 4; i++) mkMesh(Bx(1.6, 0.04, 0.12), lam(0x101014), vx, 0.11, vz - 0.6 + i * 0.4);
-      W.arenaVents.push({ x: vx, z: vz, sp: glowSprite(0x9be06a, 2, world, vx, 0.6, vz, 0.2), t: rand(2, 6) });
+      W.arenaVents.push({ x: vx, z: vz, sp: glowSprite(0x9be06a, 2, world, vx, 0.6, vz, 0.2), t: rr(2, 6) });
     }
     // Gas drums on open floor (never half inside a wall).
     for (let i = 0; i < 6; i++) for (let t = 0; t < 4; t++) { const dx = x + rr(-9, 9), dz = z + rr(-9, 9); if (freeSpot(dx, dz, 0.9) && !blocked(dx, dz, 2.6)) { staticBox(dx, dz, 1.4, 1.4, 1.4, lam(0xb04a30, { map: metalTex })); break; } }
   },
   maw(x, z) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; const r = mkMesh(new THREE.TorusGeometry(2.4, 0.18, 4, 10, Math.PI), lam(0xd8d0b8), x + Math.sin(a) * 6, 0, z + Math.cos(a) * 6); r.rotation.y = a; }
-    for (let i = 0; i < 24; i++) mkMesh(Cy(0.08, 0.08, rr(0.6, 1.4), 4), lam(0xd8d0b8), x + rr(-7, 7), 0.1, z + rr(-7, 7)).rotation.set(PI2, rand(0, TAU), 0);
+    for (let i = 0; i < 24; i++) mkMesh(Cy(0.08, 0.08, rr(0.6, 1.4), 4), lam(0xd8d0b8), x + rr(-7, 7), 0.1, z + rr(-7, 7)).rotation.set(PI2, rr(0, TAU), 0);
   },
   brood(x, z) {
     W.arenaSacs = [];
-    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, sx = x + Math.sin(a) * 6, sz = z + Math.cos(a) * 6; mkMesh(Sp(0.8, 6, 4), lam(0xe8e0c8, { emissive: 0x2a1a0a }), sx, 0.7, sz); W.arenaSacs.push({ x: sx, z: sz, t: rand(6, 12) }); }
-    for (let i = 0; i < 10; i++) { const m = mkMesh(Bx(0.04, 0.04, 9), lam(0xf0f0f0, { transparent: true, opacity: 0.5 }), x + rr(-5, 5), rr(2, 4), z + rr(-5, 5)); m.rotation.set(rr(-0.3, 0.3), rand(0, TAU), 0); }
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, sx = x + Math.sin(a) * 6, sz = z + Math.cos(a) * 6; mkMesh(Sp(0.8, 6, 4), lam(0xe8e0c8, { emissive: 0x2a1a0a }), sx, 0.7, sz); W.arenaSacs.push({ x: sx, z: sz, t: rr(6, 12) }); }
+    for (let i = 0; i < 10; i++) { const m = mkMesh(Bx(0.04, 0.04, 9), lam(0xf0f0f0, { transparent: true, opacity: 0.5 }), x + rr(-5, 5), rr(2, 4), z + rr(-5, 5)); m.rotation.set(rr(-0.3, 0.3), rr(0, TAU), 0); }
   },
   ratking(x, z) {
     // The throne: bones, a tall back and a crown of candles.
