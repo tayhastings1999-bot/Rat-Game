@@ -4,7 +4,7 @@ import { resetObj, unseedRng, $ } from '../core/util.js';
 import { G, P, W, run, st, meta, saveMeta } from '../core/state.js';
 import { dropCreature } from '../render/renderer.js';
 import { clearFx } from '../fx/fx.js';
-import { M, gi, toW, floorY } from '../world/grid.js';
+import { M, gi, inG, toG, toW, floorY, bfs, tAt } from '../world/grid.js';
 import { genCity } from '../world/cityGen.js';
 import { genSewer } from '../world/sewerGen.js';
 import { carveDucts } from '../world/ducts.js';
@@ -164,15 +164,51 @@ export function startRun(k, opt = {}) {
   checkpoint();
 }
 
-/** Boss dead: open the way on. Surface → a road gate; sewer → a ladder up. */
+/** Boss dead: open the way on. Surface → a road gate; sewer → a ladder up.
+ *  The exit sits within TUNE.nests.exitTiles walking tiles of the arena (or the
+ *  boss's death spot if there is no arena) — not in the farthest room. */
 export function openGate() {
-  let bk = -1, bd = -1;
-  for (const r of W.rooms) {
-    const k = gi(r.cx, r.cy);
-    if (M.flow[k] > bd) { bd = M.flow[k]; bk = k; }
+  const cap = TUNE.nests.exitTiles ?? 12;
+  const ax = (G.arena && G.arena.x) ?? (G.boss && G.boss.x) ?? P.x;
+  const az = (G.arena && G.arena.z) ?? (G.boss && G.boss.z) ?? P.z;
+  const walk = t => t === 1 || t === 2 || t === 4 || t === 9 || t === 10 || t === 5 || t === 11;
+  let sx = toG(ax), sz = toG(az);
+  if (!inG(sx, sz) || !walk(tAt(sx, sz))) {
+    let bd = 1e9, bx = sx, bz = sz;
+    for (let z = sz - 6; z <= sz + 6; z++) for (let x = sx - 6; x <= sx + 6; x++) {
+      if (!inG(x, z) || !walk(tAt(x, z))) continue;
+      const d = Math.abs(x - sx) + Math.abs(z - sz);
+      if (d < bd) { bd = d; bx = x; bz = z; }
+    }
+    sx = bx; sz = bz;
   }
-  // Walled in (e.g. inside a boarded slot): fall back to the farthest room as the crow flies.
-  if (bk < 0) for (const r of W.rooms) { const d = Math.hypot(toW(r.cx) - P.x, toW(r.cy) - P.z); if (d > bd) { bd = d; bk = gi(r.cx, r.cy); } }
+  const dist = bfs(sx, sz, walk);
+  let bk = -1, score = 1e9;
+  // Prefer a room centre 3–cap tiles away (just outside the arena, a short walk after the fight).
+  for (const r of W.rooms || []) {
+    const k = gi(r.cx, r.cy), d = dist[k];
+    if (d == null || d < 3 || d > cap || !walk(tAt(r.cx, r.cy))) continue;
+    const s = Math.abs(d - 8);
+    if (s < score) { score = s; bk = k; }
+  }
+  if (bk < 0) {
+    score = 1e9;
+    for (let k = 0; k < dist.length; k++) {
+      const d = dist[k];
+      if (d < 3 || d > cap || !walk(M.grid[k]) || M.grid[k] === 5 || M.grid[k] === 11) continue;
+      const s = Math.abs(d - 8);
+      if (s < score) { score = s; bk = k; }
+    }
+  }
+  // Nothing in range: the closest walkable floor at least 2 tiles from the arena.
+  if (bk < 0) {
+    score = 1e9;
+    for (let k = 0; k < dist.length; k++) {
+      const d = dist[k];
+      if (d < 2 || !walk(M.grid[k]) || M.grid[k] === 5 || M.grid[k] === 11) continue;
+      if (d < score) { score = d; bk = k; }
+    }
+  }
   if (bk < 0) return;
   addExit(toW(bk % M.W), toW((bk / M.W) | 0), isSewer() ? 'ladder' : 'road');
 }

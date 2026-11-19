@@ -37,6 +37,16 @@ export const TUNE = {
     // (so 4 rats = 1 + 3 × value). zoneScaling() in combat.js applies them.
     // HP and spawn pressure rise with the party, damage does not (uneven damage scaling is the top complaint in co-op reviews).
     perPlayer: { hp: 0.6, dmg: 0, spawn: 0.35, elite: 0.1, bossHp: 0.75, nestKids: 0.3 },
+    // 1–4 player balance table (Rat 3 / Rat Leader). Nest *count* stays fixed with party size;
+    // pressure (children, spawn rate) and boss HP scale. Boss HP grows less than linearly because
+    // a boss mostly hits one rat at a time. Food caches and Rot Vials are placed per this table
+    // (world/build.js placePartySupplies).
+    party: {
+      1: { kids: 1.0, spawn: 1.0, bossHp: 1.00, foodCaches: 4, vials: 2 },
+      2: { kids: 1.3, spawn: 1.3, bossHp: 1.60, foodCaches: 6, vials: 3 },
+      3: { kids: 1.6, spawn: 1.6, bossHp: 2.20, foodCaches: 8, vials: 4 },
+      4: { kids: 1.9, spawn: 1.9, bossHp: 2.80, foodCaches: 10, vials: 5 },
+    },
     // Downed rats: a teammate can revive them inside the window; when it runs out the party spends a shared
     // cheese token (a continue) to bring them back beside the lead, or they sit out until the next level.
     // Per difficulty: tokens per run and teammate revives per rat per level (-1 = unlimited).
@@ -168,7 +178,10 @@ export const TUNE = {
     xp1: 15, xp2: 25, xp3: 40,
     startClear: 10, // tiles of walking distance from the start kept free of nests (a quiet first minute)
     range: 32, // nests only spawn while you're this close (tighter on the bigger maps, so far nests don't flood you)
-    count: 20, countPerZone: 0.6, countMax: 28, // nests per zone (10-20 min levels on bigger maps)
+    count: 20, countPerZone: 0.6, countMax: 28, // nests per zone; 28 is the global cap (city keeps it)
+    sewerFrac: 0.65, // sewers: no more nests than this × eligible rooms (about 16 in a 26-room sewer)
+    sewerFree: 4, // at least this many sewer rooms stay nest-free (landmarks, hidden doors, quiet entry)
+    exitTiles: 12, // walking tiles from the boss arena to the exit (openGate)
     warrenBase: 0.05, warrenPerZone: 0.1, warrenMax: 0.6, // chance a nest starts as a Warren
     warrenMinZone: 2, // no Warrens before this zone
     burrowBase: 0.35, burrowPerZone: 0.03, // ...or a Burrow (the rest start as Litter Piles)
@@ -277,7 +290,7 @@ export const TUNE = {
     // The exit tally (ui/tally.js): points per part (they add up to 100) and grade thresholds.
     wNests: 30, wBoss: 15, wSide: 10, wSecrets: 20, wHealth: 15, wTime: 10,
     hurtPar: 2, // taking this many × your max HP scores 0 for health
-    parTime: 240, // seconds: at or under this scores full time points
+    parTime: 1200, // seconds (20 min): a clear at or under the 10–20 min target scores full time points
     S: 90, A: 75, B: 60, C: 40,
     goldS: 60, goldA: 40, goldB: 20, goldC: 10, goldD: 0, // grade bonus
   },

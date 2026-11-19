@@ -5,11 +5,14 @@ import { M, allocMap, gi, inG, tAt, bfs, OPEN, N4, WH } from './grid.js';
 
 export function genSewer(seed, D) {
   seedRng(seed);
-  allocMap(56, 'sewer'); // was 40 (15 rooms): sized for 10-20 min levels
+  const maxRooms = D.rooms || 26;
+  const sideN = D.sideRooms || 0;
+  // A little more map when we also place nest-free side rooms (beats / detours).
+  allocMap(maxRooms > 22 || sideN > 2 ? 64 : 56, 'sewer'); // was 40 (15 rooms), then 56
   const GW = M.W, GH = M.H, grid = M.grid;
   M.hgt.fill(WH);
   const rooms = [];
-  for (let a = 0; a < 1400 && rooms.length < 26; a++) {
+  for (let a = 0; a < 1800 && rooms.length < maxRooms; a++) {
     const w = ri(4, 8), h = ri(4, 7), x = ri(2, GW - w - 2), y = ri(2, GH - h - 2);
     if (rooms.some(r => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y)) continue;
     rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1) });
@@ -40,7 +43,8 @@ export function genSewer(seed, D) {
     links.push([con[bj], r]);
     con.push(r);
   }
-  for (let i = 0; i < 3; i++) {
+  const extraLoops = D.loops != null ? D.loops : 3;
+  for (let i = 0; i < extraLoops; i++) {
     const a = rooms[ri(0, rooms.length - 1)], b = rooms[ri(0, rooms.length - 1)];
     if (a !== b) links.push([a, b]);
   }
@@ -53,6 +57,27 @@ export function genSewer(seed, D) {
   for (const r of rooms) {
     if (r !== startRoom && rng.next() < (pw > 0.3 ? 0.5 : 0.25) && r.w >= 6 && r.h >= 5) {
       for (let y = r.y + 2; y < r.y + r.h - 2; y++) for (let x = r.x + 2; x < r.x + r.w - 2; x++) grid[gi(x, y)] = 2;
+    }
+  }
+  // Nest-free side rooms off the mid-route: longer B2 exploration without adding nests.
+  if (sideN > 0) {
+    for (const r of shuffleR(rooms.filter(r => r !== startRoom))) {
+      if (rooms.filter(x => x.side).length >= sideN) break;
+      for (const [dx, dy] of shuffleR(N4.slice())) {
+        const gap = 2, w = ri(4, 6), h = ri(4, 6);
+        const x = dx > 0 ? r.x + r.w + gap : dx < 0 ? r.x - gap - w : r.x + ri(0, Math.max(0, r.w - w));
+        const y = dy > 0 ? r.y + r.h + gap : dy < 0 ? r.y - gap - h : r.y + ri(0, Math.max(0, r.h - h));
+        if (x < 2 || y < 2 || x + w >= GW - 2 || y + h >= GH - 2) continue;
+        if (rooms.some(o => x < o.x + o.w + 1 && x + w + 1 > o.x && y < o.y + o.h + 1 && y + h + 1 > o.y)) continue;
+        let ok = true;
+        for (let yy = y - 1; yy <= y + h && ok; yy++) for (let xx = x - 1; xx <= x + w; xx++) if (inG(xx, yy) && grid[gi(xx, yy)] !== 0) ok = false;
+        if (!ok) continue;
+        const side = { x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1), nestFree: true, side: true };
+        rooms.push(side);
+        for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) grid[gi(xx, yy)] = 1;
+        carve(r.cx, r.cy, side.cx, side.cy, 1);
+        break;
+      }
     }
   }
   let dist = bfs(startRoom.cx, startRoom.cy, OPEN);

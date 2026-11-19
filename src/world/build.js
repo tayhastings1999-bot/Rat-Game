@@ -22,7 +22,8 @@ import { populateDucts, applyCutaway } from './ducts.js';
 import * as TEX from '../render/textures.js';
 const SHARED_TEX = new Set(Object.values(TEX).filter(v => v && v.isTexture));
 import { curD, FAMILIES } from '../data/world.js';
-import { initNest, rollNest, nestCount } from '../game/nests.js';
+import { initNest, rollNest, nestBudget } from '../game/nests.js';
+import { dropVial } from '../game/vials.js';
 import { placeSecretDrain } from '../game/secrets.js';
 import { addGrave } from '../game/reaper.js';
 import { OBJ } from '../data/props.js';
@@ -819,6 +820,31 @@ function lockChests() {
   shuffleR(cand).slice(0, TUNE.keys.lockedChests).forEach(lockChest);
 }
 /** Power-up tokens on the street (seeded): rooms between the start and the far end. */
+
+/** Top up ground food caches and Rot Vials to the 1–4 player table. Sit in nest-free rooms, never in a nest cluster. */
+function placePartySupplies(info) {
+  const n = Math.max(1, Math.min(4, run.players || 1));
+  const party = TUNE.coop.party && TUNE.coop.party[n];
+  if (!party) return;
+  const nestAt = (x, z) => W.enemies.some(e => e.type === 'nest' && !e.dead && Math.hypot(e.x - x, e.z - z) < 8);
+  const rooms = shuffleR((info.rooms || W.rooms || []).filter(r => !nestAt(toW(r.cx), toW(r.cy))));
+  let caches = (W.caches || []).filter(c => (c.y || 0) < 0.6).length;
+  for (const r of rooms) {
+    if (caches >= party.foodCaches) break;
+    const tl = shuffleR(roomTiles(r).slice()).find(([x, y]) => freeSpot(toW(x), toW(y), 1.2) && !nestAt(toW(x), toW(y)));
+    if (!tl) continue;
+    addCache(toW(tl[0]), 0, toW(tl[1]));
+    caches++;
+  }
+  let vials = (W.vials || []).length;
+  for (const r of rooms) {
+    if (vials >= party.vials) break;
+    const tl = shuffleR(roomTiles(r).slice()).find(([x, y]) => freeSpot(toW(x), toW(y), 1.2) && !nestAt(toW(x), toW(y)));
+    if (!tl) continue;
+    dropVial(toW(tl[0]), 0, toW(tl[1]));
+    vials++;
+  }
+}
 function placePowerups(info) {
   const rooms = (info.byDist || []).filter(r => r !== info.startRoom), lo = Math.floor(rooms.length * 0.2), hi = Math.max(lo + 1, Math.floor(rooms.length * 0.9));
   const pool = rooms.slice(lo, hi);
@@ -987,8 +1013,11 @@ export function populate(info) {
   // byDist runs nearest-first, so with ~20 nests they used to fill the rooms around the start and the rat
   // woke up inside spawn range of half a dozen of them (Toxic Refinery: dead in 1-2 min). Keep a quiet start:
   // no nest within TUNE.nests.startClear tiles of walking distance, unless the map runs out of rooms.
-  const far = byDist.filter(r => (dist[gi(r.cx, r.cy)] ?? 99) >= TUNE.nests.startClear), order = far.length >= nestCount() / 2 ? far : byDist;
-  for (let j = 0, i = 0, want = nestCount(); i < want && j < order.length; j++) {
+  // Eligible rooms: past the quiet start, and not reserved nest-free side rooms (landmarks, hidden doors).
+  const far = byDist.filter(r => !r.nestFree && (dist[gi(r.cx, r.cy)] ?? 99) >= TUNE.nests.startClear);
+  const want = nestBudget(far.length, rooms.length);
+  const order = far.length >= want / 2 ? far : byDist.filter(r => !r.nestFree);
+  for (let j = 0, i = 0; i < want && j < order.length; j++) {
     const spot = shuffleR(roomTiles(order[j]).slice()).map(([x, y]) => [toW(x), toW(y)]).find(([x, z]) => away(x, z) && freeSpot(x, z, 1.7));
     if (!spot) continue;
     const n = rollNest(i++);
@@ -997,6 +1026,7 @@ export function populate(info) {
   }
   lockChests();
   placePowerups(info);
+  placePartySupplies(info);
   if (city) {
     const cand = byDist.slice(Math.floor(byDist.length * 0.3), Math.floor(byDist.length * 0.75)).filter(r => r.kind === 'cross');
     const r = cand[ri(0, Math.max(0, cand.length - 1))] || byDist[Math.floor(byDist.length / 2)];
