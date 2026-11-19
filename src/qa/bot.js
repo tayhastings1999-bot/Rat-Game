@@ -43,6 +43,7 @@ export function parseGoal(text = '') {
   if (/secret|hidden/.test(t)) return 'secret';
   if (/manhole|sewer|descend/.test(t)) return 'manhole';
   if (/nest/.test(t)) return 'nests';
+  if (/clear/.test(t)) return 'clear'; // clear the level: nests → boss → key → exit (scripts/clear.mjs)
   if (/boss/.test(t)) return 'boss';
   if (/chest|loot/.test(t)) return 'loot';
   if (/building|inside|interior|indoors/.test(t)) return 'interior';
@@ -209,16 +210,19 @@ function chooseTarget() {
     if (f) return { x: f.x, z: f.z, kind: 'food', o: f };
   }
   if (B.goal === 'break') return breakTarget();
-  // Power-up tokens nearby are worth a detour (as a player would take them).
-  if (Math.random() < pr.loot) { const t = nearestOf((W.pups || []).filter(p => Math.hypot(p.x - P.x, p.z - P.z) < 30 && Math.abs(p.y - P.y) < 1.5)); if (t) return { x: t.x, z: t.z, kind: 'powerup', o: t }; }
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
+  // Clear-goal critical path: once a key is down, the exit is open, or the boss is up, skip loot detours.
+  const clearing = B.goal === 'clear' && (W.keys.length || exits.length || (G.boss && !G.boss.dead));
+  // Power-up tokens nearby are worth a detour (as a player would take them).
+  if (!clearing && Math.random() < pr.loot) { const t = nearestOf((W.pups || []).filter(p => Math.hypot(p.x - P.x, p.z - P.z) < 30 && Math.abs(p.y - P.y) < 1.5)); if (t) return { x: t.x, z: t.z, kind: 'powerup', o: t }; }
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };
   if (B.goal === 'secret' && G.secretExit) return { x: G.secretExit.x, z: G.secretExit.z, kind: 'secret' }; // best effort: it may sit behind a cracked wall
   if (B.goal === 'interior') {
     for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1 && !B.banned.has((k % M.W) + ',' + ((k / M.W) | 0))) return { x: toW(k % M.W), z: toW((k / M.W) | 0), kind: 'interior' };
   }
   if (B.goal === 'explore') return exploreTarget();
-  if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
+  if (!clearing && (B.goal === 'loot' || Math.random() < pr.loot * 0.2)) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
+  if (B.goal === 'clear' && W.keys.length) { const k = nearestMust(W.keys); if (k) return { x: k.x, z: k.z, kind: 'key' }; } // grab the boss key before the exit
   if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestMust(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
@@ -322,11 +326,20 @@ function think(dt) {
       const s = steerTo(tg.x, tg.z);
       if (s === OFF) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist]; // head straight for it until back on the field
       else if (s) d = s;
+      else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
       else { B.banned.add(toG(tg.x) + ',' + toG(tg.z)); B.target = null; }
     }
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
+    else if (tg.kind === 'exit' || tg.kind === 'key') {
+      // Keep walking onto the pad / key. Standing still at 0.6 misses the trigger if a hop lifts Y
+      // (exit needs |dy| < 0.8) or ice carries the rat past (Frozen Pipeworks). Don't mark a key
+      // done until it's actually picked up (range 1.4).
+      d = [(tg.x - P.x) / (dist || 1), (tg.z - P.z) / (dist || 1)];
+      keys.Space = false;
+      if (tg.kind === 'key' && !W.keys.length) tg.done = true;
+    }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
   }
   // Boss spacing: a player who can't roll (cooldown) steps back out of a boss wind-up instead of
@@ -409,7 +422,9 @@ function watchdogs(dt) {
       setDir(rand(-1, 1), rand(-1, 1));
       if (B.unstick >= 3) {
         anomaly('stuck', { target: B.target && B.target.kind, tx: B.target && +B.target.x.toFixed(1), tz: B.target && +B.target.z.toFixed(1) });
-        if (B.target) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
+        // Clear-goal keys and exits are the whole point: banning them left the bot idle until the cap.
+        const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key');
+        if (B.target && !must) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
         B.target = null; B.unstick = 0;
       }
     } else { B.unstick = 0; if (B.on) keys.Space = false; }
