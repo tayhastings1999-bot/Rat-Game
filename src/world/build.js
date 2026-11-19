@@ -1054,6 +1054,11 @@ export function populate(info) {
   if (run.mods.includes('currents')) for (let i = 0; i < 9; i++) addZone('vent', ...nxt());
   if (run.mods.includes('gravity')) for (let i = 0; i < 5; i++) addZone('grav', ...nxt());
   if (run.mods.includes('decay')) for (let i = 0; i < 5; i++) addZone('decay', ...nxt());
+  // After Dark: extra unlit pockets along the mid-route so the longer walk goes through Blackout stretches.
+  if (D.darkStretches) {
+    const mid = byDist.filter(r => r !== startRoom && (dist[gi(r.cx, r.cy)] ?? 0) >= 8);
+    shuffleR((mid.length ? mid : others).slice()).slice(0, D.darkStretches).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
+  }
   if (G.tideMesh) G.tideMesh.material.map.dispose();
   G.tideMesh = null;
   G.tideY = -5;
