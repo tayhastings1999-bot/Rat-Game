@@ -34,7 +34,7 @@ export const SEWER_LEVELS = [
   { id: 'toxic', base: 4, seed: 'toxic-refinery' },
   { id: 'court', base: 5, seed: 'rat-kings-court', grave: true },
   { id: 'under-d', base: 0, seed: 'deep-undersewer', title: 'The Deep Undersewer', haz: 'decay', fam: ['rot', 'prowl'], boss: 'maw', bossV: 'frenzied', over: { ...deep, lamp: 0xff8040 } },
-  { id: 'cistern-d', base: 1, seed: 'undertow', title: 'Flooded Cisterns · Undertow', loops: 2, map: 72, pumpHall: true, haz: 'currents', fam: ['wings', 'rot', 'vermin'], boss: 'brood', bossV: 'brood', over: { ...deep, lamp: 0x40c0ff } },
+  { id: 'cistern-d', base: 1, seed: 'undertow', title: 'Flooded Cisterns · Undertow', loops: 2, map: 72, spread: 4, detour: true, pumpHall: true, haz: 'currents', fam: ['wings', 'rot', 'vermin'], boss: 'brood', bossV: 'brood', over: { ...deep, lamp: 0x40c0ff } },
   { id: 'butcher-d', base: 2, seed: 'bloodworks', title: "Butcher's Drain · Bloodworks", haz: 'bloodmoon', fam: ['guard', 'vermin'], boss: 'ratking', bossV: 'armored', grave: true, rooms: 22, nests: 14, over: { ...deep, lamp: 0xff2a20 } }, // ceiling: ≤22 rooms, ≤14 nests (Rat 3); trim variant only if still over 20
   { id: 'frozen-d', base: 3, seed: 'black-ice', title: 'Frozen Pipeworks · Black Ice', haz: 'gravity', fam: ['wings', 'guard', 'prowl'], boss: 'maw', bossV: 'armored', over: { ...deep, lamp: 0x60a0ff } },
   { id: 'toxic-d', base: 4, seed: 'meltdown', title: 'Toxic Refinery · Meltdown', loops: 2, map: 72, spread: 4, detour: true, haz: 'tides', fam: ['rot', 'vermin', 'wings'], boss: 'brood', bossV: 'frenzied', over: { ...deep, lamp: 0xa0ff20 } },
