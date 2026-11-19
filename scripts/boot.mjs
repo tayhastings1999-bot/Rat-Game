@@ -486,6 +486,22 @@ await check('hidden lairs wake an elite guard pack (no mini-boss) and pay out wh
   if (!r.paid || r.chests < 1) throw new Error('lair hoard missing ' + JSON.stringify(r));
   await S(() => { __scurry.G.qaHold = false; }); // hand the loop back (stepRaw holds it)
 });
+await check('pace snapshot reads current run fields (no run.items)', async () => {
+  const r = await S(() => {
+    const s = __scurry;
+    s.startRun('tank'); s.god(true); s.G.testNoTally = true;
+    // The same snapshot scripts/pace.mjs takes each game-minute. Phase 1 cut items, rules, keystones and mutations.
+    return {
+      t: Math.round(s.run.time), L: s.run.level, xp: Math.round(s.run.xp || 0), k: s.run.kills,
+      T: +(s.run.T || 0).toFixed(1), hp: Math.round(s.run.hp), mhp: s.st.maxHp, mobs: s.W.enemies.length,
+      d: s.run.tier + 1, dmg: +s.st.dmg.toFixed(2),
+      x: JSON.stringify({ pu: Object.keys(s.run.pu || {}), growth: s.run.growth, by: Object.entries(s.run.dmgBy || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => k + ':' + Math.round(v)).join(' ') }),
+      hasItems: 'items' in s.run,
+    };
+  });
+  if (typeof r.xp !== 'number' || typeof r.dmg !== 'number' || !r.x) throw new Error('pace snapshot failed ' + JSON.stringify(r));
+  if (r.hasItems) throw new Error('run.items came back; pace.mjs may need another pass');
+});
 await check('old single-slot saves move into slot 1', async () => {
   // Park the main page so it is not burning the runner's CPU while the second page loads.
   await page.goto('about:blank');

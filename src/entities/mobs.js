@@ -2,7 +2,7 @@
 // movement helpers, telegraphed attack patterns per mob type, and the
 // per-frame enemy update.
 
-import { rand, randi, clamp, angD, pick, keep, TAU, PI2 } from '../core/util.js';
+import { rand, randi, rr, rng, clamp, angD, pick, keep, TAU, PI2 } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
 import { scene } from '../render/renderer.js';
 import { fx, puff, spark, blood, dnum, swipeFx } from '../fx/fx.js';
@@ -87,24 +87,24 @@ export function spawnEnemy(type, x, z, o = {}) {
   if (gy > 1.2 && !D.fly && !o.roof) return null;
   const sewer = isSewer();
   const Z = TUNE.zone, eliteP = run.time - (run.dStart || 0) < 60 ? 0 : Math.min(Z.eliteMax * (run.eliteM || 1), (Z.eliteBase + (run.T || 0) * Z.elitePerThreat + (sewer ? 0.05 : 0)) * (run.eliteM || 1));
-  const el = !o.plain && (!!o.elite || Math.random() < eliteP);
+  const el = !o.plain && (!!o.elite || rng.next() < eliteP);
   const mut = sewer;
   const hpm = (run.hpM || 1) * (run.powHp || 1) * (el ? 2 : 1) * (mut ? 1.5 : 1), sc = (D.sc || 1) * (el ? 1.3 : 1) * (o.sc || 1);
   const e = {
     type, x, y: D.fly ? gy + 2.2 : gy, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0,
     hp: D.hp * hpm * (o.sc ? o.sc : 1) * (o.hpMul || 1), maxHp: D.hp * hpm * (o.sc ? o.sc : 1) * (o.hpMul || 1), mini: !!o.mini, name: o.name,
-    spd: D.spd * rand(0.9, 1.1) * (run.spdM || 1) * (mut ? 1.1 : 1), dmg: D.dmg * (run.dmgM || 1) * 1.25 * (mut ? 1.25 : 1),
+    spd: D.spd * rr(0.9, 1.1) * (run.spdM || 1) * (mut ? 1.1 : 1), dmg: D.dmg * (run.dmgM || 1) * 1.25 * (mut ? 1.25 : 1),
     r: D.r * (el ? 1.3 : 1) * (o.sc || 1), h: D.h * (el ? 1.3 : 1) * (o.sc || 1), sc, xp: D.xp * (el ? 4 : 1),
-    fly: D.fly, col: D.col, blood: D.blood, flash: 0, slow: 0, atk: rand(1, 2.5), ph: rand(0, 6), ang: rand(0, TAU),
-    born: run.time || 0, elite: el, mut, corrupt: el ? o.corrupt || pick(CORRUPT_KEYS) : null, bar: D.bar || el,
+    fly: D.fly, col: D.col, blood: D.blood, flash: 0, slow: 0, atk: rr(1, 2.5), ph: rr(0, 6), ang: rr(0, TAU),
+    born: run.time || 0, elite: el, mut, corrupt: el ? o.corrupt || CORRUPT_KEYS[(rng.next() * CORRUPT_KEYS.length) | 0] : null, bar: D.bar || el,
     pT: 0, pD: 0, bT: 0, bD: 0, dT: 0, tT: 0, lunge: 0, acid: 0, wind: 0, atkCd: 0, ward: 0, trailT: 0, wardT: 0,
-    st: 'move', tt: 0, cd: rand(0.6, 1.6), jk: 0, lat: 0, oa: rand(0, TAU), ow: (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1.2),
-    ax: x, az: z, hv: rand(0.3, 0.9), darts: 0, bl: rand(1.5, 3), tel: 0, mass: (D.mass || 1) * (el ? 1.5 : 1), ai: !!(MOBAI[type] || ROLE_AI[type]), flank: type === 'mawling' && Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0,
+    st: 'move', tt: 0, cd: rr(0.6, 1.6), jk: 0, lat: 0, oa: rr(0, TAU), ow: (rng.next() < 0.5 ? -1 : 1) * rr(0.6, 1.2),
+    ax: x, az: z, hv: rr(0.3, 0.9), darts: 0, bl: rr(1.5, 3), tel: 0, mass: (D.mass || 1) * (el ? 1.5 : 1), ai: !!(MOBAI[type] || ROLE_AI[type]), flank: type === 'mawling' && rng.next() < 0.3 ? (rng.next() < 0.5 ? -1 : 1) : 0,
   };
   W.enemies.push(e);
   spark(e.x, e.y + 0.5, e.z, 1.2, el ? CORRUPT[e.corrupt].col : 0xff3a20);
   if (!o.force || o.emerge) { e.emT = 0.5; puff(e.x, e.y + 0.1, e.z, 0x5a4e44, D.fly ? 2 : 6, 2); }
-  if (type === 'roach' && !o.pack) for (let i = 0; i < 3; i++) spawnEnemy('roach', x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), { pack: 1, plain: true });
+  if (type === 'roach' && !o.pack) for (let i = 0; i < 3; i++) spawnEnemy('roach', x + rr(-1.5, 1.5), z + rr(-1.5, 1.5), { pack: 1, plain: true });
   return e;
 }
 
@@ -549,6 +549,7 @@ export function addPred(path, o = {}) {
  */
 const LOD_R2 = 34 * 34;
 let lodTick = 0;
+export function resetEnemyLod() { lodTick = 0; }
 export function updateEnemies(dt0, cap) {
   lodTick = (lodTick + 1) % 3;
   for (const e of W.enemies) {

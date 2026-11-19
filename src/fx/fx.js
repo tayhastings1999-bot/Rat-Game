@@ -15,6 +15,7 @@ export const discGeo = new THREE.CircleGeometry(1, 32);
 const fxs = [];
 /** Expanding ring, flat disc, or pulsing 'warn' telegraph on the ground. */
 export function fx(kind, x, y, z, R, col, life, ang = 0, op = 0.8) {
+  if (G.qaFast) return;
   let f = fxs.find(f => !f.on && f.kind === kind);
   if (!f) {
     const m = new THREE.Mesh(kind === 'disc' || kind === 'warn' ? discGeo : ringGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide }));
@@ -35,6 +36,7 @@ export function fx(kind, x, y, z, R, col, life, ang = 0, op = 0.8) {
 const pfxs = [];
 /** Four-frame pixel animation from the FX atlas (row 0 slash, 1 spark, 2 explosion). */
 export function pfx(row, x, y, z, size, life, o = {}) {
+  if (G.qaFast) return;
   const gr = !!o.ground;
   let f = pfxs.find(f => !f.on && f.ground === gr);
   if (!f) {
@@ -98,6 +100,10 @@ const swipes = [];
  * sides, slightly tilted) instead of a flat stamp. `heavy` is wider and slower.
  */
 export function swipeFx(A, R, col, heavy = false, from = P) {
+  if (G.qaFast) {
+    if (from === P) { P.swingSide = -(P.swingSide || 1); P.swing = heavy ? 0.3 : 0.24; P.swingHeavy = heavy; }
+    return;
+  }
   sfx('slash');
   let f = swipes.find(f => !f.on && f.heavy === heavy);
   if (!f) {
@@ -126,6 +132,7 @@ export function swipeFx(A, R, col, heavy = false, from = P) {
 }
 
 export function boom(x, y, z, s, col = 0xffffff) {
+  if (G.qaFast) return;
   pfx(2, x, y, z, s * 1.3, 0.36, { col });
   if (s >= 2.5) {
     pfx(1, x, y, z, s * 0.9, 0.18);
@@ -134,10 +141,11 @@ export function boom(x, y, z, s, col = 0xffffff) {
     if (s >= 3) sfx('boom');
   }
 }
-export const spark = (x, y, z, s = 0.9, col = 0xffffff) => pfx(1, x, y, z, s, 0.16, { col });
+export const spark = (x, y, z, s = 0.9, col = 0xffffff) => { if (G.qaFast) return; return pfx(1, x, y, z, s, 0.16, { col }); };
 
 const bolts = [];
 export function bolt(pts) {
+  if (G.qaFast) return;
   let b = bolts.find(b => !b.on);
   if (!b) {
     const geo = new THREE.BufferGeometry();
@@ -174,12 +182,14 @@ export function bolt(pts) {
 
 export const PART_CAP = 700;
 export function puff(x, y, z, col, n = 6, s = 3) {
+  if (G.qaFast) return;
   for (let i = 0; i < n; i++) {
     if (W.parts.length >= PART_CAP) W.parts.shift();
     W.parts.push({ x, y, z, vx: rand(-1, 1) * s, vy: rand(0.3, 1.4) * s, vz: rand(-1, 1) * s, life: rand(0.3, 0.6), c: col, s: 1 });
   }
 }
 export function blood(x, y, z, col, ang, n, sp = 4) {
+  if (G.qaFast) return;
   for (let i = 0; i < n; i++) {
     if (W.parts.length >= PART_CAP) W.parts.shift();
     const a = ang == null ? rand(0, TAU) : ang + rand(-0.8, 0.8), v = rand(1.5, sp);
@@ -187,6 +197,7 @@ export function blood(x, y, z, col, ang, n, sp = 4) {
   }
 }
 export function decal(x, y, z, s, col) {
+  if (G.qaFast) return;
   const D = decals[randi(0, 3)];
   dummy.position.set(x, y + 0.02 + Math.random() * 0.02, z);
   dummy.rotation.set(0, rand(0, TAU), 0);
@@ -204,6 +215,7 @@ export function clearDecals() { for (const D of decals) { D.n = 0; D.i = 0; D.m.
 
 /** Flesh chunks that bounce, tumble and leave blood where they land. */
 export function gore(e, mul = 1) {
+  if (G.qaFast) return;
   const big = e.boss || e.pred || e.type === 'nest', n = Math.round((big ? 22 : e.h > 1 ? 9 : 5) * mul), s0 = (e.sc || 1) * (big ? 2 : 1);
   for (let i = 0; i < n; i++) {
     if (W.gibs.length >= 400) W.gibs.shift();
@@ -230,6 +242,7 @@ let numI = 0;
 let numBudget = 0;
 /** Floating number. Plain damage numbers are rate-limited so huge fights don't flood the page. */
 export function dnum(x, y, z, v, cls = '') {
+  if (G.qaFast) return;
   if ((cls === '' || cls === 'poison' || cls === 'burn') && numBudget <= 0) return;
   numBudget--;
   _v.set(x, y, z).project(camera);

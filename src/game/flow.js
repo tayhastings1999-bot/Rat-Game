@@ -33,6 +33,7 @@ import { setupFinds } from './finds.js';
 import { showTally } from '../ui/tally.js';
 import { placeRune } from './runes.js';
 import { colony, colonyPlace } from './colony.js';
+import { resetEnemyLod } from '../entities/mobs.js';
 
 export function freshStats(k) {
   const C = CLASSES[k], melee = !!PRIM[C.prim].melee; // Gnash and Shiv
@@ -48,6 +49,7 @@ export function freshStats(k) {
 }
 
 export function setupWorld(seed) {
+  resetEnemyLod();
   for (const e of W.enemies) if (e.mesh && e.type !== 'nest') dropCreature(e.mesh);
   G.boss = null;
   G.lockOn = null;
@@ -67,14 +69,14 @@ export function setupWorld(seed) {
   setupFinds(info);
   placeRune(info);
   placePacks(info); // seeded, before the RNG is released
-  unseedRng();
   clearFx();
   const s = info.startRoom;
   P.x = toW(s.cx); P.z = toW(s.cy); P.y = floorY(P.x, P.z);
   P.vx = P.vy = P.vz = 0;
   P.safe = { x: P.x, z: P.z, y: P.y };
-  placeRoles(); // after the rat is at the start, so ambushers keep their distance
+  placeRoles(); // after the rat is at the start, so ambushers keep their distance; still on the map seed
   colonyPlace(); // the swarm prototype (?swarm): the colony comes along
+  unseedRng();
   P.poisonT = 0; P.roll = 0; P.rollCd = 0; P.scent = false; P.scentE = st.scentMax; P.carry = null; P.bulwark = 0;
   G.camPos.set(P.x, 12, P.z + 12);
   G.flowT = 0;

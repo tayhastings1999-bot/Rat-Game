@@ -5,10 +5,12 @@
 // Usage: node scripts/pace.mjs [seconds=600] [profile:class,...] [portOffset=0]
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
+import { existsSync } from 'node:fs';
 const MAXT = +(process.argv[2] || 600), PORT = 5194 + (+process.argv[4] || 0);
 const combos = (process.argv[3] || 'average:tank,average:slinger,novice:tank,expert:slinger').split(',').map(s => s.split(':'));
 const server = await createServer({ server: { port: PORT, strictPort: true }, logLevel: 'error' }); await server.listen();
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] });
+const exe = process.env.CHROMIUM || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : existsSync('/usr/bin/google-chrome') ? '/usr/bin/google-chrome' : undefined);
+const b = await chromium.launch({ executablePath: exe, args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] });
 const p = await b.newPage();
 await p.goto(`http://localhost:${PORT}/?debug`); await p.waitForFunction(() => window.__scurry);
 for (const [prof, cls] of combos) {
@@ -19,8 +21,9 @@ for (const [prof, cls] of combos) {
   for (;;) {
     const st = await p.evaluate(() => __scurry.qa.sim(10));
     if (st === 'trans') await p.waitForTimeout(800);
-    const r = await p.evaluate(() => { const s = __scurry; return { t: Math.round(s.run.time), L: s.run.level, xp: Math.round(s.run.xpTotal || 0), k: s.run.kills, T: +(s.run.T || 0).toFixed(1), hp: Math.round(s.run.hp), mhp: s.st.maxHp, mobs: s.W.enemies.length, d: s.run.tier + 1, dmg: +s.st.dmg.toFixed(2), x: JSON.stringify({ rules: s.run.rules, keys: s.run.keystones, items: s.run.items.length, muts: s.run.muts, cursed: s.run.cursed, tb: +(s.run.threatBase||0).toFixed(1), dec: s.run.decisions, by: Object.entries(s.run.dmgBy).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+":"+Math.round(v)).join(" ") }) }; });
-    if (st === 'dead') { end = `died ${r.t}s by ` + await p.evaluate(() => JSON.stringify({ deaths: __scurry.qa.telemetry().deaths.slice(-1), trial: !!__scurry.run.trial, cue: __scurry.run.trialCue, fails: __scurry.run.trialFails, near: __scurry.W.enemies.filter(e => Math.hypot(e.x - __scurry.P.x, e.z - __scurry.P.z) < 8).map(e => e.type + (e.champion ? '*' : e.elite ? '+' : '')).join(' ') })); rows.push(r); break; }
+    // Run state as it is now (Phase 1 cut items, rules, keystones, mutations and curses): power-ups, growth picks, damage sources.
+    const r = await p.evaluate(() => { const s = __scurry; return { t: Math.round(s.run.time), L: s.run.level, xp: Math.round(s.run.xp || 0), k: s.run.kills, T: +(s.run.T || 0).toFixed(1), hp: Math.round(s.run.hp), mhp: s.st.maxHp, mobs: s.W.enemies.length, d: s.run.tier + 1, dmg: +s.st.dmg.toFixed(2), x: JSON.stringify({ pu: Object.keys(s.run.pu || {}), growth: s.run.growth, by: Object.entries(s.run.dmgBy || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+":"+Math.round(v)).join(" ") }) }; });
+    if (st === 'dead') { end = `died ${r.t}s by ` + await p.evaluate(() => JSON.stringify({ deaths: __scurry.qa.telemetry().deaths.slice(-1), near: __scurry.W.enemies.filter(e => Math.hypot(e.x - __scurry.P.x, e.z - __scurry.P.z) < 8).map(e => e.type + (e.champion ? '*' : e.elite ? '+' : '')).join(' ') })); rows.push(r); break; }
     if (r.t >= next) { rows.push(r); next += 60; }
     if (r.t >= MAXT) break;
   }

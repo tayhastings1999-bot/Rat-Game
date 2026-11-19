@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { PAL } from '../render/palette.js';
 import { toon } from '../render/toon.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { rand, TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
+import { TAU, PI2, rr, ri, shuffleR, rng } from '../core/util.js';
 import { G, W, run } from '../core/state.js';
 import { diffMods } from '../combat/combat.js';
 import { TUNE } from '../tuning.js';
@@ -252,7 +252,7 @@ export function addChest(x, y, z, premium = false, cursed = false) {
   mkMesh(Bx(0.16, 0.2, 0.1), b, 0, 0.45, 0.37, g);
   glowSprite(cursed ? 0xff2a2a : premium ? 0xb070ff : 0xffc060, 1.6, g, 0, 0.8, 0, 0.5);
   g.position.set(x, y, z);
-  g.rotation.y = rand(0, TAU);
+  g.rotation.y = rr(0, TAU);
   world.add(g);
   const c = { x, y, z, g, lid, open: false, premium, cursed };
   W.chests.push(c);
@@ -316,9 +316,9 @@ function addNest(x, z, tier = 2, fam = 'vermin') {
   mkMesh(Co(1.4, 1.5, 7), lam(0x3a2e24, { map: furTex }), 0, 0.75, 0, g);
   const bone = lam(0xcfc2a4);
   for (let i = 0; i < 9; i++) {
-    const a = rand(0, TAU), r = rand(0.5, 1.1);
-    const b = mkMesh(Cy(0.07, 0.07, rand(0.6, 1.1), 5), bone, Math.sin(a) * r, rand(0.2, 0.9), Math.cos(a) * r, g);
-    b.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
+    const a = rr(0, TAU), r = rr(0.5, 1.1);
+    const b = mkMesh(Cy(0.07, 0.07, rr(0.6, 1.1), 5), bone, Math.sin(a) * r, rr(0.2, 0.9), Math.cos(a) * r, g);
+    b.rotation.set(rr(0, 3), rr(0, 3), rr(0, 3));
   }
   const core = mkMesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: col }), 0, 1.3, 0, g);
   glowSprite(col, 2.2, g, 0, 1.3, 0, 0.6);
@@ -334,9 +334,9 @@ function addZone(type, x, z) {
   const g = new THREE.Group();
   g.position.set(x, floorY(x, z) + 0.05, z);
   world.add(g);
-  const zn = { type, x, z, g, t: rand(3, 8), mt: rand(20, 32) };
+  const zn = { type, x, z, g, t: rr(3, 8), mt: rr(20, 32) };
   if (type === 'vent') {
-    zn.r = 3.2; zn.a = rand(0, TAU); zn.up = Math.random() < 0.35;
+    zn.r = 3.2; zn.a = rr(0, TAU); zn.up = rng.next() < 0.35;
     mkMesh(Cy(1.4, 1.4, 0.1, 10), lam(0x3a3e44, { map: metalTex }), 0, 0, 0, g);
     zn.arrow = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, depthWrite: false, color: zn.up ? 0xc8f0ff : 0x9ad0ff }));
     zn.arrow.rotation.x = -PI2;
@@ -344,15 +344,15 @@ function addZone(type, x, z) {
     g.add(zn.arrow);
   }
   if (type === 'grav') {
-    zn.r = 5.5; zn.low = Math.random() < 0.5;
+    zn.r = 5.5; zn.low = rng.next() < 0.5;
     zn.ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
     zn.ring.rotation.x = -PI2; zn.ring.scale.setScalar(zn.r); g.add(zn.ring);
     zn.disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.12, depthWrite: false }));
     zn.disc.rotation.x = -PI2; zn.disc.scale.setScalar(zn.r); g.add(zn.disc);
   }
   if (type === 'decay') {
-    zn.r = 4.5; zn.vx = rand(-1, 1); zn.vz = rand(-1, 1); zn.tick = 0; zn.fog = [];
-    for (let i = 0; i < 4; i++) zn.fog.push(glowSprite(0x7ab020, rand(4, 6), g, rand(-1.5, 1.5), rand(0.6, 1.6), rand(-1.5, 1.5), 0.35));
+    zn.r = 4.5; zn.vx = rr(-1, 1); zn.vz = rr(-1, 1); zn.tick = 0; zn.fog = [];
+    for (let i = 0; i < 4; i++) zn.fog.push(glowSprite(0x7ab020, rr(4, 6), g, rr(-1.5, 1.5), rr(0.6, 1.6), rr(-1.5, 1.5), 0.35));
   }
   if (type === 'dark') {
     // Zero-visibility pocket: the light dies as you enter. Marked by a faint violet rim.

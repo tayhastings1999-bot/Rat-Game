@@ -5,7 +5,7 @@
 //   The Rat Run       timed: gold strewn down every street, and thieves after it
 //   The Bone Garden   a ring of Warrens from every family; smash them all to get out
 import * as THREE from 'three';
-import { rand, fmt } from '../core/util.js';
+import { rand, rr, rng, fmt } from '../core/util.js';
 import { G, P, run } from '../core/state.js';
 import { world } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
@@ -51,7 +51,7 @@ export function setupSecret(info) {
   if (!D.secret) return;
   run.scabSeen = true; // Scab doesn't follow you down here
   run.secretsSeen = (run.secretsSeen || 0) + 1;
-  const rooms = (info.byDist || []).slice(), at = i => { const r = rooms[i % Math.max(1, rooms.length)]; if (!r) return [P.x + rand(-8, 8), P.z + rand(-8, 8)]; const x = toW(r.cx), z = toW(r.cy); return nearFree(x, z, 0.8, 8) || [x, z]; }; // off any prop at the room centre (P24-4: buried chests)
+  const rooms = (info.byDist || []).slice(), at = i => { const r = rooms[i % Math.max(1, rooms.length)]; if (!r) return [P.x + rr(-8, 8), P.z + rr(-8, 8)]; const x = toW(r.cx), z = toW(r.cy); return nearFree(x, z, 0.8, 8) || [x, z]; }; // off any prop at the room centre (P24-4: buried chests)
   if (D.secret === 'vault') {
     run.secretT = S.vaultTime;
     for (let i = 0; i < S.vaultChests; i++) { const [x, z] = at(i); addChest(x, 0, z, true); }
@@ -62,7 +62,7 @@ export function setupSecret(info) {
     const open = [];
     for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !M.inside[k]) open.push(k);
     for (let i = 0; i < S.runGold && open.length; i++) {
-      const k = open[(Math.random() * open.length) | 0], x = toW(k % M.W), z = toW((k / M.W) | 0);
+      const k = open[(rng.next() * open.length) | 0], x = toW(k % M.W), z = toW((k / M.W) | 0);
       for (let j = 0; j < 3; j++) scrapDrop(x, floorY(x, z), z);
     }
     for (let i = 0; i < S.runCaches; i++) { const [x, z] = at(i * 2); addCache(x, 0, z); }
@@ -75,7 +75,7 @@ export function setupSecret(info) {
     const open = [];
     for (let k = 0; k < M.W * M.H; k++) if (DRY(M.grid[k]) && !M.inside[k] && floorY(toW(k % M.W), toW((k / M.W) | 0)) < 0.5 && Math.hypot(toW(k % M.W) - P.x, toW((k / M.W) | 0) - P.z) < T.radius) open.push(k);
     for (let i = 0; i < T.piles && open.length; i++) {
-      const k = open.splice((Math.random() * open.length) | 0, 1)[0], x = toW(k % M.W), z = toW((k / M.W) | 0);
+      const k = open.splice((rng.next() * open.length) | 0, 1)[0], x = toW(k % M.W), z = toW((k / M.W) | 0);
       for (let j = 0; j < T.perPile; j++) scrapDrop(x, floorY(x, z), z);
     }
     for (let i = 0; i < T.chests; i++) { const [x, z] = at(i); addChest(x, 0, z, true); }
