@@ -10,7 +10,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene, dropCreature } from '../render/renderer.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { M, inG, toG, toW, tAt, OPEN, floorY, collideBody } from '../world/grid.js';
+import { M, inG, toG, toW, tAt, DRY, floorY, collideBody } from '../world/grid.js';
 import { BOSSES, FAMILIES, curD, isSewer } from '../data/world.js';
 import { glob } from '../combat/arsenal.js';
 import { hurtP, scrapDrop, dropKey } from '../combat/combat.js';
@@ -507,14 +507,15 @@ export function onBossDeath(e) {
   addXP(220);
   for (let i = 0; i < 30; i++) scrapDrop(e.x, gy, e.z);
   addChest(e.x, gy, e.z, isSewer());
-  // Drop the key on open ground near the boss, not on a ledge or roof at +1.5, +1.5
-  // (Frozen Pipeworks was leaving it on a y=4.5 shelf the bot, and a player, could miss).
+  // Drop the key on dry open ground near the boss (floor/grass/road), never water or
+  // acid, and not on a ledge or roof at +1.5 (P41-2; Frozen Pipeworks used to leave
+  // it on a y=4.5 shelf the bot, and a player, could miss).
   let kx = e.x, kz = e.z, ky = gy;
-  if (ky > 1.5 || !OPEN(tAt(toG(kx), toG(kz)))) {
+  if (ky > 1.5 || !DRY(tAt(toG(kx), toG(kz)))) {
     let best = 1e9;
     const gx = toG(e.x), gz = toG(e.z);
     for (let z = gz - 5; z <= gz + 5; z++) for (let x = gx - 5; x <= gx + 5; x++) {
-      if (!inG(x, z) || !OPEN(tAt(x, z))) continue;
+      if (!inG(x, z) || !DRY(tAt(x, z))) continue;
       const wx = toW(x), wz = toW(z), y = floorY(wx, wz);
       if (y > 1.5) continue;
       const d = Math.abs(x - gx) + Math.abs(z - gz);
