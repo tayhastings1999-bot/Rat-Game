@@ -17,7 +17,7 @@
 const night = { fog: 0x0a0a16, sky: 0x0c0a1c };
 export const CITY_LEVELS = [
   { id: 'cinder', base: 0, seed: 'cinder' },
-  { id: 'neon', base: 1, seed: 'neon', map: 88 }, // covered-arcade stretch (Rat 3: target ~11 min, no extra nests)
+  { id: 'neon', base: 1, seed: 'neon', map: 84 }, // covered-arcade stretch (Rat 3: target ~11 min, no extra nests)
   { id: 'rust', base: 2, seed: 'rust', hiddenExtra: 2, alleyOdds: 0.85 }, // longer B2 crane-yard loop + extra hidden yards (Rat 3: target ~12 min, no extra nests)
   { id: 'hollow', base: 3, seed: 'hollow', grave: true, secretTo: 'vault' },
   { id: 'cinder-n', base: 0, seed: 'cinder-night', title: 'Cinder Row · After Dark', night: true, haz: 'blackout', fam: ['prowl', 'vermin', 'wings'], boss: 'tabby', bossV: 'frenzied', over: { ...night, lamp: 0x9ab0ff, neon: [0xff3a6a, 0x6a3aff] } },
