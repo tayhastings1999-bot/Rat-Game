@@ -184,10 +184,11 @@ export function openGate() {
   }
   const dist = bfs(sx, sz, walk);
   let bk = -1, score = 1e9;
+  const openish = t => t === 1 || t === 9 || t === 10; // dry floor / grass / road: the bot pathfinds these reliably
   // Prefer a room centre 3–cap tiles away (just outside the arena, a short walk after the fight).
   for (const r of W.rooms || []) {
     const k = gi(r.cx, r.cy), d = dist[k];
-    if (d == null || d < 3 || d > cap || !walk(tAt(r.cx, r.cy))) continue;
+    if (d == null || d < 3 || d > cap || !openish(tAt(r.cx, r.cy))) continue;
     const s = Math.abs(d - 8);
     if (s < score) { score = s; bk = k; }
   }
@@ -195,7 +196,7 @@ export function openGate() {
     score = 1e9;
     for (let k = 0; k < dist.length; k++) {
       const d = dist[k];
-      if (d < 3 || d > cap || !walk(M.grid[k]) || M.grid[k] === 5 || M.grid[k] === 11) continue;
+      if (d < 3 || d > cap || !openish(M.grid[k])) continue;
       const s = Math.abs(d - 8);
       if (s < score) { score = s; bk = k; }
     }

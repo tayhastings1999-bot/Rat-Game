@@ -27,9 +27,9 @@ export const CITY_LEVELS = [
 ];
 const deep = { fog: 0x080608 };
 export const SEWER_LEVELS = [
-  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 5 }, // pump-hall side loop, still a gentle first sewer (target ~11 min)
+  { id: 'under', base: 0, seed: 'undersewer', sideRooms: 5, loops: 2, map: 72, spread: 5, detour: true }, // longer B2 tunnels, few shortcuts; still a gentle first sewer (target ~11 min)
   { id: 'cistern', base: 1, seed: 'cisterns' },
-  { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 6 }, // cold-store side rooms (target ~13 min, no extra nests)
+  { id: 'butcher', base: 2, seed: 'butchers-drain', grave: true, sideRooms: 8, loops: 2, map: 72, spread: 4, detour: true }, // cold-store side rooms + longer drains (target ~13 min, no extra nests)
   { id: 'frozen', base: 3, seed: 'frozen-pipeworks', secretTo: 'garden' },
   { id: 'toxic', base: 4, seed: 'toxic-refinery' },
   { id: 'court', base: 5, seed: 'rat-kings-court', grave: true },
@@ -37,7 +37,7 @@ export const SEWER_LEVELS = [
   { id: 'cistern-d', base: 1, seed: 'undertow', title: 'Flooded Cisterns · Undertow', haz: 'currents', fam: ['wings', 'rot', 'vermin'], boss: 'brood', bossV: 'brood', over: { ...deep, lamp: 0x40c0ff } },
   { id: 'butcher-d', base: 2, seed: 'bloodworks', title: "Butcher's Drain · Bloodworks", haz: 'bloodmoon', fam: ['guard', 'vermin'], boss: 'ratking', bossV: 'armored', grave: true, rooms: 22, nests: 14, over: { ...deep, lamp: 0xff2a20 } }, // ceiling: ≤22 rooms, ≤14 nests (Rat 3); trim variant only if still over 20
   { id: 'frozen-d', base: 3, seed: 'black-ice', title: 'Frozen Pipeworks · Black Ice', haz: 'gravity', fam: ['wings', 'guard', 'prowl'], boss: 'maw', bossV: 'armored', over: { ...deep, lamp: 0x60a0ff } },
-  { id: 'toxic-d', base: 4, seed: 'meltdown', title: 'Toxic Refinery · Meltdown', haz: 'tides', fam: ['rot', 'vermin', 'wings'], boss: 'brood', bossV: 'frenzied', over: { ...deep, lamp: 0xa0ff20 } },
+  { id: 'toxic-d', base: 4, seed: 'meltdown', title: 'Toxic Refinery · Meltdown', loops: 2, map: 72, spread: 4, detour: true, haz: 'tides', fam: ['rot', 'vermin', 'wings'], boss: 'brood', bossV: 'frenzied', over: { ...deep, lamp: 0xa0ff20 } },
 ];
 
 /** Secret zones. The Vault, the Rat Run and the Treasure Room are timed loot dashes with no boss (their exit is open

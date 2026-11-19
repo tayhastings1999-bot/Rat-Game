@@ -8,13 +8,14 @@ export function genSewer(seed, D) {
   const maxRooms = D.rooms || 26;
   const sideN = D.sideRooms || 0;
   // A little more map when we also place nest-free side rooms (beats / detours).
-  allocMap(maxRooms > 22 || sideN > 2 ? 64 : 56, 'sewer'); // was 40 (15 rooms), then 56
+  allocMap(D.map || (maxRooms > 22 || sideN > 2 ? 64 : 56), 'sewer'); // was 40 (15 rooms), then 56
   const GW = M.W, GH = M.H, grid = M.grid;
   M.hgt.fill(WH);
   const rooms = [];
   for (let a = 0; a < 1800 && rooms.length < maxRooms; a++) {
     const w = ri(4, 8), h = ri(4, 7), x = ri(2, GW - w - 2), y = ri(2, GH - h - 2);
-    if (rooms.some(r => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y)) continue;
+    const gap = D.spread || 2;
+    if (rooms.some(r => x < r.x + r.w + gap && x + w + gap > r.x && y < r.y + r.h + gap && y + h + gap > r.y)) continue;
     rooms.push({ x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1) });
   }
   for (const r of rooms) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) grid[gi(x, y)] = 1;
@@ -51,7 +52,16 @@ export function genSewer(seed, D) {
   const pw = D.water ?? 0.28, pa = D.acid ?? 0.22;
   for (const [a, b] of links) {
     const q = rng.next();
-    carve(a.cx, a.cy, b.cx, b.cy, q < pw ? 2 : q < pw + pa ? 4 : 1);
+    const t = q < pw ? 2 : q < pw + pa ? 4 : 1;
+    if (D.detour) {
+      // A longer B2 path: dog-leg through a waypoint instead of a short L-tunnel (the bot has to walk it between nests).
+      const mx = Math.round((a.cx + b.cx) / 2), my = Math.round((a.cy + b.cy) / 2);
+      const ox = a.cy === b.cy ? 0 : (rng.next() < 0.5 ? 6 : -6);
+      const oy = a.cx === b.cx ? 0 : (rng.next() < 0.5 ? 6 : -6);
+      const wx = Math.max(2, Math.min(GW - 3, mx + ox)), wy = Math.max(2, Math.min(GH - 3, my + oy));
+      carve(a.cx, a.cy, wx, wy, t);
+      carve(wx, wy, b.cx, b.cy, t);
+    } else carve(a.cx, a.cy, b.cx, b.cy, t);
   }
   const startRoom = rooms[0];
   for (const r of rooms) {
