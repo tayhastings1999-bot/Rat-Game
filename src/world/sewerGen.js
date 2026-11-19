@@ -82,15 +82,18 @@ export function genSewer(seed, D) {
     const pi = pumpLinks.findIndex(p => p[0] === a && p[1] === b);
     if (pi >= 0) {
       if (D.pumpWrap) {
-        // A long unique C-shaped hall around the rim so the spine crossing cannot be shortcut.
-        const left = 2, right = GW - 3, top = 2;
+        // A long unique C-shaped hall around the farther rim so the spine crossing cannot be shortcut.
+        const left = 2, right = GW - 3, top = 2, bot = GH - 3;
+        const viaTop = a.cy + b.cy, viaBot = (bot - a.cy) + (bot - b.cy);
+        const rim = viaBot > viaTop ? bot : top;
         carve(a.cx, a.cy, left, a.cy, t);
-        carve(left, a.cy, left, top, t);
-        carve(left, top, right, top, t);
-        carve(right, top, right, b.cy, t);
+        carve(left, a.cy, left, rim, t);
+        carve(left, rim, right, rim, t);
+        carve(right, rim, right, b.cy, t);
         carve(right, b.cy, b.cx, b.cy, t);
         const midx = Math.round(GW / 2);
-        for (let y = 2; y <= 6; y++)
+        const y0 = rim <= top ? 2 : GH - 7, y1 = rim <= top ? 6 : GH - 3;
+        for (let y = y0; y <= y1; y++)
           for (let x = midx - 3; x <= midx + 3; x++)
             if (inG(x, y) && (grid[gi(x, y)] === 0 || grid[gi(x, y)] === t)) grid[gi(x, y)] = 1;
       } else {
