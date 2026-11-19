@@ -82,6 +82,12 @@ export const TUNE = {
     ppu: 32, // sprite pixels per world unit
     heroPpu: 80, // heroes_v2 art is 128×160 per frame; 80 px/unit draws a hero 1.6 × 2 units
     heroCap: 8,
+    // Walk frame timing (data only; same 6 frames, different hold). Default is each atlas action's
+    // base_run profile (tank 65, slinger 68, warlock 60, sneak 60). 'slow_run' and 'walk' prefix-match
+    // the JSON profiles (tank 92/133, slinger 96/133, warlock and sneak 83/133). walkMs, if set, wins:
+    // a number for every class, or { tank, slinger, warlock, sneak }.
+    walkProfile: 'base_run',
+    walkMs: null,
   },
   camera: {
     // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9

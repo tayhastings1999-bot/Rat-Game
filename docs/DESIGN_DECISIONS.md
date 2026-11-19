@@ -106,6 +106,10 @@ A running log of decisions about Scurry's direction, with the reasons for them. 
   class has frames in `public/sprites/atlas_heroes.json` draws from one SpriteBatch and its mesh is hidden; no
   atlas, no frames for that class, or no frame for the action → the procedural mesh as before (any non-idle action
   plays idle). Mesh mode never fetches the atlas.
-- First art: heroes_v2 idle-only package (4 heroes × 16 frames, 128×160, anchor 64,150, south-facing only, ai:true →
+- First art: heroes_v2 idle package (4 heroes × 16 frames, 128×160, anchor 64,150, south-facing only, ai:true →
   Steam AI disclosure). Drawn at `TUNE.sprite.heroPpu` 80. spritelint updated to v1.9 §4.2 hero rules.
-  Walks, attacks, normals, rings, mobs, bosses and sprite lighting are later slices.
+- South-facing walk cycles (4 heroes × 6 frames, same canvas and anchor, 1 px bob on walk only) play when the
+  hero is moving (`?sprites=1`); idle plays when stopped. Other directions fall back to the south walk with no
+  flip, same as the idle package. Default hold is the JSON `base_run` profile (65/68/60/60 ms); `TUNE.sprite.walkProfile`
+  (`slow_run` / `walk`) or `TUNE.sprite.walkMs` selects the alternatives without a code change. Attacks, other
+  facings, normals, rings, mobs, bosses and sprite lighting are later slices. Walk goldens wait for Taylor's approval.
