@@ -29,7 +29,7 @@
    "idle": 1,
    "fidget": 1,
    "run": 3,
-   "walk": 3,
+   "walk": 1,
    "attack": 3,
    "special": 3,
    "dodge": 4,

@@ -20,6 +20,8 @@ rows = [
  ('budget check', rc.get('budget') == '0', f"{u.get('ok_frames',0)} frames in budget, {len(u.get('fail',[]))} fail, {len(u.get('open',[]))} open"),
  ('guard selftest', rc.get('selftest') == '0', st.group(0) if st else 'no result'),
 ]
+for k in sorted(x for x in rc if x.startswith('spritelint_walk_')):
+    rows.append((f"spritelint walk {k[len('spritelint_walk_'):]}", rc[k] == '0', 'pass' if rc[k] == '0' else 'FAILING, see gate.log'))
 ok = all(r[1] for r in rows)
 now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M %Z').strip() or datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 print(f"SCURRY ART GATE  {now} ET  =>  {'PASS' if ok else 'FAIL'}")
@@ -28,6 +30,7 @@ exc = []
 for x in g.get('fail', []): exc.append(f"FAIL golden: {x['file']} - {x.get('changed_px','')} px {x.get('bbox_xyxy','') or ''} {x.get('why','')}".replace('  ', ' '))
 for x in b.get('fail', []): exc.append(f"FAIL bleed: {x['file']} - {x['why']}")
 for x in u.get('fail', []): exc.append(f"FAIL budget: {x['file']} - {x['why']}")
+for k in sorted(x for x in rc if x.startswith('spritelint_walk_') and rc[x] != '0'): exc.append(f"FAIL {k}: see scripts/out/art/gate.log")
 if rc.get('spritelint') != '0': exc.append('FAIL spritelint: see scripts/out/art/gate.log')
 if rc.get('selftest') != '0': exc.append('FAIL guard selftest: the checks themselves are broken - do not trust this run')
 for x in g.get('allowed', []): exc.append(f"LOOK allowed change: {x['file']} ({x['changed_px']} px, {'; '.join(x['allowed_by'])}) - approve with golden.py approve once Taylor signs off")

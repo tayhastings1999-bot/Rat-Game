@@ -332,6 +332,13 @@ def cmd_selftest(_):
     r = bleed_one(b, 'warlock', m, c, cols); t(f'warlock yellow belt block caught (bleed {r["bleed_px"]} px, cov delta {r["cov_delta"]}pp)', r['bleed_px'] > 0)
     b = g.copy(); sh = np.roll(g, 1, axis=1); d = diff(sh, g)
     t(f'1-px shift of whole sprite detected ({d["changed"]} px)', d['changed'] > 0)
+    # walk checks must FAIL (not pass silently) when SCURRY_WALK_DIR is set but holds no walk frames
+    import subprocess, tempfile
+    with tempfile.TemporaryDirectory() as td:
+        os.makedirs(os.path.join(td, 'tank', 'frames'))
+        bc = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'budget_check.py')
+        r = subprocess.run([sys.executable, bc], env=dict(os.environ, SCURRY_WALK_DIR=td), capture_output=True, text=True)
+        t('SCURRY_WALK_DIR set with no walk frames fails the budget check', r.returncode == 1 and 'no walk frames' in r.stdout)
     print('selftest', 'PASS' if ok else 'FAIL'); return 0 if ok else 1
 
 

@@ -114,6 +114,37 @@ def main():
             mm = load_rgba(mp); c = 100 * float((mm[..., 0] == 255).sum()) / max(1, m['opaque'])
             if act == 'idle' and not cov[hero][0] <= c <= cov[hero][1]: F(mp, f'mask coverage {c:.2f}% outside {cov[hero]}')
             if ((mm[..., 0] == 255) & (load_rgba(p)[..., 3] == 0)).any(): F(mp, 'mask on transparent pixel')
+    # 3b. animation walk folders (<SCURRY_WALK_DIR>/<hero>/frames + atlas_*_walk_*.json beside it).
+    # Rat-Game: no default (scurry-anim is not on CI). gate.sh stages public/sprites/hero_*_walk_* into this
+    # shape with scripts/art/stage_walks.py and sets SCURRY_WALK_DIR only when walk frames exist.
+    # If SCURRY_WALK_DIR is set but holds no walk frames, that is a FAIL, never a silent pass.
+    WALK = os.environ.get('SCURRY_WALK_DIR')
+    if WALK is not None and not glob.glob(os.path.join(WALK, '*', 'frames', 'hero_*_walk_*_[0-9][0-9].png')):
+        F(WALK or '(empty SCURRY_WALK_DIR)', 'SCURRY_WALK_DIR is set but no walk frames (<hero>/frames/hero_*_walk_*_NN.png) were found')
+    for fd in sorted(glob.glob(os.path.join(WALK, '*', 'frames'))) if WALK else []:
+        hd = os.path.dirname(fd); act = 'walk'; bud = A.get(act, {})
+        pngs = sorted(x for x in glob.glob(os.path.join(fd, 'hero_*_walk_*_[0-9][0-9].png')))
+        if not pngs: opens.append(dict(file=fd, why='walk folder has no frames')); continue
+        hero = hero_of(pngs[0])
+        if len(pngs) != bud.get('frames', len(pngs)): F(fd, f"walk: {len(pngs)} frames, budget {bud.get('frames')}")
+        mmin = B.get('mask_min_pct', 2.0)
+        for p in pngs:
+            a = load_rgba(p); m = measure(a); frame_checks(p, hero, act, m)
+            if m['bottom'] != H['bottom_row'][hero]: F(p, f"planted foot row {m['bottom']} != idle feet row {H['bottom_row'][hero]}")
+            mp = p[:-4] + '_m.png'
+            if not os.path.exists(mp): F(p, 'missing _m mask'); continue
+            mm = load_rgba(mp); on = mm[..., 0] == 255
+            c = 100 * float(on.sum()) / max(1, m['opaque'])
+            if c < mmin: F(mp, f'mask coverage {c:.2f}% < {mmin}%')
+            if (on & (a[..., 3] == 0)).any(): F(mp, 'mask on transparent pixel')
+        for aj in glob.glob(os.path.join(hd, 'atlas_*_walk_*.json')):
+            j = load_json(aj); r = bud.get('ms_range', [50, 133])
+            for an, ac in j.get('actions', {}).items():
+                if len(ac.get('frames', [])) != bud.get('frames', 6): F(aj, f"{an}: {len(ac.get('frames', []))} frames")
+                if not all(r[0] <= x <= r[1] for x in ac.get('ms', [])): F(aj, f"{an}: ms {ac.get('ms')} outside {r}")
+            for k, fr in j.get('frames', {}).items():
+                if [fr['anchor']['x'], fr['anchor']['y']] != H['anchor']: F(aj, f'{k} anchor')
+                if 'ai' not in fr: F(aj, f'{k} missing ai disclosure flag (D13)')
     # 4. known open items
     for r in B['rings']['files']:
         if os.path.exists(ab(r)) and list(Image.open(ab(r)).size) != B['rings']['size']:
