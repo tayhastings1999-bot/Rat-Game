@@ -455,6 +455,30 @@ await check('every level has a boss that drops the key (Bone Garden included); o
   if (bad.length) throw new Error('levels with no boss: ' + bad.map(l => l.name).join(', '));
   if (!r.find(l => l.secret === 'garden' && l.boss)) throw new Error('Bone Garden has no boss');
 });
+await check('runes go in the room farthest from the start (byDist is farthest-first)', async () => {
+  await loadLevel('surface', 1, null); // Neon Market has a rune
+  // byDist[0] is the farthest room; swapping the order must move the rune with it
+  const n = await S(() => { const s = __scurry, m = s.meta, keep = JSON.stringify(m.runes || {}); m.runes = {}; const a = s.runes.placeRune({ byDist: [{ cx: 10, cy: 12 }, { cx: 30, cy: 32 }], hidden: [] }); const b = s.runes.placeRune({ byDist: [{ cx: 30, cy: 32 }, { cx: 10, cy: 12 }], hidden: [] }); m.runes = JSON.parse(keep); return { a: a && a.x, b: b && b.x }; });
+  if (n.a == null || !(n.a < n.b)) throw new Error('rune did not follow byDist[0] ' + JSON.stringify(n));
+});
+await check('first level of a run rolls its treasure drain from its own seed, not a leftover one', async () => {
+  for (const [idx, stale] of [[0, 'rust'], [2, 'cinder']]) {
+    const a = await page.evaluate(([idx, stale]) => { const s = __scurry, keep = s.meta.maxDistrict; s.meta.maxDistrict = Math.max(keep || 0, idx); s.run.seed = stale; s.startRun('tank', { realm: 'city', idx }); s.meta.maxDistrict = keep; const e = s.G.secretExit; return { seed: s.run.seed, want: s.levelSeed(), d: s.run.district, kind: e ? e.kind : null }; }, [idx, stale]);
+    if (a.seed !== a.want || a.d !== idx) throw new Error('run start ' + JSON.stringify(a));
+    await loadLevel('surface', idx, null); // mid-run style: run.seed set before setupWorld
+    const b = await S(() => { const e = __scurry.G.secretExit; return e ? e.kind : null; });
+    if (a.kind !== b) throw new Error(`level ${idx}: drain at run start ${a.kind} vs mid-run ${b}`);
+  }
+  await S(() => { const s = __scurry; s.god(false); s.menu(); });
+});
+await check('leaving a secret zone in a sewer-realm run stays underground', async () => {
+  await S(() => { const s = __scurry; s.startRun('tank'); s.god(true); });
+  await toPlay();
+  const r0 = await S(() => { const s = __scurry; s.G.testNoTally = true; Object.assign(s.run, { realm: 'sewer', layer: 'sewer', sewerIdx: 3, tier: 4, secret: 'garden' }); const r = { idx: s.run.sewerIdx, d: s.run.district }; s.exitSecret(); return r; });
+  await page.waitForFunction(() => !__scurry.run.secret && __scurry.G.state === 'play', null, { timeout: T(8000) });
+  const r = await S(() => { const s = __scurry, r = { layer: s.run.layer, realm: s.run.realm, idx: s.run.sewerIdx, d: s.run.district }; s.G.testNoTally = false; s.god(false); s.menu(); return r; });
+  if (r.layer !== 'sewer' || r.idx !== r0.idx + 1 || r.d !== r0.d) throw new Error(JSON.stringify({ r0, r }));
+});
 await check('Bone Garden: the boss wakes when the Warrens fall; the way out opens only when she dies', async () => {
   await loadLevel('sewer', 0, 'garden');
   const r = await S(() => {

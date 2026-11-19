@@ -141,8 +141,8 @@ export function startRun(k, opt = {}) {
   meta.runs = (meta.runs || 0) + 1;
   saveMeta();
   const seed = levelSeed(); // every level has a fixed layout (data/levels.js)
+  run.seed = seed; // before setupWorld: its seeded rolls (e.g. the treasure drain) read run.seed
   setupWorld(seed);
-  run.seed = seed;
   setRat(C);
   G.state = 'play';
   G.camYaw = Math.PI; G.camPitch = TUNE.camera.pitch; G.camWidth = TUNE.camera.width;
@@ -233,9 +233,10 @@ export function exitRoad() {
 export function enterSecret(kind) {
   leave(() => { meta.secrets = (meta.secrets || 0) + 1; transition(() => { run.secret = kind; }, () => 'Secret · ' + dName()); });
 }
-/** Out of a secret zone: on to the level after the one you left. */
+/** Out of a secret zone: on to the level after the one you left (a sewer-realm run stays underground, like exitLadder). */
 export function exitSecret() {
   const sewer = run.layer === 'sewer';
+  if (sewer && run.realm === 'sewer') { leave(() => transition(() => { run.secret = null; run.sewerIdx++; run.tier++; }, () => 'Deeper · ' + dName())); return; }
   leave(() => transition(() => { run.secret = null; if (sewer) { run.layer = 'surface'; run.sewerIdx++; } run.district++; run.tier++; }, () => dName() + (hazName() ? ' · ' + hazName() : '')));
 }
 export function exitLadder() {
