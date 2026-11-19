@@ -22,7 +22,8 @@ export function genCity(seed, D) {
     while (p + 3 < W - 6) {
       const w = ri(2, 3);
       out.push([p, w]);
-      p += w + ri(8, 11);
+      const gap = D.blockGap || 8;
+      p += w + ri(gap, gap + 3);
     }
     return out;
   };

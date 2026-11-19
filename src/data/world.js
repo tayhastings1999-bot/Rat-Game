@@ -94,7 +94,7 @@ export function curD() {
   if (!D) {
     const B = L.kind === 'sewer' || (!L.kind && SEWER_LEVELS.includes(L)) ? SEWER[L.base] : SURFACE[L.base];
     D = { ...B, ...(L.over || {}), title: L.title || B.name, level: L.id, night: !!L.night, deep: /-d$/.test(L.id), secret: L.secret || null, grave: !!L.grave, secretTo: L.secretTo || null, bossV: L.bossV || null,
-      rooms: L.rooms, nests: L.nests, sideRooms: L.sideRooms, loops: L.loops, hiddenExtra: L.hiddenExtra, alleyOdds: L.alleyOdds, map: L.map, spread: L.spread, detour: L.detour, spine: L.spine, cuts: L.cuts, pumpHall: L.pumpHall };
+      rooms: L.rooms, nests: L.nests, sideRooms: L.sideRooms, loops: L.loops, hiddenExtra: L.hiddenExtra, alleyOdds: L.alleyOdds, map: L.map, spread: L.spread, detour: L.detour, spine: L.spine, cuts: L.cuts, pumpHall: L.pumpHall, pumpHalls: L.pumpHalls, blockGap: L.blockGap };
     if (L.haz !== undefined) D.haz = L.haz;
     if (L.fam) D.fam = L.fam;
     if (L.boss) D.boss = L.boss;
