@@ -41,7 +41,8 @@ export function normalizeAtlasJson(j) {
     const ms = a.ms || [], m0 = Math.min(...ms.filter(Boolean)), base = Number.isFinite(m0) ? m0 : 100;
     const prev = acts[key];
     acts[key] = { fps: 1000 / base, hold: ms.map(v => (v || base) / base), frames: a.frames.length, loop: a.loop !== false,
-      dirs: [...new Set([...(prev?.dirs || []), dir])] };
+      dirs: [...new Set([...(prev?.dirs || []), dir])],
+      ...(a.ms_by_profile ? { ms_by_profile: a.ms_by_profile } : {}) };
   }
   j.actions = acts;
   return j;
@@ -79,6 +80,32 @@ export function buildFrames(j) {
     });
   }
   return { meta: j.meta, frames, actions: j.actions || {} };
+}
+
+/** Apply a named timing profile or a millisecond override to atlas actions that carry ms_by_profile
+ * (walk cycles). `profile` is a prefix, so 'base_run' matches 'base_run_5.6'. `overrideMs` is a single
+ * number for every matching action, or a map of class id → ms (e.g. { tank: 65 }). Mutates `at`. */
+export function applyMsProfile(at, profile, overrideMs) {
+  if (!at?.actions) return at;
+  for (const [k, a] of Object.entries(at.actions)) {
+    const timed = a.ms_by_profile;
+    if (!timed) continue; // idle and other actions keep their own holds
+    let ms = null;
+    if (overrideMs != null) {
+      const id = k.includes('_') ? k.slice(0, k.lastIndexOf('_')) : k;
+      const v = typeof overrideMs === 'object' ? overrideMs[id] : overrideMs;
+      if (v != null) ms = Array.from({ length: a.frames || 0 }, () => v);
+    }
+    if (!ms && profile) {
+      const hit = Object.entries(timed).find(([n]) => n === profile || n.startsWith(profile + '_') || n.startsWith(profile));
+      if (hit) ms = hit[1];
+    }
+    if (!ms || !ms.length) continue;
+    const m0 = Math.min(...ms.filter(Boolean)), base = Number.isFinite(m0) ? m0 : 100;
+    a.fps = 1000 / base;
+    a.hold = ms.map(v => (v || base) / base);
+  }
+  return at;
 }
 
 /** Load a group. Resolves to the group, or null when its files are missing (mesh fallback). */

@@ -4,7 +4,7 @@
 // for that class or action) leaves the mesh path exactly as it was.
 import * as THREE from 'three';
 import { TUNE } from '../tuning.js';
-import { loadAtlas, getAtlas, has, dirOf, frameKey } from './atlas.js';
+import { loadAtlas, getAtlas, has, dirOf, frameKey, applyMsProfile } from './atlas.js';
 import { SpriteBatch, frameAt } from './sprites.js';
 
 const GROUP = 'heroes', PREFIX = 'hero'; // atlas_heroes.json, frames hero_<id>_<action>_<dir>_<nn>
@@ -18,6 +18,7 @@ export async function preloadHeroes(scene) {
   if (!spritesOn()) return false;
   const at = await loadAtlas(GROUP);
   if (!at) return false;
+  applyMsProfile(at, TUNE.sprite.walkProfile, TUNE.sprite.walkMs);
   batch = new SpriteBatch(at, { cap: TUNE.sprite.heroCap, name: 'heroSprites' });
   // heroes_v2 frames are painted at 128×160; heroPpu sets their on-screen size (80 → 1.6 × 2 world units).
   batch.material.uniforms.uPpu.value = TUNE.sprite.heroPpu;
@@ -35,10 +36,12 @@ export function beginHeroes() { slot = 0; if (batch) batch.clear(); }
 export function drawHero(cls, s, screenAngle, t, x, y, z, playerCol, flash = 0, sx = 1, sy = 1) {
   const at = getAtlas(GROUP);
   if (!at || !batch) return false;
-  const action = at.actions[`${cls}_${s.action}`] ? s.action : 'idle', act = at.actions[`${cls}_${action}`];
+  // Moving heroes request 'walk' (heroAnimState); 'run' maps to walk until a distinct run set exists.
+  let want = s.action === 'run' && at.actions[`${cls}_walk`] ? 'walk' : s.action;
+  const action = at.actions[`${cls}_${want}`] ? want : 'idle', act = at.actions[`${cls}_${action}`];
   if (!act) return false;
   let { dir, flip } = dirOf(screenAngle);
-  if (act.dirs && !act.dirs.includes(dir)) { dir = act.dirs[0]; flip = 0; } // idle-only package: 's' only
+  if (act.dirs && !act.dirs.includes(dir)) { dir = act.dirs[0]; flip = 0; } // south-only package: 's' only
   const n = frameAt(act, t, act.loop !== false && action !== 'dead');
   const f = at.frames.get(frameKey(PREFIX, cls, action, dir, n)) || at.frames.get(frameKey(PREFIX, cls, action, dir, 0));
   if (!f) return false;

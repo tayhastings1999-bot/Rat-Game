@@ -454,11 +454,11 @@ export function tickInteractives(dt) {
 }
 
 /** Animation state for the sprite picker (render/heroSprites.js). Read-only view of P; the mesh path
- * ignores it. action is one of dead, roll, attack, special, squeeze, climb, jump, run, idle. */
+ * ignores it. action is one of dead, roll, attack, special, squeeze, climb, jump, walk, idle. */
 export function heroAnimState(p = P) {
-  const moving = Math.hypot(p.vx || 0, p.vz || 0) > 0.4;
+  const moving = Math.hypot(p.vx || 0, p.vz || 0) > (TUNE.sprite.idleBelow ?? 0.15);
   const action = p.downed || p.dead ? 'dead' : p.roll > 0 ? 'roll' : (p.swing > 0 || p.throwT > 0 || p.atk > 0) ? 'attack'
     : (run.specT > 0 || p.specialT > 0) ? 'special' : p.squeeze ? 'squeeze' : p.climbing ? 'climb'
-    : !p.onGround ? 'jump' : moving ? 'run' : 'idle';
+    : !p.onGround ? 'jump' : moving ? 'walk' : 'idle';
   return { action, facing: p.facing || 0, squeeze: !!p.squeeze, dead: !!(p.downed || p.dead), moving };
 }
