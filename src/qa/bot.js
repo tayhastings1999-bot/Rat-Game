@@ -65,6 +65,7 @@ function resetTelemetry() {
     steps: 0, simTime: 0, updMs: [], frames: [], anomalies: [], samples: [], errors: [],
     hurt: {}, hurtN: 0, dmgTaken: 0, kills: {}, ttk: {}, levels: [], scrap: [], districts: [], bosses: [],
     distMem: [], deaths: [], dodges: 0, rollsTried: 0, perfects0: run.perfects || 0, peakEnemies: 0, xpRate: [],
+    keyTp: 0, keyTpSaved: 0, keyTpAt: [],
   });
 }
 resetTelemetry();
@@ -475,7 +476,15 @@ function watchdogs(dt) {
         }
         // Last resort after the boss is dead: if the key is still overhead, stand on it so the pickup fires.
         const k = B.goal === 'clear' && W.keys[0];
-        if (k && Math.abs(P.y - k.y) >= 1.6) { P.x = k.x; P.z = k.z; P.y = k.y; P.vy = 0; }
+        if (k && Math.abs(P.y - k.y) >= 1.6) {
+          // P41-4: count the teleport; do not change when or how it fires.
+          const dist = Math.hypot(P.x - k.x, P.y - k.y, P.z - k.z);
+          const spd = Math.max(0.5, st.speed || 6.56);
+          T.keyTp = (T.keyTp || 0) + 1;
+          T.keyTpSaved = +((T.keyTpSaved || 0) + dist / spd).toFixed(2);
+          (T.keyTpAt || (T.keyTpAt = [])).push(+((run.time - (T.start && T.start.time || run.dStart || 0)) / 60).toFixed(2));
+          P.x = k.x; P.z = k.z; P.y = k.y; P.vy = 0;
+        }
         // Clear-goal keys, exits and the arena are the whole point: banning them left the bot idle until the cap.
         const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key' || B.target.kind === 'climb' || B.target.kind === 'ledge' || B.target.kind === 'arena');
         if (B.target && !must) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
