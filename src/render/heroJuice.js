@@ -15,17 +15,43 @@ export function movingState(prev, speed, juice) {
   return prev ? speed > exit : speed > enter;
 }
 
-/** Playback rate so a cycle covers the same stride as at refSpeed (profile `base_run_5.6`). */
-export function cadenceRate(speed, juice) {
-  const ref = juice.refSpeed || 5.6;
-  return Math.max(0, speed) / ref;
+/** Planted-foot displacement per step, in world units (stridePx / ppu). */
+export function strideOf(cls, juice, ppu = 64) {
+  const px = juice?.heroes?.[cls]?.stridePx;
+  const u = juice?.stridePpu || ppu;
+  return (px > 0 && u > 0) ? px / u : 0;
 }
 
-/** 0–1 phase along a loop of `cycleSec` seconds of *clock* time. */
+/** Ground distance one 2-step walk cycle should cover, in world units. */
+export function cycleDist(cls, juice, ppu = 64) {
+  return 2 * strideOf(cls, juice, ppu);
+}
+
+/**
+ * Cycles per second from live ground speed: one cycle covers 2 × stride.
+ * Independent of atlas walkProfile / walkMs holds.
+ */
+export function cadenceRate(speed, juice, cls) {
+  const d = cycleDist(cls, juice);
+  if (!(d > 0)) return 0;
+  const v = Math.max(0, speed);
+  const max = juice.cadenceMax ?? 16;
+  return Math.max(0, Math.min(v, max)) / d;
+}
+
+/** 0–1 phase. `clock` is cycle count when juicing; `cycleSec` is only a fallback. */
 export function cyclePhase(clock, cycleSec) {
-  if (!(cycleSec > 0)) return 0;
-  const t = clock % cycleSec;
-  return (t < 0 ? t + cycleSec : t) / cycleSec;
+  if (cycleSec > 0 && cycleSec !== 1) {
+    const t = clock % cycleSec;
+    return (t < 0 ? t + cycleSec : t) / cycleSec;
+  }
+  const t = clock % 1;
+  return t < 0 ? t + 1 : t;
+}
+
+/** Apparent foot speed (u/s) = cycles/s × 2 × stride. Equals ground speed when cadence is exact. */
+export function footSpeed(speed, juice, cls) {
+  return cadenceRate(speed, juice, cls) * cycleDist(cls, juice);
 }
 
 /** Seconds of one walk loop at rate 1, from an atlas action's fps/holds. */
@@ -71,7 +97,7 @@ export function swayX(phase, amp) {
  * Advance per-hero juice state by `dt` (the same sim dt the game loop uses).
  * Returns pose offsets; never writes to the player body or the RNG.
  */
-export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle, juice: J }) {
+export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle: _cycle, juice: J }) {
   const mul = heroMul(cls, J);
   const was = !!st.walking;
   st.walking = movingState(was, speed, J);
@@ -82,6 +108,7 @@ export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle, juic
     st.mode = 'start';
     st.startT = startDur;
     st.clock = 0;
+    st.cadenceSpeed = speed; // snap on start so the first step is not lagged from 0
   } else if (!st.walking && was) {
     st.mode = 'stop';
     st.stopT = stopDur;
@@ -99,7 +126,14 @@ export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle, juic
     st.mode = st.mode || 'idle';
   }
 
-  const rate = cadenceRate(speed, J);
+  // Smooth the speed used for cadence when live velocity changes (not on the start snap).
+  const k = J.cadenceSmooth ?? 14;
+  if (st.cadenceSpeed == null) st.cadenceSpeed = speed;
+  else if (was) st.cadenceSpeed += (speed - st.cadenceSpeed) * (1 - Math.exp(-k * Math.max(0, dt)));
+  else st.cadenceSpeed = speed;
+  // Rate is cycles/s from live velocity and measured stride — not atlas holds, walkProfile, or walkMs.
+  // `cycle` is ignored here so applyMsProfile cannot change foot speed.
+  const rate = cadenceRate(st.cadenceSpeed, J, cls);
   if (st.mode === 'start' && startDur > 0) {
     const u = 1 - Math.max(0, st.startT) / startDur;
     st.clock += dt * rate * u * u;
@@ -108,7 +142,7 @@ export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle, juic
   }
 
   const special = action && action !== 'walk' && action !== 'idle';
-  const phase = cyclePhase(st.clock, cycle);
+  const phase = cyclePhase(st.clock, 1);
   const walkAmt = st.mode === 'walk' ? 1 : st.mode === 'start' ? 0.25 : st.mode === 'stop' && stopDur > 0 ? Math.max(0, st.stopT / stopDur) : 0;
 
   let bob = bobOffset(phase, (J.bob || 0) * mul.bob) * (st.mode === 'walk' ? 1 : walkAmt * 0.5);
@@ -140,5 +174,5 @@ export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle, juic
 }
 
 export function newJuiceState() {
-  return { walking: false, mode: 'idle', clock: 0, startT: 0, stopT: 0 };
+  return { walking: false, mode: 'idle', clock: 0, startT: 0, stopT: 0, cadenceSpeed: 0 };
 }

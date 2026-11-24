@@ -65,11 +65,11 @@ ok('walkMs override restores defaults', Math.abs(1000 / HJ.actions.tank_walk.fps
 ok('idle timing unchanged by walk profiles', Math.abs(16 / HJ.actions.tank_idle.fps - 2.4) < 1e-9);
 ok('TUNE.sprite.heroPpu is 64 (art director painted-hero scale)', TUNE.sprite.heroPpu === 64);
 
-const { movingState, cadenceRate, bobOffset, squashXY, leanRad, swayX, stepJuice, newJuiceState, cycleSec, heroMul } = await import('../src/render/heroJuice.js');
+const { movingState, cadenceRate, bobOffset, squashXY, leanRad, swayX, stepJuice, newJuiceState, cycleSec, heroMul, strideOf, cycleDist, footSpeed } = await import('../src/render/heroJuice.js');
 const JUICE = TUNE.sprite.juice;
 ok('juice block exists with hysteresis and refSpeed 5.6', JUICE && JUICE.idleEnter > JUICE.idleExit && JUICE.refSpeed === 5.6 && JUICE.heroes.tank.squash > 1 && JUICE.heroes.sneak.bob > 1);
 ok('hysteresis: idle stays idle at 0.15, walk holds down to 0.11', movingState(false, 0.15, JUICE) === false && movingState(false, 0.3, JUICE) === true && movingState(true, 0.15, JUICE) === true && movingState(true, 0.09, JUICE) === false);
-ok('cadenceRate is speed / 5.6 (tank 6.56 → ~1.17)', Math.abs(cadenceRate(6.56, JUICE) - 6.56 / 5.6) < 1e-12 && cadenceRate(0, JUICE) === 0);
+ok('cadenceRate is speed / (2·stride) from live velocity, not refSpeed', Math.abs(cadenceRate(6.56, JUICE, 'tank') - 6.56 / cycleDist('tank', JUICE)) < 1e-12 && cadenceRate(0, JUICE, 'tank') === 0);
 ok('bob is 0 at footfalls and max mid-stride', bobOffset(0, 1) === 0 && Math.abs(bobOffset(0.5, 1)) < 1e-12 && Math.abs(bobOffset(0.25, 1) - 1) < 1e-12);
 ok('squash at footfall, stretch after', squashXY(0, 0.07, 0.06).sy < 1 && squashXY(0, 0.07, 0.06).sx > 1 && squashXY(0.125, 0.07, 0.06).sy > 1);
 ok('lean tilts top right when facing right', leanRad(0, 5.6, JUICE, 1) < 0 && leanRad(Math.PI, 5.6, JUICE, 1) > 0);
@@ -81,7 +81,7 @@ const cyc = cycleSec(walkAct);
 stepJuice(st, { dt: 0, speed: 0, cls: 'tank', screenAngle: 0, action: 'idle', cycle: cyc, juice: JUICE });
 ok('starts idle', st.mode === 'idle' && st.walking === false);
 stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: 0, action: 'walk', cycle: cyc, juice: JUICE });
-ok('cross idleEnter goes to start, not a random clock jump', st.mode === 'start' && st.clock < 0.01 && st.walking === true);
+ok('cross idleEnter goes to start, not a random clock jump', st.mode === 'start' && st.clock < 0.05 && st.walking === true);
 // Finish anticipation
 for (let i = 0; i < 12; i++) stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: 0, action: 'walk', cycle: cyc, juice: JUICE });
 ok('then walks, clock advanced by speed scale', st.mode === 'walk' && st.clock > 0);
@@ -90,6 +90,30 @@ stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: Math.PI, action
 ok('direction change does not reset the clock', st.clock > clockBeforeDir);
 const tMul = heroMul('tank', JUICE), sMul = heroMul('sneak', JUICE);
 ok('tank is heavier (less bob, more squash) than sneak', tMul.bob < sMul.bob && tMul.squash > sMul.squash);
+
+// Base move speed = spdBase + spdPer·SPD (no wet/squeeze/puffcap). Stride from 8-frame art at 64 ppu.
+const baseSpeed = cls => TUNE.stats.spdBase + TUNE.stats.spdPer * TUNE.classes[cls].spd;
+const CLASSES = ['tank', 'slinger', 'warlock', 'sneak'];
+const expectedPx = { tank: 38.52, slinger: 20.62, warlock: 20.45, sneak: 32.29 };
+ok('stridePx measured from 8-frame planted feet at heroPpu 64', CLASSES.every(c => Math.abs(JUICE.heroes[c].stridePx - expectedPx[c]) < 0.02) && JUICE.stridePpu === 64);
+ok('stride world units are stridePx / 64', Math.abs(strideOf('tank', JUICE) - 38.52 / 64) < 1e-12);
+let footOk = true, footNotes = [];
+for (const cls of CLASSES) {
+  const v = baseSpeed(cls);
+  const stFoot = newJuiceState();
+  stFoot.walking = true; stFoot.mode = 'walk'; stFoot.cadenceSpeed = v;
+  const dt = 1 / 60, T = 1;
+  // A long fake atlas cycle would throw the old clock-based cadence off; it must be ignored.
+  const fakeCycle = 10;
+  for (let t = 0; t < T; t += dt) stepJuice(stFoot, { dt, speed: v, cls, screenAngle: 0, action: 'walk', cycle: fakeCycle, juice: JUICE });
+  const travelled = stFoot.clock * cycleDist(cls, JUICE); // clock is cycle count
+  const err = Math.abs(travelled / T - v) / v;
+  footNotes.push(`${cls} v=${v.toFixed(2)} stride=${strideOf(cls, JUICE).toFixed(4)} foot=${(travelled / T).toFixed(3)} err=${(err * 100).toFixed(2)}%`);
+  if (!(err <= 0.10)) footOk = false;
+}
+ok('foot speed matches ground speed within 10% at each class base speed (atlas holds ignored)', footOk);
+if (!footOk) console.log('  foot notes:', footNotes.join(' | '));
+ok('footSpeed helper equals ground speed at base (identity of the cadence formula)', CLASSES.every(c => Math.abs(footSpeed(baseSpeed(c), JUICE, c) - baseSpeed(c)) < 1e-12));
 ok('stepJuice does not call Math.random (no shared RNG)', true);
 
 delete globalThis.location;

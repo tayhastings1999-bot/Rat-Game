@@ -67,9 +67,15 @@ export function drawHero(cls, s, screenAngle, t, x, y, z, playerCol, flash = 0, 
   let { dir, flip } = dirOf(screenAngle);
   // South-only art: keep the left/right flip so a westward walk isn't a frozen front view.
   if (act.dirs && !act.dirs.includes(dir)) dir = act.dirs[0];
-  // Cadence clock (speed-scaled) when juicing a walk; otherwise the old shared G.time.
-  const clock = pose && action === 'walk' ? juiceById.get(juiceCtx.id ?? 0).clock : t;
-  const n = frameAt(act, clock, act.loop !== false && action !== 'dead');
+  // Juiced walks pick the frame from stride phase so atlas walkProfile / walkMs holds cannot override cadence.
+  let n;
+  if (pose && action === 'walk') {
+    const nFr = act.frames || 1;
+    const ph = ((pose.phase % 1) + 1) % 1;
+    n = Math.min(nFr - 1, Math.floor(ph * nFr));
+  } else {
+    n = frameAt(act, t, act.loop !== false && action !== 'dead');
+  }
   const f = at.frames.get(frameKey(PREFIX, cls, action, dir, n)) || at.frames.get(frameKey(PREFIX, cls, action, dir, 0));
   if (!f) return false;
   let px = x, py = y, pz = z, psx = sx, psy = sy, lean = 0;
