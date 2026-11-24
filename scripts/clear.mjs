@@ -105,6 +105,9 @@ function runClearLevel(lv, seed, cls, profile, god, max) {
     Object.assign(run, { realm: lv.realm, layer: lv.layer, district: lv.district, sewerIdx: lv.sewerIdx, tier: lv.tier, secret: lv.secret,
       reaper: null, robber: null, reaperT: null, robT: null, bossDone: false, lvlBoss: false, evT: 45, scabSeen: false, nests: 0, surgeT: 75, keys: 0 });
     run.seed = s.levelSeed();
+    // P40-3: startRun just built the hub level (Cinder Row) on this stream. Re-seed so this level's setup
+    // does not depend on how many draws the hub took: a Cinder Row edit was reshuffling every other level.
+    a = hash(seed + ':' + lv.id + ':setup');
     s.setupWorld(run.seed);
     // Hook is already in place so unseedRng() bound rng.next to rnd. Re-seed now for the sim itself.
     a = hash(seed + ':' + lv.id + ':sim');
