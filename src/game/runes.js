@@ -19,7 +19,7 @@ export function placeRune(info) {
   placeFragment(info);
   const D = curD(), R = RUNES.find(r => r.level === D.level);
   if (!R || D.secret || (meta.runes && meta.runes[R.id])) return null;
-  const rooms = info.byDist || [], r = rooms[rooms.length - 1];
+  const r = (info.byDist || [])[0]; // byDist is sorted farthest-first (cityGen/sewerGen)
   if (!r) return null;
   const x = toW(r.cx), z = toW(r.cy), y = floorY(x, z);
   const g = new THREE.Mesh(new THREE.OctahedronGeometry(0.45), new THREE.MeshBasicMaterial({ color: 0x8af0ff }));

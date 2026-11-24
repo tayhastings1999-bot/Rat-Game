@@ -984,7 +984,7 @@ export function populate(info) {
   // Each one sits on clear floor: never in a wall, a car, a crate or a bin, and
   // never on top of a chest or another nest. A room with no such spot is skipped.
   const nests = [], away = (x, z) => !nests.some(([a, b]) => Math.hypot(a - x, b - z) < 7) && ![...W.chests, ...(W.caches || []), ...W.bins].some(o => Math.hypot(o.x - x, o.z - z) < 2.6) && !W.climbs.some(c => Math.hypot(c.x - x, c.z - z) < 3.2);
-  // byDist runs nearest-first, so with ~20 nests they used to fill the rooms around the start and the rat
+  // byDist runs farthest-first, but with ~20 nests they used to spill into the rooms around the start and the rat
   // woke up inside spawn range of half a dozen of them (Toxic Refinery: dead in 1-2 min). Keep a quiet start:
   // no nest within TUNE.nests.startClear tiles of walking distance, unless the map runs out of rooms.
   const far = byDist.filter(r => (dist[gi(r.cx, r.cy)] ?? 99) >= TUNE.nests.startClear), order = far.length >= nestCount() / 2 ? far : byDist;
