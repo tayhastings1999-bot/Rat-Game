@@ -85,7 +85,7 @@ export const TUNE = {
     heroPpu: 64,
     heroCap: 8,
     // Atlas walk holds (data only). Sprite-mode juice cadence does NOT read these: it uses live
-    // velocity and juice.heroes[cls].stridePx. They remain for tests and any non-juice playback.
+    // velocity and juice.heroes[cls].stride. They remain for tests and any non-juice playback.
     // Default is each action's base_run profile (tank 49, slinger 51, warlock 45, sneak 45).
     walkProfile: 'base_run',
     walkMs: null,
@@ -109,17 +109,18 @@ export const TUNE = {
       idleExit: 0.10, // return to idle below this (hysteresis around idleBelow)
       refSpeed: 5.6, // lean amplitude scale only; cadence does not use this
       stepsPerCycle: 2,
-      stridePpu: 64, // same as heroPpu; stride world = stridePx / stridePpu
-      // Planted-foot displacement per step, sprite px: distance between the contact_A and
-      // contact_B planted-foot bottom-centres on the 8-frame south walks (heroPpu 64).
-      // Cycle covers 2 × stride at the live hypot(vx,vz). cadenceMax clamps extreme speeds only.
+      // Per-hero step length in world units (not measured from south-facing frames; those
+      // cannot show ground travel). Chosen so a full cycle at class base speed is ~0.40 s:
+      // stride = 0.20 × (spdBase + spdPer·SPD). Cycle covers 2 × stride at live |v|.
+      // While walking, cycle time is clamped to [cycleMin, cycleMax].
+      cycleMin: 0.35,
+      cycleMax: 0.9,
       cadenceSmooth: 14,
-      cadenceMax: 16,
       heroes: {
-        tank:    { bob: 0.8,  squash: 1.15, stretch: 0.9,  lean: 0.85, sway: 0.85, startAnticipation: 1.1,  stopSettle: 1.15, stridePx: 38.52 },
-        slinger: { bob: 1,    squash: 1,    stretch: 1,    lean: 1,    sway: 1,    startAnticipation: 1,    stopSettle: 1,    stridePx: 20.62 },
-        warlock: { bob: 0.9,  squash: 1.05, stretch: 0.95, lean: 0.9,  sway: 0.9,  startAnticipation: 1.05, stopSettle: 1.05, stridePx: 20.45 },
-        sneak:   { bob: 1.15, squash: 0.85, stretch: 1.15, lean: 1.1,  sway: 1.1,  startAnticipation: 0.85, stopSettle: 0.9,  stridePx: 32.29 },
+        tank:    { bob: 0.8,  squash: 1.15, stretch: 0.9,  lean: 0.85, sway: 0.85, startAnticipation: 1.1,  stopSettle: 1.15, stride: 1.312 },
+        slinger: { bob: 1,    squash: 1,    stretch: 1,    lean: 1,    sway: 1,    startAnticipation: 1,    stopSettle: 1,    stride: 1.632 },
+        warlock: { bob: 0.9,  squash: 1.05, stretch: 0.95, lean: 0.9,  sway: 0.9,  startAnticipation: 1.05, stopSettle: 1.05, stride: 1.440 },
+        sneak:   { bob: 1.15, squash: 0.85, stretch: 1.15, lean: 1.1,  sway: 1.1,  startAnticipation: 0.85, stopSettle: 0.9,  stride: 1.696 },
       },
     },
   },

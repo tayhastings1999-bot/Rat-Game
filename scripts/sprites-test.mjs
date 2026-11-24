@@ -91,12 +91,16 @@ ok('direction change does not reset the clock', st.clock > clockBeforeDir);
 const tMul = heroMul('tank', JUICE), sMul = heroMul('sneak', JUICE);
 ok('tank is heavier (less bob, more squash) than sneak', tMul.bob < sMul.bob && tMul.squash > sMul.squash);
 
-// Base move speed = spdBase + spdPer·SPD (no wet/squeeze/puffcap). Stride from 8-frame art at 64 ppu.
+// Base move speed = spdBase + spdPer·SPD (no wet/squeeze/puffcap). Stride is a TUNE constant
+// (not measured from south-facing frames) so a cycle at base speed is ~0.40 s.
 const baseSpeed = cls => TUNE.stats.spdBase + TUNE.stats.spdPer * TUNE.classes[cls].spd;
 const CLASSES = ['tank', 'slinger', 'warlock', 'sneak'];
-const expectedPx = { tank: 38.52, slinger: 20.62, warlock: 20.45, sneak: 32.29 };
-ok('stridePx measured from 8-frame planted feet at heroPpu 64', CLASSES.every(c => Math.abs(JUICE.heroes[c].stridePx - expectedPx[c]) < 0.02) && JUICE.stridePpu === 64);
-ok('stride world units are stridePx / 64', Math.abs(strideOf('tank', JUICE) - 38.52 / 64) < 1e-12);
+const expectedStride = { tank: 1.312, slinger: 1.632, warlock: 1.440, sneak: 1.696 };
+ok('per-hero stride constants in TUNE.sprite.juice (cycle ≈ 0.40 s at base speed)', CLASSES.every(c => {
+  const v = baseSpeed(c), s = JUICE.heroes[c].stride;
+  return Math.abs(s - expectedStride[c]) < 1e-9 && Math.abs((2 * s) / v - 0.40) < 1e-9;
+}) && JUICE.cycleMin === 0.35 && JUICE.cycleMax === 0.9 && JUICE.heroes.tank.stridePx == null);
+ok('strideOf reads the TUNE constant', Math.abs(strideOf('tank', JUICE) - 1.312) < 1e-12);
 let footOk = true, footNotes = [];
 for (const cls of CLASSES) {
   const v = baseSpeed(cls);
@@ -114,6 +118,10 @@ for (const cls of CLASSES) {
 ok('foot speed matches ground speed within 10% at each class base speed (atlas holds ignored)', footOk);
 if (!footOk) console.log('  foot notes:', footNotes.join(' | '));
 ok('footSpeed helper equals ground speed at base (identity of the cadence formula)', CLASSES.every(c => Math.abs(footSpeed(baseSpeed(c), JUICE, c) - baseSpeed(c)) < 1e-12));
+ok('cycle never shorter than 0.35 s or longer than 0.9 s while walking', CLASSES.every(c => {
+  const fast = 1 / cadenceRate(40, JUICE, c), slow = 1 / cadenceRate(0.3, JUICE, c);
+  return fast >= 0.35 - 1e-12 && fast <= 0.35 + 1e-12 && slow >= 0.9 - 1e-12 && slow <= 0.9 + 1e-12 && cadenceRate(0, JUICE, c) === 0;
+}));
 ok('stepJuice does not call Math.random (no shared RNG)', true);
 
 delete globalThis.location;

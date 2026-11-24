@@ -15,28 +15,32 @@ export function movingState(prev, speed, juice) {
   return prev ? speed > exit : speed > enter;
 }
 
-/** Planted-foot displacement per step, in world units (stridePx / ppu). */
-export function strideOf(cls, juice, ppu = 64) {
-  const px = juice?.heroes?.[cls]?.stridePx;
-  const u = juice?.stridePpu || ppu;
-  return (px > 0 && u > 0) ? px / u : 0;
+/** Authored step length in world units (`TUNE.sprite.juice.heroes[cls].stride`). Not measured from south-facing frames. */
+export function strideOf(cls, juice) {
+  const s = juice?.heroes?.[cls]?.stride;
+  return s > 0 ? s : 0;
 }
 
 /** Ground distance one 2-step walk cycle should cover, in world units. */
-export function cycleDist(cls, juice, ppu = 64) {
-  return 2 * strideOf(cls, juice, ppu);
+export function cycleDist(cls, juice) {
+  return 2 * strideOf(cls, juice);
 }
 
 /**
  * Cycles per second from live ground speed: one cycle covers 2 × stride.
- * Independent of atlas walkProfile / walkMs holds.
+ * Independent of atlas walkProfile / walkMs holds. While there is motion, the
+ * cycle is clamped to [cycleMin, cycleMax] seconds (defaults 0.35–0.9).
  */
 export function cadenceRate(speed, juice, cls) {
   const d = cycleDist(cls, juice);
   if (!(d > 0)) return 0;
   const v = Math.max(0, speed);
-  const max = juice.cadenceMax ?? 16;
-  return Math.max(0, Math.min(v, max)) / d;
+  if (!(v > 0)) return 0;
+  const rate = v / d;
+  const tMin = juice.cycleMin ?? 0.35, tMax = juice.cycleMax ?? 0.9;
+  const T = 1 / rate;
+  const Tc = Math.min(tMax, Math.max(tMin, T));
+  return 1 / Tc;
 }
 
 /** 0–1 phase. `clock` is cycle count when juicing; `cycleSec` is only a fallback. */
@@ -131,7 +135,7 @@ export function stepJuice(st, { dt, speed, cls, screenAngle, action, cycle: _cyc
   if (st.cadenceSpeed == null) st.cadenceSpeed = speed;
   else if (was) st.cadenceSpeed += (speed - st.cadenceSpeed) * (1 - Math.exp(-k * Math.max(0, dt)));
   else st.cadenceSpeed = speed;
-  // Rate is cycles/s from live velocity and measured stride — not atlas holds, walkProfile, or walkMs.
+  // Rate is cycles/s from live velocity and the per-hero stride constant — not atlas holds, walkProfile, or walkMs.
   // `cycle` is ignored here so applyMsProfile cannot change foot speed.
   const rate = cadenceRate(st.cadenceSpeed, J, cls);
   if (st.mode === 'start' && startDur > 0) {
