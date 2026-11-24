@@ -129,22 +129,49 @@ function blockedTiles() {
   }
   return B.blocked;
 }
-function fieldTo(gx, gz, acid = false) {
-  const k0 = gi(gx, gz), bl = blockedTiles(), ok = acid ? walk : dryWalk, key = k0 * 2 + (acid ? 1 : 0);
+// P40-5: tiles the stuck watchdog blocks expire (they used to last the whole level: on Meltdown the bot
+// blocked both boss-room exits and drove into a corner until the cap). Map tile -> bot-clock expiry.
+const STUCK_TTL = 25; // sim seconds
+function stuckBlocked(k) {
+  const e = B.stuckBlk && B.stuckBlk.get(k);
+  if (e == null) return false;
+  if (e > B.t) return true;
+  B.stuckBlk.delete(k);
+  return false;
+}
+// P40-6: gnawable boards (city plywood / sewer drywall, tile 3; not a gate-locked one) are passable at a
+// cost when no board-free route exists, so a rat that hopped into a boarded building gnaws its way out.
+const BOARD_COST = 6;
+const gnawable = k => M.grid[k] === 3 && M.secret[k] !== 2;
+function fieldTo(gx, gz, acid = false, boards = false) {
+  const k0 = gi(gx, gz), bl = blockedTiles(), ok = acid ? walk : dryWalk, key = k0 * 4 + (acid ? 1 : 0) + (boards ? 2 : 0);
   if (B.fieldK === key && B.field && B.fieldT > 0) return B.field;
-  const n = M.W * M.H, d = new Int16Array(n).fill(-1), q = new Int32Array(n);
-  let h = 0, t = 0;
+  const n = M.W * M.H, d = new Int16Array(n).fill(-1);
   if (!inG(gx, gz)) return d;
-  d[k0] = 0; q[t++] = k0;
-  while (h < t) {
-    const c = q[h++], x = c % M.W, y = (c / M.W) | 0;
-    for (const [dx, dy] of N4) {
-      const X = x + dx, Y = y + dy;
-      if (!inG(X, Y)) continue;
-      const k = gi(X, Y);
-      if (d[k] >= 0 || !ok(M.grid[k]) || (bl.has(k) && k !== k0)) continue;
-      d[k] = d[c] + 1; q[t++] = k;
+  // Dial's buckets: unit steps, BOARD_COST through a board (plain BFS when boards are off).
+  const buckets = [[k0]], done = new Uint8Array(n);
+  d[k0] = 0;
+  for (let c0 = 0; c0 < buckets.length; c0++) {
+    const bk = buckets[c0];
+    if (!bk) continue;
+    for (let i = 0; i < bk.length; i++) {
+      const c = bk[i];
+      if (done[c] || d[c] !== c0) continue;
+      done[c] = 1;
+      const x = c % M.W, y = (c / M.W) | 0;
+      for (const [dx, dy] of N4) {
+        const X = x + dx, Y = y + dy;
+        if (!inG(X, Y)) continue;
+        const k = gi(X, Y);
+        if (done[k] || (bl.has(k) && k !== k0) || (k !== k0 && stuckBlocked(k))) continue;
+        const step = ok(M.grid[k]) ? 1 : boards && gnawable(k) ? BOARD_COST : 0;
+        if (!step) continue;
+        const nd = c0 + step;
+        if (d[k] >= 0 && d[k] <= nd) continue;
+        d[k] = nd; (buckets[nd] || (buckets[nd] = [])).push(k);
+      }
     }
+    buckets[c0] = null;
   }
   B.field = d; B.fieldK = key; B.fieldT = 1.5;
   return d;
@@ -162,9 +189,20 @@ function steerTo(x, z) {
     if (!best) return null;
     [tx, tz] = best;
   }
+  B.gnaw = null;
+  const at = inG(px, pz) ? gi(px, pz) : -1;
   let f = fieldTo(tx, tz);
-  let here = inG(px, pz) ? f[gi(px, pz)] : -1;
-  if (here < 0 && inG(px, pz)) { f = fieldTo(tx, tz, true); here = f[gi(px, pz)]; } // no dry route: wade the acid
+  let here = at >= 0 ? f[at] : -1;
+  if (here < 0 && at >= 0) { f = fieldTo(tx, tz, true); here = f[at]; } // no dry route: wade the acid
+  // P40-5: still no route with the stuck marks in place: drop them and repath (never block the only way through).
+  if (here < 0 && at >= 0 && walk(M.grid[at]) && B.stuckBlk && B.stuckBlk.size) {
+    const keep = B.stuckBlk; B.stuckBlk = new Map(); B.fieldT = 0;
+    f = fieldTo(tx, tz); here = f[at];
+    if (here < 0) { f = fieldTo(tx, tz, true); here = f[at]; }
+    if (here >= 0) T.unblocks = (T.unblocks || 0) + 1; else { B.stuckBlk = keep; B.fieldT = 0; }
+  }
+  let viaBoards = false;
+  if (here < 0 && at >= 0 && walk(M.grid[at])) { f = fieldTo(tx, tz, true, true); here = f[at]; viaBoards = here >= 0; } // P40-6: walled in by boards
   if (here < 0) return OFF; // the rat is off the field (roof, duct, prop): not the target's fault
   if (here <= 1) { const l = Math.hypot(x - P.x, z - P.z) || 1; return [(x - P.x) / l, (z - P.z) / l]; }
   let bd = here, bx = 0, bz = 0;
@@ -174,7 +212,7 @@ function steerTo(x, z) {
     const v = f[gi(X, Z)];
     // Diagonals only when both orthogonal steps are open (no corner cutting).
     if (dx && dz && (!walk(tAt(px + dx, pz)) || !walk(tAt(px, pz + dz)))) continue;
-    if (v >= 0 && v < bd) { bd = v; bx = toW(X) - P.x; bz = toW(Z) - P.z; }
+    if (v >= 0 && v < bd) { bd = v; bx = toW(X) - P.x; bz = toW(Z) - P.z; B.gnaw = viaBoards && !dx !== !dz && gnawable(gi(X, Z)) ? { gx: X, gz: Z } : null; }
   }
   const l = Math.hypot(bx, bz) || 1;
   return [bx / l, bz / l];
@@ -361,10 +399,16 @@ function think(dt) {
     const fight = tg.kind === 'boss' || tg.kind === 'mob' || tg.kind === 'nest';
     const want = fight ? (RANGED[run.cls] ? 6.5 : 1.6) : 0.6;
     if (tg.kind.startsWith('break-') && (dist < 1.6 || B.tacT > 0)) { breakAct(tg, 0.1 + B.profile.react * 0.3); return; }
+    B.gnawing = false;
     if (dist > want) {
       const s = steerTo(tg.x, tg.z);
       if (s === OFF) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist]; // head straight for it until back on the field
-      else if (s) d = s;
+      else if (s) {
+        d = s;
+        // P40-6: the route goes through a board: walk into it and hold E (the game's own gnaw) until it opens.
+        const c = B.gnaw && chewTarget();
+        if (c && c.kind === 'tile' && c.gx === B.gnaw.gx && c.gz === B.gnaw.gz) { B.gnawing = true; keys.KeyE = true; if (!P.chewing) { pressE(); T.gnaws = (T.gnaws || 0) + 1; } }
+      }
       else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge' || tg.kind === 'arena')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
       else { B.banned.add(toG(tg.x) + ',' + toG(tg.z)); B.target = null; }
     }
@@ -453,7 +497,7 @@ function applyInput() {
   stick.active = x !== 0 || z !== 0;
   stick.y = x * fx + z * fz;
   stick.x = x * rx + z * rz;
-  if (!(B.target && B.target.kind === 'objective')) keys.KeyE = false;
+  if (!(B.target && B.target.kind === 'objective') && !B.gnawing) keys.KeyE = false;
 }
 
 function watchdogs(dt) {
@@ -466,7 +510,7 @@ function watchdogs(dt) {
       B.unstick++;
       // Something the grid doesn't know about is in the way: block the tile we were walking into.
       const bx = toG(P.x + B.dir[0] * 1.2), bz = toG(P.z + B.dir[1] * 1.2);
-      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) { blockedTiles().add(gi(bx, bz)); B.fieldT = 0; }
+      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) { (B.stuckBlk || (B.stuckBlk = new Map())).set(gi(bx, bz), B.t + STUCK_TTL); B.fieldT = 0; }
       keys.Space = true; P.buffer = 0.13; // hop
       setDir(rand(-1, 1), rand(-1, 1));
       if (B.unstick >= 3) {
@@ -539,7 +583,7 @@ function step(dt) {
   think(sdt);
   applyInput();
   const lv = run.level;
-  if (B.tierSeen !== run.tier) { if (B.tierSeen != null) T.districts.push({ to: run.tier, t: +run.time.toFixed(1) }); B.tierSeen = run.tier; B.visited.clear(); B.banned.clear(); B.target = null; B.memT = 2; }
+  if (B.tierSeen !== run.tier) { if (B.tierSeen != null) T.districts.push({ to: run.tier, t: +run.time.toFixed(1) }); B.tierSeen = run.tier; B.visited.clear(); B.banned.clear(); if (B.stuckBlk) B.stuckBlk.clear(); B.target = null; B.memT = 2; }
   const t0 = performance.now();
   update(sdt);
   const ms = performance.now() - t0;
@@ -562,7 +606,7 @@ export const qa = {
   get bot() { return B; },
   start({ profile = 'average', goal = 'progress', assist = false } = {}) {
     resetTelemetry();
-    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, seenWind: new Map(), triedUp: new Set() });
+    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, stuckBlk: new Map(), gnaw: null, gnawing: false, seenWind: new Map(), triedUp: new Set() });
     G.qa = hooks;
     G.qaHold = true;
     if (assist) { st.taken = 0; st.dmg *= 4; }
