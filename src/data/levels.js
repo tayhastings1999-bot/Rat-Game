@@ -16,8 +16,8 @@
 
 const night = { fog: 0x0a0a16, sky: 0x0c0a1c };
 export const CITY_LEVELS = [
-  { id: 'cinder', base: 0, seed: 'cinder', map: 92, blockGap: 14, hiddenExtra: 3, alleyOdds: 0.28 }, // try 1 knobs kept: median 9.3 was closer to ~11 than try 2's 7.9
-  { id: 'neon', base: 1, seed: 'neon', map: 90, blockGap: 17, hiddenExtra: 3, alleyOdds: 0.16 }, // try 2: pull back from try 1 median 14.0 (target ~11)
+  { id: 'cinder', base: 0, seed: 'cinder', map: 92, blockGap: 14, hiddenExtra: 3, alleyOdds: 0.28, sideYards: 10 }, // try 1 knobs kept (median 9.3 beat try 2's 7.9); fallback (Rat 3): one more gentle side-room set, 10 dead-end yards off the main route that take some of the same 20 nests; same map
+  { id: 'neon', base: 1, seed: 'neon', map: 90, blockGap: 17, hiddenExtra: 3, alleyOdds: 0.16, arenaDetour: 4 }, // try 2 knobs; fallback (Rat 3): barricade 4 crossings round the lair so the walk to the arena goes round, same beats and nests
   { id: 'rust', base: 2, seed: 'rust', hiddenExtra: 2, alleyOdds: 0.85 }, // longer B2 crane-yard loop + extra hidden yards (Rat 3: target ~12 min, no extra nests)
   { id: 'hollow', base: 3, seed: 'hollow', grave: true, secretTo: 'vault' },
   { id: 'cinder-n', base: 0, seed: 'cinder-night', title: 'Cinder Row · After Dark', night: true, haz: 'blackout', fam: ['prowl', 'vermin', 'wings'], boss: 'tabby', bossV: 'frenzied', map: 86, blockGap: 12, hiddenExtra: 2, alleyOdds: 0.28, darkStretches: 8, over: { ...night, lamp: 0x9ab0ff, neon: [0xff3a6a, 0x6a3aff] } }, // route length through Blackout dark stretches, not more enemies (PR 3b: target ~13)

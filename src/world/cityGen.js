@@ -145,8 +145,54 @@ export function genCity(seed, D) {
     if (OPEN(grid[k]) && dist[k] < 0) { grid[k] = TL.WALL; hgt[k] = 4.5; }
   }
   dist = bfs(startRoom.cx, startRoom.cy, OPEN);
-  const live = rooms.filter(r => dist[gi(r.cx, r.cy)] >= 0);
-  const byDist = live.filter(r => r !== startRoom).sort((a, b) => dist[gi(b.cx, b.cy)] - dist[gi(a.cx, a.cy)]);
+  let live = rooms.filter(r => dist[gi(r.cx, r.cy)] >= 0);
+  const sortFar = () => live.filter(r => r !== startRoom).sort((a, b) => dist[gi(b.cx, b.cy)] - dist[gi(a.cx, a.cy)]);
+  let byDist = sortFar();
+
+  // 7a. Arena detour (per level, D.arenaDetour = n): barricade up to n street crossings in a ring around the
+  // farthest room (the boss lair), nearest-the-start side first, so the walk in has to go round to a far
+  // entrance. A barricade is kept only if every room stays reachable. No rng, so the rest of the seeded
+  // layout rolls the same; nests, packs and beats are placed afterwards exactly as before.
+  if (D.arenaDetour && byDist.length) {
+    const far = byDist[0];
+    const dL = bfs(far.cx, far.cy, OPEN);
+    const crossCut = (x, y) => { // the shortest wall-to-wall run of open tiles through (x, y), either axis
+      let bestCut = null;
+      for (const [ax, ay] of [[1, 0], [0, 1]]) {
+        const cut = [gi(x, y)];
+        let wide = false;
+        for (const sgn of [1, -1]) for (let s2 = 1; ; s2++) {
+          const cx = x + ax * s2 * sgn, cy = y + ay * s2 * sgn;
+          if (!inG(cx, cy) || !OPEN(tAt(cx, cy))) break;
+          if (s2 > 6) { wide = true; break; }
+          cut.push(gi(cx, cy));
+        }
+        if (!wide && cut.length >= 2 && (!bestCut || cut.length < bestCut.length)) bestCut = cut;
+      }
+      return bestCut;
+    };
+    const ring = [];
+    for (let k = 0; k < W * W; k++) if (grid[k] === TL.ROAD && dL[k] >= 8 && dL[k] <= 24) ring.push(k);
+    ring.sort((p, q) => dist[p] - dist[q] || p - q);
+    const near = new Set();
+    let placed = 0;
+    for (const k of ring) {
+      if (placed >= D.arenaDetour) break;
+      if (near.has(k)) continue;
+      const cut = crossCut(k % W, (k / W) | 0);
+      if (!cut) continue;
+      const was = cut.map(c => [grid[c], hgt[c]]);
+      for (const c of cut) { grid[c] = TL.WALL; hgt[c] = 2.6; }
+      const nd = bfs(startRoom.cx, startRoom.cy, OPEN);
+      if (live.every(r => nd[gi(r.cx, r.cy)] >= 0)) {
+        placed++;
+        dist = nd;
+        // Keep barricades a few tiles apart: one per crossing, not a solid wall.
+        for (const c of cut) { const cx = c % W, cy = (c / W) | 0; for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (inG(cx + dx, cy + dy)) near.add(gi(cx + dx, cy + dy)); }
+      } else cut.forEach((c, j) => { grid[c] = was[j][0]; hgt[c] = was[j][1]; });
+    }
+    byDist = sortFar();
+  }
 
   // 7b. Secrets: hollow out a few big buildings into hidden courtyards behind a
   // cracked (gnawable, disguised) wall; the biggest becomes a mini-boss lair.
@@ -196,6 +242,42 @@ export function genCity(seed, D) {
     if (back) { set(back[0], back[1], TL.DRY, h); M.secret[gi(back[0], back[1])] = 2; }
     const kind = interiors.some(i => i.kind === 'laundromat') || (L.w < 5 && L.h < 5) ? KINDS[(interiors.length + ri(0, 2)) % 3] : rng.next() < 0.7 ? 'laundromat' : KINDS[ri(0, 2)];
     interiors.push({ id, x: L.x + 1, y: L.y + 1, w: L.w - 2, h: L.h - 2, roof: h, door: front, back: back || null, kind });
+  }
+
+  // 7d. Side yards (per level, D.sideYards = n): open up to n solid lots in the far half of the map into
+  // walled yards with one 2-tile street gap: dead-end side rooms off the main route. They join the room list
+  // flagged sideYard, and populate() seats the level's nests in them first, so the route detours into each
+  // (same nest count, same map size).
+  if (D.sideYards) {
+    const used = new Set([...hidden, ...interiors].map(h => gi(h.x, h.y)));
+    const maxD = Math.max(...live.map(r => dist[gi(r.cx, r.cy)]));
+    const gapOf = L => {
+      const out = [];
+      for (let x = L.x + 1; x < L.x + L.w - 2; x++) { out.push([x, L.y, 0, -1, 1, 0]); out.push([x, L.y + L.h - 1, 0, 1, 1, 0]); }
+      for (let y = L.y + 1; y < L.y + L.h - 2; y++) { out.push([L.x, y, -1, 0, 0, 1]); out.push([L.x + L.w - 1, y, 1, 0, 0, 1]); }
+      return out.filter(([x, y, dx, dy, ex, ey]) => [[x, y], [x + ex, y + ey]].every(([a, b]) => { const k = gi(a + dx, b + dy); return OPEN(grid[k]) && dist[k] >= 0; }))
+        .sort((a, b) => dist[gi(b[0] + b[2], b[1] + b[3])] - dist[gi(a[0] + a[2], a[1] + a[3])]);
+    };
+    const doorD = c => dist[gi(c.g[0][0] + c.g[0][2], c.g[0][1] + c.g[0][3])];
+    // No rng, so the rest of the seeded layout rolls the same.
+    const pool = lots.filter(L => L.type === 'bldg' && !L.compound && L.w >= 4 && L.h >= 4 && L.w <= 9 && L.h <= 9 && L.x > 1 && L.y > 1 && L.x + L.w < W - 1 && L.y + L.h < W - 1 && solidLot(L) && !used.has(gi(L.x + 1, L.y + 1)))
+      .map(L => ({ L, g: gapOf(L) })).filter(c => c.g.length && doorD(c) >= maxD * 0.4)
+      // Farthest first, at least 10 tiles apart: the far half is where the nests go.
+      .sort((a, b) => doorD(b) - doorD(a) || (a.L.x * W + a.L.y) - (b.L.x * W + b.L.y));
+    const cand = [];
+    for (const c of pool) if (cand.length < D.sideYards && cand.every(o => Math.hypot(o.L.x - c.L.x, o.L.y - c.L.y) >= 10)) cand.push(c);
+    for (const { L, g } of cand) {
+      for (let y = L.y + 1; y < L.y + L.h - 1; y++) for (let x = L.x + 1; x < L.x + L.w - 1; x++) set(x, y, TL.FLOOR, 0);
+      const [x, y, , , ex, ey] = g[0];
+      set(x, y, TL.FLOOR, 0); set(x + ex, y + ey, TL.FLOOR, 0);
+      L.type = 'yard';
+      const r = { x: L.x + 1, y: L.y + 1, w: L.w - 2, h: L.h - 2, kind: 'yard', sideYard: true };
+      r.cx = r.x + (r.w >> 1); r.cy = r.y + (r.h >> 1);
+      rooms.push(r);
+    }
+    dist = bfs(startRoom.cx, startRoom.cy, OPEN);
+    live = rooms.filter(r => dist[gi(r.cx, r.cy)] >= 0);
+    byDist = sortFar();
   }
 
   // 8. Street furniture spots.
