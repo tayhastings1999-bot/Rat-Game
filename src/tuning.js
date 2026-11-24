@@ -9,6 +9,12 @@ const SPRITE_MODE = (() => {
   const m = typeof location !== 'undefined' && /[?&]sprites(?:=(\w+))?/.exec(location.search);
   return !m ? 'mesh' : m[1] === 'sprite' ? 'sprite' : m[1] === 'mesh' || m[1] === '0' ? 'mesh' : 'mixed';
 })();
+// ?gore=0 forces low-gore (no blood, gibs or floor splats); ?gore=1 forces it on. Otherwise settings.gore.
+const GORE_Q = (() => {
+  const m = typeof location !== 'undefined' && /[?&]gore=(\w+)/.exec(location.search);
+  if (!m) return null;
+  return !(m[1] === '0' || m[1] === 'off' || m[1] === 'false');
+})();
 // TD-3 ortho play camera is gated behind sprite mode; mesh/default keeps main's perspective camera.
 const ORTHO = SPRITE_MODE !== 'mesh' && !(typeof location !== 'undefined' && /[?&]persp\b/.test(location.search));
 
@@ -344,6 +350,44 @@ export const TUNE = {
     backstab: 1.8, // Shiv damage × from behind
     smokeVuln: 1.3, // enemies in the Smoke Bomb take this × damage
     smokeTurboDps: 14, // a turbo Smoke Bomb also burns this much per second
+  },
+  gore: {
+    // Combat gore (fx/fx.js). Visual only: damage, timers and drops stay the same.
+    // force: null respects the pause-menu toggle; true/false come from ?gore=1 / ?gore=0.
+    force: GORE_Q,
+    partCap: 700, // instanced particles (blood + puffs)
+    gibCap: 400, // flesh chunks that bounce and settle
+    decalCap: 140, // floor splats (the instanced mesh hard cap is DECAL_CAP)
+    decalFade: 8, // seconds before a splat shrinks away (0 = wrap at the cap only)
+    bloodMin: 2, bloodMax: 12, bloodPerDmg: 0.12, bloodCrit: 4, // burst count on a hit, scaled by damage
+    bloodLife: 1.4, bloodSpeed: 4,
+    splatChance: 0.35, splatMin: 0.35, splatMax: 0.8, // blood that lands becomes a decal
+    gibSmall: 5, gibMid: 9, gibBig: 22, // counts before mul (small / taller / boss-pred-nest)
+    gibMul: 1, gibBossMul: 1.6, gibRagMul: 0.6,
+    gibSpeed: 6, gibSpeedBig: 9, gibLifeMin: 5, gibLifeMax: 9,
+    killBlood: 12, killBloodBig: 30, killBloodBossSp: 8, killBloodSp: 5,
+    killBoom: 1.6, bossBoom: 7, // boom() size on a normal kill / boss
+    killPuff: 5, bossPuff: 20,
+    decalMin: 1.2, decalMax: 2.2, decalBig: 2.5,
+    corpseCap: 60,
+  },
+  feel: {
+    // Hit-stop, trauma shake, flash, kill pop, low-HP vignette (combat.js, sync.js, feel.js). Visual/feel only.
+    hitStopHit: 0.035, // crit or a heavy hit
+    hitStopDmg: 40, // damage that counts as heavy
+    hitStopHurt: 0.05, // the rat is hit
+    hitStopKill: 0.025, // any kill
+    hitStopBig: 0.08, // elite / pred / brute / nest
+    hitStopBoss: 0.3,
+    hitStopCap: 0.35,
+    flashHit: 0.12, // enemy white flash, seconds
+    shakeDecay: 1.6, // trauma units lost per second
+    shakeCap: 1.2, // max trauma
+    shakeAmp: 0.45, // camera offset scale (× trauma² × settings.shake)
+    killShake: 0.12, bigKillShake: 0.28, bossShake: 1,
+    killPop: 2.2, killPopBoss: 6, killPopLife: 0.28, // ring radius / life
+    lowHp: 0.3, // red vignette starts here and ramps to full at 0 HP
+    heartbeatMin: 0.28, heartbeatMax: 0.9, // interval at 0 HP / at the lowHp line (audio hook only)
   },
   combat: {
     meleeFlyReach: 6, // melee primaries swat flying enemies up to this far above the rat

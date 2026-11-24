@@ -141,6 +141,8 @@ export function ping(warm = 0) {
 }
 
 const GAP = { squeak: 70, bark: 600, bell: 500, clank: 70, rattle: 400, heal: 300, hit: 40, pickup: 45, shoot: 70, slash: 80, kill: 45, chew: 110, boom: 90, zap: 90, splat: 120 };
+// Combat feel hooks (heartbeat, killPop, hit, kill, bossDeath) live in fx/feelEvents.js
+// (onFeelEvent). Subscribe here later; this file stays procedural and adds no audio files.
 export function sfx(n) {
   if (!audioReady()) return;
   const now = performance.now();

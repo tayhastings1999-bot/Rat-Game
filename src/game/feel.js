@@ -1,12 +1,13 @@
 // Moment-to-moment feel: perfect dodges and the cold open.
 import { rand } from '../core/util.js';
-import { G, P, run } from '../core/state.js';
+import { G, P, run, st } from '../core/state.js';
 import { fx, dnum, spark } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { tileAt } from '../world/grid.js';
 import { spawnEnemy } from '../entities/mobs.js';
 import { streakHit } from './swarm.js';
 import { TUNE } from '../tuning.js';
+import { feelEvent } from '../fx/feelEvents.js';
 import { banner } from '../ui/hud.js';
 
 /** Window at the start of a roll (seconds) in which a hit you slip through counts as perfect. */
@@ -31,7 +32,19 @@ export function tryPerfectDodge() {
   sfx('perfect');
 }
 export const perfectCrit = () => (P.perfectT || 0) > 0;
-export function tickFeel(dt) { if (P.perfectT > 0) P.perfectT -= dt; }
+export function tickFeel(dt) {
+  if (P.perfectT > 0) P.perfectT -= dt;
+  // Low-HP heartbeat: emit an audio hook only (no files). Rate rises as health falls.
+  if (G.state !== 'play' || !st.maxHp) { G.hbT = 0; return; }
+  const frac = run.hp / st.maxHp, F = TUNE.feel;
+  if (!(frac < F.lowHp) || frac < 0) { G.hbT = 0; return; }
+  G.hbT = (G.hbT || 0) - dt;
+  if (G.hbT <= 0) {
+    const t = frac / F.lowHp;
+    G.hbT = F.heartbeatMin + t * (F.heartbeatMax - F.heartbeatMin);
+    feelEvent('heartbeat', { hp: frac });
+  }
+}
 
 /** Runs open mid-chase: a pack is already on your tail. */
 export function coldOpen() {

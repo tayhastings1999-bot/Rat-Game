@@ -10,6 +10,7 @@ import { heroSprite, beginHeroes, drawHero, endHeroes } from '../render/heroSpri
 import { heroAnimState, camBasis } from '../entities/player.js';
 import { IMB, IMG, IMO, MOB_CAP, shadowIM, scrapIM, pprojIM, eprojIM, partIM, gibIM, scentIM, ringIM, dummy, tmpC, _v } from '../render/pools.js';
 import { decal, puff, tickFx, PART_CAP } from '../fx/fx.js';
+import { goreOn } from '../fx/gore.js';
 import { animTick, writePose, rigTime } from '../render/rig.js';
 import { tickAmbient } from '../fx/ambient.js';
 import { M, G as GRAV, toW, floorY, forPlatsNear } from '../world/grid.js';
@@ -234,12 +235,12 @@ export function sync(dt) {
     if (!p.ng) p.vy -= 14 * dt;
     p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     const gy = floorY(p.x, p.z);
-    if (p.y <= gy && p.vy < 0) { if (p.b && Math.random() < 0.35) decal(p.x, gy, p.z, rand(0.35, 0.8), p.c); p.life = 0; }
+    if (p.y <= gy && p.vy < 0) { if (p.b && goreOn(settings) && Math.random() < TUNE.gore.splatChance) decal(p.x, gy, p.z, rand(TUNE.gore.splatMin, TUNE.gore.splatMax), p.c); p.life = 0; }
   }
   keep(W.parts, p => p.life > 0);
   n = 0;
   for (const p of W.parts) {
-    if (n >= PART_CAP) break;
+    if (n >= (TUNE.gore.partCap || PART_CAP)) break;
     dummy.position.set(p.x, p.y, p.z);
     dummy.rotation.set(0, 0, 0);
     dummy.scale.setScalar(p.b ? p.s : Math.min(1, p.life * 2.5) * p.s);
@@ -269,7 +270,7 @@ export function sync(dt) {
         }
       }
     }
-    if (n < 400) {
+    if (n < (TUNE.gore.gibCap || 400)) {
       dummy.position.set(g.x, g.y, g.z);
       dummy.rotation.set(g.rx, g.ry, 0);
       const k = Math.min(1, g.life) * g.s;
@@ -475,8 +476,12 @@ function animateCamera(dt) {
   want.set(tgt.x - Math.sin(G.camYaw) * dist * Math.cos(pitch), tgt.y + dist * Math.sin(pitch), tgt.z - Math.cos(G.camYaw) * dist * Math.cos(pitch));
   G.camPos.lerp(want, 1 - Math.exp(-10 * dt));
   camLook.lerp(tgt, 1 - Math.exp(-14 * dt));
-  G.shake = Math.max(0, G.shake - dt * 1.6);
-  camera.position.copy(G.camPos).add(shakeV.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(G.shake * 0.45 * settings.shake));
+  // Trauma-based shake: G.shake writers still bump a floor; amplitude is trauma², capped.
+  const F = TUNE.feel;
+  G.trauma = Math.min(F.shakeCap, Math.max(G.trauma || 0, G.shake || 0));
+  G.shake = Math.max(0, G.shake - dt * F.shakeDecay);
+  G.trauma = Math.max(0, G.trauma - dt * F.shakeDecay);
+  camera.position.copy(G.camPos).add(shakeV.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(G.trauma * G.trauma * F.shakeAmp * settings.shake));
   camera.lookAt(camLook);
   syncFade();
   syncTurboFx(dt);
@@ -488,7 +493,7 @@ function animateCamera(dt) {
   U.hurt.value = G.flash;
   U.gold.value = G.flashGold || 0;
   U.time.value = G.time;
-  U.low.value = G.state === 'play' && run.hp < st.maxHp * 0.3 ? 1 : 0;
+  U.low.value = G.state === 'play' && st.maxHp ? Math.max(0, Math.min(1, (F.lowHp - run.hp / st.maxHp) / F.lowHp)) : 0;
   U.moon.value += ((run.moon && G.state !== 'menu' ? 1 : 0) - U.moon.value) * Math.min(1, 2 * dt);
   U.dark.value = G.darkness;
   U.toxic.value += ((isSewer() && G.state !== 'menu' ? 1 : 0) - U.toxic.value) * Math.min(1, 2 * dt);

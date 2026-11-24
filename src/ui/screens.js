@@ -194,6 +194,7 @@ export function pause(on) {
       <label>Music<input type="range" id="sMu" min="0" max="1" step="0.05" value="${settings.music}"></label>
       <label>Effects<input type="range" id="sFx" min="0" max="1" step="0.05" value="${settings.sfx}"></label>
       <label>Announcer voice<input type="checkbox" id="sVo" ${settings.voice ? 'checked' : ''}></label>
+      <label>Gore<input type="checkbox" id="sGore" ${settings.gore !== false ? 'checked' : ''}></label>
     </div>
     <div class="btns"><button class="btn" id="resumeBtn">Resume</button><button class="btn ghost" id="quit">Abandon run</button></div></div>`);
   $('resumeBtn').onclick = resume;
@@ -201,6 +202,7 @@ export function pause(on) {
   $('sMu').oninput = e => { settings.music = +e.target.value; applyVolumes(); saveSettings(); };
   $('sFx').oninput = e => { settings.sfx = +e.target.value; applyVolumes(); saveSettings(); };
   $('sVo').onchange = e => { settings.voice = e.target.checked; saveSettings(); };
+  $('sGore').onchange = e => { settings.gore = e.target.checked; saveSettings(); };
   $('quit').onclick = () => { G.state = 'play'; run.hp = 0; run.abandon = true; die(); };
 }
 

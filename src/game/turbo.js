@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { rand, TAU } from '../core/util.js';
 import { G, P, W, run, st } from '../core/state.js';
-import { boom, fx, puff, spark, bolt, dnum, PART_CAP } from '../fx/fx.js';
+import { boom, fx, puff, spark, bolt, dnum } from '../fx/fx.js';
+import { spawnCapped } from '../fx/pool.js';
 import { scene } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
 import { CLASSES } from '../data/classes.js';
@@ -111,7 +112,7 @@ export function syncTurboFx(dt) {
   aura.visible = auraMat.opacity > 0.02;
   if (domeT > 0) { domeT -= dt; const u = 1 - domeT / 0.45; dome.position.set(P.x, P.y + 0.5, P.z); dome.scale.setScalar(1 + u * 4); domeMat.opacity = 0.5 * (1 - u); dome.visible = true; } else dome.visible = false;
 }
-const part = p => { if (W.parts.length >= PART_CAP) W.parts.shift(); W.parts.push(p); };
+const part = p => spawnCapped(W.parts, TUNE.gore.partCap, o => { Object.assign(o, { b: false, ng: false }, p); });
 /** Each class's turbo flourish, at the rat. `big` for blasts. */
 const FLOURISH = {
   slinger(big) { // a spiralling halo of stones
