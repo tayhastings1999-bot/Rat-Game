@@ -16,6 +16,7 @@ import { hud, drawMap, initHudIcons } from './ui/hud.js';
 import { initTouch } from './ui/touch.js';
 import { padStart, padBack, slotOf, dropIn, dropOut, coop } from './game/coop.js';
 import { pause, resume } from './ui/screens.js';
+import { simDt, tickKillHitStop } from './game/hitstop.js';
 
 initHudIcons();
 refreshPortraits();
@@ -37,9 +38,8 @@ function loop(now) {
   document.body.classList.toggle('playing', G.state === 'play');
   G.last = now;
   G.time += dt;
-  let sdt = dt;
-  if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; }
-  else if (G.slowMo > 0) { G.slowMo -= dt; sdt = dt * 0.3; } // perfect dodge
+  const sdt = simDt(G, dt);
+  tickKillHitStop(G, dt);
   // Start on a pad that isn't in the party drops that pad in mid-run (pad 1 solo is player 1's, so it pauses);
   // Back on a joined pad drops it out. Any other Start pauses / resumes.
   const sp = padStart(), bp = padBack();

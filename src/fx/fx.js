@@ -2,12 +2,16 @@
 // particles, blood, gibs, decals and floating damage numbers.
 import * as THREE from 'three';
 import { rand, randi, TAU, PI2 } from '../core/util.js';
-import { G, P, W } from '../core/state.js';
+import { G, P, W, settings } from '../core/state.js';
 import { scene, camera } from '../render/renderer.js';
 import { atlasTex } from '../render/textures.js';
 import { decals, dummy, tmpC, _v, DECAL_CAP } from '../render/pools.js';
 import { floorY } from '../world/grid.js';
 import { sfx } from '../audio/audio.js';
+import { TUNE } from '../tuning.js';
+import { spawnCapped, makePool } from './pool.js';
+import { goreOn } from './gore.js';
+import { feelEvent } from './feelEvents.js';
 
 export const ringGeo = new THREE.RingGeometry(0.86, 1, 32);
 export const discGeo = new THREE.CircleGeometry(1, 32);
@@ -172,44 +176,87 @@ export function bolt(pts) {
   sfx('zap');
 }
 
-export const PART_CAP = 700;
+export const PART_CAP = 700; // default; live cap is TUNE.gore.partCap
+const partCap = () => TUNE.gore.partCap || PART_CAP;
+const gibCap = () => TUNE.gore.gibCap || 400;
+
 export function puff(x, y, z, col, n = 6, s = 3) {
   for (let i = 0; i < n; i++) {
-    if (W.parts.length >= PART_CAP) W.parts.shift();
-    W.parts.push({ x, y, z, vx: rand(-1, 1) * s, vy: rand(0.3, 1.4) * s, vz: rand(-1, 1) * s, life: rand(0.3, 0.6), c: col, s: 1 });
+    spawnCapped(W.parts, partCap(), p => { Object.assign(p, { x, y, z, vx: rand(-1, 1) * s, vy: rand(0.3, 1.4) * s, vz: rand(-1, 1) * s, life: rand(0.3, 0.6), c: col, b: false, s: 1, ng: false }); });
   }
 }
-export function blood(x, y, z, col, ang, n, sp = 4) {
+export function blood(x, y, z, col, ang, n, sp) {
+  if (!goreOn(settings) || !n) return;
+  const GR = TUNE.gore, speed = sp ?? GR.bloodSpeed;
   for (let i = 0; i < n; i++) {
-    if (W.parts.length >= PART_CAP) W.parts.shift();
-    const a = ang == null ? rand(0, TAU) : ang + rand(-0.8, 0.8), v = rand(1.5, sp);
-    W.parts.push({ x, y, z, vx: Math.sin(a) * v, vy: rand(2, 6), vz: Math.cos(a) * v, life: 1.4, c: col, b: true, s: rand(0.8, 1.5) });
+    const a = ang == null ? rand(0, TAU) : ang + rand(-0.8, 0.8), v = rand(1.5, speed);
+    spawnCapped(W.parts, partCap(), p => { Object.assign(p, { x, y, z, vx: Math.sin(a) * v, vy: rand(2, 6), vz: Math.cos(a) * v, life: GR.bloodLife, c: col, b: true, s: rand(0.8, 1.5), ng: false }); });
   }
 }
+
+// Floor splats: one pooled list, faded or evicted at TUNE.gore.decalCap (across all atlas frames).
+const splatPool = makePool(160, () => ({ on: false, x: 0, y: 0, z: 0, s: 1, col: 0, frame: 0, life: 0, max: 0, ang: 0 }));
 export function decal(x, y, z, s, col) {
-  const D = decals[randi(0, 3)];
-  dummy.position.set(x, y + 0.02 + Math.random() * 0.02, z);
-  dummy.rotation.set(0, rand(0, TAU), 0);
-  dummy.scale.set(s, 1, s);
-  dummy.updateMatrix();
-  D.m.setMatrixAt(D.i, dummy.matrix);
-  D.m.setColorAt(D.i, tmpC.setHex(col));
-  D.i = (D.i + 1) % DECAL_CAP;
-  D.n = Math.min(DECAL_CAP, D.n + 1);
-  D.m.count = D.n;
-  D.m.instanceMatrix.needsUpdate = true;
-  D.m.instanceColor.needsUpdate = true;
+  if (!goreOn(settings)) return;
+  const cap = Math.min(DECAL_CAP, TUNE.gore.decalCap || DECAL_CAP);
+  const d = splatPool.acquire(cap);
+  if (!d) return;
+  d.on = true;
+  d.x = x; d.y = y + 0.02 + Math.random() * 0.02; d.z = z;
+  d.s = s; d.col = col;
+  d.frame = randi(0, 3);
+  d.ang = rand(0, TAU);
+  d.max = d.life = TUNE.gore.decalFade || 0;
 }
-export function clearDecals() { for (const D of decals) { D.n = 0; D.i = 0; D.m.count = 0; } }
+function tickDecals(dt) {
+  const fade = TUNE.gore.decalFade;
+  if (fade > 0) splatPool.retain(d => { if (!d.on) return false; d.life -= dt; if (d.life <= 0) { d.on = false; return false; } return true; });
+  const counts = [0, 0, 0, 0];
+  for (const d of splatPool.live) {
+    const i = counts[d.frame];
+    if (i >= DECAL_CAP) continue;
+    const u = fade > 0 && d.max > 0 ? d.life / d.max : 1;
+    const k = u > 0.35 ? 1 : Math.max(0, u / 0.35);
+    dummy.position.set(d.x, d.y, d.z);
+    dummy.rotation.set(0, d.ang, 0);
+    dummy.scale.set(d.s * k, 1, d.s * k);
+    dummy.updateMatrix();
+    const D = decals[d.frame];
+    D.m.setMatrixAt(i, dummy.matrix);
+    D.m.setColorAt(i, tmpC.setHex(d.col));
+    counts[d.frame] = i + 1;
+  }
+  for (let f = 0; f < 4; f++) {
+    decals[f].n = counts[f];
+    decals[f].m.count = counts[f];
+    decals[f].m.instanceMatrix.needsUpdate = true;
+    if (decals[f].m.instanceColor) decals[f].m.instanceColor.needsUpdate = true;
+  }
+}
+export function clearDecals() {
+  splatPool.clear();
+  for (const D of decals) { D.n = 0; D.i = 0; D.m.count = 0; }
+}
 
 /** Flesh chunks that bounce, tumble and leave blood where they land. */
-export function gore(e, mul = 1) {
-  const big = e.boss || e.pred || e.type === 'nest', n = Math.round((big ? 22 : e.h > 1 ? 9 : 5) * mul), s0 = (e.sc || 1) * (big ? 2 : 1);
+export function gore(e, mul) {
+  if (!goreOn(settings)) return;
+  const GR = TUNE.gore;
+  const m = mul == null ? GR.gibMul : mul;
+  const big = e.boss || e.pred || e.type === 'nest', n = Math.round((big ? GR.gibBig : e.h > 1 ? GR.gibMid : GR.gibSmall) * m), s0 = (e.sc || 1) * (big ? 2 : 1);
   for (let i = 0; i < n; i++) {
-    if (W.gibs.length >= 400) W.gibs.shift();
-    const a = rand(0, TAU), v = rand(2, big ? 9 : 6) * (mul > 1 ? 1.4 : 1);
-    W.gibs.push({ x: e.x, y: e.y + e.h * 0.5, z: e.z, vx: Math.sin(a) * v, vy: rand(4, 10), vz: Math.cos(a) * v, rx: rand(0, 6), ry: rand(0, 6), sp: rand(-14, 14), life: rand(5, 9), c: i % 3 === 0 ? e.blood : i % 3 === 1 ? e.col : 0x5a0808, s: rand(0.7, 1.6) * s0, l: rand(1, 2.4), hit: false, rest: false });
+    const a = rand(0, TAU), v = rand(2, big ? GR.gibSpeedBig : GR.gibSpeed) * (m > 1 ? 1.4 : 1);
+    spawnCapped(W.gibs, gibCap(), g => { Object.assign(g, { x: e.x, y: e.y + e.h * 0.5, z: e.z, vx: Math.sin(a) * v, vy: rand(4, 10), vz: Math.cos(a) * v, rx: rand(0, 6), ry: rand(0, 6), sp: rand(-14, 14), life: rand(GR.gibLifeMin, GR.gibLifeMax), c: i % 3 === 0 ? e.blood : i % 3 === 1 ? e.col : 0x5a0808, s: rand(0.7, 1.6) * s0, l: rand(1, 2.4), hit: false, rest: false }); });
   }
+}
+
+/** A sharp ring + spark when something dies. Works in mesh and ?sprites=1 (world-space). */
+export function killPop(x, y, z, col = 0xffe8d0, big = false) {
+  const F = TUNE.feel, s = big ? F.killPopBoss : F.killPop;
+  const gy = floorY(x, z);
+  fx('ring', x, gy, z, s, col, F.killPopLife, 0, 0.95);
+  spark(x, y + 0.4, z, s * 0.35, 0xfff4e8);
+  feelEvent('killPop', { x, y, z, big });
 }
 
 // ---------- weapon visuals that live with FX ----------
@@ -246,6 +293,7 @@ export function dnum(x, y, z, v, cls = '') {
 
 /** Advance pooled FX lifetimes (called from the render sync). */
 export function tickFx(dt) {
+  tickDecals(dt);
   numBudget = 4;
   for (const f of swipes) {
     if (!f.on) continue;

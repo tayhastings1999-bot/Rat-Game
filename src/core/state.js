@@ -11,6 +11,12 @@ export const G = {
   shake: 0,
   flash: 0,
   hitStop: 0,
+  killStop: 0,        // remaining render-only kill freeze (real time)
+  killStopMax: 0,     // original length of the active kill freeze
+  killStopCd: 0,      // post-freeze cooldown; new kills cannot restart or extend during it
+  feelTime: 0,        // visual clock; pauses during killStop
+  trauma: 0,
+  hbT: 0,
   boss: null,
   lockOn: null,
   camYaw: Math.PI,
@@ -52,7 +58,7 @@ export const run = {};
 export const st = {};
 
 export const settings = Object.assign(
-  { shake: 1, music: 0.55, sfx: 0.7, voice: false, musicMode: 'v3' }, // musicMode: 'v3' stems | 'procedural' (v2 isn't shipped: plays procedural)
+  { shake: 1, music: 0.55, sfx: 0.7, voice: false, musicMode: 'v3', gore: true }, // musicMode: 'v3' stems | 'procedural' (v2 isn't shipped: plays procedural)
   loadJSON('scurry.settings', loadJSON('scurry5.settings', {})),
 );
 if (settings.vol != null && settings.sfx == null) settings.sfx = settings.vol;

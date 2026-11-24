@@ -22,6 +22,7 @@ import { CLASSES } from '../data/classes.js';
 import { grabTarget, dropCarry } from '../entities/player.js';
 import { throwVial } from '../game/vials.js';
 import { turboBlast, turboDown, turboUp } from '../game/turbo.js';
+import { simDt, tickKillHitStop } from '../game/hitstop.js';
 
 // ---------- skill profiles ----------
 export const PROFILES = {
@@ -451,8 +452,8 @@ function sample() {
 function step(dt) {
   if (G.state !== 'play') return;
   G.time += dt;
-  let sdt = dt;
-  if (G.hitStop > 0) { G.hitStop -= dt; sdt = dt * 0.06; } else if (G.slowMo > 0) { G.slowMo -= dt; sdt = dt * 0.3; }
+  const sdt = simDt(G, dt);
+  tickKillHitStop(G, dt);
   B.t += dt;
   const px = toG(P.x), pz = toG(P.z);
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if (inG(px + dx, pz + dz)) B.visited.add(gi(px + dx, pz + dz)); // the rat sees the tiles around it

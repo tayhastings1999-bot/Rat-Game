@@ -6,7 +6,7 @@ import { G, P, W, run, st, meta, settings } from '../core/state.js';
 import { onLowHp } from '../game/shop.js';
 import { world, bury, dropCreature } from '../render/renderer.js';
 import { flameTex } from '../render/textures.js';
-import { blood, spark, puff, boom, decal, gore, dnum } from '../fx/fx.js';
+import { blood, spark, puff, boom, decal, gore, dnum, killPop } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
 import { floorY } from '../world/grid.js';
 import { warn } from './hazards.js';
@@ -20,6 +20,9 @@ import { guardMul, maybeFlee, packRage } from '../entities/roles.js';
 import { addXP, dropLoot } from '../game/progress.js';
 import { onBossHit } from '../entities/brain.js';
 import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
+import { applyKillHitStop } from '../game/hitstop.js';
+import { bloodCount } from '../fx/gore.js';
+import { feelEvent } from '../fx/feelEvents.js';
 import { bountyKill } from '../game/events.js';
 import { thiefDown } from '../game/objectives.js';
 import { scabDown } from '../game/personality.js';
@@ -101,7 +104,8 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   if (e.boss) d *= onBossHit(e, d) * (e.armored || 1); // exposed bosses take more; bursts break their poise; iron-hided variants less
   d = Math.max(1, Math.round(d));
   e.hp -= d;
-  e.flash = 0.1;
+  const F = TUNE.feel;
+  e.flash = F.flashHit;
   e.hitT = G.time;
   if (ang != null) e.hitA = ang;
   e.hurt = true;
@@ -109,14 +113,15 @@ export function hit(e, base, ang, kb, src, quiet, itemFx) {
   if (src !== 'swarm' && src !== 'dot') streakHit(1);
   if (src !== 'turbo') turboGain(d);
   sfx('hit');
-  if (crit || d >= 40) G.hitStop = Math.max(G.hitStop, 0.035);
+  if (crit || d >= F.hitStopDmg) G.hitStop = Math.max(G.hitStop, Math.min(F.hitStopCap, F.hitStopHit));
   run.dmgBy[src] = (run.dmgBy[src] || 0) + d;
   run.dmg += d;
   if (kb && ang != null && !e.heavy) { e.kx += Math.sin(ang) * kb; e.kz += Math.cos(ang) * kb; }
   if (!quiet || crit) {
-    blood(e.x, e.y + e.h * 0.6, e.z, e.blood, ang, crit ? 6 : 3);
+    blood(e.x, e.y + e.h * 0.6, e.z, e.blood, ang, bloodCount(d, crit));
     spark(e.x, e.y + e.h * 0.6, e.z, crit ? 1.4 : 0.8);
   }
+  feelEvent('hit', { dmg: d, crit });
   if (!quiet || crit || Math.random() < 0.3) dnum(e.x, e.y + e.h + 0.3, e.z, d, crit ? 'crit' : '');
   if (melee && st.meleeLeech) run.hp = Math.min(st.maxHp, run.hp + st.meleeLeech * st.healMul);
   if (e.hp <= 0) kill(e);
@@ -160,7 +165,7 @@ export function hurtP(d, from, raw) {
     if (from.corrupt === 'leech' && !from.dead) { from.hp = Math.min(from.maxHp, from.hp + from.maxHp * 0.12); puff(from.x, from.y + from.h * 0.6, from.z, 0xd02040, 6, 2); }
   }
   blood(P.x, P.y + 0.5, P.z, 0xa01010, null, raw ? 2 : 6);
-  if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, 0.05); streakBreak(); }
+  if (!raw) { dnum(P.x, P.y + 1.4, P.z, '-' + d, 'heal'); sfx('hurt'); G.hitStop = Math.max(G.hitStop, Math.min(TUNE.feel.hitStopCap, TUNE.feel.hitStopHurt)); streakBreak(); }
   onLowHp();
   lowHealth();
   if (run.hp <= 0) die();
@@ -177,16 +182,24 @@ export function kill(e) {
   if (e.mini) run.minis = (run.minis || 0) + 1;
   streakHit(TUNE.turbo.streak.killHits);
   sfx('kill');
-  if (e.boss || e.pred || e.elite || e.type === 'brute' || e.type === 'nest') G.hitStop = Math.max(G.hitStop, e.boss ? 0.3 : 0.08);
+  const F = TUNE.feel, GR = TUNE.gore;
   const big = e.boss || e.pred;
-  blood(e.x, e.y + e.h * 0.5, e.z, e.blood, null, big ? 30 : 12, e.boss ? 8 : 5);
-  puff(e.x, e.y + e.h / 2, e.z, e.col, e.boss ? 20 : 5, 3.5);
-  boom(e.x, e.y + e.h * 0.5, e.z, (big ? 5 : 1.6) * (e.sc || 1), e.blood);
-  decal(e.x, floorY(e.x, e.z) + 0.01, e.z, rand(1.2, 2.2) * (big ? 2.5 : 1) * (e.sc || 1), e.blood);
+  const bigKill = !!(e.boss || e.pred || e.elite || e.type === 'brute' || e.type === 'nest');
+  const stop = e.boss ? F.hitStopBoss : bigKill ? F.hitStopBig : F.hitStopKill;
+  // Ordinary kills: render-only freeze. Elite / pred / brute / nest / boss kills still slow the sim.
+  if (bigKill) G.hitStop = Math.max(G.hitStop, Math.min(F.hitStopCap, stop));
+  else applyKillHitStop(G, stop);
+  G.shake = Math.max(G.shake, e.boss ? F.bossShake : big ? F.bigKillShake : F.killShake);
+  blood(e.x, e.y + e.h * 0.5, e.z, e.blood, null, big ? GR.killBloodBig : GR.killBlood, e.boss ? GR.killBloodBossSp : GR.killBloodSp);
+  puff(e.x, e.y + e.h / 2, e.z, e.col, e.boss ? GR.bossPuff : GR.killPuff, 3.5);
+  boom(e.x, e.y + e.h * 0.5, e.z, (e.boss ? GR.bossBoom : big ? GR.bossBoom * 0.7 : GR.killBoom) * (e.sc || 1), e.blood);
+  decal(e.x, floorY(e.x, e.z) + 0.01, e.z, rand(GR.decalMin, GR.decalMax) * (big ? GR.decalBig : 1) * (e.sc || 1), e.blood);
+  killPop(e.x, e.y + e.h * 0.5, e.z, e.blood, big);
+  feelEvent(e.boss ? 'bossDeath' : 'kill', { boss: !!e.boss, elite: !!e.elite });
   // Small fry die with a short ragdoll tumble (sync.js) and lose a few chunks now.
   const rag = !e.boss && !e.pred && !e.mesh && !e.rival && e.type !== 'nest';
-  gore(e, rag ? 0.6 : 1);
-  if (rag && W.corpses.length < 60) {
+  gore(e, e.boss ? GR.gibBossMul : rag ? GR.gibRagMul : GR.gibMul);
+  if (rag && W.corpses.length < GR.corpseCap) {
     const a = e.hitA ?? e.ang + Math.PI, v = e.fly ? 2 : 3.5 + Math.min(6, Math.hypot(e.kx || 0, e.kz || 0) * 0.4);
     W.corpses.push({ type: e.type, x: e.x, y: e.y, z: e.z, ang: e.ang, sc: e.sc || 1, ph: e.ph || 0, vx: Math.sin(a) * v, vy: e.fly ? 0 : rand(3, 5.5), vz: Math.cos(a) * v, rx: 0, rz: 0, sx: rand(-9, 9), sz: rand(-9, 9), t: 0, life: e.fly ? 0.9 : 0.6, fly: e.fly, blood: e.blood, col: e.col, h: e.h, gph: e.gph || 0 });
   }
