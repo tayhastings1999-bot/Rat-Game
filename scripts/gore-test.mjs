@@ -45,7 +45,7 @@ globalThis.location = { search: '' };
 const { TUNE, setTune } = await import('../src/tuning.js');
 const { goreOn, bloodCount } = await import('../src/fx/gore.js');
 ok('TUNE.gore defaults: on (force null), caps set', TUNE.gore.force == null && TUNE.gore.partCap === 700 && TUNE.gore.gibCap === 400 && TUNE.gore.decalCap === 140);
-ok('TUNE.feel defaults: hit-stop, shake cap, lowHp', TUNE.feel.hitStopBoss === 0.3 && TUNE.feel.shakeCap === 1.2 && TUNE.feel.lowHp === 0.3);
+ok('TUNE.feel defaults: hit-stop, shake cap, lowHp', TUNE.feel.hitStopBoss === 0.3 && TUNE.feel.shakeCap === 1.2 && TUNE.feel.lowHp === 0.3 && TUNE.feel.lowHpVig === 0.35 && TUNE.feel.hitStopKillCd === 0.08);
 ok('goreOn default (no settings) is on', goreOn() === true && goreOn({}) === true);
 ok('goreOn respects settings.gore = false', goreOn({ gore: false }) === false);
 ok('goreOn settings true stays on', goreOn({ gore: true }) === true);
@@ -73,4 +73,53 @@ TUNE.gore.force = null;
   ok('feelEvent unsubscribe stops delivery', got.length === 2);
 }
 
+// ---------- kill hit-stop (render-only) and low-HP vignette ----------
+{
+  const { applyKillHitStop, tickKillHitStop, simDt, feelDt, feelNow, lowHpVignette } = await import('../src/game/hitstop.js');
+  const F = TUNE.feel;
+  const fresh = () => ({ hitStop: 0, slowMo: 0, killStop: 0, killStopMax: 0, killStopCd: 0, feelTime: 0 });
+
+  const g = fresh();
+  applyKillHitStop(g, F.hitStopKill);
+  ok('applyKillHitStop starts a freeze at the kill duration', g.killStop === F.hitStopKill && g.killStopMax === F.hitStopKill && g.killStopCd === F.hitStopKillCd);
+  ok('kill freeze does not set sim hitStop', g.hitStop === 0 && simDt(g, 1 / 30) === 1 / 30);
+  ok('feelDt is 0 during the kill freeze', feelDt(g, 1 / 30) === 0);
+
+  const g2 = fresh();
+  g2.hitStop = F.hitStopHurt;
+  ok('non-kill hit-stop still slows the sim', Math.abs(simDt(g2, 1 / 30) - (1 / 30) * 0.06) < 1e-12);
+
+  const g3 = fresh();
+  applyKillHitStop(g3, F.hitStopBig);
+  const left = g3.killStop;
+  applyKillHitStop(g3, F.hitStopBoss);
+  ok('a new kill during the freeze/cooldown cannot extend past the original length', g3.killStop === left && g3.killStopMax === F.hitStopBig && g3.killStop <= F.hitStopBig);
+
+  const g4 = fresh();
+  applyKillHitStop(g4, 0.08);
+  tickKillHitStop(g4, 0.08);
+  ok('freeze ends on real time without touching sim hitStop', g4.killStop === 0 && g4.hitStop === 0 && g4.killStopCd === F.hitStopKillCd);
+  applyKillHitStop(g4, 0.08);
+  ok('cooldown blocks a new freeze right after the last one', g4.killStop === 0);
+  tickKillHitStop(g4, F.hitStopKillCd);
+  applyKillHitStop(g4, 0.08);
+  ok('a new freeze can start once the cooldown has elapsed', g4.killStop === 0.08);
+
+  const g5 = fresh();
+  applyKillHitStop(g5, 0.1);
+  tickKillHitStop(g5, 0.04);
+  ok('feelTime pauses during the kill freeze', feelNow(g5) === 0);
+  tickKillHitStop(g5, 0.1);
+  tickKillHitStop(g5, 0.05);
+  ok('feelTime advances again after the freeze (and during cooldown)', Math.abs(feelNow(g5) - 0.05) < 1e-12);
+
+  ok('vignette is off above the low-HP line', lowHpVignette(31, 100) === 0);
+  ok('vignette snaps on at 30% to lowHpVig', lowHpVignette(30, 100) === F.lowHpVig);
+  ok('vignette is already strong just below 30%', lowHpVignette(29, 100) > 0.35);
+  ok('vignette is full at 0 HP', lowHpVignette(0, 100) === 1);
+  const mid = lowHpVignette(15, 100);
+  ok('vignette deepens toward 0 HP', mid > F.lowHpVig && mid < 1 && Math.abs(mid - (F.lowHpVig + (1 - F.lowHpVig) * 0.5)) < 1e-12);
+}
+
 process.exit(fail ? 1 : 0);
+

@@ -26,6 +26,7 @@ import { nearest } from '../combat/combat.js';
 import { syncScent } from './scent.js';
 import { sigPose } from './signature.js';
 import { puOn } from './powerups.js';
+import { feelDt, feelNow, lowHpVignette } from './hitstop.js';
 
 G.camPos = new THREE.Vector3(0, 12, 12);
 G.camOff = new THREE.Vector3();
@@ -94,10 +95,11 @@ const frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4(), _sph = new THREE
 const onScreen = e => { _sph.center.set(e.x, e.y + (e.h || 1) * 0.5, e.z); _sph.radius = (e.r || 0.5) * (e.sc || 1) + 1.5; return frustum.intersectsSphere(_sph); };
 
 export function sync(dt) {
-  rigTime.value = G.time;
+  const vdt = feelDt(G, dt);
+  rigTime.value = feelNow(G);
   camera.updateMatrixWorld();
   frustum.setFromProjectionMatrix(_m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse.copy(camera.matrixWorld).invert()));
-  tickAmbient(dt);
+  tickAmbient(vdt);
   const cnt = {};
   for (const k in IMB) cnt[k] = 0;
   let rings = 0;
@@ -106,7 +108,7 @@ export function sync(dt) {
       if (e.type === 'nest' || e.rival || e.reaper) continue; // these place their own meshes
       e.mesh.visible = !e.hidden;
       const rg = e.mesh.userData.rig;
-      if (rg) { animTick(e, dt, e.mesh.userData.rigKey, P.x, P.z); writePose(e, rg.rA.value, rg.rB.value); }
+      if (rg) { animTick(e, vdt, e.mesh.userData.rigKey, P.x, P.z); writePose(e, rg.rA.value, rg.rB.value); }
       const fl = e.fl || 0, rel = angD(e.hitA ?? e.ang, e.ang), coil = Math.max(0, -(e.ap || 0));
       e.mesh.position.set(e.x, e.y + (e.fly ? 0 : Math.abs(Math.sin(e.gph || 0)) * 0.08 * (e.gam || 0)), e.z);
       e.mesh.rotation.set((e.pitch || 0) + coil * 0.08 + Math.cos(rel) * fl * 0.12, e.ang, (e.roll || 0) + (e.lean || 0) * 0.4 - Math.sin(rel) * fl * 0.12);
@@ -120,7 +122,7 @@ export function sync(dt) {
     if (!onScreen(e)) continue;
     const i = cnt[e.type]++;
     if (i >= MOB_CAP) continue;
-    animTick(e, dt, e.type, P.x, P.z);
+    animTick(e, vdt, e.type, P.x, P.z);
     writePose(e, IMB[e.type].userData.rA, IMB[e.type].userData.rB, i);
     if (e.disguise) { IMB[e.type].userData.rA.setXYZW(i, 0, 1, 0, 0); IMB[e.type].userData.rB.setXYZW(i, 0, 0, e.fl * 0.6, 0); }
     poseMatrix(e);
@@ -156,17 +158,17 @@ export function sync(dt) {
   if (ringIM.instanceColor) ringIM.instanceColor.needsUpdate = true;
   // Ragdoll corpses: a short tumble along the killing blow, then they pop.
   keep(W.corpses, c => {
-    c.t += dt;
+    c.t += vdt;
     if (c.t >= c.life) {
       puff(c.x, c.y + 0.2, c.z, c.col, 4, 2);
       decal(c.x, floorY(c.x, c.z) + 0.012, c.z, rand(0.7, 1.2) * c.sc, c.blood);
       return false;
     }
     const gy = floorY(c.x, c.z);
-    c.vy -= GRAV * 1.3 * dt;
-    c.x += c.vx * dt; c.z += c.vz * dt; c.y += c.vy * dt;
+    c.vy -= GRAV * 1.3 * vdt;
+    c.x += c.vx * vdt; c.z += c.vz * vdt; c.y += c.vy * vdt;
     if (c.y <= gy) { c.y = gy; c.vy = Math.abs(c.vy) > 3 ? -c.vy * 0.3 : 0; c.vx *= 0.6; c.vz *= 0.6; c.sx *= 0.5; c.sz *= 0.5; }
-    c.rx += c.sx * dt; c.rz += c.sz * dt;
+    c.rx += c.sx * vdt; c.rz += c.sz * vdt;
     const i = cnt[c.type]++;
     if (i >= MOB_CAP || !IMB[c.type]) return true;
     const u = c.t / c.life, shrink = u > 0.7 ? 1 - (u - 0.7) / 0.3 * 0.6 : 1;
@@ -231,9 +233,9 @@ export function sync(dt) {
   putP(pprojIM, W.pproj, true);
   putP(eprojIM, W.eproj, false);
   for (const p of W.parts) {
-    p.life -= dt;
-    if (!p.ng) p.vy -= 14 * dt;
-    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    p.life -= vdt;
+    if (!p.ng) p.vy -= 14 * vdt;
+    p.x += p.vx * vdt; p.y += p.vy * vdt; p.z += p.vz * vdt;
     const gy = floorY(p.x, p.z);
     if (p.y <= gy && p.vy < 0) { if (p.b && goreOn(settings) && Math.random() < TUNE.gore.splatChance) decal(p.x, gy, p.z, rand(TUNE.gore.splatMin, TUNE.gore.splatMax), p.c); p.life = 0; }
   }
@@ -254,11 +256,11 @@ export function sync(dt) {
   if (partIM.instanceColor) partIM.instanceColor.needsUpdate = true;
   n = 0;
   for (const g of W.gibs) {
-    g.life -= dt;
+    g.life -= vdt;
     if (!g.rest) {
-      g.vy -= GRAV * dt;
+      g.vy -= GRAV * vdt;
       const ox = g.x, oz = g.z;
-      g.x += g.vx * dt; g.y += g.vy * dt; g.z += g.vz * dt; g.rx += g.sp * dt;
+      g.x += g.vx * vdt; g.y += g.vy * vdt; g.z += g.vz * vdt; g.rx += g.sp * vdt;
       const gy = floorY(g.x, g.z) + 0.06;
       if (g.y < gy) {
         if (gy - g.y > 1.5) { g.x = ox; g.z = oz; g.vx *= -0.4; g.vz *= -0.4; }
@@ -285,7 +287,7 @@ export function sync(dt) {
   gibIM.count = n;
   gibIM.instanceMatrix.needsUpdate = true;
   if (gibIM.instanceColor) gibIM.instanceColor.needsUpdate = true;
-  tickFx(dt);
+  tickFx(vdt);
   n = 0;
   if (P.scent && G.state === 'play') for (const sp of W.scentPaths) {
     const L = sp.p.length;
@@ -339,11 +341,12 @@ export function sync(dt) {
 
 export function animate(dt) {
   if (!G.rat) return;
+  const vdt = feelDt(G, dt);
   beginHeroes();
   heroI = 0;
-  poseRat(dt, blob);
-  coopAnimate(dt, poseRat);
-  animateCamera(dt);
+  poseRat(vdt, blob);
+  coopAnimate(vdt, poseRat);
+  animateCamera(vdt);
   endHeroes(camera);
 }
 
@@ -355,7 +358,7 @@ function poseRat(dt, shadow) {
   // sprite instead of the mesh. Without an atlas this is skipped and the mesh path below is untouched.
   if (heroSprite(run.cls) && spriteRat(rat, hi, shadow)) return;
   if (rat.g.userData.spriteHid) { rat.g.userData.spriteHid = false; rat.g.visible = true; }
-  const t = G.time, bulk = rat.bulk || 1;
+  const t = feelNow(G), bulk = rat.bulk || 1;
   rat.g.position.set(P.x, P.y, P.z);
   rat.g.rotation.y += angD(P.facing, rat.g.rotation.y) * (1 - Math.exp(-18 * dt));
   const A = rat.anim || (rat.anim = newAnim());
@@ -426,7 +429,7 @@ function spriteRat(rat, hi, shadow) {
   // World facing (sin f, cos f) → screen angle: x along camera right, y along camera forward (up-screen).
   const fx = Math.sin(s.facing), fz = Math.cos(s.facing), ang = Math.atan2(fx * b.fx + fz * b.fz, fx * b.rx + fz * b.rz);
   const blink = P.inv > 0 && P.roll <= 0 && G.state === 'play' && Math.floor(G.time * 24) % 2 === 1;
-  const ok = !blink ? drawHero(run.cls, s, ang, G.time, P.x, P.y, P.z, TUNE.coop.colors?.[hi] ?? null, 0, P.squeeze ? 1.2 : 1, P.squeeze ? 0.7 : 1) : true;
+  const ok = !blink ? drawHero(run.cls, s, ang, feelNow(G), P.x, P.y, P.z, TUNE.coop.colors?.[hi] ?? null, 0, P.squeeze ? 1.2 : 1, P.squeeze ? 0.7 : 1) : true;
   if (!ok) return false;
   rat.g.position.set(P.x, P.y, P.z);
   rat.g.visible = false; rat.g.userData.spriteHid = true;
@@ -493,7 +496,7 @@ function animateCamera(dt) {
   U.hurt.value = G.flash;
   U.gold.value = G.flashGold || 0;
   U.time.value = G.time;
-  U.low.value = G.state === 'play' && st.maxHp ? Math.max(0, Math.min(1, (F.lowHp - run.hp / st.maxHp) / F.lowHp)) : 0;
+  U.low.value = G.state === 'play' ? lowHpVignette(run.hp, st.maxHp) : 0;
   U.moon.value += ((run.moon && G.state !== 'menu' ? 1 : 0) - U.moon.value) * Math.min(1, 2 * dt);
   U.dark.value = G.darkness;
   U.toxic.value += ((isSewer() && G.state !== 'menu' ? 1 : 0) - U.toxic.value) * Math.min(1, 2 * dt);

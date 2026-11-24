@@ -11,6 +11,10 @@ export const G = {
   shake: 0,
   flash: 0,
   hitStop: 0,
+  killStop: 0,        // remaining render-only kill freeze (real time)
+  killStopMax: 0,     // original length of the active kill freeze
+  killStopCd: 0,      // post-freeze cooldown; new kills cannot restart or extend during it
+  feelTime: 0,        // visual clock; pauses during killStop
   trauma: 0,
   hbT: 0,
   boss: null,

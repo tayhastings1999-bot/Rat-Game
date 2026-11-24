@@ -169,6 +169,8 @@ const TAUF = Math.PI * 2;
 export function animTick(e, dt, key, px, pz) {
   const R = RIGS[key] || DEF;
   if (e.anx == null) { e.anx = e.x; e.anz = e.z; e.gph = Math.random() * TAUF; e.gam = 0; e.ap = 0; e.av = 0; e.lean = 0; e.hyaw = 0; e.flap = Math.random() * TAUF; e.pang = e.ang; e.sq = 0; e.sqv = 0; e.pvy = 0; }
+  // dt 0: acknowledge position so a kill freeze does not dump a huge step into the walk cycle when it ends.
+  if (dt <= 0) { e.anx = e.x; e.anz = e.z; e.pang = e.ang; return; }
   const step = Math.min(Math.hypot(e.x - e.anx, e.z - e.anz), 2);
   e.anx = e.x; e.anz = e.z;
   const sc = e.sc || 1, k = Math.min(1, dt * 10);

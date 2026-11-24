@@ -20,6 +20,7 @@ import { guardMul, maybeFlee, packRage } from '../entities/roles.js';
 import { addXP, dropLoot } from '../game/progress.js';
 import { onBossHit } from '../entities/brain.js';
 import { tryPerfectDodge, perfectCrit } from '../game/feel.js';
+import { applyKillHitStop } from '../game/hitstop.js';
 import { bloodCount } from '../fx/gore.js';
 import { feelEvent } from '../fx/feelEvents.js';
 import { bountyKill } from '../game/events.js';
@@ -184,7 +185,7 @@ export function kill(e) {
   const F = TUNE.feel, GR = TUNE.gore;
   const big = e.boss || e.pred;
   const stop = e.boss ? F.hitStopBoss : (e.pred || e.elite || e.type === 'brute' || e.type === 'nest') ? F.hitStopBig : F.hitStopKill;
-  G.hitStop = Math.max(G.hitStop, Math.min(F.hitStopCap, stop));
+  applyKillHitStop(G, stop);
   G.shake = Math.max(G.shake, e.boss ? F.bossShake : big ? F.bigKillShake : F.killShake);
   blood(e.x, e.y + e.h * 0.5, e.z, e.blood, null, big ? GR.killBloodBig : GR.killBlood, e.boss ? GR.killBloodBossSp : GR.killBloodSp);
   puff(e.x, e.y + e.h / 2, e.z, e.col, e.boss ? GR.bossPuff : GR.killPuff, 3.5);

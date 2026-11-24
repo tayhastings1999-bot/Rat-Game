@@ -372,7 +372,8 @@ export const TUNE = {
     corpseCap: 60,
   },
   feel: {
-    // Hit-stop, trauma shake, flash, kill pop, low-HP vignette (combat.js, sync.js, feel.js). Visual/feel only.
+    // Hit-stop, trauma shake, flash, kill pop, low-HP vignette (combat.js, sync.js, hitstop.js, feel.js).
+    // Kill hit-stop is render-only (sim keeps full dt). Non-kill hit-stop still slows the sim.
     hitStopHit: 0.035, // crit or a heavy hit
     hitStopDmg: 40, // damage that counts as heavy
     hitStopHurt: 0.05, // the rat is hit
@@ -380,13 +381,15 @@ export const TUNE = {
     hitStopBig: 0.08, // elite / pred / brute / nest
     hitStopBoss: 0.3,
     hitStopCap: 0.35,
+    hitStopKillCd: 0.08, // after a kill freeze, ignore new kill freezes for this long (streaks cannot chain)
     flashHit: 0.12, // enemy white flash, seconds
     shakeDecay: 1.6, // trauma units lost per second
     shakeCap: 1.2, // max trauma
     shakeAmp: 0.45, // camera offset scale (× trauma² × settings.shake)
     killShake: 0.12, bigKillShake: 0.28, bossShake: 1,
     killPop: 2.2, killPopBoss: 6, killPopLife: 0.28, // ring radius / life
-    lowHp: 0.3, // red vignette starts here and ramps to full at 0 HP
+    lowHp: 0.3, // red vignette snaps on at or below this HP fraction
+    lowHpVig: 0.35, // intensity at the snap-on line; deepens to 1 at 0 HP
     heartbeatMin: 0.28, heartbeatMax: 0.9, // interval at 0 HP / at the lowHp line (audio hook only)
   },
   combat: {
