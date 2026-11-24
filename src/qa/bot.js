@@ -394,6 +394,57 @@ function threatDir() {
   return { crowd: n, cx: hx, cz: hz, danger };
 }
 
+// P40-10: locked vault bars sit on a tile edge the grid still calls open. Block that edge so a
+// flood-fill can tell a real trap (no walkable path off the vault tiles) from merely standing near
+// a locked gate.
+function lockedGateEdges() {
+  const edges = new Set();
+  for (const g of W.gates || []) {
+    if (g.open) continue;
+    const gx1 = toG(g.x - (g.nx || 0) * 0.25), gz1 = toG(g.z - (g.nz || 0) * 0.25);
+    const gx2 = toG(g.x + (g.nx || 0) * 0.25), gz2 = toG(g.z + (g.nz || 0) * 0.25);
+    if (!inG(gx1, gz1) || !inG(gx2, gz2)) continue;
+    const a = gi(gx1, gz1), b = gi(gx2, gz2);
+    if (a === b) continue;
+    edges.add(a + '>' + b);
+    edges.add(b + '>' + a);
+  }
+  return edges;
+}
+// True only when the rat is on a vault tile and cannot walk to a non-vault tile without crossing a
+// locked gate. Standing on the vault tile but still on the outside of the bars is not trapped (the
+// gate is built on the vault tile's edge, so toG can put the rat "inside" while it is still in the
+// corridor). Boards and acid count as passable; stuck-watchdog marks do not — those are bot memory.
+function trappedInVault(atK) {
+  if (atK < 0 || !M.vault || !M.vault[atK]) return false;
+  for (const g of W.gates || []) {
+    if (!g.open && (P.x - g.x) * (g.nx || 0) + (P.z - g.z) * (g.nz || 0) > 0.15) {
+      const gx = toG(g.x - (g.nx || 0) * 0.25), gz = toG(g.z - (g.nz || 0) * 0.25);
+      if (inG(gx, gz) && gi(gx, gz) === atK) return false;
+    }
+  }
+  const edges = lockedGateEdges(), bl = blockedTiles(), q = [atK], seen = new Uint8Array(M.W * M.H);
+  seen[atK] = 1;
+  for (let i = 0; i < q.length; i++) {
+    const c = q[i];
+    if (c !== atK && !M.vault[c]) return false;
+    const x = c % M.W, y = (c / M.W) | 0;
+    for (const [dx, dy] of N4) {
+      const X = x + dx, Y = y + dy;
+      if (!inG(X, Y)) continue;
+      const k = gi(X, Y);
+      if (seen[k] || edges.has(c + '>' + k) || (bl.has(k) && k !== atK)) continue;
+      if (!(walk(M.grid[k]) || gnawable(k))) continue;
+      seen[k] = 1;
+      q.push(k);
+    }
+  }
+  return true;
+}
+const VAULT_JUMP_MAX = 8;     // give up after this many failed hop attempts
+const VAULT_GIVEUP_S = 6;     // or after this many seconds with no real movement
+const VAULT_PROGRESS = 2.5;   // world units from where the escape started
+
 function think(dt) {
   const pr = B.profile;
   B.thinkT -= dt;
@@ -461,22 +512,35 @@ function think(dt) {
     }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
   }
-  // P40-9: trapped behind a locked vault gate before the boss is down (the bot hopped the bars after a
-  // power-up in the vault and pushed on them until the cap, Nightshift seed 2). Drop that target and
-  // jump back out over the bars, the way it came in.
+  // P40-9 / P40-10: if the bot hopped the bars of a still-locked vault before the boss is down,
+  // drop the loot target and jump back out the way it came in (Nightshift seed 2). Only fire when a
+  // flood-fill from the rat's tile cannot reach a non-vault tile without crossing a locked gate; a
+  // nearby vault is not enough (Meltdown seed 2 used to jump in place on the gate tile until the cap).
+  // After a few failed hops with no progress, give up and fall back to normal pathing.
   const atK = inG(toG(P.x), toG(P.z)) ? gi(toG(P.x), toG(P.z)) : -1;
-  if (B.goal === 'clear' && !run.lvlBoss && atK >= 0 && M.vault && M.vault[atK] && W.gates && W.gates.length) {
+  if (!(B.goal === 'clear' && !run.lvlBoss && atK >= 0 && M.vault && M.vault[atK] && W.gates && W.gates.length)) {
+    B.inVault = false;
+    if (atK < 0 || !M.vault || !M.vault[atK]) B.vaultGiveUp = false;
+  } else if (!B.vaultGiveUp && trappedInVault(atK)) {
     let gt = null, gd = 1e9;
     for (const g of W.gates) { const dd = Math.hypot(g.x - P.x, g.z - P.z); if (!g.open && dd < gd) { gd = dd; gt = g; } }
-    if (gt && gd < 12) {
-      if (B.target && B.target.kind !== 'boss' && B.target.kind !== 'nest') { B.banned.add(toG(B.target.x) + ',' + toG(B.target.z)); B.target = null; }
-      // Run at the bars from a step back and jump as they come up.
-      const ox = gt.x + (gt.nx || 0) * 2, oz = gt.z + (gt.nz || 0) * 2;
-      d = [ox - P.x, oz - P.z];
-      if (gd < 1.6) { keys.Space = true; P.buffer = 0.13; }
-      T.vaultEscapes = (T.vaultEscapes || 0) + (B.inVault ? 0 : 1);
-      B.inVault = true;
-      setDir(d[0], d[1]);
+    if (gt) {
+      if (!B.inVault) { B.inVault = true; B.vaultJumps = 0; B.vaultSince = B.t; B.vaultX = P.x; B.vaultZ = P.z; T.vaultEscapes = (T.vaultEscapes || 0) + 1; }
+      const noProgress = B.t - (B.vaultSince || 0) > VAULT_GIVEUP_S && Math.hypot(P.x - B.vaultX, P.z - B.vaultZ) < VAULT_PROGRESS;
+      if ((B.vaultJumps || 0) >= VAULT_JUMP_MAX || noProgress) {
+        B.vaultGiveUp = true;
+        B.inVault = false;
+      } else {
+        if (B.target && B.target.kind !== 'boss' && B.target.kind !== 'nest') { B.banned.add(toG(B.target.x) + ',' + toG(B.target.z)); B.target = null; }
+        // Run at the bars from a step back and jump as they come up.
+        const ox = gt.x + (gt.nx || 0) * 2, oz = gt.z + (gt.nz || 0) * 2;
+        d = [ox - P.x, oz - P.z];
+        if (gd < 1.6) {
+          keys.Space = true; P.buffer = 0.13;
+          if (P.onGround && B.t - (B.vaultJumpT || 0) > 0.35) { B.vaultJumpT = B.t; B.vaultJumps = (B.vaultJumps || 0) + 1; }
+        }
+        setDir(d[0], d[1]);
+      }
     }
   } else B.inVault = false;
   // Locked vault gates open with the boss's key ring once the boss is down. A boss key can land behind one
@@ -662,7 +726,7 @@ export const qa = {
   get bot() { return B; },
   start({ profile = 'average', goal = 'progress', assist = false } = {}) {
     resetTelemetry();
-    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, stuckBlk: new Map(), gnaw: null, gnawing: false, upTries: new Map(), seenWind: new Map(), triedUp: new Set() });
+    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, stuckBlk: new Map(), gnaw: null, gnawing: false, upTries: new Map(), seenWind: new Map(), triedUp: new Set(), inVault: false, vaultGiveUp: false, vaultJumps: 0, vaultJumpT: 0, vaultSince: 0, vaultX: 0, vaultZ: 0 });
     G.qa = hooks;
     G.qaHold = true;
     if (assist) { st.taken = 0; st.dmg *= 4; }
