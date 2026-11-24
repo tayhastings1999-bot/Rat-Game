@@ -328,7 +328,7 @@ await check('co-op: two rats, a gamepad moves player 2, party scaling applies', 
   await page.click('.card[data-k="tank"]');
   await page.waitForFunction(() => __scurry.G.state === 'play', null, { timeout: T(15000) });
   await toPlay();
-  const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: 1 + __scurry.TUNE.coop.perPlayer.bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
+  const s0 = await S(() => ({ on: __scurry.coop.on, n: __scurry.coop.players.length, rp: __scurry.run.players, boss: __scurry.run.bossHpM, want: __scurry.TUNE.coop.party[2].bossHp, x: __scurry.asPlayer(1, () => __scurry.P.x), z: __scurry.asPlayer(1, () => __scurry.P.z), hp: __scurry.asPlayer(1, () => __scurry.run.hp) }));
   if (!s0.on || s0.n !== 2 || s0.rp !== 2) throw new Error('co-op not on ' + JSON.stringify(s0));
   if (Math.abs(s0.boss - s0.want) > 1e-6) throw new Error('boss HP scale ' + s0.boss);
   if (!(s0.hp > 0)) throw new Error('player 2 has no HP');
@@ -501,6 +501,38 @@ await check('pace snapshot reads current run fields (no run.items)', async () =>
   });
   if (typeof r.xp !== 'number' || typeof r.dmg !== 'number' || !r.x) throw new Error('pace snapshot failed ' + JSON.stringify(r));
   if (r.hasItems) throw new Error('run.items came back; pace.mjs may need another pass');
+});
+await check('parTime is 20 min so a 10–20 min clear scores full time points', async () => {
+  const n = await S(() => __scurry.TUNE.tally.parTime);
+  if (n !== 1200) throw new Error('parTime ' + n);
+});
+await check('sewer nest cap is 0.65 × eligible rooms, at least 4 rooms nest-free, never over 28', async () => {
+  const rows = [];
+  for (const i of [0, 3, 8]) {
+    await loadLevel('sewer', i, null);
+    rows.push(await S(() => {
+      const s = __scurry, N = s.TUNE.nests, rooms = s.W.rooms || [], nests = s.W.enemies.filter(e => e.type === 'nest');
+      return { id: s.curD().level, rooms: rooms.length, nests: nests.length, frac: N.sewerFrac, free: N.sewerFree, max: N.countMax, cap: s.curD().nests, roomCap: s.curD().rooms };
+    }));
+  }
+  const bad = rows.filter(r => r.nests > r.max || r.rooms - r.nests < r.free || r.nests > Math.round(r.rooms * r.frac) + 2);
+  if (bad.length) throw new Error('sewer nest cap ' + JSON.stringify(bad));
+  const bw = rows.find(r => r.id === 'butcher-d');
+  if (bw && (bw.nests > 14 || (bw.roomCap && bw.rooms > bw.roomCap))) throw new Error('Bloodworks ceiling ' + JSON.stringify(bw));
+});
+await check('the exit opens within 12 tiles of the boss arena', async () => {
+  await loadLevel('sewer', 0, null);
+  const r = await S(() => {
+    const s = __scurry;
+    if (typeof s.spawnBoss === 'function') s.spawnBoss();
+    if (typeof s.killBoss === 'function') s.killBoss();
+    else if (s.G.boss) s.kill(s.G.boss);
+    s.qa.stepRaw(0.3);
+    const a = s.G.arena, e = s.G.exitD, T = 4;
+    return { exit: !!e, kind: e && e.kind, d: a && e ? +(Math.hypot(e.x - a.x, e.z - a.z) / T).toFixed(2) : null, cap: s.TUNE.nests.exitTiles };
+  });
+  if (!r.exit) throw new Error('no exit after the boss ' + JSON.stringify(r));
+  if (r.d == null || r.d > r.cap + 0.01) throw new Error('exit too far from the arena ' + JSON.stringify(r));
 });
 await check('old single-slot saves move into slot 1', async () => {
   // Park the main page so it is not burning the runner's CPU while the second page loads.

@@ -8,8 +8,9 @@ const SIZE = 72; // was 52: 10-20 min levels need room for more nests, side stre
 
 export function genCity(seed, D) {
   seedRng(seed);
-  allocMap(SIZE, 'city');
-  const W = SIZE, grid = M.grid, hgt = M.hgt;
+  const size = D.map || SIZE;
+  allocMap(size, 'city');
+  const W = size, grid = M.grid, hgt = M.hgt;
   grid.fill(TL.WALL);
   hgt.fill(12);
   const set = (x, y, t, h) => { if (inG(x, y)) { grid[gi(x, y)] = t; if (h != null) hgt[gi(x, y)] = h; } };
@@ -21,7 +22,8 @@ export function genCity(seed, D) {
     while (p + 3 < W - 6) {
       const w = ri(2, 3);
       out.push([p, w]);
-      p += w + ri(8, 11);
+      const gap = D.blockGap || 8;
+      p += w + ri(gap, gap + 3);
     }
     return out;
   };
@@ -46,7 +48,7 @@ export function genCity(seed, D) {
     const canX = w >= 7, canZ = h >= 7;
     if ((!canX && !canZ) || (depth > 1 && rng.next() < 0.28 && w * h <= 30)) { lots.push({ x: x0, y: z0, w, h }); return; }
     const alongX = canX && (!canZ || w >= h);
-    const alley = rng.next() < 0.5;
+    const alley = rng.next() < (D.alleyOdds ?? 0.5);
     if (alongX) {
       const c = ri(x0 + 3, x1 - 3 - (alley ? 1 : 0));
       if (alley) { for (let z = z0; z <= z1; z++) set(c, z, TL.FLOOR, 0); alleys.push({ x: c, y: z0, w: 1, h }); split(x0, z0, c - 1, z1, depth + 1); split(c + 1, z0, x1, z1, depth + 1); }
@@ -153,7 +155,8 @@ export function genCity(seed, D) {
   const bigLots = shuffleR(lots.filter(L => L.type === 'bldg' && L.w >= 4 && L.h >= 4 && L.x > 1 && L.y > 1 && L.x + L.w < W - 1 && L.y + L.h < W - 1 && solidLot(L)));
   bigLots.sort((a, b) => b.w * b.h - a.w * a.h);
   const lairLot = bigLots.find(L => L.compound) || bigLots.find(L => L.w >= 5 && L.h >= 5) || bigLots[0];
-  for (const L of [lairLot, ...shuffleR(bigLots.filter(l => l !== lairLot)).slice(0, Math.round(3 * (W / 52) ** 2))].filter(Boolean)) { // more hidden courtyards on bigger maps (3 at 52 tiles, ~6 at 72)
+  const hiddenN = Math.round(3 * (W / 52) ** 2) + (D.hiddenExtra || 0);
+  for (const L of [lairLot, ...shuffleR(bigLots.filter(l => l !== lairLot)).slice(0, hiddenN)].filter(Boolean)) { // more hidden courtyards on bigger maps (3 at 52 tiles, ~6 at 72), plus per-level extras
     const doors = [];
     for (let x = L.x + 1; x < L.x + L.w - 1; x++) { doors.push([x, L.y, 0, -1]); doors.push([x, L.y + L.h - 1, 0, 1]); }
     for (let y = L.y + 1; y < L.y + L.h - 1; y++) { doors.push([L.x, y, -1, 0]); doors.push([L.x + L.w - 1, y, 1, 0]); }

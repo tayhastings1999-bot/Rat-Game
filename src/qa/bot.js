@@ -294,8 +294,9 @@ function chooseTarget() {
   }
   if (B.goal === 'break') return breakTarget();
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
-  // Clear-goal critical path: once a key is down, the exit is open, or the boss is up, skip loot detours.
-  const clearing = B.goal === 'clear' && (W.keys.length || exits.length || (G.boss && !G.boss.dead));
+  // Clear-goal stays on nests → arena → boss → key → exit. Loot detours were leaving
+  // the bot stuck on chests while After Dark still had nests left.
+  const clearing = B.goal === 'clear';
   // Power-up tokens nearby are worth a detour (as a player would take them).
   if (!clearing && Math.random() < pr.loot) { const t = nearestOf((W.pups || []).filter(p => Math.hypot(p.x - P.x, p.z - P.z) < 30 && Math.abs(p.y - P.y) < 1.5)); if (t) return { x: t.x, z: t.z, kind: 'powerup', o: t }; }
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };

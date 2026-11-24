@@ -271,15 +271,17 @@ export function zoneScaling() {
   run.atkM = 1 + Math.min(1.4, T * (SW ? SW.atkPerThreat : Z.atkPerThreat));
   // Difficulty mode (TUNE.difficulty), on top of the zone.
   const D = diffMods();
-  // Local co-op: each rat beyond the first adds TUNE.coop.perPlayer (run.players is set by startRun).
-  const xp = Math.max(0, (run.players || 1) - 1), PP = TUNE.coop.perPlayer;
+  // Local co-op: enemy HP / elite odds still add TUNE.coop.perPlayer per extra rat.
+  // Spawn rate, nest children and boss HP come from the 1–4 player table (TUNE.coop.party).
+  const nP = Math.max(1, Math.min(4, run.players || 1)), xp = nP - 1, PP = TUNE.coop.perPlayer;
+  const party = (TUNE.coop.party && TUNE.coop.party[nP]) || { spawn: 1, kids: 1, bossHp: 1 };
   run.hpM *= D.hp * (1 + xp * PP.hp);
   run.dmgM *= D.dmg * (1 + xp * PP.dmg);
-  run.spawnM = D.spawn * (1 + xp * PP.spawn); // nest spawn rate
+  run.spawnM = D.spawn * party.spawn; // nest spawn rate
   run.eliteM = D.elite * (1 + xp * PP.elite);
-  run.bossHpM = D.bossHp * (1 + xp * PP.bossHp);
+  run.bossHpM = D.bossHp * party.bossHp;
   run.bossDmgM = D.bossDmg || 1; // boss hits relative to the difficulty's dmg (Insane keeps bosses beatable)
-  run.kidsM = 1 + xp * PP.nestKids; // children each nest keeps alive
+  run.kidsM = party.kids; // children each nest keeps alive
   if (colony.on) { run.spawnM *= TUNE.colony.spawnMul; run.kidsM *= TUNE.colony.kidsMul; } // the swarm prototype: more to eat
   run.drainM = D.drain;
   run.foodM = D.food;

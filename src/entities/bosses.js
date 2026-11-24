@@ -10,7 +10,7 @@ import { G, P, W, run, st, meta } from '../core/state.js';
 import { scene, dropCreature } from '../render/renderer.js';
 import { fx, puff, boom, dnum } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
-import { M, inG, toW, floorY, collideBody } from '../world/grid.js';
+import { M, inG, toG, toW, tAt, DRY, floorY, collideBody } from '../world/grid.js';
 import { BOSSES, FAMILIES, curD, isSewer } from '../data/world.js';
 import { glob } from '../combat/arsenal.js';
 import { hurtP, scrapDrop, dropKey } from '../combat/combat.js';
@@ -74,7 +74,8 @@ export function spawnBoss() {
   // The secret boss (the Great Rune whole): The Nameless Rat, built to be nearly impossible.
   // Its ×6 replaces the co-op boss-HP multiplier rather than stacking on it (difficulty bossHp still applies).
   if (run.secretUp) {
-    const coopM = 1 + Math.max(0, (run.players || 1) - 1) * TUNE.coop.perPlayer.bossHp;
+    const nP = Math.max(1, Math.min(4, run.players || 1));
+    const coopM = (TUNE.coop.party && TUNE.coop.party[nP] && TUNE.coop.party[nP].bossHp) || 1;
     const S = TUNE.runes;
     Object.assign(b, { name: 'The Nameless Rat', final: false, secretBoss: true, hp: b.hp * S.secretHp / coopM, maxHp: b.maxHp * S.secretHp / coopM, dmg: b.dmg * S.secretDmg, spd: b.spd * S.secretSpd, armored: S.secretTaken, lore: ['Under the Court, under the crown', '"You found every piece of me. Now I am whole."'] });
     mesh.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(new THREE.Color(0xff5ad8), 0.6); });
@@ -506,7 +507,22 @@ export function onBossDeath(e) {
   addXP(220);
   for (let i = 0; i < 30; i++) scrapDrop(e.x, gy, e.z);
   addChest(e.x, gy, e.z, isSewer());
-  dropKey(e.x + 1.5, gy, e.z + 1.5); // the only source of keys
+  // Drop the key on dry open ground near the boss (floor/grass/road), never water or
+  // acid, and not on a ledge or roof at +1.5 (P41-2; Frozen Pipeworks used to leave
+  // it on a y=4.5 shelf the bot, and a player, could miss).
+  let kx = e.x, kz = e.z, ky = gy;
+  if (ky > 1.5 || !DRY(tAt(toG(kx), toG(kz)))) {
+    let best = 1e9;
+    const gx = toG(e.x), gz = toG(e.z);
+    for (let z = gz - 5; z <= gz + 5; z++) for (let x = gx - 5; x <= gx + 5; x++) {
+      if (!inG(x, z) || !DRY(tAt(x, z))) continue;
+      const wx = toW(x), wz = toW(z), y = floorY(wx, wz);
+      if (y > 1.5) continue;
+      const d = Math.abs(x - gx) + Math.abs(z - gz);
+      if (d < best) { best = d; kx = wx; kz = wz; ky = y; }
+    }
+  }
+  dropKey(kx, ky, kz); // the only source of keys
   run.bossDone = true;
   if (e.secretBoss) { run.secretDone = true; run.secretUp = false; meta.secretWins = (meta.secretWins || 0) + 1; }
   if (e.final) { run.finalDone = true; run.finalUp = false; meta.finalWins = (meta.finalWins || 0) + 1; }
