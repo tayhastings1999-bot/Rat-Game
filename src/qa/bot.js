@@ -14,7 +14,7 @@ import { renderer, world, scene } from '../render/renderer.js';
 import { M, gi, inG, toG, toW, tAt, topAt, solidFor, N4, N8 } from '../world/grid.js';
 import { update } from '../game/update.js';
 import { sync, animate } from '../game/sync.js';
-import { stick, keys, startRoll, useSpecial, pressE, chewTarget } from '../entities/player.js';
+import { stick, keys, startRoll, useSpecial, pressE, chewTarget, useTarget } from '../entities/player.js';
 import { useSig, SIGS } from '../game/signature.js';
 import { objTargets } from '../game/objectives.js';
 import { PRIM } from '../combat/arsenal.js';
@@ -449,11 +449,25 @@ function think(dt) {
         keys.Space = true; P.buffer = 0.13;
       } else keys.Space = false;
       if (tg.kind === 'key' && !W.keys.length) tg.done = true;
-      if ((tg.kind === 'climb' || tg.kind === 'ledge') && dy <= 1.2) tg.done = true;
+      if ((tg.kind === 'climb' || tg.kind === 'ledge') && dy <= 1.2) {
+        tg.done = true;
+        // Up there but no key: after two tries at the same pipe or ledge, try another (or, with none left,
+        // walk at the key so the existing stall recovery can fire). It used to loop on one pipe until the cap.
+        const k = toG(tg.x) + ',' + toG(tg.z), ups = B.upTries || (B.upTries = new Map()), n = (ups.get(k) || 0) + 1;
+        ups.set(k, n);
+        if (n >= 2) (B.triedUp || (B.triedUp = new Set())).add(k);
+      }
       if (tg.kind === 'key' && tg.y - P.y > 1.4) { keys.Space = true; P.buffer = 0.13; }
       if ((tg.kind === 'climb' || tg.kind === 'ledge') && (tg.y || 0) - P.y > 0.8) { keys.Space = true; P.buffer = 0.13; }
     }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
+  }
+  // Locked vault gates open with the boss's key ring once the boss is down. A boss key can land behind one
+  // (Bone Garden, Rat King's Court): the grid calls the gateway open, so the bot walks up to the bars and
+  // would push on them until the cap. Use the gate (the game's own E action) when it is in reach.
+  if (B.goal === 'clear' && run.lvlBoss && W.gates && W.gates.some(g => !g.open && Math.hypot(g.x - P.x, g.z - P.z) < 2.2)) {
+    const u = useTarget();
+    if (u && u.kind === 'gate') { pressE(); T.gates = (T.gates || 0) + 1; }
   }
   // Boss spacing: a player who can't roll (cooldown) steps back out of a boss wind-up instead of
   // trading hits, then closes again when it whiffs. The roll dodge above still handles the rest.
@@ -608,7 +622,7 @@ function step(dt) {
   think(sdt);
   applyInput();
   const lv = run.level;
-  if (B.tierSeen !== run.tier) { if (B.tierSeen != null) T.districts.push({ to: run.tier, t: +run.time.toFixed(1) }); B.tierSeen = run.tier; B.visited.clear(); B.banned.clear(); if (B.stuckBlk) B.stuckBlk.clear(); B.target = null; B.memT = 2; }
+  if (B.tierSeen !== run.tier) { if (B.tierSeen != null) T.districts.push({ to: run.tier, t: +run.time.toFixed(1) }); B.tierSeen = run.tier; B.visited.clear(); B.banned.clear(); if (B.stuckBlk) B.stuckBlk.clear(); if (B.upTries) B.upTries.clear(); B.target = null; B.memT = 2; }
   const t0 = performance.now();
   update(sdt);
   const ms = performance.now() - t0;
@@ -631,7 +645,7 @@ export const qa = {
   get bot() { return B; },
   start({ profile = 'average', goal = 'progress', assist = false } = {}) {
     resetTelemetry();
-    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, stuckBlk: new Map(), gnaw: null, gnawing: false, seenWind: new Map(), triedUp: new Set() });
+    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, stuckBlk: new Map(), gnaw: null, gnawing: false, upTries: new Map(), seenWind: new Map(), triedUp: new Set() });
     G.qa = hooks;
     G.qaHold = true;
     if (assist) { st.taken = 0; st.dmg *= 4; }
