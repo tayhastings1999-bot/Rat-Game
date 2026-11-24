@@ -80,7 +80,9 @@ export const TUNE = {
     // ?sprites=1 or ?sprites=mixed → mixed, ?sprites=sprite → sprite. Missing atlases always fall back to mesh.
     mode: SPRITE_MODE,
     ppu: 32, // sprite pixels per world unit
-    heroPpu: 80, // heroes_v2 art is 128×160 per frame; 80 px/unit draws a hero 1.6 × 2 units
+    // Art Director: painted heroes at 64 sprite px / world unit (guide §1's 32 was for 48×64 heroes).
+    // Sewer Rat visible height 88 px → 1.375 units; at ortho zoom 20 on 1280-wide, 1 sprite px = 1 screen px.
+    heroPpu: 64,
     heroCap: 8,
     // Walk frame timing (data only; same 6 frames, different hold). Default is each atlas action's
     // base_run profile (tank 65, slinger 68, warlock 60, sneak 60). 'slow_run' and 'walk' prefix-match
@@ -92,6 +94,29 @@ export const TUNE = {
     // idle_below_u_s of 0.15, so a sliding slowdown keeps playing walk. The mesh path
     // never reads this (animateRat is distance-driven and ignores heroAnimState).
     idleBelow: 0.15,
+    // Procedural walk juice (sprite path only; visual, deterministic, no hitbox/speed changes).
+    // Rat 6 can tune these. Per-hero keys multiply the shared amplitudes.
+    juice: {
+      bob: 0.09, // mid-stride hop, world units (0 at footfall)
+      squash: 0.07, // footfall compress (5–8%)
+      stretch: 0.06, // take-off extend
+      lean: 0.12, // radians into the move (~7°)
+      sway: 0.035, // side-to-side, world units
+      startAnticipation: 0.09, // s of pre-step squash
+      startSquash: 0.11,
+      stopSettle: 0.14, // s of overshoot / settle
+      stopOvershoot: 0.08,
+      idleEnter: 0.28, // start walk above this speed (u/s)
+      idleExit: 0.10, // return to idle below this (hysteresis around idleBelow)
+      refSpeed: 5.6, // matches walk JSON profile base_run_5.6; cadence scales with actual speed
+      stepsPerCycle: 2,
+      heroes: {
+        tank: { bob: 0.62, squash: 1.4, stretch: 0.8, lean: 0.75, sway: 0.65, startAnticipation: 1.25, stopSettle: 1.3 },
+        slinger: { bob: 1.05, squash: 1, stretch: 1.05, lean: 1.05, sway: 1, startAnticipation: 1, stopSettle: 1 },
+        warlock: { bob: 0.9, squash: 1.05, stretch: 0.95, lean: 0.9, sway: 0.85, startAnticipation: 1.1, stopSettle: 1.1 },
+        sneak: { bob: 1.4, squash: 0.72, stretch: 1.3, lean: 1.2, sway: 1.25, startAnticipation: 0.7, stopSettle: 0.75 },
+      },
+    },
   },
   camera: {
     // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9

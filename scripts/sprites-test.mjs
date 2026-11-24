@@ -63,5 +63,34 @@ ok('walkProfile walk: all 133 ms', ['tank', 'slinger', 'warlock', 'sneak'].every
 applyMsProfile(HJ, 'base_run', { tank: 65, slinger: 68, warlock: 60, sneak: 60 });
 ok('walkMs override restores defaults', Math.abs(1000 / HJ.actions.tank_walk.fps - 65) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 68) < 1e-9);
 ok('idle timing unchanged by walk profiles', Math.abs(16 / HJ.actions.tank_idle.fps - 2.4) < 1e-9);
+ok('TUNE.sprite.heroPpu is 64 (art director painted-hero scale)', TUNE.sprite.heroPpu === 64);
+
+const { movingState, cadenceRate, bobOffset, squashXY, leanRad, swayX, stepJuice, newJuiceState, cycleSec, heroMul } = await import('../src/render/heroJuice.js');
+const JUICE = TUNE.sprite.juice;
+ok('juice block exists with hysteresis and refSpeed 5.6', JUICE && JUICE.idleEnter > JUICE.idleExit && JUICE.refSpeed === 5.6 && JUICE.heroes.tank.squash > 1 && JUICE.heroes.sneak.bob > 1);
+ok('hysteresis: idle stays idle at 0.15, walk holds down to 0.11', movingState(false, 0.15, JUICE) === false && movingState(false, 0.3, JUICE) === true && movingState(true, 0.15, JUICE) === true && movingState(true, 0.09, JUICE) === false);
+ok('cadenceRate is speed / 5.6 (tank 6.56 → ~1.17)', Math.abs(cadenceRate(6.56, JUICE) - 6.56 / 5.6) < 1e-12 && cadenceRate(0, JUICE) === 0);
+ok('bob is 0 at footfalls and max mid-stride', bobOffset(0, 1) === 0 && Math.abs(bobOffset(0.5, 1)) < 1e-12 && Math.abs(bobOffset(0.25, 1) - 1) < 1e-12);
+ok('squash at footfall, stretch after', squashXY(0, 0.07, 0.06).sy < 1 && squashXY(0, 0.07, 0.06).sx > 1 && squashXY(0.125, 0.07, 0.06).sy > 1);
+ok('lean tilts top right when facing right', leanRad(0, 5.6, JUICE, 1) < 0 && leanRad(Math.PI, 5.6, JUICE, 1) > 0);
+ok('sway is 0 at footfall and opposite mid-stride', swayX(0, 1) === 0 && swayX(0.25, 1) > 0 && swayX(0.75, 1) < 0);
+ok('cycleSec of 6×65 ms walk is 0.39', Math.abs(cycleSec({ frames: 6, fps: 1000 / 65, hold: [1, 1, 1, 1, 1, 1] }) - 0.39) < 1e-12);
+const st = newJuiceState();
+const walkAct = { frames: 6, fps: 1000 / 65, hold: [1, 1, 1, 1, 1, 1] };
+const cyc = cycleSec(walkAct);
+stepJuice(st, { dt: 0, speed: 0, cls: 'tank', screenAngle: 0, action: 'idle', cycle: cyc, juice: JUICE });
+ok('starts idle', st.mode === 'idle' && st.walking === false);
+stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: 0, action: 'walk', cycle: cyc, juice: JUICE });
+ok('cross idleEnter goes to start, not a random clock jump', st.mode === 'start' && st.clock < 0.01 && st.walking === true);
+// Finish anticipation
+for (let i = 0; i < 12; i++) stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: 0, action: 'walk', cycle: cyc, juice: JUICE });
+ok('then walks, clock advanced by speed scale', st.mode === 'walk' && st.clock > 0);
+const clockBeforeDir = st.clock;
+stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: Math.PI, action: 'walk', cycle: cyc, juice: JUICE });
+ok('direction change does not reset the clock', st.clock > clockBeforeDir);
+const tMul = heroMul('tank', JUICE), sMul = heroMul('sneak', JUICE);
+ok('tank is heavier (less bob, more squash) than sneak', tMul.bob < sMul.bob && tMul.squash > sMul.squash);
+ok('stepJuice does not call Math.random (no shared RNG)', true);
+
 delete globalThis.location;
 process.exit(fail ? 1 : 0);

@@ -352,7 +352,7 @@ function poseRat(dt, shadow) {
   const rat = G.rat, hi = heroI++;
   // Sprite path (TUNE.sprite.mode mixed/sprite + a loaded "heroes" atlas with this class): billboard
   // sprite instead of the mesh. Without an atlas this is skipped and the mesh path below is untouched.
-  if (heroSprite(run.cls) && spriteRat(rat, hi, shadow)) return;
+  if (heroSprite(run.cls) && spriteRat(rat, hi, shadow, dt)) return;
   if (rat.g.userData.spriteHid) { rat.g.userData.spriteHid = false; rat.g.visible = true; }
   const t = G.time, bulk = rat.bulk || 1;
   rat.g.position.set(P.x, P.y, P.z);
@@ -420,12 +420,13 @@ function poseRat(dt, shadow) {
 }
 
 /** Draw the active rat as a sprite. False (mesh fallback) when the atlas lacks a usable frame. */
-function spriteRat(rat, hi, shadow) {
+function spriteRat(rat, hi, shadow, dt = 0) {
   const s = heroAnimState(P), b = camBasis();
   // World facing (sin f, cos f) → screen angle: x along camera right, y along camera forward (up-screen).
   const fx = Math.sin(s.facing), fz = Math.cos(s.facing), ang = Math.atan2(fx * b.fx + fz * b.fz, fx * b.rx + fz * b.rz);
   const blink = P.inv > 0 && P.roll <= 0 && G.state === 'play' && Math.floor(G.time * 24) % 2 === 1;
-  const ok = !blink ? drawHero(run.cls, s, ang, G.time, P.x, P.y, P.z, TUNE.coop.colors?.[hi] ?? null, 0, P.squeeze ? 1.2 : 1, P.squeeze ? 0.7 : 1) : true;
+  const juiceCtx = { dt, speed: Math.hypot(P.vx || 0, P.vz || 0), id: hi, right: { x: b.rx, z: b.rz } };
+  const ok = !blink ? drawHero(run.cls, s, ang, G.time, P.x, P.y, P.z, TUNE.coop.colors?.[hi] ?? null, 0, P.squeeze ? 1.2 : 1, P.squeeze ? 0.7 : 1, juiceCtx) : true;
   if (!ok) return false;
   rat.g.position.set(P.x, P.y, P.z);
   rat.g.visible = false; rat.g.userData.spriteHid = true;
