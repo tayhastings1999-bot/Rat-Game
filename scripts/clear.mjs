@@ -94,19 +94,31 @@ function runClearLevel(lv, seed, cls, profile, god, max) {
   // so the same seed produced different clear times.)
   const hash = str => { let h = 1779033703; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 3432918353), h = (h << 13) | (h >>> 19); return h >>> 0; };
   let a = hash(seed + ':' + lv.id);
-  const rnd = () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  // P40-5: cosmetic draws get their own stream. Three.js draws 4 Math.random per new object for its UUID,
+  // and procedural textures (src/render) roll their pixels, but only the first time: lazy caches that
+  // whatever ran earlier in the page built (the boot menu builds Cinder Row) skip those draws. Served from
+  // the main stream, a Cinder Row edit was shifting other levels' rolls. A short stack check names the caller.
+  let u = hash(seed + ':' + lv.id + ':cosmetic');
+  const cosRnd = () => { u |= 0; u = (u + 0x6D2B79F5) | 0; let t = Math.imul(u ^ (u >>> 15), 1 | u); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const cosmetic = () => { const lim = Error.stackTraceLimit; Error.stackTraceLimit = 4; const st = new Error().stack; Error.stackTraceLimit = lim; return st.includes('generateUUID') || st.includes('/src/render/'); };
+  const rnd = () => { if (cosmetic()) return cosRnd(); a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   Math.random = rnd;
   try {
     s.qa.stop();
     Object.assign(G, { testNoTally: true, testNoTreasure: true, testNoSave: true, qaFast: true });
     if (s.coop && s.coop.setup) s.coop.setup.n = 1;
-    s.startRun(cls);
+    // P40-4: start the run on this level itself (as the hub does for a reached level), not on Cinder Row,
+    // so lazy caches built during the start depend only on this level (a secret zone: the level whose
+    // drain leads in). meta reach is raised just for the call and put back.
+    const m = s.meta, reach = [m.maxDistrict, m.maxSewer];
+    m.maxDistrict = s.LEVELS.CITY_LEVELS.length - 1; m.maxSewer = s.LEVELS.SEWER_LEVELS.length - 1;
+    try { s.startRun(cls, lv.layer === 'sewer' ? { realm: 'sewer', idx: lv.sewerIdx } : { realm: 'city', idx: lv.district }); } finally { [m.maxDistrict, m.maxSewer] = reach; }
     // Load the level the way a transition does (flow.js transition), without the fade timer.
     Object.assign(run, { realm: lv.realm, layer: lv.layer, district: lv.district, sewerIdx: lv.sewerIdx, tier: lv.tier, secret: lv.secret,
       reaper: null, robber: null, reaperT: null, robT: null, bossDone: false, lvlBoss: false, evT: 45, scabSeen: false, nests: 0, surgeT: 75, keys: 0 });
     run.seed = s.levelSeed();
-    // P40-3: startRun just built the hub level (Cinder Row) on this stream. Re-seed so this level's setup
-    // does not depend on how many draws the hub took: a Cinder Row edit was reshuffling every other level.
+    // P40-3: startRun just built a level on this stream. Re-seed so this level's setup does not depend on
+    // how many draws the start took (with the old Cinder Row start, a Cinder edit reshuffled every level).
     a = hash(seed + ':' + lv.id + ':setup');
     s.setupWorld(run.seed);
     // Hook is already in place so unseedRng() bound rng.next to rnd. Re-seed now for the sim itself.
