@@ -14,7 +14,7 @@ import { renderer, world, scene } from '../render/renderer.js';
 import { M, gi, inG, toG, toW, tAt, topAt, solidFor, N4, N8 } from '../world/grid.js';
 import { update } from '../game/update.js';
 import { sync, animate } from '../game/sync.js';
-import { stick, keys, startRoll, useSpecial, pressE, chewTarget } from '../entities/player.js';
+import { stick, keys, startRoll, useSpecial, pressE, chewTarget, useTarget } from '../entities/player.js';
 import { useSig, SIGS } from '../game/signature.js';
 import { objTargets } from '../game/objectives.js';
 import { PRIM } from '../combat/arsenal.js';
@@ -43,6 +43,7 @@ export function parseGoal(text = '') {
   if (/secret|hidden/.test(t)) return 'secret';
   if (/manhole|sewer|descend/.test(t)) return 'manhole';
   if (/nest/.test(t)) return 'nests';
+  if (/clear/.test(t)) return 'clear'; // clear the level: nests → boss → key → exit (scripts/clear.mjs)
   if (/boss/.test(t)) return 'boss';
   if (/chest|loot/.test(t)) return 'loot';
   if (/building|inside|interior|indoors/.test(t)) return 'interior';
@@ -64,6 +65,7 @@ function resetTelemetry() {
     steps: 0, simTime: 0, updMs: [], frames: [], anomalies: [], samples: [], errors: [],
     hurt: {}, hurtN: 0, dmgTaken: 0, kills: {}, ttk: {}, levels: [], scrap: [], districts: [], bosses: [],
     distMem: [], deaths: [], dodges: 0, rollsTried: 0, perfects0: run.perfects || 0, peakEnemies: 0, xpRate: [],
+    keyTp: 0, keyTpSaved: 0, keyTpAt: [],
   });
 }
 resetTelemetry();
@@ -127,22 +129,58 @@ function blockedTiles() {
   }
   return B.blocked;
 }
-function fieldTo(gx, gz, acid = false) {
-  const k0 = gi(gx, gz), bl = blockedTiles(), ok = acid ? walk : dryWalk, key = k0 * 2 + (acid ? 1 : 0);
+// P40-5: tiles the stuck watchdog blocks expire (they used to last the whole level: on Meltdown the bot
+// blocked both boss-room exits and drove into a corner until the cap). Map tile -> bot-clock expiry.
+const STUCK_TTL = 25; // sim seconds
+function stuckBlocked(k) {
+  const e = B.stuckBlk && B.stuckBlk.get(k);
+  if (e == null) return false;
+  if (e > B.t) return true;
+  B.stuckBlk.delete(k);
+  return false;
+}
+// The step from tile a into tile b got the bot stuck (a thin wall or bars across a doorway the grid calls
+// open, or the target tile itself, which a tile mark can't block). Same expiry, keyed 'a>b'.
+function stuckEdge(a, b) {
+  const m = B.stuckBlk, k = a + '>' + b, e = m && m.get(k);
+  if (e == null) return false;
+  if (e > B.t) return true;
+  m.delete(k);
+  return false;
+}
+// P40-6: gnawable boards (city plywood / sewer drywall, tile 3; not a gate-locked one) are passable at a
+// cost when no board-free route exists, so a rat that hopped into a boarded building gnaws its way out.
+const BOARD_COST = 6;
+const gnawable = k => M.grid[k] === 3 && M.secret[k] !== 2;
+function fieldTo(gx, gz, acid = false, boards = false) {
+  const k0 = gi(gx, gz), bl = blockedTiles(), ok = acid ? walk : dryWalk, key = k0 * 4 + (acid ? 1 : 0) + (boards ? 2 : 0);
   if (B.fieldK === key && B.field && B.fieldT > 0) return B.field;
-  const n = M.W * M.H, d = new Int16Array(n).fill(-1), q = new Int32Array(n);
-  let h = 0, t = 0;
+  const n = M.W * M.H, d = new Int16Array(n).fill(-1);
   if (!inG(gx, gz)) return d;
-  d[k0] = 0; q[t++] = k0;
-  while (h < t) {
-    const c = q[h++], x = c % M.W, y = (c / M.W) | 0;
-    for (const [dx, dy] of N4) {
-      const X = x + dx, Y = y + dy;
-      if (!inG(X, Y)) continue;
-      const k = gi(X, Y);
-      if (d[k] >= 0 || !ok(M.grid[k]) || (bl.has(k) && k !== k0)) continue;
-      d[k] = d[c] + 1; q[t++] = k;
+  // Dial's buckets: unit steps, BOARD_COST through a board (plain BFS when boards are off).
+  const buckets = [[k0]], done = new Uint8Array(n);
+  d[k0] = 0;
+  for (let c0 = 0; c0 < buckets.length; c0++) {
+    const bk = buckets[c0];
+    if (!bk) continue;
+    for (let i = 0; i < bk.length; i++) {
+      const c = bk[i];
+      if (done[c] || d[c] !== c0) continue;
+      done[c] = 1;
+      const x = c % M.W, y = (c / M.W) | 0;
+      for (const [dx, dy] of N4) {
+        const X = x + dx, Y = y + dy;
+        if (!inG(X, Y)) continue;
+        const k = gi(X, Y);
+        if (done[k] || (bl.has(k) && k !== k0) || (k !== k0 && stuckBlocked(k)) || stuckEdge(k, c)) continue;
+        const step = ok(M.grid[k]) ? 1 : boards && gnawable(k) ? BOARD_COST : 0;
+        if (!step) continue;
+        const nd = c0 + step;
+        if (d[k] >= 0 && d[k] <= nd) continue;
+        d[k] = nd; (buckets[nd] || (buckets[nd] = [])).push(k);
+      }
     }
+    buckets[c0] = null;
   }
   B.field = d; B.fieldK = key; B.fieldT = 1.5;
   return d;
@@ -160,9 +198,30 @@ function steerTo(x, z) {
     if (!best) return null;
     [tx, tz] = best;
   }
+  B.gnaw = null;
+  const at = inG(px, pz) ? gi(px, pz) : -1;
   let f = fieldTo(tx, tz);
-  let here = inG(px, pz) ? f[gi(px, pz)] : -1;
-  if (here < 0 && inG(px, pz)) { f = fieldTo(tx, tz, true); here = f[gi(px, pz)]; } // no dry route: wade the acid
+  let here = at >= 0 ? f[at] : -1;
+  if (here < 0 && at >= 0) { f = fieldTo(tx, tz, true); here = f[at]; } // no dry route: wade the acid
+  // P40-5: still no route with the stuck marks in place: drop them and repath (never block the only way through).
+  if (here < 0 && at >= 0 && walk(M.grid[at]) && B.stuckBlk && B.stuckBlk.size) {
+    const keep = B.stuckBlk; B.stuckBlk = new Map(); B.fieldT = 0;
+    f = fieldTo(tx, tz); here = f[at];
+    if (here < 0) { f = fieldTo(tx, tz, true); here = f[at]; }
+    if (here >= 0) T.unblocks = (T.unblocks || 0) + 1; else { B.stuckBlk = keep; B.fieldT = 0; }
+  }
+  let viaBoards = false;
+  if (here < 0 && at >= 0 && walk(M.grid[at])) { f = fieldTo(tx, tz, true, true); here = f[at]; viaBoards = here >= 0; } // P40-6: walled in by boards
+  // Standing on a tile the field skips (a prop's footprint, a stuck mark): step to the best open neighbour
+  // instead of heading straight at the target (that pinned the bot in a crate corner in the Bone Garden).
+  if (here < 0 && at >= 0 && walk(M.grid[at])) {
+    for (const acid of [false, true]) {
+      const g = fieldTo(tx, tz, acid);
+      let nb = -1;
+      for (const [dx, dz] of N4) { const X = px + dx, Z = pz + dz; if (inG(X, Z) && g[gi(X, Z)] >= 0 && (nb < 0 || g[gi(X, Z)] < nb)) nb = g[gi(X, Z)]; }
+      if (nb >= 0) { f = g; here = nb + 1; break; }
+    }
+  }
   if (here < 0) return OFF; // the rat is off the field (roof, duct, prop): not the target's fault
   if (here <= 1) { const l = Math.hypot(x - P.x, z - P.z) || 1; return [(x - P.x) / l, (z - P.z) / l]; }
   let bd = here, bx = 0, bz = 0;
@@ -172,7 +231,8 @@ function steerTo(x, z) {
     const v = f[gi(X, Z)];
     // Diagonals only when both orthogonal steps are open (no corner cutting).
     if (dx && dz && (!walk(tAt(px + dx, pz)) || !walk(tAt(px, pz + dz)))) continue;
-    if (v >= 0 && v < bd) { bd = v; bx = toW(X) - P.x; bz = toW(Z) - P.z; }
+    if (at >= 0 && stuckEdge(at, gi(X, Z))) continue;
+    if (v >= 0 && v < bd) { bd = v; bx = toW(X) - P.x; bz = toW(Z) - P.z; B.gnaw = viaBoards && !dx !== !dz && gnawable(gi(X, Z)) ? { gx: X, gz: Z } : null; }
   }
   const l = Math.hypot(bx, bz) || 1;
   return [bx / l, bz / l];
@@ -194,6 +254,30 @@ function exploreTarget() {
   }
   return b;
 }
+/** A way up to an elevated pickup. Boss keys often land on a pipe or ledge at y 4–6, and a ground-level
+ *  walk to their xz leaves the rat under them (pickup needs |dy| < 1.6). Prefer a marked drainpipe
+ *  whose top reaches the height and that actually sits near the pickup — a far ledge left the bot
+ *  stuck while the key sat 100 tiles away. Skip approaches already tried and given up on. */
+function wayUp(x, y, z) {
+  const tried = B.triedUp || (B.triedUp = new Set());
+  const skip = o => tried.has(toG(o.x) + ',' + toG(o.z));
+  // Rank by distance to the pickup first. A nearby but irrelevant ledge used to win
+  // and leave the bot stuck 100 tiles from the key.
+  let best = null, bd = 1e9;
+  for (const c of W.climbs || []) {
+    if (c.top < y - 0.8 || skip(c)) continue;
+    const d = Math.hypot(c.x - x, c.z - z) + Math.hypot(c.x - P.x, c.z - P.z) * 0.15;
+    if (d < bd) { bd = d; best = { x: c.x, z: c.z, kind: 'climb', o: c, y }; }
+  }
+  if (best) return best;
+  for (const p of W.plats || []) {
+    if (p.thin || p.line || p.pole || p.dyn || skip(p)) continue;
+    if (p.y < P.y + 0.7 || p.y > y + 0.5 || p.y < y - 3.2) continue;
+    const d = Math.hypot(p.x - x, p.z - z) + Math.hypot(p.x - P.x, p.z - P.z) * 0.15;
+    if (d < bd) { bd = d; best = { x: p.x, z: p.z, kind: 'ledge', o: p, y }; }
+  }
+  return best;
+}
 function chooseTarget() {
   const pr = B.profile, foods = W.foods;
   if (B.goal === 'die') {
@@ -209,16 +293,29 @@ function chooseTarget() {
     if (f) return { x: f.x, z: f.z, kind: 'food', o: f };
   }
   if (B.goal === 'break') return breakTarget();
-  // Power-up tokens nearby are worth a detour (as a player would take them).
-  if (Math.random() < pr.loot) { const t = nearestOf((W.pups || []).filter(p => Math.hypot(p.x - P.x, p.z - P.z) < 30 && Math.abs(p.y - P.y) < 1.5)); if (t) return { x: t.x, z: t.z, kind: 'powerup', o: t }; }
   const exits = G.exits && G.exits.length ? G.exits : G.exitD ? [G.exitD] : [];
+  // Clear-goal critical path: once a key is down, the exit is open, or the boss is up, skip loot detours.
+  const clearing = B.goal === 'clear' && (W.keys.length || exits.length || (G.boss && !G.boss.dead));
+  // Power-up tokens nearby are worth a detour (as a player would take them).
+  if (!clearing && Math.random() < pr.loot) { const t = nearestOf((W.pups || []).filter(p => Math.hypot(p.x - P.x, p.z - P.z) < 30 && Math.abs(p.y - P.y) < 1.5)); if (t) return { x: t.x, z: t.z, kind: 'powerup', o: t }; }
   if (B.goal === 'manhole' && G.manhole) return { x: G.manhole.x, z: G.manhole.z, kind: 'manhole' };
   if (B.goal === 'secret' && G.secretExit) return { x: G.secretExit.x, z: G.secretExit.z, kind: 'secret' }; // best effort: it may sit behind a cracked wall
   if (B.goal === 'interior') {
     for (let k = 0; k < M.inside.length; k++) if (M.inside[k] && M.grid[k] === 1 && !B.banned.has((k % M.W) + ',' + ((k / M.W) | 0))) return { x: toW(k % M.W), z: toW((k / M.W) | 0), kind: 'interior' };
   }
   if (B.goal === 'explore') return exploreTarget();
-  if (B.goal === 'loot' || Math.random() < pr.loot * 0.2) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
+  if (!clearing && (B.goal === 'loot' || Math.random() < pr.loot * 0.2)) { const c = nearestOf(W.chests.filter(c => !c.open && c.y < 0.6 && !c.cursed && (!c.locked || run.lvlBoss))); if (c && (B.goal === 'loot' || Math.hypot(c.x - P.x, c.z - P.z) < 14)) return { x: c.x, z: c.z, kind: 'chest', o: c }; }
+  if (B.goal === 'clear' && W.keys.length) {
+    const k = nearestMust(W.keys);
+    if (k) {
+      // If the key is above the rat, climb a pipe or hop a ledge first; standing under it never picks it up.
+      if (k.y - P.y > 1.4) {
+        const up = wayUp(k.x, k.y, k.z);
+        if (up && Math.hypot(up.x - P.x, up.z - P.z) > 1.0) return { x: up.x, z: up.z, kind: up.kind, y: k.y, key: k };
+      }
+      return { x: k.x, z: k.z, kind: 'key', y: k.y };
+    }
+  } // grab the boss key before the exit
   if (exits.length && B.goal !== 'boss' && B.goal !== 'survive') { const e = nearestMust(exits); if (e) return { x: e.x, z: e.z, kind: 'exit' }; }
   const b = G.boss;
   if (b && b.revealed && !b.dead) return { x: b.x, z: b.z, kind: 'boss', e: b };
@@ -226,6 +323,9 @@ function chooseTarget() {
   // Smashing the nests is the main objective (it wakes the boss); side objectives come after.
   const nests = W.enemies.filter(e => e.type === 'nest' && !e.dead);
   if (nests.length && B.goal !== 'survive') { const n = nearestMust(nests); if (n) return { x: n.x, z: n.z, kind: 'nest', e: n }; }
+  // Nests are down but the boss has not spawned yet: walk to the arena. The wake check
+  // needs DRY spawn tiles 6–11 steps from the rat, which some sewer starts don't have (P41-3).
+  if (B.goal === 'clear' && !nests.length && G.arena && !run.bossDone) return { x: G.arena.x, z: G.arena.z, kind: 'arena' };
   const ot = objTargets().filter(reachable);
   if (ot.length) { const o = nearestOf(ot); if (o) return { x: o.x, z: o.z, kind: 'objective', o }; }
   // Nothing to do: hunt the nearest crowd, or explore.
@@ -294,6 +394,57 @@ function threatDir() {
   return { crowd: n, cx: hx, cz: hz, danger };
 }
 
+// P40-10: locked vault bars sit on a tile edge the grid still calls open. Block that edge so a
+// flood-fill can tell a real trap (no walkable path off the vault tiles) from merely standing near
+// a locked gate.
+function lockedGateEdges() {
+  const edges = new Set();
+  for (const g of W.gates || []) {
+    if (g.open) continue;
+    const gx1 = toG(g.x - (g.nx || 0) * 0.25), gz1 = toG(g.z - (g.nz || 0) * 0.25);
+    const gx2 = toG(g.x + (g.nx || 0) * 0.25), gz2 = toG(g.z + (g.nz || 0) * 0.25);
+    if (!inG(gx1, gz1) || !inG(gx2, gz2)) continue;
+    const a = gi(gx1, gz1), b = gi(gx2, gz2);
+    if (a === b) continue;
+    edges.add(a + '>' + b);
+    edges.add(b + '>' + a);
+  }
+  return edges;
+}
+// True only when the rat is on a vault tile and cannot walk to a non-vault tile without crossing a
+// locked gate. Standing on the vault tile but still on the outside of the bars is not trapped (the
+// gate is built on the vault tile's edge, so toG can put the rat "inside" while it is still in the
+// corridor). Boards and acid count as passable; stuck-watchdog marks do not — those are bot memory.
+function trappedInVault(atK) {
+  if (atK < 0 || !M.vault || !M.vault[atK]) return false;
+  for (const g of W.gates || []) {
+    if (!g.open && (P.x - g.x) * (g.nx || 0) + (P.z - g.z) * (g.nz || 0) > 0.15) {
+      const gx = toG(g.x - (g.nx || 0) * 0.25), gz = toG(g.z - (g.nz || 0) * 0.25);
+      if (inG(gx, gz) && gi(gx, gz) === atK) return false;
+    }
+  }
+  const edges = lockedGateEdges(), bl = blockedTiles(), q = [atK], seen = new Uint8Array(M.W * M.H);
+  seen[atK] = 1;
+  for (let i = 0; i < q.length; i++) {
+    const c = q[i];
+    if (c !== atK && !M.vault[c]) return false;
+    const x = c % M.W, y = (c / M.W) | 0;
+    for (const [dx, dy] of N4) {
+      const X = x + dx, Y = y + dy;
+      if (!inG(X, Y)) continue;
+      const k = gi(X, Y);
+      if (seen[k] || edges.has(c + '>' + k) || (bl.has(k) && k !== atK)) continue;
+      if (!(walk(M.grid[k]) || gnawable(k))) continue;
+      seen[k] = 1;
+      q.push(k);
+    }
+  }
+  return true;
+}
+const VAULT_JUMP_MAX = 8;     // give up after this many failed hop attempts
+const VAULT_GIVEUP_S = 6;     // or after this many seconds with no real movement
+const VAULT_PROGRESS = 2.5;   // world units from where the escape started
+
 function think(dt) {
   const pr = B.profile;
   B.thinkT -= dt;
@@ -318,16 +469,86 @@ function think(dt) {
     const fight = tg.kind === 'boss' || tg.kind === 'mob' || tg.kind === 'nest';
     const want = fight ? (RANGED[run.cls] ? 6.5 : 1.6) : 0.6;
     if (tg.kind.startsWith('break-') && (dist < 1.6 || B.tacT > 0)) { breakAct(tg, 0.1 + B.profile.react * 0.3); return; }
+    B.gnawing = false;
     if (dist > want) {
       const s = steerTo(tg.x, tg.z);
       if (s === OFF) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist]; // head straight for it until back on the field
-      else if (s) d = s;
+      else if (s) {
+        d = s;
+        // P40-6: the route goes through a board: walk into it and hold E (the game's own gnaw) until it opens.
+        const c = B.gnaw && chewTarget();
+        if (c && c.kind === 'tile' && c.gx === B.gnaw.gx && c.gz === B.gnaw.gz) { B.gnawing = true; keys.KeyE = true; if (!P.chewing) { pressE(); T.gnaws = (T.gnaws || 0) + 1; } }
+      }
+      else if (B.goal === 'clear' && (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge' || tg.kind === 'arena')) d = [(tg.x - P.x) / dist, (tg.z - P.z) / dist];
       else { B.banned.add(toG(tg.x) + ',' + toG(tg.z)); B.target = null; }
     }
     else if (fight && RANGED[run.cls]) { const a = Math.atan2(P.x - tg.x, P.z - tg.z) + 0.9; d = [Math.sin(a), Math.cos(a)]; } // orbit at range
     else if (tg.kind === 'chest' || tg.kind === 'manhole') { pressE(); tg.done = tg.kind === 'chest'; }
     else if (tg.kind === 'objective') { const c = chewTarget(); if (c && c.kind === 'cage') { keys.KeyE = true; if (!P.chewing) pressE(); } }
+    else if (tg.kind === 'exit' || tg.kind === 'key' || tg.kind === 'climb' || tg.kind === 'ledge' || tg.kind === 'arena') {
+      // Keep walking onto the pad / key. Standing still at 0.6 misses the trigger if a hop lifts Y
+      // (exit needs |dy| < 0.8) or ice carries the rat past (Frozen Pipeworks). Don't mark a key
+      // done until it's actually picked up (range 1.4). If the key is overhead, hold Space on a
+      // drainpipe (or hop a ledge) instead of standing under it.
+      const ty = tg.y ?? (W.keys[0] && tg.kind !== 'exit' ? W.keys[0].y : P.y);
+      const dy = ty - P.y;
+      d = [(tg.x - P.x) / (dist || 1), (tg.z - P.z) / (dist || 1)];
+      if (dy > 1.2) {
+        const up = wayUp(tg.x, ty, tg.z);
+        if (up && Math.hypot(up.x - P.x, up.z - P.z) > 1.0) d = [up.x - P.x, up.z - P.z];
+        keys.Space = true; P.buffer = 0.13;
+      } else keys.Space = false;
+      if (tg.kind === 'key' && !W.keys.length) tg.done = true;
+      if ((tg.kind === 'climb' || tg.kind === 'ledge') && dy <= 1.2) {
+        tg.done = true;
+        // Up there but no key: after two tries at the same pipe or ledge, try another (or, with none left,
+        // walk at the key so the existing stall recovery can fire). It used to loop on one pipe until the cap.
+        const k = toG(tg.x) + ',' + toG(tg.z), ups = B.upTries || (B.upTries = new Map()), n = (ups.get(k) || 0) + 1;
+        ups.set(k, n);
+        if (n >= 2) (B.triedUp || (B.triedUp = new Set())).add(k);
+      }
+      if (tg.kind === 'key' && tg.y - P.y > 1.4) { keys.Space = true; P.buffer = 0.13; }
+      if ((tg.kind === 'climb' || tg.kind === 'ledge') && (tg.y || 0) - P.y > 0.8) { keys.Space = true; P.buffer = 0.13; }
+    }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
+  }
+  // P40-9 / P40-10: if the bot hopped the bars of a still-locked vault before the boss is down,
+  // drop the loot target and jump back out the way it came in (Nightshift seed 2). Only fire when a
+  // flood-fill from the rat's tile cannot reach a non-vault tile without crossing a locked gate; a
+  // nearby vault is not enough (Meltdown seed 2 used to jump in place on the gate tile until the cap).
+  // After a few failed hops with no progress, give up and fall back to normal pathing.
+  const atK = inG(toG(P.x), toG(P.z)) ? gi(toG(P.x), toG(P.z)) : -1;
+  if (!(B.goal === 'clear' && !run.lvlBoss && atK >= 0 && M.vault && M.vault[atK] && W.gates && W.gates.length)) {
+    B.inVault = false;
+    if (atK < 0 || !M.vault || !M.vault[atK]) B.vaultGiveUp = false;
+  } else if (!B.vaultGiveUp && trappedInVault(atK)) {
+    let gt = null, gd = 1e9;
+    for (const g of W.gates) { const dd = Math.hypot(g.x - P.x, g.z - P.z); if (!g.open && dd < gd) { gd = dd; gt = g; } }
+    if (gt) {
+      if (!B.inVault) { B.inVault = true; B.vaultJumps = 0; B.vaultSince = B.t; B.vaultX = P.x; B.vaultZ = P.z; T.vaultEscapes = (T.vaultEscapes || 0) + 1; }
+      const noProgress = B.t - (B.vaultSince || 0) > VAULT_GIVEUP_S && Math.hypot(P.x - B.vaultX, P.z - B.vaultZ) < VAULT_PROGRESS;
+      if ((B.vaultJumps || 0) >= VAULT_JUMP_MAX || noProgress) {
+        B.vaultGiveUp = true;
+        B.inVault = false;
+      } else {
+        if (B.target && B.target.kind !== 'boss' && B.target.kind !== 'nest') { B.banned.add(toG(B.target.x) + ',' + toG(B.target.z)); B.target = null; }
+        // Run at the bars from a step back and jump as they come up.
+        const ox = gt.x + (gt.nx || 0) * 2, oz = gt.z + (gt.nz || 0) * 2;
+        d = [ox - P.x, oz - P.z];
+        if (gd < 1.6) {
+          keys.Space = true; P.buffer = 0.13;
+          if (P.onGround && B.t - (B.vaultJumpT || 0) > 0.35) { B.vaultJumpT = B.t; B.vaultJumps = (B.vaultJumps || 0) + 1; }
+        }
+        setDir(d[0], d[1]);
+      }
+    }
+  } else B.inVault = false;
+  // Locked vault gates open with the boss's key ring once the boss is down. A boss key can land behind one
+  // (Bone Garden, Rat King's Court): the grid calls the gateway open, so the bot walks up to the bars and
+  // would push on them until the cap. Use the gate (the game's own E action) when it is in reach.
+  if (B.goal === 'clear' && run.lvlBoss && W.gates && W.gates.some(g => !g.open && Math.hypot(g.x - P.x, g.z - P.z) < 2.2)) {
+    const u = useTarget();
+    if (u && u.kind === 'gate') { pressE(); T.gates = (T.gates || 0) + 1; }
   }
   // Boss spacing: a player who can't roll (cooldown) steps back out of a boss wind-up instead of
   // trading hits, then closes again when it whiffs. The roll dodge above still handles the rest.
@@ -391,7 +612,7 @@ function applyInput() {
   stick.active = x !== 0 || z !== 0;
   stick.y = x * fx + z * fz;
   stick.x = x * rx + z * rz;
-  if (!(B.target && B.target.kind === 'objective')) keys.KeyE = false;
+  if (!(B.target && B.target.kind === 'objective') && !B.gnawing) keys.KeyE = false;
 }
 
 function watchdogs(dt) {
@@ -404,12 +625,34 @@ function watchdogs(dt) {
       B.unstick++;
       // Something the grid doesn't know about is in the way: block the tile we were walking into.
       const bx = toG(P.x + B.dir[0] * 1.2), bz = toG(P.z + B.dir[1] * 1.2);
-      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) { blockedTiles().add(gi(bx, bz)); B.fieldT = 0; }
+      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) {
+        const m = B.stuckBlk || (B.stuckBlk = new Map()), a = inG(toG(P.x), toG(P.z)) ? gi(toG(P.x), toG(P.z)) : -1;
+        m.set(gi(bx, bz), B.t + STUCK_TTL);
+        if (a >= 0) m.set(a + '>' + gi(bx, bz), B.t + STUCK_TTL);
+        B.fieldT = 0;
+      }
       keys.Space = true; P.buffer = 0.13; // hop
       setDir(rand(-1, 1), rand(-1, 1));
       if (B.unstick >= 3) {
         anomaly('stuck', { target: B.target && B.target.kind, tx: B.target && +B.target.x.toFixed(1), tz: B.target && +B.target.z.toFixed(1) });
-        if (B.target) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
+        // A climb/ledge that didn't get us to the key: don't pick it again; walk at the key and jump.
+        if (B.goal === 'clear' && B.target && (B.target.kind === 'climb' || B.target.kind === 'ledge')) {
+          (B.triedUp || (B.triedUp = new Set())).add(toG(B.target.x) + ',' + toG(B.target.z));
+        }
+        // Last resort after the boss is dead: if the key is still overhead, stand on it so the pickup fires.
+        const k = B.goal === 'clear' && W.keys[0];
+        if (k && Math.abs(P.y - k.y) >= 1.6) {
+          // P41-4: count the teleport; do not change when or how it fires.
+          const dist = Math.hypot(P.x - k.x, P.y - k.y, P.z - k.z);
+          const spd = Math.max(0.5, st.speed || 6.56);
+          T.keyTp = (T.keyTp || 0) + 1;
+          T.keyTpSaved = +((T.keyTpSaved || 0) + dist / spd).toFixed(2);
+          (T.keyTpAt || (T.keyTpAt = [])).push(+((run.time - (T.start && T.start.time || run.dStart || 0)) / 60).toFixed(2));
+          P.x = k.x; P.z = k.z; P.y = k.y; P.vy = 0;
+        }
+        // Clear-goal keys, exits and the arena are the whole point: banning them left the bot idle until the cap.
+        const must = B.goal === 'clear' && B.target && (B.target.kind === 'exit' || B.target.kind === 'key' || B.target.kind === 'climb' || B.target.kind === 'ledge' || B.target.kind === 'arena');
+        if (B.target && !must) B.banned.add(toG(B.target.x) + ',' + toG(B.target.z));
         B.target = null; B.unstick = 0;
       }
     } else { B.unstick = 0; if (B.on) keys.Space = false; }
@@ -460,7 +703,7 @@ function step(dt) {
   think(sdt);
   applyInput();
   const lv = run.level;
-  if (B.tierSeen !== run.tier) { if (B.tierSeen != null) T.districts.push({ to: run.tier, t: +run.time.toFixed(1) }); B.tierSeen = run.tier; B.visited.clear(); B.banned.clear(); B.target = null; B.memT = 2; }
+  if (B.tierSeen !== run.tier) { if (B.tierSeen != null) T.districts.push({ to: run.tier, t: +run.time.toFixed(1) }); B.tierSeen = run.tier; B.visited.clear(); B.banned.clear(); if (B.stuckBlk) B.stuckBlk.clear(); if (B.upTries) B.upTries.clear(); B.target = null; B.memT = 2; }
   const t0 = performance.now();
   update(sdt);
   const ms = performance.now() - t0;
@@ -483,7 +726,7 @@ export const qa = {
   get bot() { return B; },
   start({ profile = 'average', goal = 'progress', assist = false } = {}) {
     resetTelemetry();
-    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, target: null, field: null, fieldK: -1, ring: [], done: null, visited: new Set(), banned: new Set(), seenWind: new Map() });
+    Object.assign(B, { tierSeen: null, memT: 0, on: true, profile: PROFILES[profile] || PROFILES.average, profileName: profile, goalText: goal, goal: parseGoal(goal), assist, t: 0, thinkT: 0, dir: [0, 0], sprint: false, target: null, field: null, fieldK: -1, fieldT: 0, stuckT: 0, unstick: 0, aimOff: null, wallT: 0, ring: [], ringT: 0, sampleT: 0, done: null, visited: new Set(), banned: new Set(), blocked: new Set(), blockedSeed: null, stuckBlk: new Map(), gnaw: null, gnawing: false, upTries: new Map(), seenWind: new Map(), triedUp: new Set(), inVault: false, vaultGiveUp: false, vaultJumps: 0, vaultJumpT: 0, vaultSince: 0, vaultX: 0, vaultZ: 0 });
     G.qa = hooks;
     G.qaHold = true;
     if (assist) { st.taken = 0; st.dmg *= 4; }
@@ -500,7 +743,10 @@ export const qa = {
       if (G.state === 'trans') return 'trans';
       if (G.state !== 'play') return G.state;
       step(dt);
-      if (++n % 6 === 0) { sync(dt * 6); animate(dt * 6); }
+      // qaFast: the clear-time bot does not need a render sync. sync/animate called
+      // animTick only for on-screen mobs, which consumed Math.random and desynced the
+      // seeded stream when the camera (boot rAF) differed between runs.
+      if (!G.qaFast && ++n % 6 === 0) { sync(dt * 6); animate(dt * 6); }
       if (goalMet()) return 'goal';
       if (run.tier !== dist0) return 'district';
     }

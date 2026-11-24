@@ -4,7 +4,7 @@
 // children alive and raise the family's tougher member. Damage knocks a nest
 // down a tier once its HP falls below the next tier's, so a half-smashed
 // Warren behaves like a Burrow. Smashing every nest wakes the zone's boss.
-import { rand, rng } from '../core/util.js';
+import { rand, rr, rng } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { dnum, puff } from '../fx/fx.js';
 import { sfx } from '../audio/audio.js';
@@ -39,7 +39,7 @@ export function rollNest(i) {
 /** Fill in a nest enemy's tier fields (called by addNest in build.js). */
 export function initNest(e, tier, fam) {
   const H = tierHp();
-  Object.assign(e, { tier, fam, hp: H[tier - 1], maxHp: H[tier - 1], name: tierName(tier), xp: N()['xp' + tier], kids: [], spawnT: rand(1, 4) });
+  Object.assign(e, { tier, fam, hp: H[tier - 1], maxHp: H[tier - 1], name: tierName(tier), xp: N()['xp' + tier], kids: [], spawnT: rr(1, 4) });
   e.mesh.scale.setScalar(0.7 + 0.32 * (tier - 1));
 }
 

@@ -168,7 +168,7 @@ const TAUF = Math.PI * 2;
  */
 export function animTick(e, dt, key, px, pz) {
   const R = RIGS[key] || DEF;
-  if (e.anx == null) { e.anx = e.x; e.anz = e.z; e.gph = Math.random() * TAUF; e.gam = 0; e.ap = 0; e.av = 0; e.lean = 0; e.hyaw = 0; e.flap = Math.random() * TAUF; e.pang = e.ang; e.sq = 0; e.sqv = 0; e.pvy = 0; }
+  if (e.anx == null) { e.anx = e.x; e.anz = e.z; const seed = Math.abs(Math.sin((e.x + 0.13) * 12.9898 + (e.z + 0.17) * 78.233 + (e.ph || 0) * 3.17)) % 1; e.gph = seed * TAUF; e.gam = 0; e.ap = 0; e.av = 0; e.lean = 0; e.hyaw = 0; e.flap = (seed * 7.13 % 1) * TAUF; e.pang = e.ang; e.sq = 0; e.sqv = 0; e.pvy = 0; }
   const step = Math.min(Math.hypot(e.x - e.anx, e.z - e.anz), 2);
   e.anx = e.x; e.anz = e.z;
   const sc = e.sc || 1, k = Math.min(1, dt * 10);

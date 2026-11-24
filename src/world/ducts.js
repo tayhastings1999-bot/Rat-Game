@@ -6,7 +6,7 @@
 // see the maze from above.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { rand, rng, shuffleR, PI2 } from '../core/util.js';
+import { rand, rr, rng, shuffleR, PI2 } from '../core/util.js';
 import { G, P, W, run } from '../core/state.js';
 import { world, cutPlane, bury } from '../render/renderer.js';
 import { applyFade } from '../render/fade.js';
@@ -121,7 +121,7 @@ export function populateDucts(nets, addCache) {
       g.add(sp);
       g.position.set(x, 0, z);
       world.add(g);
-      W.ductWires.push({ k: net.wire, x, z, t: rand(0, 3), sp, tick: 0 });
+      W.ductWires.push({ k: net.wire, x, z, t: rr(0, 3), sp, tick: 0 });
     }
   }
 }
@@ -170,7 +170,7 @@ function addRival(x, z) {
   g.position.set(x, 0, z);
   world.add(g);
   const hp = 110 * (1 + (run.tier || 0) * 0.45);
-  W.enemies.push({ type: 'rivalnest', rival: true, x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp, r: 0.75, h: 0.9, heavy: true, mesh: g, core: eye, cd: rand(1, 2), col: 0x4a3a2a, blood: 0x5a1a10, flash: 0, slow: 0, bar: true, pT: 0, bT: 0, dT: 0, tT: 0, ward: 0, ang: 0 });
+  W.enemies.push({ type: 'rivalnest', rival: true, x, y: 0, z, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp, maxHp: hp, r: 0.75, h: 0.9, heavy: true, mesh: g, core: eye, cd: rr(1, 2), col: 0x4a3a2a, blood: 0x5a1a10, flash: 0, slow: 0, bar: true, pT: 0, bT: 0, dT: 0, tT: 0, ward: 0, ang: 0 });
 }
 /** Dark caps over every solid tile, shown only in the cutaway; then arm the cut plane on everything built. */
 export function applyCutaway() {
