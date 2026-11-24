@@ -16,11 +16,11 @@
 
 const night = { fog: 0x0a0a16, sky: 0x0c0a1c };
 export const CITY_LEVELS = [
-  { id: 'cinder', base: 0, seed: 'cinder' },
-  { id: 'neon', base: 1, seed: 'neon', map: 84, blockGap: 16, hiddenExtra: 2, alleyOdds: 0.2 }, // wider arcade blocks, fewer alley shortcuts (Rat 3: target ~11 min, no extra nests)
+  { id: 'cinder', base: 0, seed: 'cinder', map: 92, blockGap: 14, hiddenExtra: 3, alleyOdds: 0.28, sideYards: 10 }, // try 1 knobs kept (median 9.3 beat try 2's 7.9); fallback (Rat 3): one more gentle side-room set, 10 dead-end yards off the main route that take some of the same 20 nests; same map
+  { id: 'neon', base: 1, seed: 'neon', map: 90, blockGap: 17, hiddenExtra: 3, alleyOdds: 0.16, arenaDetour: 4 }, // try 2 knobs; fallback (Rat 3): barricade 4 crossings round the lair so the walk to the arena goes round, same beats and nests
   { id: 'rust', base: 2, seed: 'rust', hiddenExtra: 2, alleyOdds: 0.85 }, // longer B2 crane-yard loop + extra hidden yards (Rat 3: target ~12 min, no extra nests)
   { id: 'hollow', base: 3, seed: 'hollow', grave: true, secretTo: 'vault' },
-  { id: 'cinder-n', base: 0, seed: 'cinder-night', title: 'Cinder Row · After Dark', night: true, haz: 'blackout', fam: ['prowl', 'vermin', 'wings'], boss: 'tabby', bossV: 'frenzied', over: { ...night, lamp: 0x9ab0ff, neon: [0xff3a6a, 0x6a3aff] } },
+  { id: 'cinder-n', base: 0, seed: 'cinder-night', title: 'Cinder Row · After Dark', night: true, haz: 'blackout', fam: ['prowl', 'vermin', 'wings'], boss: 'tabby', bossV: 'frenzied', map: 86, blockGap: 12, hiddenExtra: 2, alleyOdds: 0.28, darkStretches: 8, over: { ...night, lamp: 0x9ab0ff, neon: [0xff3a6a, 0x6a3aff] } }, // route length through Blackout dark stretches, not more enemies (PR 3b: target ~13)
   { id: 'neon-n', base: 1, seed: 'neon-night', title: 'Neon Market · Last Call', night: true, haz: 'cats', fam: ['wings', 'guard'], boss: 'murder', bossV: 'brood', grave: true, over: { ...night, lamp: 0xff60ff, neon: [0xff3ad0, 0x3affd0, 0xffe03a] } },
   { id: 'rust-n', base: 2, seed: 'rust-night', title: 'Rust Yards · Nightshift', night: true, haz: 'collapse', fam: ['guard', 'rot', 'prowl'], boss: 'exterm', bossV: 'armored', secretTo: 'run', over: { ...night, lamp: 0xffa040 } },
   { id: 'hollow-n', base: 3, seed: 'hollow-night', title: 'Hollow Heights · Moonrise', night: true, haz: 'bloodmoon', fam: ['prowl', 'wings', 'vermin'], boss: 'tabby', bossV: 'brood', grave: true, over: { ...night, lamp: 0xc0d0ff, neon: [0x9ad0ff] } },

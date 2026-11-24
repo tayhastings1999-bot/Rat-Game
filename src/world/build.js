@@ -1016,7 +1016,9 @@ export function populate(info) {
   // Eligible rooms: past the quiet start, and not reserved nest-free side rooms (landmarks, hidden doors).
   const far = byDist.filter(r => !r.nestFree && (dist[gi(r.cx, r.cy)] ?? 99) >= TUNE.nests.startClear);
   const want = nestBudget(far.length, rooms.length);
-  const order = far.length >= want / 2 ? far : byDist.filter(r => !r.nestFree);
+  const order0 = far.length >= want / 2 ? far : byDist.filter(r => !r.nestFree);
+  // Side yards (cityGen D.sideYards) take the first nests, so the route detours into them.
+  const order = [...order0.filter(r => r.sideYard), ...order0.filter(r => !r.sideYard)];
   for (let j = 0, i = 0; i < want && j < order.length; j++) {
     const spot = shuffleR(roomTiles(order[j]).slice()).map(([x, y]) => [toW(x), toW(y)]).find(([x, z]) => away(x, z) && freeSpot(x, z, 1.7));
     if (!spot) continue;
@@ -1054,6 +1056,11 @@ export function populate(info) {
   if (run.mods.includes('currents')) for (let i = 0; i < 9; i++) addZone('vent', ...nxt());
   if (run.mods.includes('gravity')) for (let i = 0; i < 5; i++) addZone('grav', ...nxt());
   if (run.mods.includes('decay')) for (let i = 0; i < 5; i++) addZone('decay', ...nxt());
+  // After Dark: extra unlit pockets along the mid-route so the longer walk goes through Blackout stretches.
+  if (D.darkStretches) {
+    const mid = byDist.filter(r => r !== startRoom && (dist[gi(r.cx, r.cy)] ?? 0) >= 8);
+    shuffleR((mid.length ? mid : others).slice()).slice(0, D.darkStretches).forEach(r => addZone('dark', toW(r.cx), toW(r.cy)));
+  }
   if (G.tideMesh) G.tideMesh.material.map.dispose();
   G.tideMesh = null;
   G.tideY = -5;

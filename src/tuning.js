@@ -193,7 +193,8 @@ export const TUNE = {
     // Remixed levels field a variant of their boss (data/levels.js BOSS_VARIANTS).
     remixHp: 1.1, // every variant
     frenziedSpd: 1.12, frenziedRate: 1.35, // Unleashed: move speed ×, attack rate ×
-    armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP ×
+    armoredTaken: 0.8, armoredHp: 1.15, // in Iron: damage taken ×, extra HP × (Nightshift, Black Ice: leave these alone)
+    ratkingArmoredHp: 0.65, // Bloodworks only: try 2, pull the long fights down (try 1 median 22.5; target ~17)
     broodAdds: 5, // and Brood: family mobs called in at every phase change (and on waking)
   },
   runes: { finalHp: 1.6, secretHp: 6, secretDmg: 1.8, secretSpd: 1.25, secretTaken: 0.6 }, // The Crowned One at finalHp; The Nameless Rat (Great Rune): ×6 HP, ×1.8 damage, ×1.25 speed, takes 60% damage
