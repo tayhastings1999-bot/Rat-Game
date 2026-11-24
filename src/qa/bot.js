@@ -139,6 +139,15 @@ function stuckBlocked(k) {
   B.stuckBlk.delete(k);
   return false;
 }
+// The step from tile a into tile b got the bot stuck (a thin wall or bars across a doorway the grid calls
+// open, or the target tile itself, which a tile mark can't block). Same expiry, keyed 'a>b'.
+function stuckEdge(a, b) {
+  const m = B.stuckBlk, k = a + '>' + b, e = m && m.get(k);
+  if (e == null) return false;
+  if (e > B.t) return true;
+  m.delete(k);
+  return false;
+}
 // P40-6: gnawable boards (city plywood / sewer drywall, tile 3; not a gate-locked one) are passable at a
 // cost when no board-free route exists, so a rat that hopped into a boarded building gnaws its way out.
 const BOARD_COST = 6;
@@ -163,7 +172,7 @@ function fieldTo(gx, gz, acid = false, boards = false) {
         const X = x + dx, Y = y + dy;
         if (!inG(X, Y)) continue;
         const k = gi(X, Y);
-        if (done[k] || (bl.has(k) && k !== k0) || (k !== k0 && stuckBlocked(k))) continue;
+        if (done[k] || (bl.has(k) && k !== k0) || (k !== k0 && stuckBlocked(k)) || stuckEdge(k, c)) continue;
         const step = ok(M.grid[k]) ? 1 : boards && gnawable(k) ? BOARD_COST : 0;
         if (!step) continue;
         const nd = c0 + step;
@@ -203,6 +212,16 @@ function steerTo(x, z) {
   }
   let viaBoards = false;
   if (here < 0 && at >= 0 && walk(M.grid[at])) { f = fieldTo(tx, tz, true, true); here = f[at]; viaBoards = here >= 0; } // P40-6: walled in by boards
+  // Standing on a tile the field skips (a prop's footprint, a stuck mark): step to the best open neighbour
+  // instead of heading straight at the target (that pinned the bot in a crate corner in the Bone Garden).
+  if (here < 0 && at >= 0 && walk(M.grid[at])) {
+    for (const acid of [false, true]) {
+      const g = fieldTo(tx, tz, acid);
+      let nb = -1;
+      for (const [dx, dz] of N4) { const X = px + dx, Z = pz + dz; if (inG(X, Z) && g[gi(X, Z)] >= 0 && (nb < 0 || g[gi(X, Z)] < nb)) nb = g[gi(X, Z)]; }
+      if (nb >= 0) { f = g; here = nb + 1; break; }
+    }
+  }
   if (here < 0) return OFF; // the rat is off the field (roof, duct, prop): not the target's fault
   if (here <= 1) { const l = Math.hypot(x - P.x, z - P.z) || 1; return [(x - P.x) / l, (z - P.z) / l]; }
   let bd = here, bx = 0, bz = 0;
@@ -212,6 +231,7 @@ function steerTo(x, z) {
     const v = f[gi(X, Z)];
     // Diagonals only when both orthogonal steps are open (no corner cutting).
     if (dx && dz && (!walk(tAt(px + dx, pz)) || !walk(tAt(px, pz + dz)))) continue;
+    if (at >= 0 && stuckEdge(at, gi(X, Z))) continue;
     if (v >= 0 && v < bd) { bd = v; bx = toW(X) - P.x; bz = toW(Z) - P.z; B.gnaw = viaBoards && !dx !== !dz && gnawable(gi(X, Z)) ? { gx: X, gz: Z } : null; }
   }
   const l = Math.hypot(bx, bz) || 1;
@@ -509,7 +529,12 @@ function watchdogs(dt) {
       B.unstick++;
       // Something the grid doesn't know about is in the way: block the tile we were walking into.
       const bx = toG(P.x + B.dir[0] * 1.2), bz = toG(P.z + B.dir[1] * 1.2);
-      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) { (B.stuckBlk || (B.stuckBlk = new Map())).set(gi(bx, bz), B.t + STUCK_TTL); B.fieldT = 0; }
+      if (inG(bx, bz) && (bx !== toG(P.x) || bz !== toG(P.z))) {
+        const m = B.stuckBlk || (B.stuckBlk = new Map()), a = inG(toG(P.x), toG(P.z)) ? gi(toG(P.x), toG(P.z)) : -1;
+        m.set(gi(bx, bz), B.t + STUCK_TTL);
+        if (a >= 0) m.set(a + '>' + gi(bx, bz), B.t + STUCK_TTL);
+        B.fieldT = 0;
+      }
       keys.Space = true; P.buffer = 0.13; // hop
       setDir(rand(-1, 1), rand(-1, 1));
       if (B.unstick >= 3) {
