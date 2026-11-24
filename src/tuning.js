@@ -84,9 +84,9 @@ export const TUNE = {
     // Sewer Rat visible height 88 px → 1.375 units; at ortho zoom 20 on 1280-wide, 1 sprite px = 1 screen px.
     heroPpu: 64,
     heroCap: 8,
-    // Walk frame timing (data only; same 6 frames, different hold). Default is each atlas action's
-    // base_run profile (tank 65, slinger 68, warlock 60, sneak 60). 'slow_run' and 'walk' prefix-match
-    // the JSON profiles (tank 92/133, slinger 96/133, warlock and sneak 83/133). walkMs, if set, wins:
+    // Walk frame timing (data only; same 8 frames, different hold). Default is each atlas action's
+    // base_run profile (tank 49, slinger 51, warlock 45, sneak 45). 'slow_run' and 'walk' prefix-match
+    // the JSON profiles (tank 69/100, slinger 72/100, warlock and sneak 62/100). walkMs, if set, wins:
     // a number for every class, or { tank, slinger, warlock, sneak }.
     walkProfile: 'base_run',
     walkMs: null,
@@ -97,24 +97,24 @@ export const TUNE = {
     // Procedural walk juice (sprite path only; visual, deterministic, no hitbox/speed changes).
     // Rat 6 can tune these. Per-hero keys multiply the shared amplitudes.
     juice: {
-      bob: 0.09, // mid-stride hop, world units (0 at footfall)
-      squash: 0.07, // footfall compress (5–8%)
-      stretch: 0.06, // take-off extend
-      lean: 0.12, // radians into the move (~7°)
-      sway: 0.035, // side-to-side, world units
-      startAnticipation: 0.09, // s of pre-step squash
-      startSquash: 0.11,
-      stopSettle: 0.14, // s of overshoot / settle
-      stopOvershoot: 0.08,
+      bob: 0.027, // mid-stride hop, world units (~30% of the first juice pass)
+      squash: 0.021, // footfall compress (~2%)
+      stretch: 0.018, // take-off extend
+      lean: 0.06, // radians into the move (~3.4°, half of the first pass)
+      sway: 0.011, // side-to-side, world units
+      startAnticipation: 0.06, // s of pre-step squash (subtle)
+      startSquash: 0.05,
+      stopSettle: 0.08, // s of overshoot / settle (subtle)
+      stopOvershoot: 0.04,
       idleEnter: 0.28, // start walk above this speed (u/s)
       idleExit: 0.10, // return to idle below this (hysteresis around idleBelow)
       refSpeed: 5.6, // matches walk JSON profile base_run_5.6; cadence scales with actual speed
       stepsPerCycle: 2,
       heroes: {
-        tank: { bob: 0.62, squash: 1.4, stretch: 0.8, lean: 0.75, sway: 0.65, startAnticipation: 1.25, stopSettle: 1.3 },
-        slinger: { bob: 1.05, squash: 1, stretch: 1.05, lean: 1.05, sway: 1, startAnticipation: 1, stopSettle: 1 },
-        warlock: { bob: 0.9, squash: 1.05, stretch: 0.95, lean: 0.9, sway: 0.85, startAnticipation: 1.1, stopSettle: 1.1 },
-        sneak: { bob: 1.4, squash: 0.72, stretch: 1.3, lean: 1.2, sway: 1.25, startAnticipation: 0.7, stopSettle: 0.75 },
+        tank: { bob: 0.8, squash: 1.15, stretch: 0.9, lean: 0.85, sway: 0.85, startAnticipation: 1.1, stopSettle: 1.15 },
+        slinger: { bob: 1, squash: 1, stretch: 1, lean: 1, sway: 1, startAnticipation: 1, stopSettle: 1 },
+        warlock: { bob: 0.9, squash: 1.05, stretch: 0.95, lean: 0.9, sway: 0.9, startAnticipation: 1.05, stopSettle: 1.05 },
+        sneak: { bob: 1.15, squash: 0.85, stretch: 1.15, lean: 1.1, sway: 1.1, startAnticipation: 0.85, stopSettle: 0.9 },
       },
     },
   },
