@@ -2,3 +2,4 @@ node_modules/
 dist/
 scripts/out/
 scripts/_*.mjs
+tools/walk_v3/out/

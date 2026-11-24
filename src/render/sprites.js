@@ -26,6 +26,7 @@ const VERT = /* glsl */`
 uniform vec3 uRight; uniform vec3 uUp; uniform vec3 uFwd; uniform float uPpu; uniform float uVertical;
 attribute vec3 aPos; attribute vec4 aFrame; attribute vec4 aGeom; // aGeom = w, h (px), anchor x, y (px)
 attribute vec4 aFx;   // squashX, squashY, flipX, flash
+attribute float aLean; // billboard-plane tilt, radians (hero walk juice)
 attribute vec3 aPlayer; attribute vec3 aTint;
 varying vec2 vUv; varying vec3 vPlayer; varying vec3 vTint; varying float vFlash; varying vec2 vZW;
 void main() {
@@ -33,6 +34,11 @@ void main() {
   float dx = position.x * w - aGeom.z;
   float dy = aGeom.w - (1.0 - position.y) * h;
   if (aFx.z > 0.5) dx = -dx;
+  if (abs(aLean) > 1e-6) {
+    float c = cos(aLean), s = sin(aLean);
+    float rx = dx * c - dy * s, ry = dx * s + dy * c;
+    dx = rx; dy = ry;
+  }
   dx = floor(dx * aFx.x + 0.5); dy = floor(dy * aFx.y + 0.5); // whole sprite pixels [Q6]
   vec3 world = aPos + (uRight * dx + uUp * dy) / uPpu;
   // Upright equivalent [Q2]: slide the corner along the (ortho) view ray onto the vertical plane through
@@ -76,7 +82,7 @@ export class SpriteBatch {
     geo.setIndex([0, 1, 2, 0, 2, 3]);
     const ia = (n, name) => { const a = new THREE.InstancedBufferAttribute(new Float32Array(cap * n), n); a.setUsage(THREE.DynamicDrawUsage); geo.setAttribute(name, a); return a; };
     this.aPos = ia(3, 'aPos'); this.aFrame = ia(4, 'aFrame'); this.aGeom = ia(4, 'aGeom');
-    this.aFx = ia(4, 'aFx'); this.aPlayer = ia(3, 'aPlayer'); this.aTint = ia(3, 'aTint');
+    this.aFx = ia(4, 'aFx'); this.aLean = ia(1, 'aLean'); this.aPlayer = ia(3, 'aPlayer'); this.aTint = ia(3, 'aTint');
     geo.instanceCount = 0;
     const pg = atlas.pages?.[page] || {};
     this.material = new THREE.ShaderMaterial({
@@ -100,16 +106,17 @@ export class SpriteBatch {
     u.uUp.value.set(e[4], e[5], e[6]).normalize();
     u.uFwd.value.set(-e[8], -e[9], -e[10]).normalize();
     this.mesh.geometry.instanceCount = this.count;
-    for (const a of [this.aPos, this.aFrame, this.aGeom, this.aFx, this.aPlayer, this.aTint]) a.needsUpdate = true;
+    for (const a of [this.aPos, this.aFrame, this.aGeom, this.aFx, this.aLean, this.aPlayer, this.aTint]) a.needsUpdate = true;
   }
   /** Write instance i. f: a frame object from atlas.frames (look it up once, not per frame, to avoid GC).
    * player: THREE.Color or null; squash: snapped in the shader; flash 0–1; tint: THREE.Color or null. */
-  set(i, x, y, z, f, flip = false, player = null, flash = 0, sx = 1, sy = 1, tint = null) {
+  set(i, x, y, z, f, flip = false, player = null, flash = 0, sx = 1, sy = 1, tint = null, lean = 0) {
     if (i >= this.cap) return false;
     this.aPos.setXYZ(i, x, y, z);
     this.aFrame.setXYZW(i, f.uv.x, f.uv.y, f.uv.z, f.uv.w);
     this.aGeom.setXYZW(i, f.px[0], f.px[1], f.anchor[0], f.anchor[1]);
     this.aFx.setXYZW(i, sx, sy, flip ? 1 : 0, flash);
+    this.aLean.setX(i, lean);
     if (player) this.aPlayer.setXYZ(i, player.r, player.g, player.b); else this.aPlayer.setXYZ(i, 0, 0, 0);
     if (tint) this.aTint.setXYZ(i, tint.r, tint.g, tint.b); else this.aTint.setXYZ(i, 1, 1, 1);
     if (i >= this.count) this.count = i + 1;

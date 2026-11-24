@@ -80,18 +80,49 @@ export const TUNE = {
     // ?sprites=1 or ?sprites=mixed → mixed, ?sprites=sprite → sprite. Missing atlases always fall back to mesh.
     mode: SPRITE_MODE,
     ppu: 32, // sprite pixels per world unit
-    heroPpu: 80, // heroes_v2 art is 128×160 per frame; 80 px/unit draws a hero 1.6 × 2 units
+    // Art Director: painted heroes at 64 sprite px / world unit (guide §1's 32 was for 48×64 heroes).
+    // Sewer Rat visible height 88 px → 1.375 units; at ortho zoom 20 on 1280-wide, 1 sprite px = 1 screen px.
+    heroPpu: 64,
     heroCap: 8,
-    // Walk frame timing (data only; same 6 frames, different hold). Default is each atlas action's
-    // base_run profile (tank 65, slinger 68, warlock 60, sneak 60). 'slow_run' and 'walk' prefix-match
-    // the JSON profiles (tank 92/133, slinger 96/133, warlock and sneak 83/133). walkMs, if set, wins:
-    // a number for every class, or { tank, slinger, warlock, sneak }.
+    // Atlas walk holds (data only). Sprite-mode juice cadence does NOT read these: it uses live
+    // velocity and juice.heroes[cls].stride. They remain for tests and any non-juice playback.
+    // Default is each action's base_run profile (tank 49, slinger 51, warlock 45, sneak 45).
     walkProfile: 'base_run',
     walkMs: null,
     // Sprite path only: switch walk → idle below this speed (u/s). Matches the walk JSON
     // idle_below_u_s of 0.15, so a sliding slowdown keeps playing walk. The mesh path
     // never reads this (animateRat is distance-driven and ignores heroAnimState).
     idleBelow: 0.15,
+    // Procedural walk juice (sprite path only; visual, deterministic, no hitbox/speed changes).
+    // Rat 6 can tune these. Per-hero keys multiply the shared amplitudes.
+    juice: {
+      bob: 0.027, // mid-stride hop, world units (~30% of the first juice pass)
+      squash: 0.021, // footfall compress (~2%)
+      stretch: 0.018, // take-off extend
+      lean: 0.06, // radians into the move (~3.4°, half of the first pass)
+      sway: 0.011, // side-to-side, world units
+      startAnticipation: 0.06, // s of pre-step squash (subtle)
+      startSquash: 0.05,
+      stopSettle: 0.08, // s of overshoot / settle (subtle)
+      stopOvershoot: 0.04,
+      idleEnter: 0.28, // start walk above this speed (u/s)
+      idleExit: 0.10, // return to idle below this (hysteresis around idleBelow)
+      refSpeed: 5.6, // lean amplitude scale only; cadence does not use this
+      stepsPerCycle: 2,
+      // Per-hero step length in world units (not measured from south-facing frames; those
+      // cannot show ground travel). Chosen so a full cycle at class base speed is ~0.40 s:
+      // stride = 0.20 × (spdBase + spdPer·SPD). Cycle covers 2 × stride at live |v|.
+      // While walking, cycle time is clamped to [cycleMin, cycleMax].
+      cycleMin: 0.35,
+      cycleMax: 0.9,
+      cadenceSmooth: 14,
+      heroes: {
+        tank:    { bob: 0.8,  squash: 1.15, stretch: 0.9,  lean: 0.85, sway: 0.85, startAnticipation: 1.1,  stopSettle: 1.15, stride: 1.312 },
+        slinger: { bob: 1,    squash: 1,    stretch: 1,    lean: 1,    sway: 1,    startAnticipation: 1,    stopSettle: 1,    stride: 1.632 },
+        warlock: { bob: 0.9,  squash: 1.05, stretch: 0.95, lean: 0.9,  sway: 0.9,  startAnticipation: 1.05, stopSettle: 1.05, stride: 1.440 },
+        sneak:   { bob: 1.15, squash: 0.85, stretch: 1.15, lean: 1.1,  sway: 1.1,  startAnticipation: 0.85, stopSettle: 0.9,  stride: 1.696 },
+      },
+    },
   },
   camera: {
     // Fixed high 3/4 camera (art bible §9): FOV 35, ~62° pitch, ~22 world units across at 16:9

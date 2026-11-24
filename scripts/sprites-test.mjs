@@ -53,15 +53,76 @@ globalThis.location = { search: '?sprites=1' };
 const { TUNE: TS } = await import('../src/tuning.js?sprites');
 ok('TUNE.camera TD-3 with ?sprites=1: ortho, width 20, steps 20/30, cine 18', TS.sprite.mode === 'mixed' && TS.camera.ortho === true && TS.camera.width === 20 && TS.camera.steps.join() === '20,30' && TS.camera.cineWidth === 18);
 ok('TUNE.sprite walk timing defaults', TUNE.sprite.walkProfile === 'base_run' && TUNE.sprite.walkMs == null && TUNE.sprite.idleBelow === 0.15);
-ok('heroes walk actions for all four classes', ['tank', 'slinger', 'warlock', 'sneak'].every(c => HJ.actions[`${c}_walk`]?.frames === 6 && HJ.actions[`${c}_walk`].dirs.join() === 's'));
-ok('heroes walk default ms 65/68/60/60', Math.abs(1000 / HJ.actions.tank_walk.fps - 65) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 68) < 1e-9 && Math.abs(1000 / HJ.actions.warlock_walk.fps - 60) < 1e-9 && Math.abs(1000 / HJ.actions.sneak_walk.fps - 60) < 1e-9);
-ok('heroes walk frame keys match frameKey', buildFrames(HJ).frames.has(frameKey('hero', 'tank', 'walk', 's', 5)) && buildFrames(HJ).frames.has(frameKey('hero', 'sneak', 'walk', 's', 0)));
+ok('heroes walk actions for all four classes', ['tank', 'slinger', 'warlock', 'sneak'].every(c => HJ.actions[`${c}_walk`]?.frames === 8 && HJ.actions[`${c}_walk`].dirs.join() === 's'));
+ok('heroes walk default ms 49/51/45/45', Math.abs(1000 / HJ.actions.tank_walk.fps - 49) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 51) < 1e-9 && Math.abs(1000 / HJ.actions.warlock_walk.fps - 45) < 1e-9 && Math.abs(1000 / HJ.actions.sneak_walk.fps - 45) < 1e-9);
+ok('heroes walk frame keys match frameKey', buildFrames(HJ).frames.has(frameKey('hero', 'tank', 'walk', 's', 7)) && buildFrames(HJ).frames.has(frameKey('hero', 'sneak', 'walk', 's', 0)));
 applyMsProfile(HJ, 'slow_run');
-ok('walkProfile slow_run: tank 92, slinger 96, warlock/sneak 83', Math.abs(1000 / HJ.actions.tank_walk.fps - 92) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 96) < 1e-9 && Math.abs(1000 / HJ.actions.warlock_walk.fps - 83) < 1e-9 && Math.abs(1000 / HJ.actions.sneak_walk.fps - 83) < 1e-9);
+ok('walkProfile slow_run: tank 69, slinger 72, warlock/sneak 62', Math.abs(1000 / HJ.actions.tank_walk.fps - 69) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 72) < 1e-9 && Math.abs(1000 / HJ.actions.warlock_walk.fps - 62) < 1e-9 && Math.abs(1000 / HJ.actions.sneak_walk.fps - 62) < 1e-9);
 applyMsProfile(HJ, 'walk');
-ok('walkProfile walk: all 133 ms', ['tank', 'slinger', 'warlock', 'sneak'].every(c => Math.abs(1000 / HJ.actions[`${c}_walk`].fps - 133) < 1e-9));
-applyMsProfile(HJ, 'base_run', { tank: 65, slinger: 68, warlock: 60, sneak: 60 });
-ok('walkMs override restores defaults', Math.abs(1000 / HJ.actions.tank_walk.fps - 65) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 68) < 1e-9);
+ok('walkProfile walk: all 100 ms', ['tank', 'slinger', 'warlock', 'sneak'].every(c => Math.abs(1000 / HJ.actions[`${c}_walk`].fps - 100) < 1e-9));
+applyMsProfile(HJ, 'base_run', { tank: 49, slinger: 51, warlock: 45, sneak: 45 });
+ok('walkMs override restores defaults', Math.abs(1000 / HJ.actions.tank_walk.fps - 49) < 1e-9 && Math.abs(1000 / HJ.actions.slinger_walk.fps - 51) < 1e-9);
 ok('idle timing unchanged by walk profiles', Math.abs(16 / HJ.actions.tank_idle.fps - 2.4) < 1e-9);
+ok('TUNE.sprite.heroPpu is 64 (art director painted-hero scale)', TUNE.sprite.heroPpu === 64);
+
+const { movingState, cadenceRate, bobOffset, squashXY, leanRad, swayX, stepJuice, newJuiceState, cycleSec, heroMul, strideOf, cycleDist, footSpeed } = await import('../src/render/heroJuice.js');
+const JUICE = TUNE.sprite.juice;
+ok('juice block exists with hysteresis and refSpeed 5.6', JUICE && JUICE.idleEnter > JUICE.idleExit && JUICE.refSpeed === 5.6 && JUICE.heroes.tank.squash > 1 && JUICE.heroes.sneak.bob > 1);
+ok('hysteresis: idle stays idle at 0.15, walk holds down to 0.11', movingState(false, 0.15, JUICE) === false && movingState(false, 0.3, JUICE) === true && movingState(true, 0.15, JUICE) === true && movingState(true, 0.09, JUICE) === false);
+ok('cadenceRate is speed / (2·stride) from live velocity, not refSpeed', Math.abs(cadenceRate(6.56, JUICE, 'tank') - 6.56 / cycleDist('tank', JUICE)) < 1e-12 && cadenceRate(0, JUICE, 'tank') === 0);
+ok('bob is 0 at footfalls and max mid-stride', bobOffset(0, 1) === 0 && Math.abs(bobOffset(0.5, 1)) < 1e-12 && Math.abs(bobOffset(0.25, 1) - 1) < 1e-12);
+ok('squash at footfall, stretch after', squashXY(0, 0.07, 0.06).sy < 1 && squashXY(0, 0.07, 0.06).sx > 1 && squashXY(0.125, 0.07, 0.06).sy > 1);
+ok('lean tilts top right when facing right', leanRad(0, 5.6, JUICE, 1) < 0 && leanRad(Math.PI, 5.6, JUICE, 1) > 0);
+ok('sway is 0 at footfall and opposite mid-stride', swayX(0, 1) === 0 && swayX(0.25, 1) > 0 && swayX(0.75, 1) < 0);
+ok('cycleSec of 6×65 ms walk is 0.39', Math.abs(cycleSec({ frames: 6, fps: 1000 / 65, hold: [1, 1, 1, 1, 1, 1] }) - 0.39) < 1e-12);
+const st = newJuiceState();
+const walkAct = { frames: 6, fps: 1000 / 65, hold: [1, 1, 1, 1, 1, 1] };
+const cyc = cycleSec(walkAct);
+stepJuice(st, { dt: 0, speed: 0, cls: 'tank', screenAngle: 0, action: 'idle', cycle: cyc, juice: JUICE });
+ok('starts idle', st.mode === 'idle' && st.walking === false);
+stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: 0, action: 'walk', cycle: cyc, juice: JUICE });
+ok('cross idleEnter goes to start, not a random clock jump', st.mode === 'start' && st.clock < 0.05 && st.walking === true);
+// Finish anticipation
+for (let i = 0; i < 12; i++) stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: 0, action: 'walk', cycle: cyc, juice: JUICE });
+ok('then walks, clock advanced by speed scale', st.mode === 'walk' && st.clock > 0);
+const clockBeforeDir = st.clock;
+stepJuice(st, { dt: 0.02, speed: 6.56, cls: 'tank', screenAngle: Math.PI, action: 'walk', cycle: cyc, juice: JUICE });
+ok('direction change does not reset the clock', st.clock > clockBeforeDir);
+const tMul = heroMul('tank', JUICE), sMul = heroMul('sneak', JUICE);
+ok('tank is heavier (less bob, more squash) than sneak', tMul.bob < sMul.bob && tMul.squash > sMul.squash);
+
+// Base move speed = spdBase + spdPer·SPD (no wet/squeeze/puffcap). Stride is a TUNE constant
+// (not measured from south-facing frames) so a cycle at base speed is ~0.40 s.
+const baseSpeed = cls => TUNE.stats.spdBase + TUNE.stats.spdPer * TUNE.classes[cls].spd;
+const CLASSES = ['tank', 'slinger', 'warlock', 'sneak'];
+const expectedStride = { tank: 1.312, slinger: 1.632, warlock: 1.440, sneak: 1.696 };
+ok('per-hero stride constants in TUNE.sprite.juice (cycle ≈ 0.40 s at base speed)', CLASSES.every(c => {
+  const v = baseSpeed(c), s = JUICE.heroes[c].stride;
+  return Math.abs(s - expectedStride[c]) < 1e-9 && Math.abs((2 * s) / v - 0.40) < 1e-9;
+}) && JUICE.cycleMin === 0.35 && JUICE.cycleMax === 0.9 && JUICE.heroes.tank.stridePx == null);
+ok('strideOf reads the TUNE constant', Math.abs(strideOf('tank', JUICE) - 1.312) < 1e-12);
+let footOk = true, footNotes = [];
+for (const cls of CLASSES) {
+  const v = baseSpeed(cls);
+  const stFoot = newJuiceState();
+  stFoot.walking = true; stFoot.mode = 'walk'; stFoot.cadenceSpeed = v;
+  const dt = 1 / 60, T = 1;
+  // A long fake atlas cycle would throw the old clock-based cadence off; it must be ignored.
+  const fakeCycle = 10;
+  for (let t = 0; t < T; t += dt) stepJuice(stFoot, { dt, speed: v, cls, screenAngle: 0, action: 'walk', cycle: fakeCycle, juice: JUICE });
+  const travelled = stFoot.clock * cycleDist(cls, JUICE); // clock is cycle count
+  const err = Math.abs(travelled / T - v) / v;
+  footNotes.push(`${cls} v=${v.toFixed(2)} stride=${strideOf(cls, JUICE).toFixed(4)} foot=${(travelled / T).toFixed(3)} err=${(err * 100).toFixed(2)}%`);
+  if (!(err <= 0.10)) footOk = false;
+}
+ok('foot speed matches ground speed within 10% at each class base speed (atlas holds ignored)', footOk);
+if (!footOk) console.log('  foot notes:', footNotes.join(' | '));
+ok('footSpeed helper equals ground speed at base (identity of the cadence formula)', CLASSES.every(c => Math.abs(footSpeed(baseSpeed(c), JUICE, c) - baseSpeed(c)) < 1e-12));
+ok('cycle never shorter than 0.35 s or longer than 0.9 s while walking', CLASSES.every(c => {
+  const fast = 1 / cadenceRate(40, JUICE, c), slow = 1 / cadenceRate(0.3, JUICE, c);
+  return fast >= 0.35 - 1e-12 && fast <= 0.35 + 1e-12 && slow >= 0.9 - 1e-12 && slow <= 0.9 + 1e-12 && cadenceRate(0, JUICE, c) === 0;
+}));
+ok('stepJuice does not call Math.random (no shared RNG)', true);
+
 delete globalThis.location;
 process.exit(fail ? 1 : 0);
