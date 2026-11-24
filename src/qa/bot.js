@@ -461,6 +461,24 @@ function think(dt) {
     }
     else if (tg.kind === 'explore' || tg.kind === 'interior' || tg.kind === 'food' || tg.kind === 'powerup') tg.done = true;
   }
+  // P40-9: trapped behind a locked vault gate before the boss is down (the bot hopped the bars after a
+  // power-up in the vault and pushed on them until the cap, Nightshift seed 2). Drop that target and
+  // jump back out over the bars, the way it came in.
+  const atK = inG(toG(P.x), toG(P.z)) ? gi(toG(P.x), toG(P.z)) : -1;
+  if (B.goal === 'clear' && !run.lvlBoss && atK >= 0 && M.vault && M.vault[atK] && W.gates && W.gates.length) {
+    let gt = null, gd = 1e9;
+    for (const g of W.gates) { const dd = Math.hypot(g.x - P.x, g.z - P.z); if (!g.open && dd < gd) { gd = dd; gt = g; } }
+    if (gt && gd < 12) {
+      if (B.target && B.target.kind !== 'boss' && B.target.kind !== 'nest') { B.banned.add(toG(B.target.x) + ',' + toG(B.target.z)); B.target = null; }
+      // Run at the bars from a step back and jump as they come up.
+      const ox = gt.x + (gt.nx || 0) * 2, oz = gt.z + (gt.nz || 0) * 2;
+      d = [ox - P.x, oz - P.z];
+      if (gd < 1.6) { keys.Space = true; P.buffer = 0.13; }
+      T.vaultEscapes = (T.vaultEscapes || 0) + (B.inVault ? 0 : 1);
+      B.inVault = true;
+      setDir(d[0], d[1]);
+    }
+  } else B.inVault = false;
   // Locked vault gates open with the boss's key ring once the boss is down. A boss key can land behind one
   // (Bone Garden, Rat King's Court): the grid calls the gateway open, so the bot walks up to the bars and
   // would push on them until the cap. Use the gate (the game's own E action) when it is in reach.

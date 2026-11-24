@@ -170,7 +170,7 @@ function runClearLevel(lv, seed, cls, profile, god, max) {
       target: s.qa.bot.target && { kind: s.qa.bot.target.kind, x: +s.qa.bot.target.x.toFixed(1), z: +s.qa.bot.target.z.toFixed(1) },
       exit: (G.exitD || null) && { x: +G.exitD.x.toFixed(1), z: +G.exitD.z.toFixed(1), kind: G.exitD.kind, d: +Math.hypot(s.P.x - G.exitD.x, s.P.z - G.exitD.z).toFixed(1) },
       keyPos: (s.W.keys[0] && { x: +s.W.keys[0].x.toFixed(1), y: +s.W.keys[0].y.toFixed(1), z: +s.W.keys[0].z.toFixed(1), d: +Math.hypot(s.P.x - s.W.keys[0].x, s.P.z - s.W.keys[0].z).toFixed(1) }) || null,
-      keyTp: tel.keyTp || 0, keyTpSaved: tel.keyTpSaved || 0, keyTpAt: tel.keyTpAt || [], gnaws: tel.gnaws || 0, unblocks: tel.unblocks || 0, gates: tel.gates || 0,
+      keyTp: tel.keyTp || 0, keyTpSaved: tel.keyTpSaved || 0, keyTpAt: tel.keyTpAt || [], gnaws: tel.gnaws || 0, unblocks: tel.unblocks || 0, gates: tel.gates || 0, vaultEscapes: tel.vaultEscapes || 0,
     };
     if (end !== 'cleared' || out.min > 20) out.trace = trace;
     if (end !== 'cleared' && window.__scurryDump) { const M = s.M, b = s.qa.bot; out.dump = { W: M.W, grid: Array.from(M.grid).join(','), secret: Array.from(M.secret).join(','), hgt: Array.from(M.hgt, v => +v.toFixed(1)).join(','), blocked: [...(b.blocked || [])], stuck: [...(b.stuckBlk || new Map()).entries()], t: b.t, banned: [...b.banned], plats: s.W.plats.filter(p => !p.dyn).map(p => [p.x, p.z, p.w, p.d, p.y, p.th || 0]) }; }
@@ -277,7 +277,7 @@ for (const mode of MODES) for (const lv of todo) {
   r.mode = mode;
   rows.push(r);
   const why = r.end !== 'cleared' ? `  tgt=${r.target ? r.target.kind : '-'} exit=${r.exit ? r.exit.kind + '@' + r.exit.d : '-'} key=${r.keyPos ? 'd' + r.keyPos.d : '-'} pos=${(r.pos || []).join(',')}` : '';
-  const tp = (r.keyTp ? `  keyTp ${r.keyTp} saved ${r.keyTpSaved}s` : '') + (r.gnaws ? `  gnaws ${r.gnaws}` : '') + (r.unblocks ? `  unblocks ${r.unblocks}` : '') + (r.gates ? `  gates ${r.gates}` : '');
+  const tp = (r.keyTp ? `  keyTp ${r.keyTp} saved ${r.keyTpSaved}s` : '') + (r.gnaws ? `  gnaws ${r.gnaws}` : '') + (r.unblocks ? `  unblocks ${r.unblocks}` : '') + (r.gates ? `  gates ${r.gates}` : '') + (r.vaultEscapes ? `  vault escapes ${r.vaultEscapes}` : '');
   console.log(`${mode.padEnd(6)} ${r.id.padEnd(10)} ${r.end.padEnd(9)} ${r.min == null ? '   -  ' : r.min.toFixed(2).padStart(6)} min  [${r.flag}${r.keyTp ? ' · key tp' : ''}]  nests ${r.nests} (left ${r.left.nests})  boss@${r.at.boss ?? '-'} dead@${r.at.bossDead ?? '-'} key@${r.at.key ?? '-'}  stuck ${r.stuck}${tp}  (${r.wallS}s)${why}`);
   save();
 }
