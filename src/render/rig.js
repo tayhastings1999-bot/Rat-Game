@@ -169,8 +169,13 @@ const TAUF = Math.PI * 2;
 export function animTick(e, dt, key, px, pz) {
   const R = RIGS[key] || DEF;
   if (e.anx == null) { e.anx = e.x; e.anz = e.z; e.gph = Math.random() * TAUF; e.gam = 0; e.ap = 0; e.av = 0; e.lean = 0; e.hyaw = 0; e.flap = Math.random() * TAUF; e.pang = e.ang; e.sq = 0; e.sqv = 0; e.pvy = 0; }
-  // dt 0: acknowledge position so a kill freeze does not dump a huge step into the walk cycle when it ends.
-  if (dt <= 0) { e.anx = e.x; e.anz = e.z; e.pang = e.ang; return; }
+  // Recovery is combat state (OPEN punish, shieldrat guard). Tick it even during a
+  // render-only kill freeze; only the walk/pose hold.
+  const striking0 = e.lunge > 0 || e.st === 'leap' || e.st === 'charge' || e.st === 'dive' || e.st === 'swoop' || e.st === 'dart';
+  if (e.wasStrike && !striking0 && !e.boss) { e.recov = 0.4; e.openShown = false; }
+  e.wasStrike = striking0;
+  e.recov = (e.recov || 0) - dt;
+  if (dt <= 0 || ((G.killStop || 0) > 0 && !G.qaHold)) { e.anx = e.x; e.anz = e.z; e.pang = e.ang; return; }
   const step = Math.min(Math.hypot(e.x - e.anx, e.z - e.anz), 2);
   e.anx = e.x; e.anz = e.z;
   const sc = e.sc || 1, k = Math.min(1, dt * 10);
@@ -189,9 +194,6 @@ export function animTick(e, dt, key, px, pz) {
   let tgt = 0;
   if (winding) { const tot = e.tel0 || 0.4, left = e.st === 'wind' ? e.tt : e.wind; tgt = -clamp(1.25 - left / tot, 0.25, 1); }
   else if (striking) tgt = 1;
-  if (e.wasStrike && !striking && !e.boss) { e.recov = 0.4; e.openShown = false; }
-  e.wasStrike = striking;
-  e.recov = (e.recov || 0) - dt;
   const kk = winding ? 90 : striking ? 420 : 150, c = winding ? 16 : striking ? 30 : 11;
   e.av += ((tgt - e.ap) * kk - e.av * c) * dt;
   e.ap = clamp(e.ap + e.av * dt, -1.2, 1.3);

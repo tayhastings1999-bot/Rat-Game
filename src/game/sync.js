@@ -95,7 +95,7 @@ const frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4(), _sph = new THREE
 const onScreen = e => { _sph.center.set(e.x, e.y + (e.h || 1) * 0.5, e.z); _sph.radius = (e.r || 0.5) * (e.sc || 1) + 1.5; return frustum.intersectsSphere(_sph); };
 
 export function sync(dt) {
-  const vdt = feelDt(G, dt);
+  const vdt = G.qaHold ? dt : feelDt(G, dt);
   rigTime.value = feelNow(G);
   camera.updateMatrixWorld();
   frustum.setFromProjectionMatrix(_m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse.copy(camera.matrixWorld).invert()));
@@ -108,7 +108,7 @@ export function sync(dt) {
       if (e.type === 'nest' || e.rival || e.reaper) continue; // these place their own meshes
       e.mesh.visible = !e.hidden;
       const rg = e.mesh.userData.rig;
-      if (rg) { animTick(e, vdt, e.mesh.userData.rigKey, P.x, P.z); writePose(e, rg.rA.value, rg.rB.value); }
+      if (rg) { animTick(e, dt, e.mesh.userData.rigKey, P.x, P.z); writePose(e, rg.rA.value, rg.rB.value); }
       const fl = e.fl || 0, rel = angD(e.hitA ?? e.ang, e.ang), coil = Math.max(0, -(e.ap || 0));
       e.mesh.position.set(e.x, e.y + (e.fly ? 0 : Math.abs(Math.sin(e.gph || 0)) * 0.08 * (e.gam || 0)), e.z);
       e.mesh.rotation.set((e.pitch || 0) + coil * 0.08 + Math.cos(rel) * fl * 0.12, e.ang, (e.roll || 0) + (e.lean || 0) * 0.4 - Math.sin(rel) * fl * 0.12);
@@ -122,7 +122,7 @@ export function sync(dt) {
     if (!onScreen(e)) continue;
     const i = cnt[e.type]++;
     if (i >= MOB_CAP) continue;
-    animTick(e, vdt, e.type, P.x, P.z);
+    animTick(e, dt, e.type, P.x, P.z);
     writePose(e, IMB[e.type].userData.rA, IMB[e.type].userData.rB, i);
     if (e.disguise) { IMB[e.type].userData.rA.setXYZW(i, 0, 1, 0, 0); IMB[e.type].userData.rB.setXYZW(i, 0, 0, e.fl * 0.6, 0); }
     poseMatrix(e);
@@ -341,7 +341,7 @@ export function sync(dt) {
 
 export function animate(dt) {
   if (!G.rat) return;
-  const vdt = feelDt(G, dt);
+  const vdt = G.qaHold ? dt : feelDt(G, dt);
   beginHeroes();
   heroI = 0;
   poseRat(vdt, blob);

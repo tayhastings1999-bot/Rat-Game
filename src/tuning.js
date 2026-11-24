@@ -373,7 +373,7 @@ export const TUNE = {
   },
   feel: {
     // Hit-stop, trauma shake, flash, kill pop, low-HP vignette (combat.js, sync.js, hitstop.js, feel.js).
-    // Kill hit-stop is render-only (sim keeps full dt). Non-kill hit-stop still slows the sim.
+    // Trash-kill hit-stop is render-only (sim keeps full dt). Elite/boss and non-kill hit-stop still slow the sim.
     hitStopHit: 0.035, // crit or a heavy hit
     hitStopDmg: 40, // damage that counts as heavy
     hitStopHurt: 0.05, // the rat is hit

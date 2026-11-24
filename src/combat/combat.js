@@ -184,8 +184,11 @@ export function kill(e) {
   sfx('kill');
   const F = TUNE.feel, GR = TUNE.gore;
   const big = e.boss || e.pred;
-  const stop = e.boss ? F.hitStopBoss : (e.pred || e.elite || e.type === 'brute' || e.type === 'nest') ? F.hitStopBig : F.hitStopKill;
-  applyKillHitStop(G, stop);
+  const bigKill = !!(e.boss || e.pred || e.elite || e.type === 'brute' || e.type === 'nest');
+  const stop = e.boss ? F.hitStopBoss : bigKill ? F.hitStopBig : F.hitStopKill;
+  // Ordinary kills: render-only freeze. Elite / pred / brute / nest / boss kills still slow the sim.
+  if (bigKill) G.hitStop = Math.max(G.hitStop, Math.min(F.hitStopCap, stop));
+  else applyKillHitStop(G, stop);
   G.shake = Math.max(G.shake, e.boss ? F.bossShake : big ? F.bigKillShake : F.killShake);
   blood(e.x, e.y + e.h * 0.5, e.z, e.blood, null, big ? GR.killBloodBig : GR.killBlood, e.boss ? GR.killBloodBossSp : GR.killBloodSp);
   puff(e.x, e.y + e.h / 2, e.z, e.col, e.boss ? GR.bossPuff : GR.killPuff, 3.5);
