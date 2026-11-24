@@ -37,6 +37,7 @@ async function launchBrowser() {
   // Hook timers and rAF before any page script runs, so we can cancel transition
   // timeouts and later park the game loop (menu rAF was mutating shared state
   // between levels with a wall-clock-dependent number of frames).
+  if (process.env.CLEAR_DUMP) await page.addInitScript(() => { window.__scurryDump = true; }); // diagnostics: map dump on an uncleared run
   await page.addInitScript(() => {
     const tos = new Set(), ivs = new Set();
     const _st = window.setTimeout.bind(window);
@@ -145,8 +146,10 @@ function runClearLevel(lv, seed, cls, profile, god, max) {
     const T0 = run.time, at = {};
     const mark = (k, c) => { if (c && at[k] == null) at[k] = +((run.time - T0) / 60).toFixed(2); };
     let end = 'timeout';
+    const trace = []; // every 5 sim s: [min, tile x, tile z, y, target kind] (kept for long or uncleared runs)
     while (run.time - T0 < max * 60) {
       const st = s.qa.sim(5);
+      { const P = s.P, M = s.M, tg = s.qa.bot.target; trace.push([+((run.time - T0) / 60).toFixed(2), Math.floor(P.x / 4 + M.W / 2), Math.floor(P.z / 4 + M.W / 2), +P.y.toFixed(1), tg ? tg.kind : '-']); }
       mark('nests', !s.W.enemies.some(e => e.type === 'nest' && !e.dead));
       mark('boss', G.boss && !G.boss.dead);
       mark('bossDead', run.lvlBoss || run.bossDone);
@@ -167,8 +170,10 @@ function runClearLevel(lv, seed, cls, profile, god, max) {
       target: s.qa.bot.target && { kind: s.qa.bot.target.kind, x: +s.qa.bot.target.x.toFixed(1), z: +s.qa.bot.target.z.toFixed(1) },
       exit: (G.exitD || null) && { x: +G.exitD.x.toFixed(1), z: +G.exitD.z.toFixed(1), kind: G.exitD.kind, d: +Math.hypot(s.P.x - G.exitD.x, s.P.z - G.exitD.z).toFixed(1) },
       keyPos: (s.W.keys[0] && { x: +s.W.keys[0].x.toFixed(1), y: +s.W.keys[0].y.toFixed(1), z: +s.W.keys[0].z.toFixed(1), d: +Math.hypot(s.P.x - s.W.keys[0].x, s.P.z - s.W.keys[0].z).toFixed(1) }) || null,
-      keyTp: tel.keyTp || 0, keyTpSaved: tel.keyTpSaved || 0, keyTpAt: tel.keyTpAt || [],
+      keyTp: tel.keyTp || 0, keyTpSaved: tel.keyTpSaved || 0, keyTpAt: tel.keyTpAt || [], gnaws: tel.gnaws || 0, unblocks: tel.unblocks || 0,
     };
+    if (end !== 'cleared' || out.min > 20) out.trace = trace;
+    if (end !== 'cleared' && window.__scurryDump) { const M = s.M, b = s.qa.bot; out.dump = { W: M.W, grid: Array.from(M.grid).join(','), secret: Array.from(M.secret).join(','), hgt: Array.from(M.hgt, v => +v.toFixed(1)).join(','), blocked: [...(b.blocked || [])], stuck: [...(b.stuckBlk || new Map()).entries()], t: b.t, banned: [...b.banned], plats: s.W.plats.filter(p => !p.dyn).map(p => [p.x, p.z, p.w, p.d, p.y, p.th || 0]) }; }
     s.qa.stop();
     // Drop the 450ms transition (and any other pending callbacks) before yielding the thread,
     // then park on the menu so the rAF loop cannot tick leftover play-state with native RNG.
@@ -272,7 +277,7 @@ for (const mode of MODES) for (const lv of todo) {
   r.mode = mode;
   rows.push(r);
   const why = r.end !== 'cleared' ? `  tgt=${r.target ? r.target.kind : '-'} exit=${r.exit ? r.exit.kind + '@' + r.exit.d : '-'} key=${r.keyPos ? 'd' + r.keyPos.d : '-'} pos=${(r.pos || []).join(',')}` : '';
-  const tp = r.keyTp ? `  keyTp ${r.keyTp} saved ${r.keyTpSaved}s` : '';
+  const tp = (r.keyTp ? `  keyTp ${r.keyTp} saved ${r.keyTpSaved}s` : '') + (r.gnaws ? `  gnaws ${r.gnaws}` : '') + (r.unblocks ? `  unblocks ${r.unblocks}` : '');
   console.log(`${mode.padEnd(6)} ${r.id.padEnd(10)} ${r.end.padEnd(9)} ${r.min == null ? '   -  ' : r.min.toFixed(2).padStart(6)} min  [${r.flag}${r.keyTp ? ' · key tp' : ''}]  nests ${r.nests} (left ${r.left.nests})  boss@${r.at.boss ?? '-'} dead@${r.at.bossDead ?? '-'} key@${r.at.key ?? '-'}  stuck ${r.stuck}${tp}  (${r.wallS}s)${why}`);
   save();
 }
